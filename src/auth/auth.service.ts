@@ -92,8 +92,15 @@ export class AuthService {
       where: { id: otpRecord.id },
     });
 
+    // ✅ ISSUE JWT HERE
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+
     return {
       message: 'Email verified successfully',
+      token,
       user: {
         id: user.id,
         email: user.email,

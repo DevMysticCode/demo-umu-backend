@@ -43,4 +43,32 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get otpCode() {
     return this.prisma.otpCode;
   }
+
+  get passport() {
+    return this.prisma.passport;
+  }
+
+  get passportSection() {
+    return this.prisma.passportSection;
+  }
+
+  get passportSectionTask() {
+    return this.prisma.passportSectionTask;
+  }
+
+  get questionTemplate() {
+    return this.prisma.questionTemplate;
+  }
+
+  get sectionTemplate() {
+    return this.prisma.sectionTemplate;
+  }
+
+  get passportQuestion() {
+    return this.prisma.passportQuestion;
+  }
+
+  get questionAnswer() {
+    return this.prisma.questionAnswer;
+  }
 }

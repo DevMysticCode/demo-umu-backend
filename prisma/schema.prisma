@@ -7,6 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// ENUMS
+// ============================================
+
+enum PassportStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum SectionStatus {
+  LOCKED
+  ACTIVE
+  COMPLETED
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
+enum QuestionStatus {
+  PENDING
+  COMPLETED
+}
+
+enum QuestionType {
+  TEXT
+  RADIO
+  CHECKBOX
+  UPLOAD
+  MULTIPART
+  NOTE
+  DATE
+}
+
+// ============================================
+// MODELS
+// ============================================
+
 model User {
   id         String   @id @default(uuid())
   email      String   @unique
@@ -19,6 +58,8 @@ model User {
   password   String
   isVerified Boolean  @default(false)
   createdAt  DateTime @default(now())
+
+  passports  Passport[]
 }
 
 model OtpCode {
@@ -29,4 +70,122 @@ model OtpCode {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+// ============================================
+// PASSPORT MODELS
+// ============================================
+
+model SectionTemplate {
+  id          String @id @default(uuid())
+  key         String @unique
+  title       String
+  subtitle    String?
+  description String?
+  icon        String?
+  order       Int
+  createdAt   DateTime @default(now())
+
+  questionTemplates QuestionTemplate[]
+}
+
+model Passport {
+  id           String         @id @default(uuid())
+  addressLine1 String         @unique
+  postcode     String
+  ownerId      String
+  owner        User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  status       PassportStatus @default(IN_PROGRESS)
+  createdAt    DateTime       @default(now())
+
+  sections PassportSection[]
+
+  @@index([ownerId])
+}
+
+model PassportSection {
+  id         String         @id @default(uuid())
+  passportId String
+  passport   Passport       @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  key        String
+  title      String
+  subtitle   String?
+  description String?
+  imageKey   String?
+  order      Int
+  status     SectionStatus  @default(LOCKED)
+  createdAt  DateTime       @default(now())
+
+  tasks PassportSectionTask[]
+
+  @@index([passportId])
+  @@unique([passportId, key])
+}
+
+model PassportSectionTask {
+  id                  String     @id @default(uuid())
+  passportSectionId   String
+  passportSection     PassportSection @relation(fields: [passportSectionId], references: [id], onDelete: Cascade)
+  key                 String
+  title               String
+  description         String?
+  icon                String?
+  order               Int
+  status              TaskStatus @default(PENDING)
+  createdAt           DateTime   @default(now())
+
+  passportQuestions   PassportQuestion[]
+
+  @@index([passportSectionId])
+  @@unique([passportSectionId, key])
+}
+
+model QuestionTemplate {
+  id                    String         @id @default(uuid())
+  sectionKey            String
+  taskKey               String
+  sectionTemplate       SectionTemplate @relation(fields: [sectionKey], references: [key], onDelete: Restrict)
+  title                 String
+  description           String?
+  instructionText       String?
+  helpText              String?
+  type                  QuestionType
+  options               Json?
+  placeholder           String?
+  displayMode           String?
+  uploadInstruction     String?
+  prewrittenTemplates   Json?
+  dateFields            Json?
+  points                Int
+  order                 Int
+  createdAt             DateTime       @default(now())
+
+  passportQuestions     PassportQuestion[]
+
+  @@index([sectionKey, taskKey])
+}
+
+model PassportQuestion {
+  id                  String         @id @default(uuid())
+  passportSectionTaskId String
+  passportSectionTask PassportSectionTask @relation(fields: [passportSectionTaskId], references: [id], onDelete: Cascade)
+  questionTemplateId  String
+  questionTemplate    QuestionTemplate @relation(fields: [questionTemplateId], references: [id], onDelete: Restrict)
+  status              QuestionStatus @default(PENDING)
+  createdAt           DateTime       @default(now())
+
+  answer              QuestionAnswer?
+
+  @@index([passportSectionTaskId])
+  @@index([questionTemplateId])
+}
+
+model QuestionAnswer {
+  id                  String   @id @default(uuid())
+  passportQuestionId  String   @unique
+  passportQuestion    PassportQuestion @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
+  answerText          String?
+  answerJson          Json?
+  fileUrl             String?
+  createdAt           DateTime @default(now())
 }
