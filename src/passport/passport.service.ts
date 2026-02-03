@@ -153,8 +153,8 @@ export class PassportService {
           data: {
             passportSectionId: section.id,
             key: taskKey,
-            title: questions[0].template.title,
-            description: questions[0].template.description,
+            title: this.formatTaskKey(taskKey),
+            description: null,
             order: taskOrder,
           },
         });
@@ -174,6 +174,13 @@ export class PassportService {
     return {
       passportId: passport.id,
     };
+  }
+
+  private formatTaskKey(key: string): string {
+    return key
+      .split('_')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
   }
 
   private groupTemplatesBySection(
