@@ -16,14 +16,14 @@ export class TaskController {
   @Get(':taskId/questions')
   @UseGuards(JwtAuthGuard)
   async getTaskQuestions(@Param('taskId') taskId: string, @Request() req: any) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     return this.taskService.getTaskQuestions(taskId, userId);
   }
 
   @Post(':taskId/complete')
   @UseGuards(JwtAuthGuard)
   async completeTask(@Param('taskId') taskId: string, @Request() req: any) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     return this.taskService.completeTask(taskId, userId);
   }
 }

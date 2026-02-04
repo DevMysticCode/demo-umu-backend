@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run prisma:seed:*)",
+      "Bash(npx ts-node -e \"\nconst { PrismaClient } = require\\(''@prisma/client''\\);\nconst prisma = new PrismaClient\\(\\);\nasync function check\\(\\) {\n  const sections = await prisma.sectionTemplate.findMany\\({ orderBy: { order: ''asc'' } }\\);\n  console.log\\(''=== SECTION TEMPLATES ===''\\);\n  sections.forEach\\(s => console.log\\(''  '' + s.order + ''. '' + s.key + '' \\(icon: '' + s.icon + ''\\)''\\)\\);\n  console.log\\(''Total:'', sections.length\\);\n\n  const questions = await prisma.questionTemplate.findMany\\({ orderBy: [{ sectionKey: ''asc'' }, { order: ''asc'' }] }\\);\n  console.log\\(''\\\\n=== QUESTION TEMPLATES ===''\\);\n  const grouped = {};\n  questions.forEach\\(q => {\n    const k = q.sectionKey + '' > '' + q.taskKey;\n    if \\(!grouped[k]\\) grouped[k] = 0;\n    grouped[k]++;\n  }\\);\n  Object.entries\\(grouped\\).forEach\\(\\([k, v]\\) => console.log\\(''  '' + k + '': '' + v + '' question\\(s\\)''\\)\\);\n  console.log\\(''Total:'', questions.length\\);\n\n  // Check one passport\n  const passport = await prisma.passport.findFirst\\({\n    include: {\n      sections: {\n        orderBy: { order: ''asc'' },\n        include: {\n          tasks: {\n            orderBy: { order: ''asc'' },\n            include: { passportQuestions: true }\n          }\n        }\n      }\n    }\n  }\\);\n  console.log\\(''\\\\n=== PASSPORT:'', passport.addressLine1, ''===''\\);\n  console.log\\(''Sections:'', passport.sections.length\\);\n  passport.sections.forEach\\(s => {\n    const taskCount = s.tasks.length;\n    const qCount = s.tasks.reduce\\(\\(sum, t\\) => sum + t.passportQuestions.length, 0\\);\n    console.log\\(''  '' + s.order + ''. '' + s.key + '' ['' + s.status + ''] imageKey='' + s.imageKey + '' | '' + taskCount + '' task\\(s\\), '' + qCount + '' question\\(s\\)''\\);\n  }\\);\n\n  await prisma.$disconnect\\(\\);\n}\ncheck\\(\\);\n\")",
+      "Bash(node check-seed.js)",
+      "Bash(npx nest start)",
+      "Bash(curl:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUiLCJlbWFpbCI6InByYWRlZXAwMTAyMTdAZ21haWwuY29tIiwiaWF0IjoxNzcwMjIyOTY5fQ.j2UJN-CN0M9_2EHqwsxIMHfYroyyuUKE6boUADUdfGU\")"
+    ]
+  }
+}

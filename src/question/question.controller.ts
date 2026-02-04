@@ -24,7 +24,7 @@ export class QuestionController {
     @Body() dto: AnswerQuestionDto,
     @Request() req: any,
   ) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     return this.questionService.answerQuestion(questionId, userId, dto);
   }
 }
