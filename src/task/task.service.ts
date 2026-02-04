@@ -40,6 +40,7 @@ export class TaskService {
             id: true,
             title: true,
             description: true,
+            instructionText: true,
             type: true,
             helpText: true,
             options: true,
@@ -47,6 +48,8 @@ export class TaskService {
             displayMode: true,
             uploadInstruction: true,
             prewrittenTemplates: true,
+            dateFields: true,
+            points: true,
           },
         },
         answer: {
@@ -69,6 +72,7 @@ export class TaskService {
       templateId: question.questionTemplate.id,
       question: question.questionTemplate.title,
       description: question.questionTemplate.description,
+      instructionText: question.questionTemplate.instructionText,
       type: question.questionTemplate.type,
       help: question.questionTemplate.helpText,
       options: question.questionTemplate.options,
@@ -76,6 +80,8 @@ export class TaskService {
       display: question.questionTemplate.displayMode,
       uploadInstruction: question.questionTemplate.uploadInstruction,
       prewritten: question.questionTemplate.prewrittenTemplates,
+      dateFields: question.questionTemplate.dateFields,
+      points: question.questionTemplate.points,
       answer: question.answer
         ? question.answer.answerText ||
           question.answer.answerJson ||

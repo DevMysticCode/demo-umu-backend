@@ -78,12 +78,16 @@ export class PassportService {
       id: section.id,
       key: section.key,
       title: section.title,
+      subtitle: section.subtitle,
+      description: section.description,
+      imageKey: section.imageKey,
       status: section.status,
       order: section.order,
       tasks: section.tasks.map((task) => ({
         id: task.id,
         key: task.key,
         title: task.title,
+        description: task.description,
         order: task.order,
         totalQuestions: task.passportQuestions.length,
         answeredQuestions: task.passportQuestions.filter(
@@ -100,6 +104,9 @@ export class PassportService {
     addressLine1: string,
     postcode: string,
   ): Promise<{ passportId: string }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('User does not exist: ' + userId);
+
     // Create passport
     const passport = await this.prisma.passport.create({
       data: {
@@ -138,6 +145,7 @@ export class PassportService {
           title: sectionTemplate?.title || sectionKey,
           subtitle: sectionTemplate?.subtitle,
           description: sectionTemplate?.description,
+          imageKey: sectionTemplate?.icon,
           order: sectionOrder,
           status: sectionStatus,
         },

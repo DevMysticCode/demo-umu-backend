@@ -23,7 +23,8 @@ export class PassportController {
   @Post('create')
   @UseGuards(JwtAuthGuard)
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
-    const userId = req.user.sub;
+    console.log('req.user:', req.user);
+    const userId = req.user.id;
     return this.passportService.createPassport(
       userId,
       dto.addressLine1,
@@ -34,7 +35,7 @@ export class PassportController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     const passport = await this.passportService.getPassport(passportId);
 
     if (!passport) {
@@ -54,7 +55,7 @@ export class PassportController {
     @Param('id') passportId: string,
     @Request() req: any,
   ) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     const sections = await this.passportService.getPassportSections(
       passportId,
       userId,
