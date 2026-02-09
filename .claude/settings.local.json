@@ -6,7 +6,9 @@
       "Bash(node check-seed.js)",
       "Bash(npx nest start)",
       "Bash(curl:*)",
-      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUiLCJlbWFpbCI6InByYWRlZXAwMTAyMTdAZ21haWwuY29tIiwiaWF0IjoxNzcwMjIyOTY5fQ.j2UJN-CN0M9_2EHqwsxIMHfYroyyuUKE6boUADUdfGU\")"
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUiLCJlbWFpbCI6InByYWRlZXAwMTAyMTdAZ21haWwuY29tIiwiaWF0IjoxNzcwMjIyOTY5fQ.j2UJN-CN0M9_2EHqwsxIMHfYroyyuUKE6boUADUdfGU\")",
+      "Bash(npx prettier:*)",
+      "Bash(npx ts-node:*)"
     ]
   }
 }
