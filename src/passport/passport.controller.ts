@@ -42,7 +42,12 @@ export class PassportController {
       throw new ForbiddenException('Passport not found');
     }
 
-    if (passport.ownerId !== userId) {
+    // Check if user is owner or collaborator
+    const hasAccess = await this.passportService.checkUserAccess(
+      passportId,
+      userId,
+    );
+    if (!hasAccess) {
       throw new ForbiddenException('You do not have access to this passport');
     }
 
@@ -62,5 +67,41 @@ export class PassportController {
     );
 
     return sections;
+  }
+
+  @Post(':id/collaborators')
+  @UseGuards(JwtAuthGuard)
+  async addCollaborator(
+    @Param('id') passportId: string,
+    @Body('email') email: string,
+    @Request() req: any,
+  ) {
+    const userId = req.user.id;
+    return this.passportService.addCollaborator(passportId, userId, email);
+  }
+
+  @Get(':id/collaborators')
+  @UseGuards(JwtAuthGuard)
+  async getCollaborators(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    const userId = req.user.id;
+    return this.passportService.getCollaborators(passportId, userId);
+  }
+
+  @Post(':id/collaborators/:collaboratorId/remove')
+  @UseGuards(JwtAuthGuard)
+  async removeCollaborator(
+    @Param('id') passportId: string,
+    @Param('collaboratorId') collaboratorId: string,
+    @Request() req: any,
+  ) {
+    const userId = req.user.id;
+    return this.passportService.removeCollaborator(
+      passportId,
+      userId,
+      collaboratorId,
+    );
   }
 }

@@ -2,13 +2,17 @@
   Injectable,
   NotFoundException,
   ForbiddenException,
-} from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { AnswerQuestionDto } from "./dto/answer-question.dto";
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { AnswerQuestionDto } from './dto/answer-question.dto';
+import { PassportService } from '../passport/passport.service';
 
 @Injectable()
 export class QuestionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private passportService: PassportService,
+  ) {}
 
   async answerQuestion(
     questionId: string,
@@ -33,14 +37,17 @@ export class QuestionService {
     });
 
     if (!question) {
-      throw new NotFoundException("Question not found");
+      throw new NotFoundException('Question not found');
     }
 
-    if (
-      question.passportSectionTask.passportSection.passport.ownerId !==
-      userId
-    ) {
-      throw new ForbiddenException("You do not have access to this question");
+    // Check if user has access (owner or collaborator)
+    const passportId = question.passportSectionTask.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(
+      passportId,
+      userId,
+    );
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this question');
     }
 
     let answerText: string | null = null;
