@@ -126,33 +126,62 @@ export class AuthService {
       where: { email },
     });
 
-    if (existingUser) {
-      throw new ConflictException('Email already registered');
-    }
-
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Parse DOB if provided
     const dobDate = dob ? new Date(dob) : null;
 
-    // Create user
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-        dob: dobDate,
-        postcode,
-        gender,
-        isVerified: true,
-      },
+    let user;
+
+    if (existingUser) {
+      // If user exists and is verified (from OTP), update their details
+      if (existingUser.isVerified) {
+        user = await this.prisma.user.update({
+          where: { email },
+          data: {
+            password: hashedPassword,
+            firstName,
+            lastName,
+            phone,
+            dob: dobDate,
+            postcode,
+            gender,
+          },
+        });
+      } else {
+        throw new ConflictException('Email already registered');
+      }
+    } else {
+      // Create new user if doesn't exist
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          firstName,
+          lastName,
+          phone,
+          dob: dobDate,
+          postcode,
+          gender,
+          isVerified: true,
+        },
+      });
+    }
+
+    if (!user) {
+      throw new ConflictException('Failed to create or update user');
+    }
+
+    // Generate JWT token for automatic login
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
     });
 
     return {
       message: 'User registered successfully',
+      token,
       user: {
         id: user.id,
         email: user.email,
