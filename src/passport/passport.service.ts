@@ -38,16 +38,9 @@ export class PassportService {
   }
 
   async getPassportSections(passportId: string, userId: string) {
-    // Verify passport exists and belongs to user
-    const passport = await this.prisma.passport.findUnique({
-      where: { id: passportId },
-    });
-
-    if (!passport) {
-      throw new ForbiddenException('Passport not found');
-    }
-
-    if (passport.ownerId !== userId) {
+    // Verify passport exists and user has access (owner or collaborator)
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
       throw new ForbiddenException('You do not have access to this passport');
     }
 
@@ -215,5 +208,167 @@ export class PassportService {
     }
 
     return grouped;
+  }
+
+  // Check if user has access to passport (owner or collaborator)
+  async checkUserAccess(passportId: string, userId: string): Promise<boolean> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        collaborators: {
+          where: { userId },
+        },
+      },
+    });
+
+    if (!passport) {
+      return false;
+    }
+
+    // User has access if they are the owner or a collaborator
+    return (
+      passport.ownerId === userId || passport.collaborators.length > 0
+    );
+  }
+
+  // Add collaborator by email
+  async addCollaborator(passportId: string, requesterId: string, email: string) {
+    // Verify requester is the owner
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+
+    if (!passport) {
+      throw new ForbiddenException('Passport not found');
+    }
+
+    if (passport.ownerId !== requesterId) {
+      throw new ForbiddenException(
+        'Only the owner can add collaborators',
+      );
+    }
+
+    // Find user by email
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User with this email not found');
+    }
+
+    // Check if user is already owner
+    if (user.id === passport.ownerId) {
+      throw new ForbiddenException('User is already the owner');
+    }
+
+    // Check if already a collaborator
+    const existingCollaborator =
+      await this.prisma.passportCollaborator.findUnique({
+        where: {
+          passportId_userId: {
+            passportId,
+            userId: user.id,
+          },
+        },
+      });
+
+    if (existingCollaborator) {
+      throw new ForbiddenException('User is already a collaborator');
+    }
+
+    // Add collaborator
+    const collaborator = await this.prisma.passportCollaborator.create({
+      data: {
+        passportId,
+        userId: user.id,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return {
+      message: 'Collaborator added successfully',
+      collaborator: {
+        id: collaborator.id,
+        userId: collaborator.userId,
+        email: collaborator.user.email,
+        firstName: collaborator.user.firstName,
+        lastName: collaborator.user.lastName,
+        createdAt: collaborator.createdAt,
+      },
+    };
+  }
+
+  // Get all collaborators for a passport
+  async getCollaborators(passportId: string, userId: string) {
+    // Verify user has access
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+
+    const collaborators = await this.prisma.passportCollaborator.findMany({
+      where: { passportId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return collaborators.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      email: c.user.email,
+      firstName: c.user.firstName,
+      lastName: c.user.lastName,
+      createdAt: c.createdAt,
+    }));
+  }
+
+  // Remove collaborator
+  async removeCollaborator(
+    passportId: string,
+    requesterId: string,
+    collaboratorId: string,
+  ) {
+    // Verify requester is the owner
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+
+    if (!passport) {
+      throw new ForbiddenException('Passport not found');
+    }
+
+    if (passport.ownerId !== requesterId) {
+      throw new ForbiddenException(
+        'Only the owner can remove collaborators',
+      );
+    }
+
+    // Delete collaborator
+    await this.prisma.passportCollaborator.delete({
+      where: { id: collaboratorId },
+    });
+
+    return {
+      message: 'Collaborator removed successfully',
+    };
   }
 }

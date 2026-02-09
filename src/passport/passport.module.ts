@@ -8,5 +8,6 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [PrismaModule, JwtModule],
   providers: [PassportService],
   controllers: [PassportController],
+  exports: [PassportService],
 })
 export class PassportModule {}

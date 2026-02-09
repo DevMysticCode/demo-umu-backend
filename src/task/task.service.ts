@@ -3,12 +3,16 @@
   ForbiddenException,
   NotFoundException,
   BadRequestException,
-} from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { PassportService } from '../passport/passport.service';
 
 @Injectable()
 export class TaskService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private passportService: PassportService,
+  ) {}
 
   async getTaskQuestions(taskId: string, userId: string) {
     const task = await this.prisma.passportSectionTask.findUnique({
@@ -28,8 +32,14 @@ export class TaskService {
       throw new NotFoundException("Task not found");
     }
 
-    if (task.passportSection.passport.ownerId !== userId) {
-      throw new ForbiddenException("You do not have access to this task");
+    // Check if user has access (owner or collaborator)
+    const passportId = task.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(
+      passportId,
+      userId,
+    );
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this task');
     }
 
     const questions = await this.prisma.passportQuestion.findMany({
@@ -117,8 +127,14 @@ export class TaskService {
       throw new NotFoundException("Task not found");
     }
 
-    if (task.passportSection.passport.ownerId !== userId) {
-      throw new ForbiddenException("You do not have access to this task");
+    // Check if user has access (owner or collaborator)
+    const passportId = task.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(
+      passportId,
+      userId,
+    );
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this task');
     }
 
     const totalQuestions = task.passportQuestions.length;

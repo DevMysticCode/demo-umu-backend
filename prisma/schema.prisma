@@ -8,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(uuid())
-  email      String     @unique
-  password   String
-  createdAt  DateTime   @default(now())
-  dob        DateTime?
-  firstName  String?
-  gender     String?
-  isVerified Boolean    @default(false)
-  lastName   String?
-  phone      String?
-  postcode   String?
-  passports  Passport[]
+  id                     String                 @id @default(uuid())
+  email                  String                 @unique
+  password               String
+  createdAt              DateTime               @default(now())
+  dob                    DateTime?
+  firstName              String?
+  gender                 String?
+  isVerified             Boolean                @default(false)
+  lastName               String?
+  phone                  String?
+  postcode               String?
+  passports              Passport[]
+  passportCollaborations PassportCollaborator[]
 }
 
 model OtpCode {
@@ -45,16 +46,30 @@ model SectionTemplate {
 }
 
 model Passport {
-  id           String            @id @default(uuid())
-  addressLine1 String            @unique
-  postcode     String
-  ownerId      String
-  status       PassportStatus    @default(IN_PROGRESS)
-  createdAt    DateTime          @default(now())
-  owner        User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  sections     PassportSection[]
+  id            String                 @id @default(uuid())
+  addressLine1  String                 @unique
+  postcode      String
+  ownerId       String
+  status        PassportStatus         @default(IN_PROGRESS)
+  createdAt     DateTime               @default(now())
+  owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sections      PassportSection[]
+  collaborators PassportCollaborator[]
 
   @@index([ownerId])
+}
+
+model PassportCollaborator {
+  id         String   @id @default(uuid())
+  passportId String
+  userId     String
+  createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([passportId, userId])
+  @@index([passportId])
+  @@index([userId])
 }
 
 model PassportSection {
