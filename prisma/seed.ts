@@ -9,8 +9,8 @@ const prisma = new PrismaClient();
 
 const SECTION_TEMPLATES = [
   {
-    key: 'instructions',
-    title: 'Instructions',
+    key: 'ownershipProfile',
+    title: 'Ownership Profile',
     subtitle: 'Getting Started',
     description: 'Learn how to complete your property passport',
     icon: 'instructions',
@@ -182,7 +182,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // INSTRUCTIONS
   // ────────────────────────────────────────────
   {
-    sectionKey: 'instructions',
+    sectionKey: 'ownershipProfile',
     taskKey: 'read_instructions',
     title: 'What is a Property Passport?',
     description:
@@ -472,7 +472,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'alterations_notes',
+    taskKey: 'notes',
     title: 'Important Notes',
     description: 'You must read notes before starting.',
     instructionText:
@@ -579,7 +579,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'solar_panels',
+    taskKey: 'solar_panels_ownership',
     title: 'Are the solar panels owned outright?',
     description: 'Please answer yes or no:',
     type: 'RADIO',
@@ -613,7 +613,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'unfinished_works',
+    taskKey: 'listed_building',
     title: 'Is the property or any part of it: a listed building?',
     description:
       'If yes, please supply copies of the confirmation of listing status and any consent for works:',
@@ -630,7 +630,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'unfinished_works',
+    taskKey: 'tree_preservation_orders',
     title:
       'Are any of the trees on the property subject to a Tree Preservation Order?',
     description: 'Please select yes or no:',
@@ -647,7 +647,23 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'unfinished_works',
+    taskKey: 'conservation_orders',
+    title: 'Is the property or any part of it: in a conservation area?',
+    description: 'Please select yes or no:',
+    type: 'RADIO',
+    helpText:
+      "A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council's planning department keeps a list and map of conservation areas.",
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 25,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'alterationsAndPlanning',
+    taskKey: 'tree_preservation_orders',
     title: 'Have the terms of the Order been complied with?',
     description:
       'Please select yes or no and supply copies of evidence of permission applications, consent letters, evidence of replanting if necessary or any evidence of non-compliance.',
@@ -667,17 +683,193 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   {
     sectionKey: 'guaranteesAndWarranties',
-    taskKey: 'guarantees_review',
-    title: 'Have there been any planning notices or proposals?',
-    description: 'Document any planning applications or notices',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'new_home_warranty',
+    title:
+      'Does the property benefit from any New Home guarantees or warranties? (e.g. NHBC or similar)',
+    description:
+      'Document any planning applications orIf yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes. notices',
     type: 'RADIO',
     helpText:
-      'This includes planning permission notices or development proposals.',
+      'New home warranties typically cover structural defects for 10 years and are usually provided by NHBC, Premier Guarantee, or similar providers.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 75,
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'damp_proofing',
+    title:
+      'Does the property benefit from any Damp Proofing guarantees or warranties?',
+    description:
+      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+    type: 'RADIO',
+    helpText:
+      'Certificate from the installer (often insurance-backed) confirming damp treatment, the date, and areas treated. Usually transferable to a new owner if notified; keep paperwork and follow any maintenance conditions to claim.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'timber_treatment',
+    title:
+      'Does the property benefit from any Timber Treatment guarantees or warranties?',
+    description:
+      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+    type: 'RADIO',
+    helpText:
+      'Timber treatment is the inspection and treatment of structural wood to eradicate or prevent wood-boring insects and rot (e.g., woodworm, wet/dry rot), typically using approved insecticides/fungicides and targeted repairs.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'window_roof_light_door',
+    title:
+      'Does the property benefit from any Windows, Roof Lights, Roof Windows or Glazed Doors guarantees or warranties?',
+    description:
+      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+    type: 'RADIO',
+    helpText:
+      'These are typically given when any windows, roof lights, or glazed doors are installed or replaced They protect the homeowner if there are problems with the products or the way they were fitted.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'electrical_work',
+    title:
+      'Does the property benefit from any electrical work guarantees or warranties?',
+    description:
+      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+    type: 'RADIO',
+    helpText:
+      'When electrical work is carried out (such as rewiring, installing a new consumer unit, or adding circuits), the installer sometimes provides a guarantee/warranty. This paperwork would’ve been provided by your supplier after the works have been completed.Provide dates/contractor and term; if missing/expired, buyer may request an EICR or indemnity.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'roofing',
+    title:
+      'Does the property benefit from any of the following guarantees or warranties:',
+    description: 'Roofing ',
+    type: 'RADIO',
+    helpText:
+      'Checks if any roofing was installed/replaced/repaired (including flat roofs).If yes, give what was done, dates, contractor, materials, compliance proof (Building Control/CompetentRoofer), and any warranty.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'central_heating',
+    title:
+      'Does the property benefit from any of the following guarantees or warranties:',
+    description: 'Central Heating ',
+    type: 'RADIO',
+    helpText:
+      'Checks if the property has central heating (any type: gas, electric, oil, heat pump). If yes, give system type, install/last-service dates, installer, compliance docs (e.g., Gas Safe/Building Control), and any warranty/manuals.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'underpinning',
+    title:
+      'Does the property benefit from any of the following guarantees or warranties:',
+    description: 'Underpinning',
+    type: 'RADIO',
+    helpText:
+      'Underpinning strengthens the foundations (often after subsidence).If done, provide date/location, engineer/contractor, Building Control sign-off, and any warranty; missing docs may trigger extra surveys/indemnity.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'other',
+    title:
+      'Does the property benefit from any of the following guarantees or warranties:',
+    description: 'Other/please state',
+    type: 'RADIO',
+    helpText: 'please write the other category here ',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'guaranteesAndWarranties',
+    taskKey: 'claims_made_under_guarantees_warranties',
+    title:
+      'Does the property benefit from any of the following guarantees or warranties:',
+    description: 'Other/please state',
+    type: 'RADIO',
+    helpText: 'please write the other category here ',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
     order: 1,
   },
 
@@ -808,6 +1000,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // ENVIRONMENTAL
   // ────────────────────────────────────────────
+  {
+    sectionKey: 'environmental',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
   {
     sectionKey: 'environmental',
     taskKey: 'Flooding',
@@ -961,17 +1171,20 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'rights_review',
-    title: 'Have there been any planning notices or proposals?',
-    description: 'Document any planning applications or notices',
-    type: 'RADIO',
-    helpText:
-      'This includes planning permission notices or development proposals.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
     order: 1,
   },
 
@@ -1060,7 +1273,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'rights_review',
+    taskKey: 'arrangements',
     title:
       'Does the seller know if any of the following rights benefit the property:',
     description:
@@ -1078,7 +1291,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'other_right_arrangements',
+    taskKey: 'other_rights_and_arrangements',
     title:
       'Does the seller know if any of the following arrangements affect the property:',
     description: "Other people's rights to mines and minerals under the land.",
@@ -1216,6 +1429,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   {
     sectionKey: 'otherCharges',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
+  {
+    sectionKey: 'otherCharges',
     taskKey: 'charges_relating_to_the_property',
     title:
       'Does the seller have to pay any charges relating to the property (excluding any payments such as council tax, utility charges, etc.), for example payments to a management company?',
@@ -1234,6 +1465,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // OCCUPIERS
   // ────────────────────────────────────────────
+  {
+    sectionKey: 'occupiers',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
   {
     sectionKey: 'occupiers',
     taskKey: 'the_seller',
@@ -1336,6 +1585,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // SERVICES
   // ────────────────────────────────────────────
+  {
+    sectionKey: 'services',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
   {
     sectionKey: 'services',
     taskKey: 'electricity',
@@ -1846,19 +2113,23 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // FIXTURES AND FITTINGS
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'fixtures_review',
-    title: 'Have there been any planning notices or proposals?',
-    description: 'Document any planning applications or notices',
-    type: 'RADIO',
-    helpText:
-      'This includes planning permission notices or development proposals.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
     order: 1,
   },
 
@@ -1881,7 +2152,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Radiators/Wall Heaters',
     description:
       'Central heating radiators and wall-mounted heating units included in the sale',
@@ -1898,7 +2169,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Night-Storage Heaters',
     description:
       'Electric storage heaters that charge overnight and release heat during the day',
@@ -1915,7 +2186,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Free-Standing Heaters',
     description:
       'Portable and moveable heating units not permanently fixed to the property',
@@ -1932,7 +2203,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'GasFires (with surround)',
     description:
       'Gas fireplaces including decorative surrounds and fire installations',
@@ -1949,7 +2220,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Electric Fires (with surround)',
     description:
       'Electric fireplaces including decorative surrounds and installations',
@@ -1966,7 +2237,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Light Switches',
     description:
       'Wall-mounted switches and controls for lighting throughout the property',
@@ -1983,7 +2254,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Light Switches',
     description:
       'Wall-mounted switches and controls for lighting throughout the property',
@@ -2000,7 +2271,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Roof Insulation',
     description: 'Thermal insulation installed in the roof space or attic area',
     type: 'RADIO',
@@ -2016,7 +2287,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Window Fittings',
     description: 'Hardware, locks, handles, and mechanisms attached to windows',
     type: 'RADIO',
@@ -2032,7 +2303,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Window Shutters/Grilles',
     description:
       'External or internal shutters and security grilles fitted to windows',
@@ -2049,7 +2320,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Internal Door Fittings',
     description:
       'Handles, locks, hinges, and hardware for doors inside the property',
@@ -2066,7 +2337,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'External Door Fittings',
     description:
       'Hardware, locks, handles, and security features for external doors',
@@ -2083,7 +2354,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Doorbell/Chime',
     description:
       'Door entry systems, doorbells, and chime units throughout the property',
@@ -2100,7 +2371,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Electric Sockets',
     description:
       'Power outlets and electrical socket installations throughout the property',
@@ -2117,7 +2388,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fitings',
+    taskKey: 'basic_fittings',
     title: 'Burglar Alarm',
     description:
       'Security alarm system including control panels and monitoring equipment',
@@ -2651,7 +2922,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Living Room',
     description:
       'Hardwaresystems for hanging curtains and window treatments in the main living area',
@@ -2668,7 +2939,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Dining Room',
     description:
       'Hardware systems for hanging window treatments in the dining area',
@@ -2685,7 +2956,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Kitchen',
     description:
       'Hardware systems for hanging window treatments in the kitchen area',
@@ -2702,7 +2973,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 1',
     description:
       'Hardware systems for hanging window treatments in the main bedroom',
@@ -2719,7 +2990,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 2',
     description:
       'Hardware systems for hanging window treatments in the second bedroom',
@@ -2736,7 +3007,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 3',
     description:
       'Hardware systems for hanging window treatments in the third bedroom',
@@ -2753,7 +3024,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Other Rooms',
     description:
       'Hardware systems for hanging curtains in additional rooms not listed in previous sections',
@@ -2770,7 +3041,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Hall, Stairs and Landing',
     description:
       'Window treatments and coverings in entrance areas and stairways',
@@ -2787,7 +3058,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Living Room',
     description: 'Window treatments and coverings in the main living area',
     type: 'RADIO',
@@ -2803,7 +3074,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Dining Room',
     description: 'Window treatments and coverings in the dining area',
     type: 'RADIO',
@@ -2819,7 +3090,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Kitchen',
     description: 'Window treatments and coverings in the kitchen area',
     type: 'RADIO',
@@ -2835,7 +3106,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 1',
     description: 'Window treatments and coverings in the main bedroom',
     type: 'RADIO',
@@ -2851,7 +3122,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 2',
     description: 'Window treatments and coverings in the second bedroom',
     type: 'RADIO',
@@ -2867,7 +3138,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 3',
     description: 'Window treatments and coverings in the third bedroom',
     type: 'RADIO',
@@ -2883,7 +3154,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'curtains-and_curtain-rails',
+    taskKey: 'curtains_and_curtain_rails',
     title: 'Other Rooms',
     description:
       'Window treatments and coverings in additional rooms not listed in previous sections',
@@ -2900,7 +3171,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'light-fittings',
+    taskKey: 'light_fittings',
     title: 'Hall, Stairs and Landing',
     description:
       'Light fixtures and electrical fittings in entrance areas and stairways',
@@ -3381,7 +3652,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Rotary Line',
     description: 'Rotating clothes drying systems installed in garden areas',
     type: 'RADIO',
@@ -3397,7 +3668,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Rotary Line',
     description:
       'Additional garden features, equipment, or outdoor installations not listed in previous sections',
@@ -3414,7 +3685,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Telephone Receivers',
     description: 'Landline telephone handsets and communication devices',
     type: 'RADIO',
@@ -3430,7 +3701,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Television Aerial',
     description:
       'TV reception equipment including roof aerials and satellite dishes',
@@ -3447,7 +3718,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Radio Aerial',
     description: 'Radio reception equipment and aerial installations',
     type: 'RADIO',
@@ -3463,7 +3734,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'televisions_and_telephone',
+    taskKey: 'television_and_telephone',
     title: 'Satellite Dish',
     description:
       'Satellite television reception equipment and dish installations',
@@ -3496,7 +3767,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'Night-Storage Heaters',
+    taskKey: 'stock_of_fuels',
     title: 'Wood',
     description: 'Firewood, logs, and solid fuel supplies for fires and stoves',
     type: 'RADIO',
@@ -3512,7 +3783,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'fixturesAndFittings',
-    taskKey: 'Night-Storage Heaters',
+    taskKey: 'stock_of_fuels',
     title: 'Liquefied Petroleum Gas (LPG)',
     description:
       'Gas supplies in bottles or tanks for heating, cooking, or hot water',
@@ -3530,6 +3801,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // LEASEHOLD
   // ────────────────────────────────────────────
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'notes',
+    title: 'Important Notes',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+      sellers:
+        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+    },
+    points: 75,
+    order: 1,
+  },
   {
     sectionKey: 'leasehold',
     taskKey: 'the_property',
@@ -4394,6 +4683,351 @@ function formatTaskKey(key: string): string {
 }
 
 // ============================================
+// TASK DESCRIPTIONS & ORDERS
+// ============================================
+
+const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
+  ownershipProfile: {
+    read_instructions:
+      'Learn about the Property Passport and how to get started',
+  },
+  boundaries: {
+    notes: 'You must read notes before starting.',
+    boundary_responsibilities:
+      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features.',
+    irregular_boundaries:
+      "When a property's boundary isn't a straight line – for example, if it curves, bends, or follows unusual shapes.",
+    moved_boundary_features:
+      'If fences, walls, or hedges marking the boundary have ever been moved from their original position.',
+    adjacent_land_purchased:
+      'This means whether any extra land next to the property has been bought and added to it by the seller.',
+    complex_boundaries:
+      "This means boundaries that are tricky to describe or don't follow a simple line, such as when several properties meet or the edges overlap in unusual ways.",
+    notices_under_the_party_wall_act_1996:
+      'Formal notice about work affecting a shared wall, boundary, or structure under the Party Wall Act 1996.',
+  },
+  disputesAndComplaints: {
+    past_disputes_or_complaints:
+      'Determine whether there have been any disputes or complaints regarding this property or nearby properties',
+    prospective_disputes_or_complaints:
+      'Understanding if there is likely to be a future dispute about this property or nearby properties',
+  },
+  noticesAndProposals: {
+    received_or_sent_notices:
+      'Any letters, notices, or talks with neighbours or the council that might affect this home or nearby properties.',
+    proposals_to_develop_or_alter:
+      'Details of any proposals for development or changes to nearby land or buildings the seller is aware of.',
+  },
+  alterationsAndPlanning: {
+    notes: 'You must read notes before starting ',
+    building_works:
+      'Any changes to your property affecting building works, usage, windows, doors or the conservatory. ',
+    unfinished_works:
+      'Any changes to your property affecting building works, usage, windows, doors or the conservatory., that are unfinished.',
+    breaches_of_consent_conditions:
+      'If any alterations to the property were complete without approval or did not comply with planning or building regulations.',
+    planning_or_building_issues:
+      'Any ongoing issues requiring resolution with the relevant bodies for that work. E.g. applying for retrospective consent or meeting conditions for approval.',
+    solar_panels:
+      'If any solar panels have been installed and dates of installation.',
+    solar_panels_ownership:
+      'If the installed solar panels belong to the seller or if an external solar panel provider owns them.',
+    solar_panel_roof_lease:
+      'Whether a lease of the air/ roof space where the panels were installed has been obtained by the provider. ',
+    listed_building:
+      "Confirmation of the property's listing status, if applicable.",
+    conservation_orders:
+      'Confirmation of any conservation orders applicable to the property.',
+    tree_preservation_orders:
+      'Confirmation of any Tree Preservation Orders applicable to the property,',
+  },
+  guaranteesAndWarranties: {
+    notes: 'Review all property guarantees and warranties',
+    new_home_warranty:
+      'Upload your NHBC (or similar) warranty certificate to protect your structural investment',
+    damp_proofing:
+      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
+    timber_treatment:
+      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
+    window_roof_light_door:
+      'Upload your glazing and fenestration warranties for weather protection and energy efficiency',
+    electrical_work:
+      'Upload your electrical installation certificates for safety compliance and warranty coverage',
+    roofing:
+      'Upload your roofing warranty to protect against leaks and structural weather damage',
+    central_heating:
+      'Upload your heating system warranty to ensure warmth and protect against breakdowns',
+    underpinning:
+      'Upload your underpinning guarantee to secure foundation stability and structural integrity',
+    other: 'Upload any other relevant guarantees and warranties here',
+    claims_made_under_guarantees_warranties:
+      'Track and manage your warranty claims to maximize your property protection benefits',
+  },
+  insurance: {
+    seller_insurance: 'Floor coverings and carpets remaining in each room',
+    landlord_insurance: 'Floor coverings and carpets remaining in each room',
+    buildings_insurance: 'Floor coverings and carpets remaining in each room',
+  },
+  environmental: {
+    notes: 'You must read notes before starting ',
+    Flooding:
+      'Upload your NHBC or similar warranty certificate to protect your structural investment',
+    radon:
+      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
+    energy_efficiency:
+      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
+    japanese_knotweed:
+      'Upload your glazing and fenestration warranties for weather protection and energy efficiency',
+  },
+  rightsAndInformalArrangements: {
+    notes: 'You must read notes before starting.',
+    resposibility_towards_jointly:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    '2_dunno_how_id_surmise_this':
+      'Record utility connections and service lines that cross property boundaries',
+    prevented_access:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    right_of_light:
+      'Including but not limited to rights of light, customary rights, rights of support from adjoining properties, extraction rights',
+    rights_of_support:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    arrangements:
+      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
+    other_rights_and_arrangements:
+      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
+    chancel_repair_liability:
+      'Record utility connections and service lines that cross property boundaries',
+    service_crossing_the_property_or_neighboring_property:
+      'Record utility connections and service lines that cross property boundaries',
+  },
+  parking: {
+    parking_arrangements:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    controlled_parking_zone_or_local_authority_schemes:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+  },
+  otherCharges: {
+    notes: 'You must read notes before starting ',
+    charges_relating_to_the_property:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+  },
+  occupiers: {
+    notes: 'You must read notes before starting ',
+    the_seller:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    other_occupiers: 'eheheheh',
+    lodgers_and_tenants: 'shahcdhsc',
+    vacant_possession:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+  },
+  services: {
+    notes: 'You must read notes before starting ',
+    electricity:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    central_heating:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    drainage_and_sewerage:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    connection_to_services_and_utilities:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+  },
+  transactionInformation: {
+    transaction_information_questions:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    special_requirements:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    payment_of_mortgages_and_charges_after_the_sales_of_the_property:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+    seller_obligations:
+      'Document property rights, shared responsibilities, and informal agreements affecting your property',
+  },
+  fixturesAndFittings: {
+    notes: 'You must read notes before starting ',
+    basic_fittings:
+      'Essential fixtures and electrical installations throughout the property',
+    kitchen: 'Appliances, fixtures, and fittings included in the kitchen',
+    bathroom:
+      'Bathroom fixtures, fittings, and accessories included with the property',
+    carpets: 'Floor coverings and carpets remaining in each room',
+    curtains_and_curtain_rails:
+      'Window treatments, curtain rails, and blinds etc.',
+    light_fittings:
+      'Light fixtures and fittings remaining throughout the property',
+    fitted_units:
+      'Built-in storage, cupboards, shelves, and wardrobes included',
+    outdoor_area:
+      'Garden furniture, plants, and outdoor equipment included in the sale',
+    televison_and_telephone:
+      'Communication equipment and aerial installations included',
+    stock_of_fuels:
+      'Appliances, fixtures, and fittings included in the kitchen',
+    other_items: 'Additional fixtures, fittings, or contents not listed above',
+  },
+  leasehold: {
+    notes: 'You must read notes before starting ',
+    the_property:
+      'Essential fixtures and electrical installations throughout the property',
+    ownership_and_management:
+      'Appliances, fixtures, and fittings included in the kitchen',
+    documents:
+      'Bathroom fixtures, fittings, and accessories included with the property',
+    contact_details: 'Floor coverings and carpets remaining in each room',
+    maintenance_and_service_charges:
+      'Window treatments, curtain rails, and blinds etc.',
+    notices: 'Light fixtures and fittings remaining throughout the property',
+    consents: 'Built-in storage, cupboards, shelves, and wardrobes included',
+    complaints:
+      'Garden furniture, plants, and outdoor equipment included in the sale',
+    alterations: 'Communication equipment and aerial installations included',
+    enfranchisement:
+      'Appliances, fixtures, and fittings included in the kitchen',
+    building_safety_cladding_and_the_leaseholder_deed_of_certificate:
+      'Additional fixtures, fittings, or contents not listed above',
+  },
+  titleDeedsAndPlan: {
+    title_deeds_review: 'Review title deeds and property plans',
+  },
+  searches: {
+    searches_review: 'Review all property search results and reports',
+  },
+};
+
+const TASK_ORDERS: Record<string, Record<string, number>> = {
+  ownershipProfile: {
+    read_instructions: 1,
+  },
+  boundaries: {
+    notes: 1,
+    boundary_responsibilities: 2,
+    irregular_boundaries: 3,
+    moved_boundary_features: 4,
+    adjacent_land_purchased: 5,
+    complex_boundaries: 6,
+    notices_under_the_party_wall_act_1996: 7,
+  },
+  disputesAndComplaints: {
+    past_disputes_or_complaints: 1,
+    prospective_disputes_or_complaints: 2,
+  },
+  noticesAndProposals: {
+    received_or_sent_notices: 1,
+    proposals_to_develop_or_alter: 2,
+  },
+  alterationsAndPlanning: {
+    notes: 1,
+    building_works: 2,
+    unfinished_works: 3,
+    breaches_of_consent_conditions: 4,
+    planning_or_building_issues: 5,
+    solar_panels: 6,
+    solar_panels_ownership: 7,
+    solar_panel_roof_lease: 8,
+    listed_building: 9,
+    conservation_orders: 10,
+    tree_preservation_orders: 11,
+  },
+  guaranteesAndWarranties: {
+    notes: 1,
+    new_home_warranty: 2,
+    damp_proofing: 3,
+    timber_treatment: 4,
+    window_roof_light_door: 5,
+    electrical_work: 6,
+    roofing: 7,
+    central_heating: 8,
+    underpinning: 9,
+    other: 10,
+    claims_made_under_guarantees_warranties: 11,
+  },
+  insurance: {
+    seller_insurance: 1,
+    landlord_insurance: 2,
+    buildings_insurance: 3,
+  },
+  environmental: {
+    notes: 1,
+    Flooding: 2,
+    radon: 3,
+    energy_efficiency: 4,
+    japanese_knotweed: 5,
+  },
+  rightsAndInformalArrangements: {
+    notes: 1,
+    resposibility_towards_jointly: 2,
+    '2_dunno_how_id_surmise_this': 3,
+    prevented_access: 4,
+    right_of_light: 5,
+    rights_of_support: 6,
+    arrangements: 7,
+    other_rights_and_arrangements: 8,
+    chancel_repair_liability: 9,
+    service_crossing_the_property_or_neighboring_property: 10,
+  },
+  parking: {
+    parking_arrangements: 1,
+    controlled_parking_zone_or_local_authority_schemes: 2,
+  },
+  otherCharges: {
+    notes: 1,
+    charges_relating_to_the_property: 2,
+  },
+  occupiers: {
+    notes: 1,
+    the_seller: 2,
+    other_occupiers: 3,
+    lodgers_and_tenants: 4,
+    vacant_possession: 5,
+  },
+  services: {
+    notes: 1,
+    electricity: 2,
+    central_heating: 3,
+    drainage_and_sewerage: 4,
+    connection_to_services_and_utilities: 5,
+  },
+  transactionInformation: {
+    transaction_information_questions: 1,
+    special_requirements: 2,
+    payment_of_mortgages_and_charges_after_the_sales_of_the_property: 3,
+    seller_obligations: 4,
+  },
+  fixturesAndFittings: {
+    notes: 1,
+    basic_fittings: 2,
+    kitchen: 3,
+    bathroom: 4,
+    carpets: 5,
+    curtains_and_curtain_rails: 6,
+    light_fittings: 7,
+    fitted_units: 8,
+    outdoor_area: 9,
+    televison_and_telephone: 10,
+    stock_of_fuels: 11,
+    other_items: 12,
+  },
+  leasehold: {
+    notes: 1,
+    the_property: 2,
+    ownership_and_management: 3,
+    documents: 4,
+    contact_details: 5,
+    maintenance_and_service_charges: 6,
+    notices: 7,
+    consents: 8,
+    complaints: 9,
+    alterations: 10,
+    enfranchisement: 11,
+    building_safety_cladding_and_the_leaseholder_deed_of_certificate: 12,
+  },
+  titleDeedsAndPlan: {
+    title_deeds_review: 1,
+  },
+  searches: {
+    searches_review: 1,
+  },
+};
+
+// ============================================
 // MAIN SEED
 // ============================================
 
@@ -4493,16 +5127,17 @@ async function main() {
 
       if (!tasksForSection) continue;
 
-      let taskOrder = 0;
       for (const [taskKey, questions] of tasksForSection) {
-        taskOrder++;
+        const taskDescription =
+          TASK_DESCRIPTIONS[sectionKey]?.[taskKey] || null;
+        const taskOrder = TASK_ORDERS[sectionKey]?.[taskKey] || 999;
 
         const task = await prisma.passportSectionTask.create({
           data: {
             passportSectionId: section.id,
             key: taskKey,
             title: formatTaskKey(taskKey),
-            description: null,
+            description: taskDescription,
             order: taskOrder,
           },
         });

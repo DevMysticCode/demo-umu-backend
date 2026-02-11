@@ -17,7 +17,10 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(taskkill:*)",
-      "Bash(npx prisma migrate deploy:*)"
+      "Bash(npx prisma migrate deploy:*)",
+      "Bash(npx prisma db seed:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }
