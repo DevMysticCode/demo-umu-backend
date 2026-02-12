@@ -11,7 +11,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'ownershipProfile',
     title: 'Ownership Profile',
-    subtitle: 'Getting Started',
+    subtitle: 'Set out the ownership structure for this property',
     description: 'Learn how to complete your property passport',
     icon: 'instructions',
     order: 1,
@@ -181,18 +181,292 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
   // INSTRUCTIONS
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'ownershipProfile',
-    taskKey: 'read_instructions',
-    title: 'What is a Property Passport?',
-    description:
-      'A Property Passport is a comprehensive document that contains all the information about a property.',
-    type: 'TEXT',
-    helpText:
-      'This helps property owners and buyers understand the property better.',
-    displayMode: 'text',
-    points: 50,
+    taskKey: 'notes',
+    title: 'About this form',
+    description: 'You must read notes before starting.',
+    instructionText:
+      'Please indicate ownership by written instruction or by reference to a plan:',
+    type: 'NOTE',
+    placeholder: 'Enter your notes here...',
+    prewrittenTemplates: {
+      buyers:
+        'If  the seller gives you, separately from this form, any information concerning the property (in writing or in conversation, whether through an estate agent or solicitor or directly to you) on which you wish to rely when buying the property, you should tell your solicitor.You are entitled to rely on the replies given to enquiries but in relation to the physical condition of the property, the replies should not be treated as a substitute for undertaking your own survey or making your own independent enquiries, which you are recommended to do.The seller is only obliged to give answers based on their own information. They may not have knowledge of legal or technical matters. You should not expect the seller to have knowledge of, or give information about, matters prior to their ownership of the property.',
+      sellers:
+        'The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner’s legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.If you do not know the answer to any question, you must say so If you are unsure of the meaning of any questions or answers.',
+    },
+    points: 0,
     order: 1,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'name_of_sellers_and_address_of_the_property',
+    title: 'Full names of the seller(s)',
+    description:
+      'Please state the full names of everyone who is named as owner on the HM Land Registry title or on the deeds. If you are completing the form on behalf of the seller, for example, under a power of attorney, grant of probate or representation, then they should provide their names here.',
+    type: 'TEXT',
+    helpText: '',
+    displayMode: 'text',
+    points: 100,
+    order: 2,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'name_of_sellers_and_address_of_the_property',
+    title: 'Are completing this form on the behalf of the seller?',
+    description:
+      'Please state the capacity in which you are providing the information, either as the seller or the seller’s representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+      { label: 'Trustee', value: 'trustee' },
+      { label: 'Representative', value: 'representative' },
+      { label: 'Power of Attorney', value: 'power_of_attorney' },
+      { label: 'Limited Company ', value: 'limited_company' },
+    ],
+    points: 100,
+    order: 2,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'seller_solicitor',
+    title: 'Please provide details of solicitor’s firm',
+    description: '',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'Great photos help buyers connect emotionally.',
+    description: '',
+    type: 'UPLOAD',
+    helpText: '',
+    displayMode: 'upload',
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What is your council tax band?',
+    description:
+      'State the council tax band for the property. The council tax band can be obtained from the latest bill, or you can check it on the GOV.UK website.',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 2,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What is your asking price for the property?',
+    description:
+      'State the asking price of the property. Please use slider or enter actual selling price in the box below.',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 100,
+    order: 3,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What is the type of the ownership?',
+    description:
+      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Freehold', value: 'freehold' },
+      { label: 'Share of Freehold', value: 'share_of_freehold' },
+      { label: 'Leasehold', value: 'Leasehold' },
+      { label: 'Commonhold', value: 'Commonhold' },
+      { label: 'Shared Ownership', value: 'shared_ownership' },
+      { label: 'Flying Freehold', value: 'flying_freehold' },
+    ],
+    points: 100,
+    order: 4,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What is the type of the ownership?',
+    description:
+      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+    type: 'RADIO',
+    helpText: '',
+    options: [
+      { label: 'Freehold', value: 'freehold' },
+      { label: 'Share of Freehold', value: 'share_of_freehold' },
+      { label: 'Leasehold', value: 'Leasehold' },
+      { label: 'Commonhold', value: 'Commonhold' },
+      { label: 'Shared Ownership', value: 'shared_ownership' },
+      { label: 'Flying Freehold', value: 'flying_freehold' },
+    ],
+    points: 100,
+    order: 4,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title:
+      'Please enter the percentage of shared ownership and state how much rent you pay each year for the share that is not owned by you.',
+    description: '',
+    type: 'DATE',
+    helpText:
+      'Select if building works were done and provide the completion date.',
+    options: [
+      {
+        label: 'Enter percentage',
+        value: 'yes',
+        hasDate: true,
+        dateFormat: 'year',
+        datePlaceholder: 'Select year',
+      },
+      {
+        label: 'Enter rent amount',
+        value: 'no',
+        hasDate: true,
+        dateFormat: 'month',
+        datePlaceholder: 'Select month',
+      },
+    ],
+    points: 100,
+    order: 5,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'Please enter the expiry date and length of your lease.',
+    description:
+      'You should be able to find this information on your title deeds.',
+    type: 'DATE',
+    helpText:
+      'Select if building works were done and provide the completion date.',
+    options: [
+      {
+        label: 'Select expiry date',
+        value: 'yes',
+        hasDate: true,
+        dateFormat: 'fullDate',
+        datePlaceholder: 'Select expiry date',
+      },
+      {
+        label: 'Length of lease',
+        value: 'no',
+        hasDate: true,
+        dateFormat: 'fullDate',
+        datePlaceholder: 'Select month',
+      },
+    ],
+    points: 100,
+    order: 5,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title:
+      'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
+    description:
+      'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens.',
+    type: 'DATE',
+    helpText: '',
+    options: [
+      {
+        label: 'Frequency of payment',
+        value: 'yes',
+        hasDate: true,
+        dateFormat: 'year',
+        datePlaceholder: 'Select years',
+      },
+      {
+        label: 'Service charges amount',
+        value: 'no',
+        hasDate: true,
+        dateFormat: 'fullDate',
+        datePlaceholder: 'Select amount',
+      },
+    ],
+    points: 100,
+    order: 6,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What is the type of the ownership?',
+    description:
+      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+    type: 'CHECKBOX',
+    helpText: '',
+    options: [
+      { label: 'Detached', value: 'detached' },
+      { label: 'Semi-Detached', value: 'semi_detached' },
+      { label: 'Terraced', value: 'terraced' },
+      { label: 'Flat', value: 'flat' },
+      { label: 'Maisonette', value: 'maisonette' },
+      { label: 'Bungalow', value: 'bungalow' },
+      { label: 'Dormer Bungalow', value: 'dormer_bungalow' },
+      { label: 'Mobile Home', value: 'mobile_home' },
+      { label: 'Boat', value: 'boat' },
+      { label: 'Parking', value: 'parking' },
+      { label: 'Land', value: 'land' },
+    ],
+    points: 100,
+    order: 7,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What we love about our home?',
+    description: '',
+    type: 'CHECKBOX',
+    helpText: '',
+    options: [
+      {
+        label: 'Morning light in the kitchen',
+        value: 'morning_light_in_the_kitchen',
+      },
+      {
+        label: 'Kids can walk to school in 6 mins',
+        value: 'kids_can_walk_to_school_in_6_mins',
+      },
+      {
+        label: 'Neighbors are friendly but not intrusive ',
+        value: 'neighbors_are_friendly_but_not_intrusive',
+      },
+    ],
+    points: 100,
+    order: 7,
   },
 
   // ────────────────────────────────────────────
@@ -4688,8 +4962,13 @@ function formatTaskKey(key: string): string {
 
 const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
   ownershipProfile: {
-    read_instructions:
-      'Learn about the Property Passport and how to get started',
+    notes: 'You must read notes before starting ',
+    name_of_sellers_and_address_of_the_property:
+      'Let’s start with the basics — what’s the full name and address of the property you’re selling?',
+    seller_solicitor:
+      'Add the details of the seller’s solicitor so we can keep things moving smoothly.',
+    give_your_home_a_story:
+      'Every home has a story — let’s give yours the perfect name',
   },
   boundaries: {
     notes: 'You must read notes before starting.',
@@ -4894,7 +5173,10 @@ const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
 
 const TASK_ORDERS: Record<string, Record<string, number>> = {
   ownershipProfile: {
-    read_instructions: 1,
+    notes: 1,
+    name_of_sellers_and_address_of_the_property: 2,
+    seller_solicitor: 3,
+    give_your_home_a_story: 4,
   },
   boundaries: {
     notes: 1,
