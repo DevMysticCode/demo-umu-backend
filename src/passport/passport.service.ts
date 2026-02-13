@@ -6,6 +6,7 @@ import {
   PassportSectionTask,
   QuestionTemplate,
 } from '@prisma/client';
+import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
 
 interface GroupedQuestion {
   sectionKey: string;
@@ -117,37 +118,48 @@ export class PassportService {
     // Group templates by section and task
     const groupedBySection = this.groupTemplatesBySection(templates);
 
-    // Create sections, tasks, and questions
-    let sectionOrder = 0;
-    for (const [sectionKey, tasks] of groupedBySection) {
-      sectionOrder++;
+    // Fetch section templates ordered by their defined order
+    const sectionTemplates = await this.prisma.sectionTemplate.findMany({
+      orderBy: { order: 'asc' },
+    });
 
-      // Determine section status (first is ACTIVE, rest are LOCKED)
-      const sectionStatus = sectionOrder === 1 ? 'ACTIVE' : 'LOCKED';
+    // Create sections, tasks, and questions using SectionTemplate order
+    for (const sectionTemplate of sectionTemplates) {
+      const sectionKey = sectionTemplate.key;
+      const tasksForSection = groupedBySection.get(sectionKey);
 
-      // Fetch section template metadata
-      const sectionTemplate = await this.prisma.sectionTemplate.findUnique({
-        where: { key: sectionKey },
-      });
+      // Determine section status (first by order is ACTIVE, rest are LOCKED)
+      const sectionStatus = sectionTemplate.order === 1 ? 'ACTIVE' : 'LOCKED';
 
       // Create passport section with template metadata
       const section = await this.prisma.passportSection.create({
         data: {
           passportId: passport.id,
           key: sectionKey,
-          title: sectionTemplate?.title || sectionKey,
-          subtitle: sectionTemplate?.subtitle,
-          description: sectionTemplate?.description,
-          imageKey: sectionTemplate?.icon,
-          order: sectionOrder,
+          title: sectionTemplate.title,
+          subtitle: sectionTemplate.subtitle,
+          description: sectionTemplate.description,
+          imageKey: sectionTemplate.icon,
+          order: sectionTemplate.order,
           status: sectionStatus,
         },
       });
 
-      // Create tasks and questions for this section
-      let taskOrder = 0;
-      for (const [taskKey, questions] of tasks) {
-        taskOrder++;
+      if (!tasksForSection) continue;
+
+      // Sort tasks by TASK_ORDERS before creating them
+      const sortedTasks = [...tasksForSection.entries()].sort(
+        ([keyA], [keyB]) => {
+          const orderA = TASK_ORDERS[sectionKey]?.[keyA] ?? 999;
+          const orderB = TASK_ORDERS[sectionKey]?.[keyB] ?? 999;
+          return orderA - orderB;
+        },
+      );
+
+      for (const [taskKey, questions] of sortedTasks) {
+        const taskDescription =
+          TASK_DESCRIPTIONS[sectionKey]?.[taskKey] || null;
+        const taskOrder = TASK_ORDERS[sectionKey]?.[taskKey] || 999;
 
         // Create task
         const task = await this.prisma.passportSectionTask.create({
@@ -155,7 +167,7 @@ export class PassportService {
             passportSectionId: section.id,
             key: taskKey,
             title: this.formatTaskKey(taskKey),
-            description: null,
+            description: taskDescription,
             order: taskOrder,
           },
         });

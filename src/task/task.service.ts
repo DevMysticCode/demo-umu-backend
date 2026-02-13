@@ -29,7 +29,7 @@ export class TaskService {
     });
 
     if (!task) {
-      throw new NotFoundException("Task not found");
+      throw new NotFoundException('Task not found');
     }
 
     // Check if user has access (owner or collaborator)
@@ -59,6 +59,13 @@ export class TaskService {
             uploadInstruction: true,
             prewrittenTemplates: true,
             dateFields: true,
+            parts: true,
+            fields: true,
+            repeatable: true,
+            buttonText: true,
+            scaleMin: true,
+            scaleMax: true,
+            scaleStep: true,
             points: true,
           },
         },
@@ -72,7 +79,7 @@ export class TaskService {
       },
       orderBy: {
         questionTemplate: {
-          order: "asc",
+          order: 'asc',
         },
       },
     });
@@ -91,13 +98,20 @@ export class TaskService {
       uploadInstruction: question.questionTemplate.uploadInstruction,
       prewritten: question.questionTemplate.prewrittenTemplates,
       dateFields: question.questionTemplate.dateFields,
+      parts: question.questionTemplate.parts,
+      fields: question.questionTemplate.fields,
+      repeatable: question.questionTemplate.repeatable,
+      buttonText: question.questionTemplate.buttonText,
+      min: question.questionTemplate.scaleMin,
+      max: question.questionTemplate.scaleMax,
+      step: question.questionTemplate.scaleStep,
       points: question.questionTemplate.points,
       answer: question.answer
         ? question.answer.answerText ||
           question.answer.answerJson ||
           question.answer.fileUrl
         : null,
-      completed: question.status === "COMPLETED",
+      completed: question.status === 'COMPLETED',
     }));
 
     return transformedQuestions;
@@ -124,7 +138,7 @@ export class TaskService {
     });
 
     if (!task) {
-      throw new NotFoundException("Task not found");
+      throw new NotFoundException('Task not found');
     }
 
     // Check if user has access (owner or collaborator)
@@ -139,16 +153,16 @@ export class TaskService {
 
     const totalQuestions = task.passportQuestions.length;
     const completedQuestions = task.passportQuestions.filter(
-      (q) => q.status === "COMPLETED"
+      (q) => q.status === 'COMPLETED',
     ).length;
 
     if (completedQuestions !== totalQuestions) {
-      throw new BadRequestException("Task not finished");
+      throw new BadRequestException('Task not finished');
     }
 
     await this.prisma.passportSectionTask.update({
       where: { id: taskId },
-      data: { status: "COMPLETED" },
+      data: { status: 'COMPLETED' },
     });
 
     const sectionId = task.passportSection.id;
@@ -159,7 +173,7 @@ export class TaskService {
     });
 
     const allTasksCompleted = tasksInSection.every(
-      (t) => t.status === "COMPLETED"
+      (t) => t.status === 'COMPLETED',
     );
 
     let sectionCompleted = false;
@@ -168,7 +182,7 @@ export class TaskService {
     if (allTasksCompleted) {
       await this.prisma.passportSection.update({
         where: { id: sectionId },
-        data: { status: "COMPLETED" },
+        data: { status: 'COMPLETED' },
       });
       sectionCompleted = true;
 
@@ -180,13 +194,13 @@ export class TaskService {
             gt: currentSection.order,
           },
         },
-        orderBy: { order: "asc" },
+        orderBy: { order: 'asc' },
       });
 
       if (nextSection) {
         await this.prisma.passportSection.update({
           where: { id: nextSection.id },
-          data: { status: "ACTIVE" },
+          data: { status: 'ACTIVE' },
         });
         nextSectionId = nextSection.id;
       }

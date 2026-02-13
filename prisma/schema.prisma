@@ -122,6 +122,13 @@ model QuestionTemplate {
   uploadInstruction   String?
   prewrittenTemplates Json?
   dateFields          Json?
+  parts               Json?
+  fields              Json?
+  repeatable          Boolean?
+  buttonText          String?
+  scaleMin            Int?
+  scaleMax            Int?
+  scaleStep           Int?
   points              Int
   order               Int
   createdAt           DateTime           @default(now())
@@ -184,4 +191,8 @@ enum QuestionType {
   MULTIPART
   NOTE
   DATE
+  ADDRESS
+  MULTITEXTINPUT
+  MULTIFIELDFORM
+  SCALE
 }
