@@ -1,4 +1,5 @@
 import { PrismaClient, QuestionType } from '@prisma/client';
+import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../src/constants/task-metadata';
 
 const prisma = new PrismaClient();
 
@@ -35,7 +36,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'noticesAndProposals',
     title: 'Notices and Proposals',
-    subtitle: 'Official Notices',
+    subtitle: 'Formal Correspondence',
     description: 'Document any official notices',
     icon: 'noticesAndProposals',
     order: 4,
@@ -173,13 +174,17 @@ interface QSeed {
   uploadInstruction?: string;
   prewrittenTemplates?: any;
   dateFields?: any;
+  parts?: any;
+  fields?: any;
+  repeatable?: boolean;
+  buttonText?: string;
   points: number;
   order: number;
 }
 
 const QUESTION_TEMPLATES: QSeed[] = [
   // ────────────────────────────────────────────
-  // INSTRUCTIONS
+  // OWNERSHIP PROFILE — 13 Tasks
   // ────────────────────────────────────────────
 
   {
@@ -204,12 +209,80 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'name_of_sellers_and_address_of_the_property',
-    title: 'Full names of the seller(s)',
-    description:
-      'Please state the full names of everyone who is named as owner on the HM Land Registry title or on the deeds. If you are completing the form on behalf of the seller, for example, under a power of attorney, grant of probate or representation, then they should provide their names here.',
-    type: 'TEXT',
+    title: 'Please provide the address of the property',
+    description: '',
+    type: 'MULTIPART',
     helpText: '',
-    displayMode: 'text',
+    parts: [
+      {
+        partKey: 'owner_names',
+        type: 'text',
+        title: 'Please provide the address of the property',
+        placeholder: 'Enter full names',
+        order: 1,
+      },
+      {
+        partKey: 'property_address',
+        type: 'address',
+        title: 'Property address',
+        placeholder: '12 Example Road, AB1 2CD',
+        order: 2,
+      },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'name_of_sellers_and_address_of_the_property',
+    title: 'Full names of the seller(s)',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'full_names_of_sellers',
+        type: 'multitextinput',
+        title: 'Full names of the seller(s)',
+        description:
+          'Please state the full names of everyone who is named as owner on the HM Land Registry title or on the deeds. If you are completing the form on behalf of the seller, for example, under a power of attorney, grant of probate or representation, then they should provide their names here.',
+        helpText: 'Hey there',
+        placeholder: 'Enter full names',
+        buttonText: 'Add More Sellers',
+        order: 1,
+      },
+      {
+        partKey: 'are_you_the_owner_of_the_property',
+        type: 'radio',
+        title: 'Are you the owner of the property?',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
+        type: 'radio',
+        title: 'Are completing this form on the behalf of the seller? ',
+        options: [
+          { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+          { label: 'Trustee', value: 'trustee' },
+          { label: 'Representative', value: 'representative' },
+          { label: 'Power of Attorney', value: 'power_of_attorney' },
+          { label: 'Limited Company ', value: 'limited_company' },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'company_details',
+        type: 'text',
+        title: 'Enter Name',
+        placeholder: 'Enter Name',
+        order: 4,
+      },
+    ],
     points: 100,
     order: 2,
   },
@@ -220,17 +293,47 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: 'Are completing this form on the behalf of the seller?',
     description:
       'Please state the capacity in which you are providing the information, either as the seller or the seller’s representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.',
-    type: 'RADIO',
+    type: 'MULTIPART',
     helpText: '',
-    options: [
-      { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
-      { label: 'Trustee', value: 'trustee' },
-      { label: 'Representative', value: 'representative' },
-      { label: 'Power of Attorney', value: 'power_of_attorney' },
-      { label: 'Limited Company ', value: 'limited_company' },
+    parts: [
+      {
+        partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
+        type: 'radio',
+        title: 'Are completing this form on the behalf of the seller? ',
+        options: [
+          { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+          { label: 'Trustee', value: 'trustee' },
+          { label: 'Representative', value: 'representative' },
+          { label: 'Power of Attorney', value: 'power_of_attorney' },
+          { label: 'Limited Company ', value: 'limited_company' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_details',
+        type: 'multifieldform',
+        title: 'Enter the details of limited company',
+        repeatable: false,
+        fields: [
+          {
+            key: 'law_firm_name',
+            label: 'Name of the Law Firm',
+            placeholder: '...',
+          },
+          { key: 'contact_name', label: 'Contact Name', placeholder: '...' },
+          { key: 'address', label: 'Address', placeholder: '...' },
+          { key: 'email', label: 'Email', placeholder: '...' },
+          {
+            key: 'reference_number',
+            label: 'Reference Number',
+            placeholder: '...',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 100,
-    order: 2,
+    order: 3,
   },
 
   {
@@ -238,11 +341,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'seller_solicitor',
     title: 'Please provide details of solicitor’s firm',
     description: '',
-    type: 'RADIO',
+    type: 'MULTIFIELDFORM',
+    repeatable: true,
+    buttonText: 'Add More Solicitors',
     helpText: '',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    fields: [
+      {
+        key: 'law_firm_name',
+        label: 'Name of the Law Firm',
+        placeholder: '...',
+      },
+      {
+        key: 'contact_name',
+        label: 'Contact Name',
+        placeholder: '...',
+      },
+      {
+        key: 'address',
+        label: 'Address',
+        placeholder: '...',
+      },
+      {
+        key: 'email',
+        label: 'Email',
+        placeholder: '...',
+      },
+      {
+        key: 'reference_number',
+        label: 'Reference Number',
+        placeholder: '...',
+      },
     ],
     points: 100,
     order: 1,
@@ -467,6 +595,75 @@ const QUESTION_TEMPLATES: QSeed[] = [
     ],
     points: 100,
     order: 7,
+  },
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'name_and_address_multipart',
+    title: 'Name of sellers and address of the property (combined)',
+    description:
+      'Multipart: owner names, property address, representative info, uploads and collaborators',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'owner_names',
+        type: 'text',
+        title: 'Full names of the seller(s)',
+        placeholder: 'Enter full names',
+        order: 1,
+      },
+      {
+        partKey: 'property_address',
+        type: 'address',
+        title: 'Property address',
+        placeholder: '12 Example Road, AB1 2CD',
+        order: 2,
+      },
+      {
+        partKey: 'representative',
+        type: 'radio',
+        title: 'Are you completing this form on behalf of the seller?',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'company_details',
+        type: 'text',
+        title: 'Company details (if seller is a company)',
+        placeholder: 'Company name, registration number',
+        order: 4,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Upload photos of the property',
+        uploadInstruction: 'Add up to 6 photos',
+        order: 5,
+      },
+      {
+        partKey: 'features',
+        type: 'chips',
+        title: 'What we love about our home?',
+        options: [
+          { label: 'Morning light', value: 'morning_light' },
+          { label: 'Large garden', value: 'large_garden' },
+          { label: 'Great transport links', value: 'transport' },
+        ],
+        order: 6,
+      },
+      {
+        partKey: 'collaborators',
+        type: 'collaborators',
+        title: 'Collaborators',
+        order: 7,
+      },
+    ],
+    points: 200,
+    order: 8,
   },
 
   // ────────────────────────────────────────────
@@ -4906,6 +5103,125 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 7,
   },
 
+  // LEASEHOLD – MULTIPART EXAMPLE (lease_details task)
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'lease_details',
+    title: 'Please enter the expiry date and length of your lease.',
+    description:
+      'You should be able to find this information on your title deeds.',
+    type: 'MULTIPART' as QuestionType,
+    helpText:
+      'The lease expiry date and original length help determine the remaining term and value of the lease.',
+    parts: [
+      {
+        partKey: 'lease_expiry_date',
+        type: 'date',
+        title: 'Select expiry date',
+        options: [
+          {
+            label: 'Select date',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select date',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'length_of_lease',
+        type: 'text',
+        title: 'Length of lease',
+        placeholder: 'Enter years',
+        inputType: 'number',
+        suffix: 'Years',
+        order: 2,
+      },
+    ],
+    points: 100,
+    order: 1,
+  },
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'lease_details',
+    title: 'Provide further information on Leasehold ownership',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'application_date',
+        type: 'date',
+        title:
+          'If you have applied to extend the lease, buy the freehold of the property, or vary the terms of the lease, provide details of the date the application was made and whether it was accepted by the landlord.',
+        options: [
+          {
+            label: 'Select date',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Application date',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'landlord_accepted',
+        type: 'radio',
+        title: 'Was the application accepted by the landlord?',
+        options: [
+          { label: 'Yes, Accepted by landlord', value: 'yes_accepted' },
+          { label: 'No, Rejected by landlord', value: 'no_rejected' },
+          { label: 'Yes, Still pending', value: 'still_pending' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'ground_rent',
+        type: 'text',
+        title:
+          'Advise how much ground rent your lease requires to be paid each year to your landlord.',
+        placeholder: '0,000',
+        inputType: 'number',
+        prefix: '\u00a3',
+        order: 3,
+      },
+      {
+        partKey: 'rent_increase_provisions',
+        type: 'radio',
+        title:
+          'Does your lease includes provisions for an increase in the rent',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 4,
+      },
+      {
+        partKey: 'rent_increase_frequency',
+        type: 'text',
+        title:
+          'How frequently will the rent increase? And the amount you will pay after the increase (if known)',
+        placeholder: '1',
+        inputType: 'number',
+        suffix: 'Year',
+        order: 5,
+      },
+      {
+        partKey: 'rent_increase_amount',
+        type: 'text',
+        title: 'Enter increase amount',
+        placeholder: '0000',
+        inputType: 'number',
+        prefix: '\u00a3',
+        order: 6,
+      },
+    ],
+    points: 100,
+    order: 2,
+  },
+
   // ────────────────────────────────────────────
   // TITLE DEEDS AND PLAN
   // ────────────────────────────────────────────
@@ -4957,359 +5273,6 @@ function formatTaskKey(key: string): string {
 }
 
 // ============================================
-// TASK DESCRIPTIONS & ORDERS
-// ============================================
-
-const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
-  ownershipProfile: {
-    notes: 'You must read notes before starting ',
-    name_of_sellers_and_address_of_the_property:
-      'Let’s start with the basics — what’s the full name and address of the property you’re selling?',
-    seller_solicitor:
-      'Add the details of the seller’s solicitor so we can keep things moving smoothly.',
-    give_your_home_a_story:
-      'Every home has a story — let’s give yours the perfect name',
-  },
-  boundaries: {
-    notes: 'You must read notes before starting.',
-    boundary_responsibilities:
-      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features.',
-    irregular_boundaries:
-      "When a property's boundary isn't a straight line – for example, if it curves, bends, or follows unusual shapes.",
-    moved_boundary_features:
-      'If fences, walls, or hedges marking the boundary have ever been moved from their original position.',
-    adjacent_land_purchased:
-      'This means whether any extra land next to the property has been bought and added to it by the seller.',
-    complex_boundaries:
-      "This means boundaries that are tricky to describe or don't follow a simple line, such as when several properties meet or the edges overlap in unusual ways.",
-    notices_under_the_party_wall_act_1996:
-      'Formal notice about work affecting a shared wall, boundary, or structure under the Party Wall Act 1996.',
-  },
-  disputesAndComplaints: {
-    past_disputes_or_complaints:
-      'Determine whether there have been any disputes or complaints regarding this property or nearby properties',
-    prospective_disputes_or_complaints:
-      'Understanding if there is likely to be a future dispute about this property or nearby properties',
-  },
-  noticesAndProposals: {
-    received_or_sent_notices:
-      'Any letters, notices, or talks with neighbours or the council that might affect this home or nearby properties.',
-    proposals_to_develop_or_alter:
-      'Details of any proposals for development or changes to nearby land or buildings the seller is aware of.',
-  },
-  alterationsAndPlanning: {
-    notes: 'You must read notes before starting ',
-    building_works:
-      'Any changes to your property affecting building works, usage, windows, doors or the conservatory. ',
-    unfinished_works:
-      'Any changes to your property affecting building works, usage, windows, doors or the conservatory., that are unfinished.',
-    breaches_of_consent_conditions:
-      'If any alterations to the property were complete without approval or did not comply with planning or building regulations.',
-    planning_or_building_issues:
-      'Any ongoing issues requiring resolution with the relevant bodies for that work. E.g. applying for retrospective consent or meeting conditions for approval.',
-    solar_panels:
-      'If any solar panels have been installed and dates of installation.',
-    solar_panels_ownership:
-      'If the installed solar panels belong to the seller or if an external solar panel provider owns them.',
-    solar_panel_roof_lease:
-      'Whether a lease of the air/ roof space where the panels were installed has been obtained by the provider. ',
-    listed_building:
-      "Confirmation of the property's listing status, if applicable.",
-    conservation_orders:
-      'Confirmation of any conservation orders applicable to the property.',
-    tree_preservation_orders:
-      'Confirmation of any Tree Preservation Orders applicable to the property,',
-  },
-  guaranteesAndWarranties: {
-    notes: 'Review all property guarantees and warranties',
-    new_home_warranty:
-      'Upload your NHBC (or similar) warranty certificate to protect your structural investment',
-    damp_proofing:
-      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
-    timber_treatment:
-      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
-    window_roof_light_door:
-      'Upload your glazing and fenestration warranties for weather protection and energy efficiency',
-    electrical_work:
-      'Upload your electrical installation certificates for safety compliance and warranty coverage',
-    roofing:
-      'Upload your roofing warranty to protect against leaks and structural weather damage',
-    central_heating:
-      'Upload your heating system warranty to ensure warmth and protect against breakdowns',
-    underpinning:
-      'Upload your underpinning guarantee to secure foundation stability and structural integrity',
-    other: 'Upload any other relevant guarantees and warranties here',
-    claims_made_under_guarantees_warranties:
-      'Track and manage your warranty claims to maximize your property protection benefits',
-  },
-  insurance: {
-    seller_insurance: 'Floor coverings and carpets remaining in each room',
-    landlord_insurance: 'Floor coverings and carpets remaining in each room',
-    buildings_insurance: 'Floor coverings and carpets remaining in each room',
-  },
-  environmental: {
-    notes: 'You must read notes before starting ',
-    Flooding:
-      'Upload your NHBC or similar warranty certificate to protect your structural investment',
-    radon:
-      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
-    energy_efficiency:
-      'Upload your damp-proofing guarantee to protect against rising damp and moisture damage',
-    japanese_knotweed:
-      'Upload your glazing and fenestration warranties for weather protection and energy efficiency',
-  },
-  rightsAndInformalArrangements: {
-    notes: 'You must read notes before starting.',
-    resposibility_towards_jointly:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    '2_dunno_how_id_surmise_this':
-      'Record utility connections and service lines that cross property boundaries',
-    prevented_access:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    right_of_light:
-      'Including but not limited to rights of light, customary rights, rights of support from adjoining properties, extraction rights',
-    rights_of_support:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    arrangements:
-      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
-    other_rights_and_arrangements:
-      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
-    chancel_repair_liability:
-      'Record utility connections and service lines that cross property boundaries',
-    service_crossing_the_property_or_neighboring_property:
-      'Record utility connections and service lines that cross property boundaries',
-  },
-  parking: {
-    parking_arrangements:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    controlled_parking_zone_or_local_authority_schemes:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-  },
-  otherCharges: {
-    notes: 'You must read notes before starting ',
-    charges_relating_to_the_property:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-  },
-  occupiers: {
-    notes: 'You must read notes before starting ',
-    the_seller:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    other_occupiers: 'eheheheh',
-    lodgers_and_tenants: 'shahcdhsc',
-    vacant_possession:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-  },
-  services: {
-    notes: 'You must read notes before starting ',
-    electricity:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    central_heating:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    drainage_and_sewerage:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    connection_to_services_and_utilities:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-  },
-  transactionInformation: {
-    transaction_information_questions:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    special_requirements:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    payment_of_mortgages_and_charges_after_the_sales_of_the_property:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    seller_obligations:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-  },
-  fixturesAndFittings: {
-    notes: 'You must read notes before starting ',
-    basic_fittings:
-      'Essential fixtures and electrical installations throughout the property',
-    kitchen: 'Appliances, fixtures, and fittings included in the kitchen',
-    bathroom:
-      'Bathroom fixtures, fittings, and accessories included with the property',
-    carpets: 'Floor coverings and carpets remaining in each room',
-    curtains_and_curtain_rails:
-      'Window treatments, curtain rails, and blinds etc.',
-    light_fittings:
-      'Light fixtures and fittings remaining throughout the property',
-    fitted_units:
-      'Built-in storage, cupboards, shelves, and wardrobes included',
-    outdoor_area:
-      'Garden furniture, plants, and outdoor equipment included in the sale',
-    televison_and_telephone:
-      'Communication equipment and aerial installations included',
-    stock_of_fuels:
-      'Appliances, fixtures, and fittings included in the kitchen',
-    other_items: 'Additional fixtures, fittings, or contents not listed above',
-  },
-  leasehold: {
-    notes: 'You must read notes before starting ',
-    the_property:
-      'Essential fixtures and electrical installations throughout the property',
-    ownership_and_management:
-      'Appliances, fixtures, and fittings included in the kitchen',
-    documents:
-      'Bathroom fixtures, fittings, and accessories included with the property',
-    contact_details: 'Floor coverings and carpets remaining in each room',
-    maintenance_and_service_charges:
-      'Window treatments, curtain rails, and blinds etc.',
-    notices: 'Light fixtures and fittings remaining throughout the property',
-    consents: 'Built-in storage, cupboards, shelves, and wardrobes included',
-    complaints:
-      'Garden furniture, plants, and outdoor equipment included in the sale',
-    alterations: 'Communication equipment and aerial installations included',
-    enfranchisement:
-      'Appliances, fixtures, and fittings included in the kitchen',
-    building_safety_cladding_and_the_leaseholder_deed_of_certificate:
-      'Additional fixtures, fittings, or contents not listed above',
-  },
-  titleDeedsAndPlan: {
-    title_deeds_review: 'Review title deeds and property plans',
-  },
-  searches: {
-    searches_review: 'Review all property search results and reports',
-  },
-};
-
-const TASK_ORDERS: Record<string, Record<string, number>> = {
-  ownershipProfile: {
-    notes: 1,
-    name_of_sellers_and_address_of_the_property: 2,
-    seller_solicitor: 3,
-    give_your_home_a_story: 4,
-  },
-  boundaries: {
-    notes: 1,
-    boundary_responsibilities: 2,
-    irregular_boundaries: 3,
-    moved_boundary_features: 4,
-    adjacent_land_purchased: 5,
-    complex_boundaries: 6,
-    notices_under_the_party_wall_act_1996: 7,
-  },
-  disputesAndComplaints: {
-    past_disputes_or_complaints: 1,
-    prospective_disputes_or_complaints: 2,
-  },
-  noticesAndProposals: {
-    received_or_sent_notices: 1,
-    proposals_to_develop_or_alter: 2,
-  },
-  alterationsAndPlanning: {
-    notes: 1,
-    building_works: 2,
-    unfinished_works: 3,
-    breaches_of_consent_conditions: 4,
-    planning_or_building_issues: 5,
-    solar_panels: 6,
-    solar_panels_ownership: 7,
-    solar_panel_roof_lease: 8,
-    listed_building: 9,
-    conservation_orders: 10,
-    tree_preservation_orders: 11,
-  },
-  guaranteesAndWarranties: {
-    notes: 1,
-    new_home_warranty: 2,
-    damp_proofing: 3,
-    timber_treatment: 4,
-    window_roof_light_door: 5,
-    electrical_work: 6,
-    roofing: 7,
-    central_heating: 8,
-    underpinning: 9,
-    other: 10,
-    claims_made_under_guarantees_warranties: 11,
-  },
-  insurance: {
-    seller_insurance: 1,
-    landlord_insurance: 2,
-    buildings_insurance: 3,
-  },
-  environmental: {
-    notes: 1,
-    Flooding: 2,
-    radon: 3,
-    energy_efficiency: 4,
-    japanese_knotweed: 5,
-  },
-  rightsAndInformalArrangements: {
-    notes: 1,
-    resposibility_towards_jointly: 2,
-    '2_dunno_how_id_surmise_this': 3,
-    prevented_access: 4,
-    right_of_light: 5,
-    rights_of_support: 6,
-    arrangements: 7,
-    other_rights_and_arrangements: 8,
-    chancel_repair_liability: 9,
-    service_crossing_the_property_or_neighboring_property: 10,
-  },
-  parking: {
-    parking_arrangements: 1,
-    controlled_parking_zone_or_local_authority_schemes: 2,
-  },
-  otherCharges: {
-    notes: 1,
-    charges_relating_to_the_property: 2,
-  },
-  occupiers: {
-    notes: 1,
-    the_seller: 2,
-    other_occupiers: 3,
-    lodgers_and_tenants: 4,
-    vacant_possession: 5,
-  },
-  services: {
-    notes: 1,
-    electricity: 2,
-    central_heating: 3,
-    drainage_and_sewerage: 4,
-    connection_to_services_and_utilities: 5,
-  },
-  transactionInformation: {
-    transaction_information_questions: 1,
-    special_requirements: 2,
-    payment_of_mortgages_and_charges_after_the_sales_of_the_property: 3,
-    seller_obligations: 4,
-  },
-  fixturesAndFittings: {
-    notes: 1,
-    basic_fittings: 2,
-    kitchen: 3,
-    bathroom: 4,
-    carpets: 5,
-    curtains_and_curtain_rails: 6,
-    light_fittings: 7,
-    fitted_units: 8,
-    outdoor_area: 9,
-    televison_and_telephone: 10,
-    stock_of_fuels: 11,
-    other_items: 12,
-  },
-  leasehold: {
-    notes: 1,
-    the_property: 2,
-    ownership_and_management: 3,
-    documents: 4,
-    contact_details: 5,
-    maintenance_and_service_charges: 6,
-    notices: 7,
-    consents: 8,
-    complaints: 9,
-    alterations: 10,
-    enfranchisement: 11,
-    building_safety_cladding_and_the_leaseholder_deed_of_certificate: 12,
-  },
-  titleDeedsAndPlan: {
-    title_deeds_review: 1,
-  },
-  searches: {
-    searches_review: 1,
-  },
-};
-
-// ============================================
 // MAIN SEED
 // ============================================
 
@@ -5353,6 +5316,10 @@ async function main() {
         uploadInstruction: qt.uploadInstruction || null,
         prewrittenTemplates: qt.prewrittenTemplates || undefined,
         dateFields: qt.dateFields || undefined,
+        parts: qt.parts || undefined,
+        fields: qt.fields || undefined,
+        repeatable: qt.repeatable ?? null,
+        buttonText: qt.buttonText || null,
         points: qt.points,
         order: qt.order,
       },
