@@ -178,6 +178,12 @@ interface QSeed {
   fields?: any;
   repeatable?: boolean;
   buttonText?: string;
+  scaleType?: string;
+  scaleMin?: number;
+  scaleMax?: number;
+  scaleStep?: number;
+  scaleFormat?: string;
+  scaleMaxLabel?: string;
   points: number;
   order: number;
 }
@@ -218,13 +224,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'owner_names',
         type: 'text',
         title: 'Please provide the address of the property',
-        placeholder: 'Enter full names',
+        placeholder: 'Start typing...',
         order: 1,
       },
       {
         partKey: 'property_address',
         type: 'address',
-        title: 'Property address',
+        title: '',
         placeholder: '12 Example Road, AB1 2CD',
         order: 2,
       },
@@ -236,7 +242,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'name_of_sellers_and_address_of_the_property',
-    title: 'Full names of the seller(s)',
+    title: '',
     description: '',
     type: 'MULTIPART',
     helpText: '',
@@ -247,8 +253,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Full names of the seller(s)',
         description:
           'Please state the full names of everyone who is named as owner on the HM Land Registry title or on the deeds. If you are completing the form on behalf of the seller, for example, under a power of attorney, grant of probate or representation, then they should provide their names here.',
-        helpText: 'Hey there',
-        placeholder: 'Enter full names',
+        helpText: '',
+        placeholder: 'Enter Name',
         buttonText: 'Add More Sellers',
         order: 1,
       },
@@ -277,9 +283,16 @@ const QUESTION_TEMPLATES: QSeed[] = [
       },
       {
         partKey: 'company_details',
-        type: 'text',
-        title: 'Enter Name',
-        placeholder: 'Enter Name',
+        type: 'multifieldform',
+        title: '',
+        repeatable: false,
+        fields: [
+          {
+            key: 'filler_name',
+            label: 'N',
+            placeholder: 'Enter Name',
+          },
+        ],
         order: 4,
       },
     ],
@@ -316,17 +329,24 @@ const QUESTION_TEMPLATES: QSeed[] = [
         repeatable: false,
         fields: [
           {
-            key: 'law_firm_name',
-            label: 'Name of the Law Firm',
-            placeholder: '...',
+            key: 'company_name',
+            label: '',
+            placeholder: 'Enter Limited Company name',
           },
-          { key: 'contact_name', label: 'Contact Name', placeholder: '...' },
-          { key: 'address', label: 'Address', placeholder: '...' },
-          { key: 'email', label: 'Email', placeholder: '...' },
           {
-            key: 'reference_number',
-            label: 'Reference Number',
-            placeholder: '...',
+            key: 'company_registration_number',
+            label: '',
+            placeholder: 'Company registration number',
+          },
+          {
+            key: 'company_address',
+            label: '',
+            placeholder: 'Name of the director or authorized person ',
+          },
+          {
+            key: 'country_of_incorporation',
+            label: '',
+            placeholder: 'Country of incorporation',
           },
         ],
         order: 2,
@@ -348,28 +368,28 @@ const QUESTION_TEMPLATES: QSeed[] = [
     fields: [
       {
         key: 'law_firm_name',
-        label: 'Name of the Law Firm',
-        placeholder: '...',
+        label: '',
+        placeholder: 'Name of the law firm',
       },
       {
         key: 'contact_name',
-        label: 'Contact Name',
-        placeholder: '...',
+        label: '',
+        placeholder: 'Contact name',
       },
       {
         key: 'address',
-        label: 'Address',
-        placeholder: '...',
+        label: '',
+        placeholder: 'Enter solicitors address',
       },
       {
         key: 'email',
-        label: 'Email',
-        placeholder: '...',
+        label: '',
+        placeholder: 'Enter solicitors email id',
       },
       {
         key: 'reference_number',
-        label: 'Reference Number',
-        placeholder: '...',
+        label: '',
+        placeholder: 'Enter reference number',
       },
     ],
     points: 100,
@@ -388,21 +408,22 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 1,
   },
 
+  // Question 1
+
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'give_your_home_a_story',
     title: 'What is your council tax band?',
     description:
       'State the council tax band for the property. The council tax band can be obtained from the latest bill, or you can check it on the GOV.UK website.',
-    type: 'RADIO',
+    type: 'SCALE',
     helpText: '',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
+    scaleType: 'alphabet', // ← Key: 'alphabet' for A-Z
     points: 100,
     order: 2,
   },
+
+  // Question 2
 
   {
     sectionKey: 'ownershipProfile',
@@ -410,23 +431,26 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: 'What is your asking price for the property?',
     description:
       'State the asking price of the property. Please use slider or enter actual selling price in the box below.',
-    type: 'RADIO',
+    type: 'SCALE',
     helpText: '',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
+    scaleMin: 50,
+    scaleMax: 350,
+    scaleStep: 50,
+    scaleFormat: 'currency', // ← Key: 'currency' for £50K format
+    scaleMaxLabel: '350K+', // ← Optional: custom label for max
     points: 100,
     order: 3,
   },
 
+  // Question 3
+
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'give_your_home_a_story',
     title: 'What is the type of the ownership?',
     description:
       'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
-    type: 'RADIO',
+    type: 'CHIPS',
     helpText: '',
     options: [
       { label: 'Freehold', value: 'freehold' },
@@ -440,25 +464,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 4,
   },
 
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'What is the type of the ownership?',
-    description:
-      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
-    type: 'RADIO',
-    helpText: '',
-    options: [
-      { label: 'Freehold', value: 'freehold' },
-      { label: 'Share of Freehold', value: 'share_of_freehold' },
-      { label: 'Leasehold', value: 'Leasehold' },
-      { label: 'Commonhold', value: 'Commonhold' },
-      { label: 'Shared Ownership', value: 'shared_ownership' },
-      { label: 'Flying Freehold', value: 'flying_freehold' },
-    ],
-    points: 100,
-    order: 4,
-  },
+  // Question 4
 
   {
     sectionKey: 'ownershipProfile',
@@ -467,163 +473,238 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Please enter the percentage of shared ownership and state how much rent you pay each year for the share that is not owned by you.',
     description: '',
     type: 'DATE',
-    helpText:
-      'Select if building works were done and provide the completion date.',
+    helpText: '',
     options: [
       {
         label: 'Enter percentage',
-        value: 'yes',
+        value: 'percentage',
         hasDate: true,
-        dateFormat: 'year',
-        datePlaceholder: 'Select year',
+        inputType: 'percentage',
+        datePlaceholder: '00%',
       },
       {
         label: 'Enter rent amount',
-        value: 'no',
+        value: 'rent_amount',
         hasDate: true,
-        dateFormat: 'month',
-        datePlaceholder: 'Select month',
+        inputType: 'currency',
+        datePlaceholder: '£ 1500',
       },
     ],
     points: 100,
     order: 5,
   },
 
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'Please enter the expiry date and length of your lease.',
-    description:
-      'You should be able to find this information on your title deeds.',
-    type: 'DATE',
-    helpText:
-      'Select if building works were done and provide the completion date.',
-    options: [
-      {
-        label: 'Select expiry date',
-        value: 'yes',
-        hasDate: true,
-        dateFormat: 'fullDate',
-        datePlaceholder: 'Select expiry date',
-      },
-      {
-        label: 'Length of lease',
-        value: 'no',
-        hasDate: true,
-        dateFormat: 'fullDate',
-        datePlaceholder: 'Select month',
-      },
-    ],
-    points: 100,
-    order: 5,
-  },
+  // Question 5
 
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'give_your_home_a_story',
-    title:
-      'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
-    description:
-      'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens.',
-    type: 'DATE',
-    helpText: '',
-    options: [
-      {
-        label: 'Frequency of payment',
-        value: 'yes',
-        hasDate: true,
-        dateFormat: 'year',
-        datePlaceholder: 'Select years',
-      },
-      {
-        label: 'Service charges amount',
-        value: 'no',
-        hasDate: true,
-        dateFormat: 'fullDate',
-        datePlaceholder: 'Select amount',
-      },
-    ],
-    points: 100,
-    order: 6,
-  },
-
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'What is the type of the ownership?',
-    description:
-      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
-    type: 'CHECKBOX',
-    helpText: '',
-    options: [
-      { label: 'Detached', value: 'detached' },
-      { label: 'Semi-Detached', value: 'semi_detached' },
-      { label: 'Terraced', value: 'terraced' },
-      { label: 'Flat', value: 'flat' },
-      { label: 'Maisonette', value: 'maisonette' },
-      { label: 'Bungalow', value: 'bungalow' },
-      { label: 'Dormer Bungalow', value: 'dormer_bungalow' },
-      { label: 'Mobile Home', value: 'mobile_home' },
-      { label: 'Boat', value: 'boat' },
-      { label: 'Parking', value: 'parking' },
-      { label: 'Land', value: 'land' },
-    ],
-    points: 100,
-    order: 7,
-  },
-
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'What we love about our home?',
+    title: '',
     description: '',
-    type: 'CHECKBOX',
-    helpText: '',
-    options: [
-      {
-        label: 'Morning light in the kitchen',
-        value: 'morning_light_in_the_kitchen',
-      },
-      {
-        label: 'Kids can walk to school in 6 mins',
-        value: 'kids_can_walk_to_school_in_6_mins',
-      },
-      {
-        label: 'Neighbors are friendly but not intrusive ',
-        value: 'neighbors_are_friendly_but_not_intrusive',
-      },
-    ],
-    points: 100,
-    order: 7,
-  },
-
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'name_and_address_multipart',
-    title: 'Name of sellers and address of the property (combined)',
-    description:
-      'Multipart: owner names, property address, representative info, uploads and collaborators',
     type: 'MULTIPART',
     helpText: '',
     parts: [
       {
-        partKey: 'owner_names',
-        type: 'text',
-        title: 'Full names of the seller(s)',
-        placeholder: 'Enter full names',
+        partKey: 'expiry_length',
+        type: 'date',
+        title: 'Please enter the expiry date and length of your lease.',
+        description:
+          'You should be able to find this information on your title deeds.',
+        options: [
+          {
+            label: 'Select expiry date',
+            value: 'expiry_date',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select expiry date',
+          },
+          {
+            label: 'Length of lease',
+            value: 'lease_length',
+            hasDate: true,
+            inputType: 'years',
+            datePlaceholder: 'Years',
+          },
+        ],
         order: 1,
       },
       {
-        partKey: 'property_address',
-        type: 'address',
-        title: 'Property address',
-        placeholder: '12 Example Road, AB1 2CD',
+        partKey: 'rent_lease_info',
+        type: 'RADIO',
+        title:
+          'If you have applied to extend the lease, buy the freehold of the property, or vary the terms of the lease, provide details of the date the application was made and whether it was accepted by the landlord.',
+        options: [
+          { label: 'Yes, Accepted by landlord', value: 'accepted' },
+          { label: 'No, Rejected by landlord', value: 'rejected' },
+          { label: 'Yes, Still pending', value: 'pending' },
+        ],
         order: 2,
       },
       {
-        partKey: 'representative',
-        type: 'radio',
-        title: 'Are you completing this form on behalf of the seller?',
+        partKey: 'expiry_length',
+        type: 'date',
+        title:
+          'Advise how much ground rent your lease requires to be paid each year to your landlord.',
+        options: [
+          {
+            label: 'Enter Amount',
+            value: 'rent_lease_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'increase_in_rent',
+        type: 'RADIO',
+        title:
+          'Does your lease includes provisions for an increase in the rent',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 4,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title:
+          'How frequently will the rent increase? And the amount you will pay after the increase (if known)',
+        options: [
+          {
+            label: 'Every',
+            value: 'frequency',
+            hasDate: true,
+            dateFormat: 'years',
+            datePlaceholder: 'Years',
+          },
+          {
+            label: 'Enter increase amount',
+            value: 'increase_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 0000',
+          },
+        ],
+        order: 5,
+      },
+      {
+        partKey: 'increase_rent_calculation',
+        type: 'date',
+        title: 'How this increase is calculated?(If Known)',
+        options: [
+          {
+            label: 'Enter percentage',
+            value: 'percentage',
+            hasDate: true,
+            inputType: 'percentage',
+            datePlaceholder: '00%',
+          },
+        ],
+        order: 6,
+      },
+    ],
+    points: 200,
+    order: 6,
+  },
+
+  // Question 6
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: '',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'expiry_length',
+        type: 'date',
+        title:
+          'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
+        description:
+          'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens. ',
+        options: [
+          {
+            label: 'Frequency of payment',
+            value: 'frequency',
+            hasDate: true,
+            inputType: 'years',
+            datePlaceholder: 'Years',
+          },
+          {
+            label: 'Service charges amount',
+            value: 'service_charge',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 1500',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please upload supporting document.',
+        uploadInstruction: 'Please upload supporting document.',
+        order: 5,
+      },
+    ],
+    points: 200,
+    order: 7,
+  },
+
+  // Question 7
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: '',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Provide a copy of the commonhold statement.',
+        uploadInstruction:
+          'The commonhold community statement is a document that makes provision in relation to specified land for the rights and duties of the commonhold association and the rights and duties of the unit-holders.',
+        order: 1,
+      },
+      {
+        partKey: 'expiry_length',
+        type: 'date',
+        title:
+          'Indicate how many units there are in the commonhold and how much your owner is required to pay each year under the commonhold assessment.',
+        description:
+          'The commonhold community statement should include this information.',
+        options: [
+          {
+            label: 'Numbers of units',
+            value: 'number_of_units',
+            hasDate: true,
+            inputType: 'units',
+            datePlaceholder: 'Units',
+          },
+          {
+            label: 'Enter amount per unit',
+            value: 'amount_per_unit',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 1500',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'rent_lease_info',
+        type: 'RADIO',
+        title:
+          'Does your commonhold community statement includes a reserve fund and how much your unit is required to pay each year into that fund?',
+        description:
+          'The commonhold community statement should include this information.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -631,40 +712,443 @@ const QUESTION_TEMPLATES: QSeed[] = [
         order: 3,
       },
       {
-        partKey: 'company_details',
-        type: 'text',
-        title: 'Company details (if seller is a company)',
-        placeholder: 'Company name, registration number',
+        partKey: 'expiry_length',
+        type: 'date',
+        title: '',
+        options: [
+          {
+            label: 'Enter Amount',
+            value: 'rent_lease_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 0000',
+          },
+        ],
         order: 4,
       },
+
       {
-        partKey: 'photos',
-        type: 'upload',
-        title: 'Upload photos of the property',
-        uploadInstruction: 'Add up to 6 photos',
+        partKey: 'increase_rent',
+        type: 'date',
+        title:
+          'Provide details of charges, including the cost and frequency of payments required.',
+        description:
+          'This question aims to find out if there are any charges, such as payments with your neighbours for shared facilities or to a management company, affecting the property.',
+        options: [
+          {
+            label: 'Frequency of payment',
+            value: 'frequency',
+            hasDate: true,
+            inputType: 'years',
+            datePlaceholder: 'Years',
+          },
+          {
+            label: 'Service charges amount',
+            value: 'service_charge',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 1500',
+          },
+        ],
         order: 5,
       },
+
       {
-        partKey: 'features',
-        type: 'chips',
-        title: 'What we love about our home?',
+        partKey: 'increase_rent_calculation',
+        type: 'date',
+        title: 'Additional charges pertaining to Access roads and footpaths',
+        description:
+          'A common additional charge that may affect a property is for the upkeep of roads or footpaths. Indicate if this applies to the property.',
         options: [
-          { label: 'Morning light', value: 'morning_light' },
-          { label: 'Large garden', value: 'large_garden' },
-          { label: 'Great transport links', value: 'transport' },
+          {
+            label: 'Additional charges amount paid annually',
+            value: 'additional_charge',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£ 000',
+          },
         ],
         order: 6,
-      },
-      {
-        partKey: 'collaborators',
-        type: 'collaborators',
-        title: 'Collaborators',
-        order: 7,
       },
     ],
     points: 200,
     order: 8,
   },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title:
+  //     'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
+  //   description:
+  //     'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens.',
+  //   type: 'DATE',
+  //   helpText: '',
+  //   options: [
+  //     {
+  //       label: 'Frequency of payment',
+  //       value: 'frequency',
+  //       hasDate: true,
+  //       inputType: 'years',
+  //       datePlaceholder: 'Years',
+  //     },
+  //     {
+  //       label: 'Service charges amount',
+  //       value: 'service_charge',
+  //       hasDate: true,
+  //       inputType: 'currency',
+  //       datePlaceholder: '£ 1500',
+  //     },
+  //   ],
+  //   points: 100,
+  //   order: 7,
+  // },
+
+  // Question 8
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: '',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'features',
+        type: 'chips',
+        title: 'Specify what type of property you are selling',
+        description:
+          'If your property is link-detached, that is linked to another property only by a garage or other structure but not a structural wall of the house, choose ‘detached’.',
+        options: [
+          { label: 'Detached', value: 'detached' },
+          { label: 'Semi-Detached', value: 'semi_detached' },
+          { label: 'Terraced', value: 'terraced' },
+          { label: 'Flat', value: 'flat' },
+          { label: 'Maisonette', value: 'maisonette' },
+          { label: 'Bungalow', value: 'bungalow' },
+          { label: 'Dormer Bungalow', value: 'dormer_bungalow' },
+          { label: 'Mobile Home', value: 'mobile_home' },
+          { label: 'Boat', value: 'boat' },
+          { label: 'Parking', value: 'parking' },
+          { label: 'Land', value: 'land' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'number_of_rooms',
+        type: 'chips',
+        title: 'Specify what rooms are in this property',
+        description: 'Select numbers of bedrooms or specify in the box below’.',
+        options: [
+          { label: 'Studio', value: 'studio' },
+          { label: '1', value: '1' },
+          { label: '2', value: '2' },
+          { label: '3', value: '3' },
+          { label: '4', value: '4' },
+          { label: '5', value: '5' },
+          { label: '6', value: '6' },
+          { label: '7', value: '7' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'number_of_bathrooms',
+        type: 'chips',
+        title: '',
+        description: 'Select numbers of bathrooms or specify in the box below',
+        options: [
+          { label: '1', value: '1' },
+          { label: '2', value: '2' },
+          { label: '3', value: '3' },
+          { label: '4', value: '4' },
+          { label: '5', value: '5' },
+          { label: '6', value: '6' },
+          { label: '7', value: '7' },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'kitchen',
+        type: 'chips',
+        title: 'Select any special features of the property',
+        description: 'Kitchen',
+        options: [
+          { label: 'Integrated Appliances', value: 'integrated_appliances' },
+          { label: 'Open Plan Kitchen', value: 'open_plan_kitchen' },
+          { label: 'Kitchen Dinner', value: 'kitchen_dinner' },
+          { label: 'Kitchen Island', value: 'kitchen_island' },
+          { label: 'Breakfast Bar', value: 'breakfast_bar' },
+          { label: 'Gallery', value: 'gallery' },
+        ],
+        order: 4,
+      },
+      {
+        partKey: 'bathroom',
+        type: 'chips',
+        title: '',
+        description: 'Bathroom',
+        options: [
+          { label: 'Ensuite', value: 'ensuite' },
+          { label: 'Downstairs Toilets', value: 'downstairs_toilets' },
+          { label: 'Upstairs Toilets', value: 'upstairs_toilets' },
+          { label: 'Walk-In Shower', value: 'walk_in_shower' },
+          { label: 'Freestanding Bath', value: 'freestanding_bath' },
+        ],
+        order: 5,
+      },
+      {
+        partKey: 'living_space',
+        type: 'chips',
+        title: '',
+        description: 'Living Space',
+        options: [
+          { label: 'Living Room', value: 'living_room' },
+          { label: 'Dining Room', value: 'dining_room' },
+          { label: 'Conservatory', value: 'conservatory' },
+          { label: 'Home Office', value: 'home_office' },
+          { label: 'Utility Room', value: 'utility_room' },
+          { label: 'Dressing Room', value: 'dressing_room' },
+        ],
+        order: 6,
+      },
+
+      {
+        partKey: 'flooring',
+        type: 'chips',
+        title: '',
+        description: 'Flooring',
+        options: [
+          { label: 'Laminated ', value: 'laminated ' },
+          { label: 'Wooden', value: 'wooden' },
+          { label: 'Stone', value: 'stone' },
+        ],
+        order: 7,
+      },
+
+      {
+        partKey: 'features',
+        type: 'chips',
+        title: '',
+        description: 'Features',
+        options: [
+          { label: 'Exposed Brickwork', value: 'exposed_brickwork' },
+          { label: 'Fireplace', value: 'fireplace' },
+          { label: 'High Ceilings', value: 'high_ceilings' },
+          { label: 'Sash Windows', value: 'sash_windows' },
+          { label: 'Wooden Beams', value: 'wooden_beams' },
+        ],
+        order: 8,
+      },
+    ],
+    points: 200,
+    order: 9,
+  },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title:
+  //     'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
+  //   description:
+  //     'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens.',
+  //   type: 'DATE',
+  //   helpText: '',
+  //   options: [
+  //     {
+  //       label: 'Frequency of payment',
+  //       value: 'frequency',
+  //       hasDate: true,
+  //       inputType: 'years',
+  //       datePlaceholder: 'Years',
+  //     },
+  //     {
+  //       label: 'Service charges amount',
+  //       value: 'service_charge',
+  //       hasDate: true,
+  //       inputType: 'currency',
+  //       datePlaceholder: '£ 1500',
+  //     },
+  //   ],
+  //   points: 100,
+  //   order: 7,
+  // },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title: 'What is the type of the ownership?',
+  //   description:
+  //     'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+  //   type: 'CHECKBOX',
+  //   helpText: '',
+  //   options: [
+  //     { label: 'Detached', value: 'detached' },
+  //     { label: 'Semi-Detached', value: 'semi_detached' },
+  //     { label: 'Terraced', value: 'terraced' },
+  //     { label: 'Flat', value: 'flat' },
+  //     { label: 'Maisonette', value: 'maisonette' },
+  //     { label: 'Bungalow', value: 'bungalow' },
+  //     { label: 'Dormer Bungalow', value: 'dormer_bungalow' },
+  //     { label: 'Mobile Home', value: 'mobile_home' },
+  //     { label: 'Boat', value: 'boat' },
+  //     { label: 'Parking', value: 'parking' },
+  //     { label: 'Land', value: 'land' },
+  //   ],
+  //   points: 100,
+  //   order: 8,
+  // },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title: 'Name of sellers and address of the property (combined)',
+  //   description: '',
+  //   type: 'MULTIPART',
+  //   helpText: '',
+  //   parts: [
+  //     {
+  //       partKey: 'shared_ownership',
+  //       type: 'date',
+  //       title:
+  //         'Please enter the percentage of shared ownership and state how much rent you pay each year for the share that is not owned by you.',
+  //       options: [
+  //         {
+  //           label: 'Enter percentage',
+  //           value: 'percentage',
+  //           hasDate: true,
+  //           inputType: 'percentage',
+  //           datePlaceholder: '00%',
+  //         },
+  //         {
+  //           label: 'Enter rent amount',
+  //           value: 'rent_amount',
+  //           hasDate: true,
+  //           inputType: 'currency',
+  //           datePlaceholder: '£ 1500',
+  //         },
+  //       ],
+  //       order: 1,
+  //     },
+  //     {
+  //       partKey: 'lease_info',
+  //       type: 'date',
+  //       title: 'Please enter the expiry date and length of your lease.',
+  //       options: [
+  //         {
+  //           label: 'Select expiry date',
+  //           value: 'expiry_date',
+  //           hasDate: true,
+  //           dateFormat: 'fullDate',
+  //           datePlaceholder: 'Select expiry date',
+  //         },
+  //         {
+  //           label: 'Length of lease',
+  //           value: 'lease_length',
+  //           hasDate: true,
+  //           inputType: 'years',
+  //           datePlaceholder: 'Years',
+  //         },
+  //       ],
+  //       order: 2,
+  //     },
+  //   ],
+  //   points: 200,
+  //   order: 9,
+  // },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title: 'What we love about our home?',
+  //   description: '',
+  //   type: 'CHECKBOX',
+  //   helpText: '',
+  //   options: [
+  //     {
+  //       label: 'Morning light in the kitchen',
+  //       value: 'morning_light_in_the_kitchen',
+  //     },
+  //     {
+  //       label: 'Kids can walk to school in 6 mins',
+  //       value: 'kids_can_walk_to_school_in_6_mins',
+  //     },
+  //     {
+  //       label: 'Neighbors are friendly but not intrusive ',
+  //       value: 'neighbors_are_friendly_but_not_intrusive',
+  //     },
+  //   ],
+  //   points: 100,
+  //   order: 10,
+  // },
+
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'name_and_address_multipart',
+  //   title: 'Name of sellers and address of the property (combined)',
+  //   description:
+  //     'Multipart: owner names, property address, representative info, uploads and collaborators',
+  //   type: 'MULTIPART',
+  //   helpText: '',
+  //   parts: [
+  //     {
+  //       partKey: 'owner_names',
+  //       type: 'text',
+  //       title: 'Full names of the seller(s)',
+  //       placeholder: 'Enter full names',
+  //       order: 1,
+  //     },
+  //     {
+  //       partKey: 'property_address',
+  //       type: 'address',
+  //       title: 'Property address',
+  //       placeholder: '12 Example Road, AB1 2CD',
+  //       order: 2,
+  //     },
+  //     {
+  //       partKey: 'representative',
+  //       type: 'radio',
+  //       title: 'Are you completing this form on behalf of the seller?',
+  //       options: [
+  //         { label: 'Yes', value: 'yes' },
+  //         { label: 'No', value: 'no' },
+  //       ],
+  //       order: 3,
+  //     },
+  //     {
+  //       partKey: 'company_details',
+  //       type: 'text',
+  //       title: 'Company details (if seller is a company)',
+  //       placeholder: 'Company name, registration number',
+  //       order: 4,
+  //     },
+  //     {
+  //       partKey: 'photos',
+  //       type: 'upload',
+  //       title: 'Upload photos of the property',
+  //       uploadInstruction: 'Add up to 6 photos',
+  //       order: 5,
+  //     },
+  //     {
+  //       partKey: 'features',
+  //       type: 'chips',
+  //       title: 'What we love about our home?',
+  //       options: [
+  //         { label: 'Morning light', value: 'morning_light' },
+  //         { label: 'Large garden', value: 'large_garden' },
+  //         { label: 'Great transport links', value: 'transport' },
+  //       ],
+  //       order: 6,
+  //     },
+  //     {
+  //       partKey: 'collaborators',
+  //       type: 'collaborators',
+  //       title: 'Collaborators',
+  //       order: 7,
+  //     },
+  //   ],
+  //   points: 200,
+  //   order: 8,
+  // },
 
   // ────────────────────────────────────────────
   // BOUNDARIES — Task: Notes
@@ -710,81 +1194,42 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 25,
     order: 1,
   },
-  {
-    sectionKey: 'boundaries',
-    taskKey: 'boundary_responsibilities',
-    title:
-      'Building works (e.g. extension, loft or garage conversion, removal of internal walls)',
-    description: '',
-    type: 'DATE',
-    helpText:
-      'Select if building works were done and provide the completion date.',
-    options: [
-      {
-        label: 'Yes, select year',
-        value: 'yes',
-        hasDate: true,
-        dateFormat: 'year',
-        datePlaceholder: 'Select year',
-      },
-      { label: 'No', value: 'no', hasDate: false },
-    ],
-    points: 50,
-    order: 2,
-  },
-  {
-    sectionKey: 'boundaries',
-    taskKey: 'boundary_responsibilities',
-    title: 'When was the work completed?',
-    description: '',
-    type: 'DATE',
-    helpText: 'Provide the completion date for the building works.',
-    options: [
-      {
-        label: 'Select month',
-        value: 'selected',
-        hasDate: true,
-        dateFormat: 'monthYear',
-        datePlaceholder: 'Select month',
-      },
-    ],
-    points: 25,
-    order: 3,
-  },
-  {
-    sectionKey: 'boundaries',
-    taskKey: 'boundary_responsibilities',
-    title: 'When did you first notice the issue?',
-    description: '',
-    type: 'DATE',
-    helpText: 'Provide the exact date when you first noticed the issue.',
-    options: [
-      {
-        label: 'Select date',
-        value: 'selected',
-        hasDate: true,
-        dateFormat: 'fullDate',
-        datePlaceholder: 'Select date',
-      },
-    ],
-    points: 25,
-    order: 4,
-  },
 
   // ────────────────────────────────────────────
   // BOUNDARIES — Task: Irregular Boundaries
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'boundaries',
     taskKey: 'irregular_boundaries',
-    title: 'Are the boundaries irregular?',
-    description: 'If yes, please give details below',
-    type: 'RADIO',
-    helpText:
-      'Boundaries are irregular if they are not a straight line – for example, if they curve, bend, or follow unusual shapes.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Are_irregular_boundaries',
+        title: 'Are the boundaries irregular?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If the property’s boundaries are irregular, ownership should be defined either with a clear written description, using landmarks or measurements, or by referring to a plan or map that shows the exact outline.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        title:
+          'Please indicate ownership by written instruction or by reference to a plan:',
+        placeholder:
+          'E.g., The irregular boundary near the stream at the rear of the property is owned by...',
+        order: 2,
+      },
     ],
     points: 100,
     order: 1,
@@ -796,147 +1241,365 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'boundaries',
     taskKey: 'moved_boundary_features',
-    title:
-      'Have fences, walls, or hedges marking the boundary ever been moved from their original position?',
-    description: 'Provide details if yes',
-    type: 'UPLOAD',
-    helpText: 'This helps identify if boundary markers have shifted over time.',
-    uploadInstruction:
-      'Attach any photos or documents that show the moved boundary.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'is_seller_aware',
+        title:
+          'Is the seller aware of any boundary feature having been moved in the last 10 years, or during the seller’s period of ownership if longer?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Back fence in the garden has been moved back 2 yards...',
+        order: 2,
+      },
     ],
-    points: 50,
+    points: 100,
     order: 1,
-  },
-  {
-    sectionKey: 'boundaries',
-    taskKey: 'moved_boundary_features',
-    title: 'Upload supporting documents (plans, photos, reports)',
-    description:
-      'Provide any files that support your answer about moved features',
-    type: 'UPLOAD',
-    helpText:
-      'Upload any supporting documents showing changes to boundary features.',
-    points: 25,
-    order: 2,
   },
 
   // ────────────────────────────────────────────
   // BOUNDARIES — Task: Adjacent Land Purchased
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'boundaries',
     taskKey: 'adjacent_land_purchased',
-    title:
-      'Has extra land next to the property been bought and added to it by the seller?',
-    description:
-      'This means whether any extra land next to the property has been purchased and added to it by the seller.',
-    type: 'RADIO',
-    helpText:
-      'Understanding if the property has been expanded helps in valuation.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'seller_ownership',
+        title:
+          'During the seller’s ownership, has any adjacent land or property been purchased by the seller?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If you have purchased extra land or property next to your home, please provide details such as the address, title number, or a detailed description. as this could change the size or boundaries of what’s being sold.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Back fence in the garden has been moved back 2 yards...',
+        order: 2,
+      },
     ],
-    points: 50,
+    points: 100,
     order: 1,
   },
 
   // ────────────────────────────────────────────
   // BOUNDARIES — Task: Complex Boundaries
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'boundaries',
     taskKey: 'complex_boundaries',
-    title: 'Are boundaries complex or tricky to describe?',
-    description:
-      "Complex boundaries don't follow simple lines or overlap in unusual ways.",
-    type: 'RADIO',
-    helpText:
-      "Complex boundaries are those that are tricky to describe or don't follow a simple line.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'seller_ownership_complex',
+        title:
+          'Does any part of the property overhang, or project under, the boundary of the neighbouring property or road, for example cellars under the pavement, roof eaves or a covered walkway?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If any part of your home extends beyond its boundary please detail what the feature is, it’s location, size and any applicable rights/ permissions, as this could affect rights/ responsibilities with neighbours or the council.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder: 'E.g., Cellar under the property...',
+        order: 2,
+      },
     ],
-    points: 75,
+    points: 100,
+    order: 1,
+  },
+
+  // ────────────────────────────────────────────
+  // BOUNDARIES — Task: Notices under the Party Wall Act 1996
+  // ────────────────────────────────────────────
+
+  {
+    sectionKey: 'boundaries',
+    taskKey: 'notices_under_the_party_wall_act_1996',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'notice_received',
+        title:
+          'Has any notice been received under the Party Wall Act 1996, in respect of any shared/party boundaries?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If a formal notice under the Party Wall Act 1996 has been received, please detail what it was for, when it was received, who served it, and whether the works were completed or an agreement was made. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder: 'E.g., Notice received in 2021 for repair work to fence..',
+        display: 'both',
+        order: 2,
+      },
+    ],
+    points: 100,
     order: 1,
   },
 
   // ────────────────────────────────────────────
   // DISPUTES AND COMPLAINTS
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'disputesAndComplaints',
     taskKey: 'past_disputes_or_complaints',
-    title:
-      'Have there been any disputes or complaints regarding this property or a property nearby?',
-    description: 'If yes, please give details below',
-    type: 'RADIO',
-    helpText:
-      "If there has been any arguments, formal complaints, or legal issues about this home or a nearby one (such as rows over noise, parking, boundaries or shared areas) please detail what it was about, who it involved, when it happened, and how it was resolved or if it's still ongoing. ",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'problems_affecting_property',
+        title:
+          'Have there been any disputes or complaints regarding this property or a property nearby? ',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If there has been any arguments, formal complaints, or legal issues about this home or a nearby one (such as rows over noise, parking, boundaries or shared areas) please detail what it was about, who it involved, when it happened, and how it was resolved or if it’s still ongoing.  ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder: 'E.g., Dispute over noise with neighbours ',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
   },
 
+  // {
+  //   sectionKey: 'disputesAndComplaints',
+  //   taskKey: 'past_disputes_or_complaints',
+  //   title:
+  //     'Have there been any disputes or complaints regarding this property or a property nearby?',
+  //   description: 'If yes, please give details below',
+  //   type: 'RADIO',
+  //   helpText:
+  //     "If there has been any arguments, formal complaints, or legal issues about this home or a nearby one (such as rows over noise, parking, boundaries or shared areas) please detail what it was about, who it involved, when it happened, and how it was resolved or if it's still ongoing. ",
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 50,
+  //   order: 1,
+  // },
+
   {
     sectionKey: 'disputesAndComplaints',
     taskKey: 'prospective_disputes_or_complaints',
-    title:
-      'Is the seller aware of anything which might lead to a dispute about the property or a property nearby?  ',
-    description: 'If yes, please give details below',
-    type: 'RADIO',
-    helpText:
-      'If you are aware of any issues that could cause arguments or legal disputes about this property or nearby properties in the future, such as disagreements over boundaries, access, or shared spaces, please detail what the possible issue is, who it involves, why it could cause a dispute, and if anything has been done about it.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'prospect_disputes_question',
+        title:
+          'Is the seller aware of anything which might lead to a dispute about the property or a property nearby?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'If you are aware of any issues that could cause arguments or legal disputes about this property or nearby properties in the future, such as disagreements over boundaries, access, or shared spaces, please detail what the possible issue is, who it involves, why it could cause a dispute, and if anything has been done about it.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Potential dispute over responsibility for hedge between mine and neighbour to the left’s garden..',
+        order: 2,
+      },
     ],
-    points: 100,
+    points: 50,
     order: 1,
   },
+
+  // {
+  //   sectionKey: 'disputesAndComplaints',
+  //   taskKey: 'prospective_disputes_or_complaints',
+  //   title:
+  //     'Is the seller aware of anything which might lead to a dispute about the property or a property nearby?  ',
+  //   description: 'If yes, please give details below',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'If you are aware of any issues that could cause arguments or legal disputes about this property or nearby properties in the future, such as disagreements over boundaries, access, or shared spaces, please detail what the possible issue is, who it involves, why it could cause a dispute, and if anything has been done about it.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 100,
+  //   order: 1,
+  // },
 
   // ────────────────────────────────────────────
   // NOTICES AND PROPOSALS
   // ────────────────────────────────────────────
+
   {
     sectionKey: 'noticesAndProposals',
     taskKey: 'received_or_sent_notices',
-    title:
-      'Have  any notices or correspondence been received or sent (e.g.from or to a neighbour, council or government department) or any negotiations or discussions taken place, which affect the property or a property nearby?',
-    description: 'If yes, please give details below',
-    type: 'RADIO',
-    helpText:
-      'This asks whether there have been any official letters, emails, notices, or any talks with neighbours, the council, or government about matters affecting this property or a nearby one. Examples include planning or enforcement notices, boundary or access issues, party wall matters, building control, highways/parking changes, tree preservation, noise/ASB notices, or utility works.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'prospect_disputes_question',
+        title:
+          'Have any notices or correspondence been received or sent (e.g.from or to a neighbour, council or government department) or any negotiations or discussions taken place, which affect the property or a property nearby?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'This asks whether there have been any official letters, emails, notices, or any talks with neighbours, the council, or government about matters affecting this property or a nearby one. Examples include planning or enforcement notices, boundary or access issues, party wall matters, building control, highways/parking changes, tree preservation, noise/ASB notices, or utility works.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder: 'E.g., Lorem Ipsum',
+        order: 2,
+      },
     ],
-    points: 75,
+    points: 50,
     order: 1,
   },
+
+  // {
+  //   sectionKey: 'noticesAndProposals',
+  //   taskKey: 'received_or_sent_notices',
+  //   title:
+  //     'Have  any notices or correspondence been received or sent (e.g.from or to a neighbour, council or government department) or any negotiations or discussions taken place, which affect the property or a property nearby?',
+  //   description: 'If yes, please give details below',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'This asks whether there have been any official letters, emails, notices, or any talks with neighbours, the council, or government about matters affecting this property or a nearby one. Examples include planning or enforcement notices, boundary or access issues, party wall matters, building control, highways/parking changes, tree preservation, noise/ASB notices, or utility works.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 75,
+  //   order: 1,
+  // },
 
   {
     sectionKey: 'noticesAndProposals',
     taskKey: 'proposals_to_develop_or_alter',
-    title:
-      'Is the seller aware of any proposals to develop property or land nearby, or, any proposals to make alterations to buildings nearby?',
-    description: 'If yes, please give details below',
-    type: 'RADIO',
-    helpText:
-      'This asks whether there have been any official letters, emails, notices, or any talks with neighbours, the council, or government about matters affecting this property or a nearby one. Examples include planning or enforcement notices, boundary or access issues, party wall matters, building control, highways/parking changes, tree preservation, noise/ASB notices, or utility works.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'prospect_disputes_question',
+        title:
+          'Is the seller aware of any proposals to develop property or land nearby, or, any proposals to make alterations to buildings nearby?',
+        description: 'If yes, please give details below',
+        type: 'RADIO',
+        helpText:
+          'This asks if the seller knows of any planned building work or developments nearby — such as new housing, extensions, or changes to existing buildings — that could affect the property or its surroundings.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder: 'E.g., Lorem Ipsum',
+        order: 2,
+      },
     ],
-    points: 100,
+    points: 50,
     order: 1,
   },
+
+  // {
+  //   sectionKey: 'noticesAndProposals',
+  //   taskKey: 'proposals_to_develop_or_alter',
+  //   title:
+  //     'Is the seller aware of any proposals to develop property or land nearby, or, any proposals to make alterations to buildings nearby?',
+  //   description: 'If yes, please give details below',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'This asks whether there have been any official letters, emails, notices, or any talks with neighbours, the council, or government about matters affecting this property or a nearby one. Examples include planning or enforcement notices, boundary or access issues, party wall matters, building control, highways/parking changes, tree preservation, noise/ASB notices, or utility works.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 100,
+  //   order: 1,
+  // },
 
   // ────────────────────────────────────────────
   // ALTERATIONS AND PLANNING
@@ -5320,6 +5983,9 @@ async function main() {
         fields: qt.fields || undefined,
         repeatable: qt.repeatable ?? null,
         buttonText: qt.buttonText || null,
+        scaleType: qt.scaleType || null,
+        scaleFormat: qt.scaleFormat || null,
+        scaleMaxLabel: qt.scaleMaxLabel || null,
         points: qt.points,
         order: qt.order,
       },

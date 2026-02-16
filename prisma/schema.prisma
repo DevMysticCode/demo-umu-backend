@@ -126,9 +126,12 @@ model QuestionTemplate {
   fields              Json?
   repeatable          Boolean?
   buttonText          String?
+  scaleType           String?
   scaleMin            Int?
   scaleMax            Int?
   scaleStep           Int?
+  scaleFormat         String?
+  scaleMaxLabel       String?
   points              Int
   order               Int
   createdAt           DateTime           @default(now())
@@ -195,4 +198,5 @@ enum QuestionType {
   MULTITEXTINPUT
   MULTIFIELDFORM
   SCALE
+  CHIPS
 }
