@@ -10,6 +10,7 @@ async function bootstrap() {
       'http://localhost:3000',
       'http://localhost:3002',
       'https://demo-umu-frontend.vercel.app',
+      'https://demo-umu-frontend-dly7s9uz1-devmysticcodes-projects.vercel.app/',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,

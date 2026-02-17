@@ -1622,24 +1622,102 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 75,
     order: 1,
   },
+  // Alterations and Planning Question 1
+  {
+    sectionKey: 'alterationsAndPlanning',
+    taskKey: 'building_works',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Are_irregular_boundaries',
+        title:
+          'Have any of the following changes been made to the whole or any part of the property (including the garden)?',
+        description:
+          'If yes, please give details including dates of all work undertaken below and supply copies of the planning permissions, Building Regulations approvals and Completion Certificates',
+        type: 'DATE',
+        helpText:
+          'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls. These details help identify if planning permission or building control approval was required.',
+        options: [
+          {
+            label: 'Yes, select year',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select date',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        title:
+          'Please indicate ownership by written instruction or by reference to a plan:',
+        placeholder:
+          'E.g., The irregular boundary near the stream at the rear of the property is owned by...',
+        order: 2,
+      },
+    ],
+    points: 100,
+    order: 1,
+  },
+
+  // {
+  //   sectionKey: 'alterationsAndPlanning',
+  //   taskKey: 'building_works',
+  //   title:
+  //     'Have any of the following changes been made to the whole or any part of the property (including the garden)?',
+  //   description:
+  //     'If yes, please give details including dates of all work undertaken below and supply copies of the planning permissions, Building Regulations approvals and Completion Certificates',
+  //   type: 'DATE',
+  //   helpText:
+  //     'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls. These details help identify if planning permission or building control approval was required.',
+  //   options: [
+  //     {
+  //       label: 'Yes, select year',
+  //       value: 'selected',
+  //       hasDate: true,
+  //       dateFormat: 'fullDate',
+  //       datePlaceholder: 'Select date',
+  //     },
+  //   ],
+  //   points: 100,
+  //   order: 1,
+  // },
 
   {
     sectionKey: 'alterationsAndPlanning',
     taskKey: 'building_works',
-    title:
-      'Have any of the following changes been made to the whole or any part of the property (including the garden)?',
-    description:
-      'If yes, please give details including dates of all work undertaken below and supply copies of the planning permissions, Building Regulations approvals and Completion Certificates',
-    type: 'DATE',
-    helpText:
-      'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls. These details help identify if planning permission or building control approval was required.',
-    options: [
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
       {
-        label: 'Yes, select year',
-        value: 'selected',
-        hasDate: true,
-        dateFormat: 'fullDate',
-        datePlaceholder: 'Select date',
+        partKey: 'Are_irregular_boundaries',
+        title:
+          'Are any of the works disclosed in previous questions unfinished?',
+        description: 'If yes, please give details:',
+        type: 'RADIO',
+        helpText:
+          'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls, and are unfinished. If so, please provide details of what work is incomplete, where it is and what is outstanding. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Garage conversion on side of house hasn’t been finished yet - windows and doors need to be fitted...',
+        order: 2,
       },
     ],
     points: 100,
@@ -1651,45 +1729,116 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'breaches_of_consent_conditions',
     title: 'Are any of the works disclosed in previous questions unfinished?',
     description: 'If yes, please give details:',
-    type: 'RADIO',
-    helpText:
-      'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls, and are unfinished. If so, please provide details of what work is incomplete, where it is and what is outstanding. ',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 100,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'alterationsAndPlanning',
-    taskKey: 'planning_or_building_issues',
-    title:
-      'Is the seller aware of any breaches of planning permission conditions or Building Regulations consent conditions, unfinished work or work that does not have all necessary consents?',
-    description: 'If yes, please give details:',
-    type: 'RADIO',
-    helpText:
-      'This section asks if any of the works or alterations to the property were complete without approval or did not comply with planning or building regulations. If yes, please detail what the works are, when they happened and the nature of the breach.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    parts: [
+      {
+        partKey: 'Are_irregular_boundaries',
+        title:
+          'Are any of the works disclosed in previous questions unfinished?',
+        description: 'If yes, please give details:',
+        type: 'RADIO',
+        helpText:
+          'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls, and are unfinished. If so, please provide details of what work is incomplete, where it is and what is outstanding. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Garage conversion on side of house hasn’t been finished yet - windows and doors need to be fitted...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
   },
 
+  // {
+  //   sectionKey: 'alterationsAndPlanning',
+  //   taskKey: 'building_works',
+  //   title:
+  //     'Is the seller aware of any breaches of planning permission conditions or Building Regulations consent conditions, unfinished work or work that does not have all necessary consents?',
+  //   description: 'If yes, please give details:',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'This section asks if any of the works or alterations to the property were complete without approval or did not comply with planning or building regulations. If yes, please detail what the works are, when they happened and the nature of the breach.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 50,
+  //   order: 1,
+  // },
+
   {
     sectionKey: 'alterationsAndPlanning',
     taskKey: 'planning_or_building_issues',
-    title: 'Are there any planning or building control issues to resolve?',
-    description: 'If yes, please give details:',
-    type: 'RADIO',
-    helpText:
-      'If you answered yes to the previous question, it is likely you may have ongoing issues requiring resolution with the relevant bodies for that work. This could include: applying for retrospective consent or meeting conditions for approval. If yes, please detail what the issue is, what part of the property it applies to, key dates, what has been done so far and what still needs to be resolved.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Are_irregular_boundaries',
+        title:
+          'Is the seller aware of any breaches of planningpermission conditions or Building Regulations consent conditions, unfinished work or work that does not have all necessary consents',
+        description: 'If yes, please give details:',
+        type: 'RADIO',
+        helpText:
+          'This section asks if any of the works or alterations to the property were complete without approval or did not comply with planning or building regulations. If yes, please detail what the works are, when they happened and the nature of the breach. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Extension was complete without the right approval...',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 2,
+  },
+
+  {
+    sectionKey: 'alterationsAndPlanning',
+    taskKey: 'planning_or_building_issues',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Are_irregular_boundaries',
+        title: 'Are there any planning or building control issues to resolve?',
+        description: 'If yes, please give details:',
+        type: 'RADIO',
+        helpText:
+          'If you answered yes to the previous question, it is likely you may have ongoing issues requiring resolution with the relevant bodies for that work. This could include: applying for retrospective consent or meeting conditions for approval. If yes, please detail what the issue is, what part of the property it applies to, key dates, what has been done so far and what still needs to be resolved. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above:',
+        placeholder:
+          'E.g., Retrospective planning for a garage conversion was applied for on the 17th August 2025, we are awaiting an update from the planning authority...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
@@ -1730,16 +1879,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'alterationsAndPlanning',
     taskKey: 'solar_panel_roof_lease',
-    title:
-      'Has a long lease of the roof/air space been granted to a solar panel provider?',
-    description:
-      'If yes, please supply copies of the agreement, electricity bills or tariff payment records and contact details of the provider:',
-    type: 'RADIO',
-    helpText:
-      'If solar panels have been installed by a provider, a lease of the space where the panels are installed is typically required. This information can be found on your roof lease agreement which you would have received and signed at the time of installation by the provider.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Party_Wall',
+        title:
+          'Has a long lease of the roof/air space been granted to a solar panel provider?',
+        description:
+          'If yes, please supply copies of the agreement, electricity bills or tariff payment records and contact details of the provider:',
+        type: 'RADIO',
+        helpText:
+          'If solar panels have been installed by a provider, a lease of the space where the panels are installed is typically required. This information can be found on your roof lease agreement which you would have received and signed at the time of installation by the provider.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: '',
+        order: 2,
+      },
     ],
     points: 75,
     order: 1,
@@ -1748,17 +1914,68 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'alterationsAndPlanning',
     taskKey: 'listed_building',
-    title: 'Is the property or any part of it: a listed building?',
-    description:
-      'If yes, please supply copies of the confirmation of listing status and any consent for works:',
-    type: 'RADIO',
-    helpText:
-      'A listed building is one that appears on the National Heritage List for England because it has special architectural or historic importance. Listing applies to the whole property and sometimes attached structures (e.g. outbuilding). You can find confirmation of listing status online.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'roof_air',
+        title: 'Is the property or any part of it: a listed building??',
+        description:
+          'If yes, please supply copies of the confirmation of listing status and any consent for works:',
+        type: 'RADIO',
+        helpText:
+          'A listed building is one that appears on the National Heritage List for England because it has special architectural or historic importance. Listing applies to the whole property and sometimes attached structures (e.g. outbuilding). You can find confirmation of listing status online.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: '',
+        order: 2,
+      },
     ],
     points: 75,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'alterationsAndPlanning',
+    taskKey: 'conservation_orders',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'roof_air',
+        title: 'Is the property or any part of it: in a conservation area?',
+        description:
+          'If yes, please supply copies of the confirmation of conservation status, planning permission/ consents for work, any restrictions or conditions from previous applications',
+        type: 'RADIO',
+        helpText:
+          'A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council’s planning department keeps a list and map of conservation areas.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: '',
+        order: 2,
+      },
+    ],
+    points: 25,
     order: 1,
   },
 
@@ -1781,35 +1998,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'conservation_orders',
-    title: 'Is the property or any part of it: in a conservation area?',
-    description: 'Please select yes or no:',
-    type: 'RADIO',
-    helpText:
-      "A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council's planning department keeps a list and map of conservation areas.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 25,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'alterationsAndPlanning',
     taskKey: 'tree_preservation_orders',
-    title: 'Have the terms of the Order been complied with?',
-    description:
-      'Please select yes or no and supply copies of evidence of permission applications, consent letters, evidence of replanting if necessary or any evidence of non-compliance.',
-    type: 'RADIO',
-    helpText:
-      "The council sets conditions under a Tree Preservation Order about what you can and can't do to protected trees. Compliance means you have only carried out works with proper permission and followed any conditions.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'roof_air',
+        title: 'Have the terms of the Order been complied with?',
+        description:
+          'If yes, please supply copies of the confirmation of conservation status, planning permission/ consents for work, any restrictions or conditions from previous applications',
+        type: 'RADIO',
+        helpText:
+          'A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council’s planning department keeps a list and map of conservation areas.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: '',
+        order: 2,
+      },
     ],
     points: 75,
-    order: 1,
+    order: 2,
   },
 
   // ────────────────────────────────────────────
@@ -1837,16 +2055,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'new_home_warranty',
-    title:
-      'Does the property benefit from any New Home guarantees or warranties? (e.g. NHBC or similar)',
-    description:
-      'Document any planning applications orIf yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes. notices',
-    type: 'RADIO',
-    helpText:
-      'New home warranties typically cover structural defects for 10 years and are usually provided by NHBC, Premier Guarantee, or similar providers.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'detail_outcomes',
+        title:
+          'Does the property benefit from any New Home guarantees or warranties? (e.g. NHBC or similar)',
+        description:
+          'Document any planning applications orIf yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes. notices',
+        type: 'RADIO',
+        helpText:
+          'New home warranties typically cover structural defects for 10 years and are usually provided by NHBC, Premier Guarantee, or similar providers. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'Please provide written instruction for your answer above and supply copies of the relevant documents:',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1855,16 +2093,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'damp_proofing',
-    title:
-      'Does the property benefit from any Damp Proofing guarantees or warranties?',
-    description:
-      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
-    type: 'RADIO',
-    helpText:
-      'Certificate from the installer (often insurance-backed) confirming damp treatment, the date, and areas treated. Usually transferable to a new owner if notified; keep paperwork and follow any maintenance conditions to claim.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'does_property_benefit',
+        title:
+          'Does the property benefit from any Damp Proofing guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+        type: 'RADIO',
+        helpText:
+          'Certificate from the installer (often insurance-backed) confirming damp treatment, the date, and areas treated. Usually transferable to a new owner if notified; keep paperwork and follow any maintenance conditions to claim. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'Please provide written instruction for your answer above and supply copies of the relevant documents:',
+        placeholder:
+          'E.g., “I had damp proofing done, but I can’t find the guarantee paperwork.',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1873,16 +2131,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'timber_treatment',
-    title:
-      'Does the property benefit from any Timber Treatment guarantees or warranties?',
-    description:
-      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
-    type: 'RADIO',
-    helpText:
-      'Timber treatment is the inspection and treatment of structural wood to eradicate or prevent wood-boring insects and rot (e.g., woodworm, wet/dry rot), typically using approved insecticides/fungicides and targeted repairs.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'inspection_treatment',
+        title:
+          'Does the property benefit from any Timber Treatment guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+        type: 'RADIO',
+        helpText:
+          'Timber treatment is the inspection and treatment of structural wood to eradicate or prevent wood-boring insects and rot (e.g., woodworm, wet/dry rot), typically using approved insecticides/fungicides and targeted repairs.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'Please provide written instruction for your answer above and supply copies of the relevant documents:',
+        placeholder:
+          'E.g., I have not had any work carried out or I have but cant find the guarantee/warranty',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1891,16 +2169,36 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'window_roof_light_door',
-    title:
-      'Does the property benefit from any Windows, Roof Lights, Roof Windows or Glazed Doors guarantees or warranties?',
-    description:
-      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
-    type: 'RADIO',
-    helpText:
-      'These are typically given when any windows, roof lights, or glazed doors are installed or replaced They protect the homeowner if there are problems with the products or the way they were fitted.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'glazed_doors_guarantees',
+        title:
+          'Does the property benefit from any Windows, Roof Lights, Roof Windows or Glazed Doors guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+        type: 'RADIO',
+        helpText:
+          'These are typically given when any windows, roof lights, or glazed doors are installed or replaced They protect the homeowner if there are problems with the products or the way they were fitted.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'Please provide written instruction for your answer above and supply copies of the relevant documents:',
+        placeholder:
+          'E.g.,I have had work done, but my friend did it, or I can’t find the certificate',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1909,16 +2207,35 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'electrical_work',
-    title:
-      'Does the property benefit from any electrical work guarantees or warranties?',
-    description:
-      'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
-    type: 'RADIO',
-    helpText:
-      'When electrical work is carried out (such as rewiring, installing a new consumer unit, or adding circuits), the installer sometimes provides a guarantee/warranty. This paperwork would’ve been provided by your supplier after the works have been completed.Provide dates/contractor and term; if missing/expired, buyer may request an EICR or indemnity.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'policy_number',
+        title:
+          'Does the property benefit from any electrical work guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+        type: 'RADIO',
+        helpText:
+          'When electrical work is carried out (such as rewiring, installing a new consumer unit, or adding circuits), the installer sometimes provides a guarantee/warranty. This paperwork would’ve been provided by your supplier after the works have been completed.Provide dates/contractor and term; if missing/expired, buyer may request an EICR or indemnity.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g.,I have had work done, but my friend did it, or I can’t find the certificate',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1927,15 +2244,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'roofing',
-    title:
-      'Does the property benefit from any of the following guarantees or warranties:',
-    description: 'Roofing ',
-    type: 'RADIO',
-    helpText:
-      'Checks if any roofing was installed/replaced/repaired (including flat roofs).If yes, give what was done, dates, contractor, materials, compliance proof (Building Control/CompetentRoofer), and any warranty.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'replaced_materials',
+        title:
+          'Does the property benefit from any of the following guarantees or warranties:',
+        description: 'roofing',
+        type: 'RADIO',
+        helpText:
+          'Checks if any roofing was installed/replaced/repaired (including flat roofs).If yes, give what was done, dates, contractor, materials, compliance proof (Building Control/CompetentRoofer), and any warranty.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1944,15 +2280,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'central_heating',
-    title:
-      'Does the property benefit from any of the following guarantees or warranties:',
-    description: 'Central Heating ',
-    type: 'RADIO',
-    helpText:
-      'Checks if the property has central heating (any type: gas, electric, oil, heat pump). If yes, give system type, install/last-service dates, installer, compliance docs (e.g., Gas Safe/Building Control), and any warranty/manuals.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gase_safe',
+        title:
+          'Does the property benefit from any of the following guarantees or warranties:',
+        description: 'central_heating',
+        type: 'RADIO',
+        helpText:
+          'Checks if the property has central heating (any type: gas, electric, oil, heat pump). If yes, give system type, install/last-service dates, installer, compliance docs (e.g., Gas Safe/Building Control), and any warranty/manuals.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1961,15 +2316,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'guaranteesAndWarranties',
     taskKey: 'underpinning',
-    title:
-      'Does the property benefit from any of the following guarantees or warranties:',
-    description: 'Underpinning',
-    type: 'RADIO',
-    helpText:
-      'Underpinning strengthens the foundations (often after subsidence).If done, provide date/location, engineer/contractor, Building Control sign-off, and any warranty; missing docs may trigger extra surveys/indemnity.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'underpinning_strengthens',
+        title:
+          'Does the property benefit from any of the following guarantees or warranties:',
+        description: 'Underpinning',
+        type: 'RADIO',
+        helpText:
+          'Underpinning strengthens the foundations (often after subsidence).If done, provide date/location, engineer/contractor, Building Control sign-off, and any warranty; missing docs may trigger extra surveys/indemnity.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., maybe you had work done but cant find the guarantee.',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -1980,12 +2354,32 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'other',
     title:
       'Does the property benefit from any of the following guarantees or warranties:',
-    description: 'Other/please state',
-    type: 'RADIO',
-    helpText: 'please write the other category here ',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: ' ',
+    parts: [
+      {
+        partKey: 'other_state',
+        title:
+          'Does the property benefit from any of the following guarantees or warranties:',
+        description: 'Other/please state',
+        type: 'RADIO',
+        helpText: 'please write the other category here',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+        display: 'both',
+      },
     ],
     points: 100,
     order: 1,
@@ -2013,13 +2407,29 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'insurance',
     taskKey: 'seller_insurance',
-    title: 'Does the seller insure the property?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText: 'Other',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    parts: [
+      {
+        partKey: 'insure_property',
+        title: 'Does the seller insure the property?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: 'Other',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Why does the seller not provide insurance for the property?',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2031,7 +2441,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: 'If the property is a flat, does the landlord insure the building?',
     description: 'Please answer Yes or No and provide details.',
     type: 'RADIO',
-    helpText: 'Other',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -2063,7 +2472,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Has any buildings insurance taken out by the seller ever been subject to high excesses?',
     description: 'Please answer Yes or No and provide details.',
     type: 'RADIO',
-    helpText: 'Other',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -2079,7 +2487,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Has any buildings insurance taken out by the seller ever been subject to unusual conditions?',
     description: 'Please answer Yes or No and provide details.',
     type: 'RADIO',
-    helpText: 'Other',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -2110,8 +2517,16 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title:
       'What were the circumstances regarding the insurance issue(s) you indicated?',
     description: 'Please provide written details below',
-    type: 'TEXT',
-    helpText: 'Other',
+    type: 'MULTIPART' as QuestionType,
+    parts: [
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
+    ],
     displayMode: 'text',
     points: 50,
     order: 1,
@@ -2119,13 +2534,30 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'insurance',
     taskKey: 'buildings_insurance',
-    title: 'Has the seller made any buildings insurance claims?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText: 'Other',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    parts: [
+      {
+        partKey: 'insurance_issue',
+        title: 'Has the seller made any buildings insurance claims?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: 'other',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'Please provide written details for building insurance claims made by the seller.',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2152,19 +2584,72 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 75,
     order: 1,
   },
+  // {
+  //   sectionKey: 'environmental',
+  //   taskKey: 'Flooding',
+  //   title:
+  //     'Has any part of the property (whether buildings or surrounding garden or land) ever been flooded?',
+  //   description:
+  //     'If Yes, please state when the flooding occurred and identify the parts that flooded:',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'This includes planning permission notices or development proposals.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 50,
+  //   order: 1,
+  // },
+
   {
     sectionKey: 'environmental',
     taskKey: 'Flooding',
-    title:
-      'Has any part of the property (whether buildings or surrounding garden or land) ever been flooded?',
-    description:
-      'If Yes, please state when the flooding occurred and identify the parts that flooded:',
-    type: 'RADIO',
-    helpText:
-      'This includes planning permission notices or development proposals.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'have_any_part',
+        title:
+          'Has any part of the property (whether buildings or surrounding garden or land) ever been flooded?',
+        description:
+          'If Yes, please state when the flooding occurred and identify the parts that flooded:',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title:
+          'If Yes, please state when the flooding occurred and identify the parts that flooded:',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
+      {
+        partKey: 'does_the_property',
+        title:
+          'What kind of flooding occurred?. Please select all the options that apply:',
+        description: '',
+        type: 'CHECKBOX',
+        helpText: '',
+        options: [
+          { label: 'Ground Water', value: 'ground_water' },
+          { label: 'Sewer flooding', value: 'sewer_flooding' },
+          { label: 'Surface water', value: 'surface_water' },
+          { label: 'Coastal flooding', value: 'coastal_flooding' },
+          { label: 'River flooding', value: 'river_flooding' },
+          { label: 'Other, specify below', value: 'other' },
+        ],
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -2178,47 +2663,111 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description:
       'If Yes, please state when the flooding occurred and identify the parts that flooded:',
     type: 'RADIO',
-    helpText:
-      'This includes planning permission notices or development proposals.',
+    helpText: '',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 75,
+    points: 25,
     order: 2,
   },
 
   {
     sectionKey: 'environmental',
     taskKey: 'Flooding',
-    title: 'Has a Flood Risk Report been prepared?',
-    description: 'If Yes, please supply a copy.',
-    type: 'RADIO',
-    helpText:
-      'This includes planning permission notices or development proposals.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'have_any_part',
+        title: 'Has a Flood Risk Report been prepared?',
+        description: 'If Yes, please supply a copy.',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please scan or upload a copy of flood risk assesment.',
+        placeholder: '',
+        order: 2,
+      },
     ],
-    points: 25,
+    points: 50,
     order: 3,
   },
+
+  // {
+  //   sectionKey: 'environmental',
+  //   taskKey: 'Flooding',
+  //   title: 'Has a Flood Risk Report been prepared?',
+  //   description: 'If Yes, please supply a copy.',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'This includes planning permission notices or development proposals.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 25,
+  //   order: 3,
+  // },
 
   {
     sectionKey: 'environmental',
     taskKey: 'radon',
-    title: 'Has a Radon test been carried out on the property?',
-    description: 'If Yes, please supply a copy.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'have_any_part',
+        title: 'Has a Radon test been carried out on the property?',
+        description: 'If Yes, please supply a copy.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please scan or upload a copy of Radon Test',
+        placeholder: '',
+        order: 2,
+      },
     ],
     points: 75,
     order: 1,
   },
+  // {
+  //   sectionKey: 'environmental',
+  //   taskKey: 'radon',
+  //   title: 'Has a Radon test been carried out on the property?',
+  //   description: 'If Yes, please supply a copy.',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 75,
+  //   order: 1,
+  // },
+
   {
     sectionKey: 'environmental',
     taskKey: 'radon',
@@ -2232,8 +2781,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 25,
-    order: 1,
+    order: 2,
   },
+
   {
     sectionKey: 'environmental',
     taskKey: 'radon',
@@ -2248,57 +2798,126 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 75,
-    order: 1,
+    order: 3,
   },
   {
     sectionKey: 'environmental',
     taskKey: 'energy_efficiency',
     title: 'Please supply a copy of the EPC for the property.',
     description: 'Others',
-    type: 'RADIO',
+    type: 'UPLOAD',
     helpText:
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 75,
-    order: 1,
-  },
-  {
-    sectionKey: 'environmental',
-    taskKey: 'energy_efficiency',
-    title:
-      'Have any installations in the property been financed under the Green Deal scheme?',
-    description:
-      'Please answer Yes or No and give details of all installations and supply a copy of your latest electricity bill.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 75,
+    points: 50,
     order: 1,
   },
 
   {
     sectionKey: 'environmental',
+    taskKey: 'energy_efficiency',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'have_any_part',
+        title:
+          'Have any installations in the property been financed under the Green Deal scheme?',
+        description:
+          'Please answer Yes or No and give details of all installations and supply a copy of your latest electricity bill.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder: '',
+        display: 'both',
+        order: 2,
+      },
+    ],
+    points: 75,
+    order: 2,
+  },
+
+  // {
+  //   sectionKey: 'environmental',
+  //   taskKey: 'energy_efficiency',
+  //   title:
+  //     'Have any installations in the property been financed under the Green Deal scheme?',
+  //   description:
+  //     'Please answer Yes or No and give details of all installations and supply a copy of your latest electricity bill.',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 75,
+  //   order: 1,
+  // },
+
+  {
+    sectionKey: 'environmental',
     taskKey: 'japanese_knotweed',
-    title: 'Is the property affected by Japanese knotweed?',
-    description:
-      'Please answer Yes or No and state whether there is a Japanese knotweed management and treatment plan in place and supply a copy with any insurance cover linked to the plan.',
-    type: 'RADIO',
-    helpText:
-      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for T marks on your property title plan or check your deeds for each side.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'have_any_part',
+        title: 'Is the property affected by Japanese knotweed?',
+        description:
+          'Please answer Yes or No and state whether there is a Japanese knotweed management and treatment plan in place and supply a copy with any insurance cover linked to the plan.',
+        type: 'RADIO',
+        helpText:
+          'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for "T" marks on your property title plan or check your deeds for each side.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        display: 'both',
+        order: 2,
+      },
     ],
     points: 75,
     order: 1,
   },
+
+  // {
+  //   sectionKey: 'environmental',
+  //   taskKey: 'japanese_knotweed',
+  //   title: 'Is the property affected by Japanese knotweed?',
+  //   description:
+  //     'Please answer Yes or No and state whether there is a Japanese knotweed management and treatment plan in place and supply a copy with any insurance cover linked to the plan.',
+  //   type: 'RADIO',
+  //   helpText:
+  //     'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for T marks on your property title plan or check your deeds for each side.',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 75,
+  //   order: 1,
+  // },
 
   // ────────────────────────────────────────────
   // RIGHTS AND INFORMAL ARRANGEMENTS
@@ -2325,15 +2944,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: 'resposibility_towards_jointly',
-    title:
-      'Does ownership of the property carry a responsibility to contribute towards the cost of any jointly used services, such as maintenance of a private road, a shared driveway, a boundary or drain?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'provide_details',
+        title:
+          'Does ownership of the property carry a responsibility to contribute towards the cost of any jointly used services, such as maintenance of a private road, a shared driveway, a boundary or drain?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2342,14 +2979,32 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: '2_dunno_how_id_surmise_this',
-    title:
-      'Does the property benefit from any rights or arrangements over any neighboring property this includes any rights of way?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText: 'what other rights would this include?',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'neighboring_property',
+        title:
+          'Does the property benefit from any rights or arrangements over any neighboring property this includes any rights of way?',
+        description: '',
+        type: 'RADIO',
+        helpText: 'what other rights would this include?',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2358,14 +3013,32 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: 'prevented_access',
-    title:
-      'Has anyone taken steps to prevent access to the property or to complain about or demand payment for access to the property?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText: 'WHAT types of steps could be taken - consider this here...',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'neighboring_property',
+        title:
+          'Has anyone taken steps to prevent access to the property or to complain about or demand payment for access to the property?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: 'WHAT types of steps could be taken - consider this here...',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2377,13 +3050,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title:
       'Does the seller know if any of the following rights benefit the property:',
     description: 'Rights of light',
-    type: 'RADIO',
+    type: 'MULTIPART' as QuestionType,
     helpText:
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
     points: 50,
     order: 1,
   },
@@ -2426,15 +3095,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: 'other_rights_and_arrangements',
-    title:
-      'Does the seller know if any of the following arrangements affect the property:',
-    description: "Other people's rights to mines and minerals under the land.",
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'arrangements_affecty',
+        title:
+          'Does the seller know if any of the following arrangements affect the property:',
+        description:
+          'Other peoples rights to mines and minerals under the land.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2443,15 +3131,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: 'chancel_repair_liability',
-    title:
-      'Does the seller know if any of the following arrangements affect the property:',
-    description: 'Chancel repair liability',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'seller_know',
+        title:
+          'Does the seller know if any of the following arrangements affect the property:',
+        description: 'Chancel repair liability',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2459,17 +3165,35 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'service_crossing_the_property_or_neighboring_property',
-    title:
-      'Does the seller know if any of the following arrangements affect the property:',
-    description:
-      "Other people's rights to take things from the land such as timber, hay or fish",
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    taskKey: 'chancel_repair_liability',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'following_arrangements',
+        title:
+          'Does the seller know if any of the following arrangements affect the property:',
+        description:
+          'Other peoples rights to take things from the land such as timber hay or fish',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2477,16 +3201,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'service_crossing_the_property_or_neighboring_property',
-    title:
-      'Are there any other rights or arrangements affecting the property? This includes any rights of way.',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    taskKey: 'chancel_repair_liability',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'arrangementst_affecting',
+        title:
+          'Are there any other rights or arrangements affecting the property? This includes any rights of way.',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2512,15 +3254,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'rightsAndInformalArrangements',
     taskKey: 'service_crossing_the_property_or_neighboring_property',
-    title:
-      'Is there any agreement or arrangement about drains, pipes or wires?',
+    title: '',
     description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'arrangement_ drains',
+        title:
+          'Is there any agreement or arrangement about drains, pipes or wires?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -2536,9 +3296,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description:
       'For example: garage, carport, driveway, shared driveway, allocated car parking space, on street parking etc.',
     type: 'TEXT',
-    helpText: 'This includes all parking available.',
-    displayMode: 'text',
-    points: 75,
+    helpText: 'Start typing your answer here...',
+    points: 50,
     order: 1,
   },
 
@@ -2554,7 +3313,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 75,
+    points: 25,
     order: 1,
   },
 
@@ -2582,15 +3341,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'otherCharges',
     taskKey: 'charges_relating_to_the_property',
-    title:
-      'Does the seller have to pay any charges relating to the property (excluding any payments such as council tax, utility charges, etc.), for example payments to a management company?',
-    description: 'Please answer Yes or No and provide written instructions.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'council_tax',
+        title:
+          'Does the seller have to pay any charges relating to the property (excluding any payments such as council tax, utility charges, etc.), for example payments to a management company?',
+        description:
+          'Please answer Yes or No and provide written instructions.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'Please provide written instruction for your answer above',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 75,
     order: 1,
@@ -2614,29 +3392,14 @@ const QUESTION_TEMPLATES: QSeed[] = [
       sellers:
         'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
     },
-    points: 75,
-    order: 1,
-  },
-  {
-    sectionKey: 'occupiers',
-    taskKey: 'the_seller',
-    title: 'Does the seller live at the property?',
-    description: 'Please answer Yes or No. ',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
     points: 25,
     order: 1,
   },
 
   {
     sectionKey: 'occupiers',
-    taskKey: 'other_occupiers',
-    title: 'Does anyone else, aged 17 or over, live at the property?',
+    taskKey: 'the_seller',
+    title: 'Does the seller live at the property?',
     description:
       'Please answer Yes or No and provide full names of any occupiers (other than the sellers) aged 17 or over:',
     type: 'RADIO',
@@ -2645,6 +3408,68 @@ const QUESTION_TEMPLATES: QSeed[] = [
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
+    ],
+    points: 50,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'occupiers',
+    taskKey: 'other_occupiersr',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'full_names_of_sellers',
+        type: 'multitextinput',
+        title: 'Does anyone else, aged 17 or over, live at the property?',
+        description:
+          'Please answer Yes or No and provide full names of any occupiers (other than the sellers) aged 17 or over:',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        placeholder: 'Enter Name',
+        buttonText: 'Add More Sellers',
+        order: 1,
+      },
+      {
+        partKey: 'are_you_the_owner_of_the_property',
+        type: 'radio',
+        title: 'Are you the owner of the property?',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
+        type: 'radio',
+        title: 'Are completing this form on the behalf of the seller? ',
+        options: [
+          { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+          { label: 'Trustee', value: 'trustee' },
+          { label: 'Representative', value: 'representative' },
+          { label: 'Power of Attorney', value: 'power_of_attorney' },
+          { label: 'Limited Company ', value: 'limited_company' },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'company_details',
+        type: 'multifieldform',
+        title: '',
+        repeatable: false,
+        fields: [
+          {
+            key: 'filler_name',
+            label: 'N',
+            placeholder: 'Enter Name',
+          },
+        ],
+        order: 4,
+      },
     ],
     points: 50,
     order: 1,
@@ -2702,17 +3527,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'occupiers',
     taskKey: 'vacant_possession',
-    title: 'Is the property being sold with vacant possession?',
-    description:
-      'Agreed to sign the sale contract? Please answer Yes or No. If No, please supply other evidence that the property will be vacant on completion.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'roof_air',
+        title: 'Is the property being sold with vacant possession?',
+        description:
+          'Agreed to sign the sale contract? Please answer Yes or No. If No, please supply other evidence that the property will be vacant on completion.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: '',
+        order: 2,
+      },
     ],
-    points: 25,
+    points: 75,
     order: 1,
   },
 
