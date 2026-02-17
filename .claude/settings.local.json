@@ -23,7 +23,9 @@
       "Bash(npx eslint:*)",
       "Bash(tasklist:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma migrate:*)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db seed:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db seed:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)"
     ]
   }
 }
