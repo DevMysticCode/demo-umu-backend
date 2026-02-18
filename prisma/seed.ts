@@ -176,6 +176,10 @@ interface QSeed {
   dateFields?: any;
   parts?: any;
   fields?: any;
+  autoSaveOn?: {
+    partKey?: string;
+    value?: string;
+  };
   repeatable?: boolean;
   buttonText?: string;
   scaleType?: string;
@@ -215,7 +219,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'name_of_sellers_and_address_of_the_property',
-    title: 'Please provide the address of the property',
+    title: 'Address of the Property',
     description: '',
     type: 'MULTIPART',
     helpText: '',
@@ -369,7 +373,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         key: 'law_firm_name',
         label: '',
-        placeholder: 'Name of the law firm',
+        placeholder: 'Name of the Solicitors firm',
       },
       {
         key: 'contact_name',
@@ -379,17 +383,23 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         key: 'address',
         label: '',
-        placeholder: 'Enter solicitors address',
+        placeholder: 'Enter address',
       },
       {
         key: 'email',
         label: '',
-        placeholder: 'Enter solicitors email id',
+        placeholder: 'Enter email',
+      },
+      {
+        key: 'phonenumber',
+        label: '',
+        placeholder: 'Enter phone number',
       },
       {
         key: 'reference_number',
         label: '',
         placeholder: 'Enter reference number',
+        required: false,
       },
     ],
     points: 100,
@@ -1251,8 +1261,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title:
           'Is the seller aware of any boundary feature having been moved in the last 10 years, or during the seller’s period of ownership if longer?',
         description: 'If yes, please give details below',
+        helpText:
+          'This is to flag any past changes to fences, walls, or hedges that might affect where the legal boundary really is. Even small changes can lead to neighbour disputes or sale delays, so any changes need to be clearly documented.',
         type: 'RADIO',
-        helpText: '',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -1506,9 +1517,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_aware_of_any_proposals',
+      value: 'no',
+    },
     parts: [
       {
-        partKey: 'prospect_disputes_question',
+        partKey: 'notices_or_correspondence',
         title:
           'Have any notices or correspondence been received or sent (e.g.from or to a neighbour, council or government department) or any negotiations or discussions taken place, which affect the property or a property nearby?',
         description: 'If yes, please give details below',
@@ -1524,8 +1539,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder: 'E.g., Lorem Ipsum',
+        conditionalOn: 'notices_or_correspondence',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1557,9 +1576,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_aware_of_any_proposals',
+      value: 'no',
+    },
     parts: [
       {
-        partKey: 'prospect_disputes_question',
+        partKey: 'seller_aware_of_any_proposals',
         title:
           'Is the seller aware of any proposals to develop property or land nearby, or, any proposals to make alterations to buildings nearby?',
         description: 'If yes, please give details below',
@@ -1575,8 +1598,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder: 'E.g., Lorem Ipsum',
+        conditionalOn: 'seller_aware_of_any_proposals',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -6823,6 +6850,7 @@ async function main() {
         dateFields: qt.dateFields || undefined,
         parts: qt.parts || undefined,
         fields: qt.fields || undefined,
+        autoSaveOn: qt.autoSaveOn || undefined,
         repeatable: qt.repeatable ?? null,
         buttonText: qt.buttonText || null,
         scaleType: qt.scaleType || null,
