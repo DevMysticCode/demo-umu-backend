@@ -124,6 +124,7 @@ model QuestionTemplate {
   dateFields          Json?
   parts               Json?
   fields              Json?
+  autoSaveOn          Json?
   repeatable          Boolean?
   buttonText          String?
   scaleType           String?
