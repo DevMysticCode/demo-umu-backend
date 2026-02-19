@@ -1173,10 +1173,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'If the property is leasehold this section, or parts of it, may not apply.',
     },
     points: 0,
     order: 1,
@@ -1192,7 +1190,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Looking at the property from the road, who owns or accepts responsibility to maintain or repair the boundary features on each side of the property?',
     description:
       'Identify who is responsible for boundary maintenance on each side',
-    type: 'RADIO',
+    type: 'BOUNDARY',
     helpText:
       'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features.',
     options: [
@@ -1216,6 +1214,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'Are_irregular_boundaries',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'Are_irregular_boundaries',
@@ -1238,6 +1240,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please indicate ownership by written instruction or by reference to a plan:',
         placeholder:
           'E.g., The irregular boundary near the stream at the rear of the property is owned by...',
+        conditionalOn: 'Are_irregular_boundaries',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1255,6 +1260,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'is_seller_aware',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'is_seller_aware',
@@ -1273,9 +1282,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
           'E.g., Back fence in the garden has been moved back 2 yards...',
+        conditionalOn: 'is_seller_aware',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1294,6 +1307,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_ownership',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'seller_ownership',
@@ -1312,9 +1329,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
           'E.g., Back fence in the garden has been moved back 2 yards...',
+        conditionalOn: 'seller_ownership',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1333,6 +1354,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_ownership_complex',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'seller_ownership_complex',
@@ -1351,8 +1376,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder: 'E.g., Cellar under the property...',
+        conditionalOn: 'seller_ownership_complex',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1371,6 +1400,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'notice_received',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'notice_received',
@@ -1389,9 +1422,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder: 'E.g., Notice received in 2021 for repair work to fence..',
-        display: 'both',
+        conditionalOn: 'notice_received',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1410,6 +1446,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'problems_affecting_property',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'problems_affecting_property',
@@ -1428,8 +1468,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder: 'E.g., Dispute over noise with neighbours ',
+        conditionalOn: 'problems_affecting_property',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1461,6 +1505,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'prospect_disputes_question',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'prospect_disputes_question',
@@ -1479,9 +1527,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
-          'E.g., Potential dispute over responsibility for hedge between mine and neighbour to the left’s garden..',
+          "E.g., Potential dispute over responsibility for hedge between mine and neighbour to the left's garden..",
+        conditionalOn: 'prospect_disputes_question',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1518,7 +1570,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'MULTIPART' as QuestionType,
     helpText: '',
     autoSaveOn: {
-      partKey: 'seller_aware_of_any_proposals',
+      partKey: 'notices_or_correspondence',
       value: 'no',
     },
     parts: [
