@@ -200,4 +200,5 @@ enum QuestionType {
   MULTIFIELDFORM
   SCALE
   CHIPS
+  BOUNDARY
 }
