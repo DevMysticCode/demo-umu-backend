@@ -28,7 +28,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'disputesAndComplaints',
     title: 'Disputes and Complaints',
-    subtitle: 'Resolving Issues',
+    subtitle: 'Problems affecting the property',
     description: 'Document any disputes or complaints',
     icon: 'disputesAndComplaints',
     order: 3,
@@ -44,7 +44,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'alterationsAndPlanning',
     title: 'Alterations and Planning',
-    subtitle: 'Property Changes',
+    subtitle: 'Changes or improvements made to the property',
     description: 'Document any alterations or planning',
     icon: 'alterationsAndPlanning',
     order: 5,
@@ -52,7 +52,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'guaranteesAndWarranties',
     title: 'Guarantees and Warranties',
-    subtitle: 'Coverage Details',
+    subtitle: 'Your property protection is building up!',
     description: 'Document guarantees and warranties',
     icon: 'guaranteesAndWarranties',
     order: 6,
@@ -60,7 +60,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'insurance',
     title: 'Insurance',
-    subtitle: 'Insurance Details',
+    subtitle: 'Your property protection is building up!',
     description: 'Document insurance information',
     icon: 'insurance',
     order: 7,
@@ -68,7 +68,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'environmental',
     title: 'Environmental',
-    subtitle: 'Environmental Matters',
+    subtitle: 'Your property protection is building up!',
     description: 'Document environmental concerns',
     icon: 'environmental',
     order: 8,
@@ -77,14 +77,14 @@ const SECTION_TEMPLATES = [
     key: 'rightsAndInformalArrangements',
     title: 'Rights and Informal Arrangements',
     subtitle: 'Property Rights',
-    description: 'Document rights and informal arrangements',
+    description: 'Your property protection is building up!',
     icon: 'rightsAndInformalArrangements',
     order: 9,
   },
   {
     key: 'parking',
     title: 'Parking',
-    subtitle: 'Parking Arrangements',
+    subtitle: 'Your property protection is building up!',
     description: 'Document parking information',
     icon: 'parking',
     order: 10,
@@ -92,7 +92,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'otherCharges',
     title: 'Other Charges',
-    subtitle: 'Additional Charges',
+    subtitle: 'Your property protection is building up!',
     description: 'Document other charges',
     icon: 'otherCharges',
     order: 11,
@@ -100,7 +100,7 @@ const SECTION_TEMPLATES = [
   {
     key: 'occupiers',
     title: 'Occupiers',
-    subtitle: 'Current Occupiers',
+    subtitle: 'Your property protection is building up!',
     description: 'Document occupier information',
     icon: 'occupiers',
     order: 12,
@@ -188,6 +188,10 @@ interface QSeed {
   scaleStep?: number;
   scaleFormat?: string;
   scaleMaxLabel?: string;
+  externalLink?: {
+    label: string;
+    url: string;
+  };
   points: number;
   order: number;
 }
@@ -207,10 +211,37 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If  the seller gives you, separately from this form, any information concerning the property (in writing or in conversation, whether through an estate agent or solicitor or directly to you) on which you wish to rely when buying the property, you should tell your solicitor.You are entitled to rely on the replies given to enquiries but in relation to the physical condition of the property, the replies should not be treated as a substitute for undertaking your own survey or making your own independent enquiries, which you are recommended to do.The seller is only obliged to give answers based on their own information. They may not have knowledge of legal or technical matters. You should not expect the seller to have knowledge of, or give information about, matters prior to their ownership of the property.',
-      sellers:
-        'The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner’s legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.If you do not know the answer to any question, you must say so If you are unsure of the meaning of any questions or answers.',
+      infoCard: {
+        title: 'About this form',
+        description:
+          'This form is completed by the seller to supply the detailed information and documents which may be relied upon for the conveyancing process.',
+        icon: 'ownershipProfileNotes',
+        sections: [
+          {
+            title: 'Definitions',
+            content:
+              "'Seller' means all sellers together where the property is owned by more than one person. 'Buyer' means all buyers together where the property is being bought by more than one person. 'Property' includes all buildings and land within its boundaries.",
+          },
+        ],
+      },
+      buyers: [
+        'If the seller gives you, separately from this form, any information concerning the property (in writing or in conversation, whether through an estate agent or solicitor or directly to you) on which you wish to rely when buying the property, you should tell your solicitor.',
+        'You are entitled to rely on the replies given to enquiries but in relation to the physical condition of the property, the replies should not be treated as a substitute for undertaking your own survey or making your own independent enquiries, which you are recommended to do.',
+        'The seller is only obliged to give answers based on their own information. They may not have knowledge of legal or technical matters. You should not expect the seller to have knowledge of, or give information about, matters prior to their ownership of the property.',
+        'Please ask your solicitor. Completing this form is not mandatory, but omissions or delay in providing some information may delay the sale.',
+        'If you later become aware of any information which would alter any replies you have given, you must inform your solicitor immediately. This is as important as giving the right answers in the first place. Do not change any arrangements concerning the property with anyone (such as a tenant or neighbor) without first consulting your solicitor.',
+        'It is very important that your answers are accurate. If you give incorrect or incomplete information to the buyer (on this form or otherwise in writing or in conversation, whether through your estate agent or solicitor or directly to the buyer), the buyer may make a claim for compensation from you or refuse to complete the purchase.',
+        'You should answer the questions based upon information known to you (or, in the case of legal representatives, you or the owner). You are not expected to have expert knowledge of legal or technical matters, or matters that occurred prior to your ownership of the property.',
+        'Please give your solicitor any letters, agreements or other papers which help answer the questions. If you are aware of any which you are not supplying with the answers, tell your solicitor. If you do not have any documentation you may need to obtain copies at your own expense. Also pass to your solicitor any notices you have received concerning the property and any which arrive at any time before completion of the sale.',
+      ],
+      sellers: [
+        'The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner’s legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.',
+        'If you do not know the answer to any question, you must say so. If you are unsure of the meaning of any questions or answers, please ask your solicitor. Completing this form is not mandatory, but omissions or delay in providing some information may delay the sale.',
+        'If you later become aware of any information which would alter any replies you have given, you must inform your solicitor immediately. This is as important as giving the right answers in the first place. Do not change any arrangements concerning the property with anyone (such as a tenant or neighbor) without first consulting your solicitor.',
+        'It is very important that your answers are accurate. If you give incorrect or incomplete information to the buyer (on this form or otherwise in writing or in conversation, whether through your estate agent or solicitor or directly to the buyer), the buyer may make a claim for compensation from you or refuse to complete the purchase.',
+        'You should answer the questions based upon information known to you (or, in the case of legal representatives, you or the owner). You are not expected to have expert knowledge of legal or technical matters, or matters that occurred prior to your ownership of the property.',
+        'Please give your solicitor any letters, agreements or other papers which help answer the questions. If you are aware of any which you are not supplying with the answers, tell your solicitor. If you do not have any documentation you may need to obtain copies at your own expense. Also pass to your solicitor any notices you have received concerning the property and any which arrive at any time before completion of the sale.',
+      ],
     },
     points: 0,
     order: 1,
@@ -272,33 +303,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 2,
       },
-      {
-        partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
-        type: 'radio',
-        title: 'Are completing this form on the behalf of the seller? ',
-        options: [
-          { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
-          { label: 'Trustee', value: 'trustee' },
-          { label: 'Representative', value: 'representative' },
-          { label: 'Power of Attorney', value: 'power_of_attorney' },
-          { label: 'Limited Company ', value: 'limited_company' },
-        ],
-        order: 3,
-      },
-      {
-        partKey: 'company_details',
-        type: 'multifieldform',
-        title: '',
-        repeatable: false,
-        fields: [
-          {
-            key: 'filler_name',
-            label: 'N',
-            placeholder: 'Enter Name',
-          },
-        ],
-        order: 4,
-      },
+      // {
+      //   partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
+      //   type: 'radio',
+      //   title: 'Are completing this form on the behalf of the seller? ',
+      //   options: [
+      //     { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+      //     { label: 'Trustee', value: 'trustee' },
+      //     { label: 'Representative', value: 'representative' },
+      //     { label: 'Power of Attorney', value: 'power_of_attorney' },
+      //     { label: 'Limited Company ', value: 'limited_company' },
+      //   ],
+      //   order: 3,
+      // },
+      // {
+      //   partKey: 'company_details',
+      //   type: 'multifieldform',
+      //   title: '',
+      //   repeatable: false,
+      //   fields: [
+      //     {
+      //       key: 'filler_name',
+      //       label: 'N',
+      //       placeholder: 'Enter Name',
+      //     },
+      //   ],
+      //   order: 4,
+      // },
     ],
     points: 100,
     order: 2,
@@ -307,16 +338,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'name_of_sellers_and_address_of_the_property',
-    title: 'Are completing this form on the behalf of the seller?',
-    description:
-      'Please state the capacity in which you are providing the information, either as the seller or the seller’s representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.',
+    title: '',
+    description: '',
     type: 'MULTIPART',
     helpText: '',
     parts: [
       {
         partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
         type: 'radio',
-        title: 'Are completing this form on the behalf of the seller? ',
+        title: 'Are you completing this form on the behalf of the seller?',
+        description:
+          'Please state the capacity in which you are providing the information, either as the seller or the seller’s representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.',
         options: [
           { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
           { label: 'Trustee', value: 'trustee' },
@@ -329,7 +361,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'company_details',
         type: 'multifieldform',
-        title: 'Enter the details of limited company',
+        title: 'Enter the details of Limited Company',
         repeatable: false,
         fields: [
           {
@@ -406,17 +438,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 1,
   },
 
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'Great photos help buyers connect emotionally.',
-    description: '',
-    type: 'UPLOAD',
-    helpText: '',
-    displayMode: 'upload',
-    points: 100,
-    order: 1,
-  },
+  // {
+  //   sectionKey: 'ownershipProfile',
+  //   taskKey: 'give_your_home_a_story',
+  //   title: 'Great photos help buyers connect emotionally.',
+  //   description: '',
+  //   type: 'UPLOAD',
+  //   helpText: '',
+  //   displayMode: 'upload',
+  //   points: 100,
+  //   order: 1,
+  // },
 
   // Question 1
 
@@ -429,6 +461,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'SCALE',
     helpText: '',
     scaleType: 'alphabet', // ← Key: 'alphabet' for A-Z
+    externalLink: {
+      label: 'Find out your council tax band',
+      url: 'https://www.google.com',
+    },
     points: 100,
     order: 2,
   },
@@ -1188,11 +1224,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'boundary_responsibilities',
     title:
       'Looking at the property from the road, who owns or accepts responsibility to maintain or repair the boundary features on each side of the property?',
-    description:
-      'Identify who is responsible for boundary maintenance on each side',
+    description: 'Tap each side to select the responsible party',
     type: 'BOUNDARY',
+    instructionText:
+      'Tap on LEFT, RIGHT, REAR or FRONT to indicate responsibility',
     helpText:
-      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features.',
+      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for `T` marks on your property title plan or check your deeds for the each side.',
     options: [
       { label: 'Neighbour', value: 'neighbour' },
       { label: 'You', value: 'you' },
@@ -1727,18 +1764,74 @@ const QUESTION_TEMPLATES: QSeed[] = [
             dateFormat: 'fullDate',
             datePlaceholder: 'Select date',
           },
+          { label: 'No', value: 'no' },
         ],
         order: 1,
+      },
+      {
+        partKey: 'change_of_use',
+        title: 'Change of use (e.g. from an office to a residence)',
+        description: '',
+        type: 'DATE',
+        helpText: '',
+        options: [
+          {
+            label: 'Yes, select year',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select date',
+          },
+          { label: 'No', value: 'no' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'installation_of_replacement',
+        title:
+          'Installation of replacement windows, roof windows, roof lights, glazed doors since 1 April 2002',
+        description: '',
+        type: 'DATE',
+        helpText: '',
+        options: [
+          {
+            label: 'Yes, select year',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select date',
+          },
+          { label: 'No', value: 'no' },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'addition_of_a_conservatory',
+        title: 'Addition of a conservatory',
+        description: '',
+        type: 'DATE',
+        helpText: '',
+        options: [
+          {
+            label: 'Yes, select year',
+            value: 'selected',
+            hasDate: true,
+            dateFormat: 'fullDate',
+            datePlaceholder: 'Select date',
+          },
+          { label: 'No', value: 'no' },
+        ],
+        order: 3,
       },
       {
         partKey: 'photos',
         type: 'text',
         display: 'both',
         title:
-          'Please indicate ownership by written instruction or by reference to a plan:',
+          'Please supply copies of the planning permissions, Building Regulations approvals and Completion Certificates or explain why these are not required',
         placeholder:
-          'E.g., The irregular boundary near the stream at the rear of the property is owned by...',
-        order: 2,
+          'E.g. Permitted development rights applied or the work was exempt from Building Regulations',
+        order: 4,
       },
     ],
     points: 100,
@@ -1770,11 +1863,15 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'building_works',
+    taskKey: 'unfinished_works',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'Are_irregular_boundaries',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'Are_irregular_boundaries',
@@ -1793,9 +1890,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
-          'E.g., Garage conversion on side of house hasn’t been finished yet - windows and doors need to be fitted...',
+          "E.g., Garage conversion on side of house hasn't been finished yet - windows and doors need to be fitted...",
+        conditionalOn: 'Are_irregular_boundaries',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1803,39 +1904,48 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 1,
   },
 
-  {
-    sectionKey: 'alterationsAndPlanning',
-    taskKey: 'breaches_of_consent_conditions',
-    title: 'Are any of the works disclosed in previous questions unfinished?',
-    description: 'If yes, please give details:',
-    type: 'MULTIPART' as QuestionType,
-    parts: [
-      {
-        partKey: 'Are_irregular_boundaries',
-        title:
-          'Are any of the works disclosed in previous questions unfinished?',
-        description: 'If yes, please give details:',
-        type: 'RADIO',
-        helpText:
-          'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls, and are unfinished. If so, please provide details of what work is incomplete, where it is and what is outstanding. ',
-        options: [
-          { label: 'Yes', value: 'yes' },
-          { label: 'No', value: 'no' },
-        ],
-        order: 1,
-      },
-      {
-        partKey: 'photos',
-        type: 'text',
-        title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          'E.g., Garage conversion on side of house hasn’t been finished yet - windows and doors need to be fitted...',
-        order: 2,
-      },
-    ],
-    points: 50,
-    order: 1,
-  },
+  // {
+  //   sectionKey: 'alterationsAndPlanning',
+  //   taskKey: 'breaches_of_consent_conditions',
+  //   title: 'Are any of the works disclosed in previous questions unfinished?',
+  //   description: 'If yes, please give details:',
+  //   type: 'MULTIPART' as QuestionType,
+  //   helpText: '',
+  //   autoSaveOn: {
+  //     partKey: 'Are_irregular_boundaries',
+  //     value: 'no',
+  //   },
+  //   parts: [
+  //     {
+  //       partKey: 'Are_irregular_boundaries',
+  //       title:
+  //         'Are any of the works disclosed in previous questions unfinished?',
+  //       description: 'If yes, please give details:',
+  //       type: 'RADIO',
+  //       helpText:
+  //         'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls, and are unfinished. If so, please provide details of what work is incomplete, where it is and what is outstanding. ',
+  //       options: [
+  //         { label: 'Yes', value: 'yes' },
+  //         { label: 'No', value: 'no' },
+  //       ],
+  //       order: 1,
+  //     },
+  //     {
+  //       partKey: 'photos',
+  //       type: 'text',
+  //       display: 'both',
+  //       title: 'Please provide written instruction for your answer above:',
+  //       placeholder:
+  //         "E.g., Garage conversion on side of house hasn't been finished yet - windows and doors need to be fitted...",
+  //       conditionalOn: 'Are_irregular_boundaries',
+  //       showOnValues: ['yes'],
+  //       required: true, // only required if shown
+  //       order: 2,
+  //     },
+  //   ],
+  //   points: 50,
+  //   order: 1,
+  // },
 
   // {
   //   sectionKey: 'alterationsAndPlanning',
@@ -1856,11 +1966,15 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'alterationsAndPlanning',
-    taskKey: 'planning_or_building_issues',
+    taskKey: 'breaches_of_consent_conditions',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'Are_irregular_boundaries',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'Are_irregular_boundaries',
@@ -1879,9 +1993,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
           'E.g., Extension was complete without the right approval...',
+        conditionalOn: 'Are_irregular_boundaries',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1896,6 +2014,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'Are_irregular_boundaries',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'Are_irregular_boundaries',
@@ -1913,14 +2035,18 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
         title: 'Please provide written instruction for your answer above:',
         placeholder:
           'E.g., Retrospective planning for a garage conversion was applied for on the 17th August 2025, we are awaiting an update from the planning authority...',
+        conditionalOn: 'Are_irregular_boundaries',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
     points: 50,
-    order: 2,
+    order: 1,
   },
 
   {
@@ -1928,11 +2054,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'solar_panels',
     title: 'Have solar panels been installed?',
     description: 'If yes, in what year were the solar panels installed?',
-    type: 'RADIO',
+    type: 'DATE',
     helpText:
       'If yes, please detail the year you had the solar panels installed. Check your installation papers, guarantees, planning records or energy statements. If the panels are leased, details may also be in the title deeds.',
     options: [
-      { label: 'Yes', value: 'yes' },
+      {
+        label: 'Yes, select year',
+        value: 'selected',
+        hasDate: true,
+        dateFormat: 'fullDate',
+        datePlaceholder: 'Select date',
+      },
       { label: 'No', value: 'no' },
     ],
     points: 25,
@@ -1944,7 +2076,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'solar_panels_ownership',
     title: 'Are the solar panels owned outright?',
     description: 'Please answer yes or no:',
-    type: 'RADIO',
+    type: 'DATE',
     helpText:
       'This is confirming whether the panels belong fully to the property owner or if a solar company installed them under a lease or roof-rental scheme and thus has rights over them.',
     options: [
@@ -1962,6 +2094,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'Party_Wall',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'Party_Wall',
@@ -1981,8 +2117,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
         title: 'Please supply copies of the relevant documents: ',
         placeholder: '',
+        conditionalOn: 'Party_Wall',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -1997,6 +2137,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'roof_air',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'roof_air',
@@ -2015,8 +2159,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
         title: 'Please supply copies of the relevant documents: ',
         placeholder: '',
+        conditionalOn: 'roof_air',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -2031,6 +2179,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'roof_air',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'roof_air',
@@ -2049,8 +2201,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
         title: 'Please supply copies of the relevant documents: ',
         placeholder: '',
+        conditionalOn: 'roof_air',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -2082,6 +2238,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'roof_air',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'roof_air',
@@ -2100,8 +2260,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
         title: 'Please supply copies of the relevant documents: ',
         placeholder: '',
+        conditionalOn: 'roof_air',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
       },
     ],
@@ -2123,9 +2287,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
       buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
+        'Some guarantees only operate to protect the person who had the work carried out or may not be valid if their terms have been breached. You may wish to contact the company to establish whether it is still trading and if so, whether the terms of the guarantee will apply to you.',
       sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+        'All available guarantees, warranties and supporting paperwork should be supplied before exchange of contracts.',
     },
     points: 75,
     order: 1,
@@ -2138,6 +2302,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'detail_outcomes',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'detail_outcomes',
@@ -2161,6 +2329,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
         placeholder:
           'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        conditionalOn: 'detail_outcomes',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2176,6 +2347,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'does_property_benefit',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'does_property_benefit',
@@ -2198,7 +2373,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
         placeholder:
-          'E.g., “I had damp proofing done, but I can’t find the guarantee paperwork.',
+          'E.g., "I had damp proofing done, but I can\'t find the guarantee paperwork.',
+        conditionalOn: 'does_property_benefit',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2214,6 +2392,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'inspection_treatment',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'inspection_treatment',
@@ -2237,6 +2419,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
         placeholder:
           'E.g., I have not had any work carried out or I have but cant find the guarantee/warranty',
+        conditionalOn: 'inspection_treatment',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2252,6 +2437,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'glazed_doors_guarantees',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'glazed_doors_guarantees',
@@ -2274,7 +2463,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
         placeholder:
-          'E.g.,I have had work done, but my friend did it, or I can’t find the certificate',
+          "E.g.,I have had work done, but my friend did it, or I can't find the certificate",
+        conditionalOn: 'glazed_doors_guarantees',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2290,6 +2482,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'policy_number',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'policy_number',
@@ -2311,7 +2507,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         title: 'Please provide written instruction for your answer above',
         placeholder:
-          'E.g.,I have had work done, but my friend did it, or I can’t find the certificate',
+          "E.g.,I have had work done, but my friend did it, or I can't find the certificate",
+        conditionalOn: 'policy_number',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2327,6 +2526,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'replaced_materials',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'replaced_materials',
@@ -2348,6 +2551,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Please provide written instruction for your answer above',
         placeholder:
           'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        conditionalOn: 'replaced_materials',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2363,6 +2569,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'gase_safe',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'gase_safe',
@@ -2384,6 +2594,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Please provide written instruction for your answer above',
         placeholder:
           'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        conditionalOn: 'gase_safe',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2399,6 +2612,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'underpinning_strengthens',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'underpinning_strengthens',
@@ -2420,6 +2637,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Please provide written instruction for your answer above',
         placeholder:
           'E.g., maybe you had work done but cant find the guarantee.',
+        conditionalOn: 'underpinning_strengthens',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2436,6 +2656,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: ' ',
+    autoSaveOn: {
+      partKey: 'other_state',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'other_state',
@@ -2456,6 +2680,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Please provide written instruction for your answer above',
         placeholder:
           'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        conditionalOn: 'other_state',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         order: 2,
         display: 'both',
       },
@@ -2489,13 +2716,18 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
+    autoSaveOn: {
+      partKey: 'insure_property',
+      value: 'yes',
+    },
     parts: [
       {
         partKey: 'insure_property',
         title: 'Does the seller insure the property?',
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
-        helpText: 'Other',
+        helpText:
+          'This confirms whether the seller currently has buildings insurance in place for the property, and that it’s protected against things like fire, flood, or damage while it’s still in their ownership.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2505,6 +2737,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'insure_property',
+        showOnValues: ['no'],
+        required: true, // only required if shown
         title: 'Why does the seller not provide insurance for the property?',
         placeholder: 'Start typing your answer here...',
         order: 2,
@@ -2517,105 +2753,239 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'insurance',
     taskKey: 'landlord_insurance',
-    title: 'If the property is a flat, does the landlord insure the building?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'insurance',
-    taskKey: 'buildings_insurance',
-    title:
-      'Has any buildings insurance taken out by the seller ever been subject to an abnormal rise in premiums?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText: 'Other',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'insurance',
-    taskKey: 'buildings_insurance',
-    title:
-      'Has any buildings insurance taken out by the seller ever been subject to high excesses?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'insurance',
-    taskKey: 'buildings_insurance',
-    title:
-      'Has any buildings insurance taken out by the seller ever been subject to unusual conditions?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'insurance',
-    taskKey: 'buildings_insurance',
-    title:
-      'Has any buildings insurance taken out by the seller ever been refused?',
-    description: 'Please answer Yes or No and provide details.',
-    type: 'RADIO',
-    helpText: 'Other',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'insurance',
-    taskKey: 'buildings_insurance',
-    title:
-      'What were the circumstances regarding the insurance issue(s) you indicated?',
-    description: 'Please provide written details below',
+    title: '',
+    description: '',
     type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'landlord_insures_building',
+      value: 'no',
+    },
     parts: [
+      {
+        partKey: 'landlord_insures_building',
+        title:
+          'If the property is a flat, does the landlord insure the building?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
       {
         partKey: 'photos',
         type: 'text',
-        title: '',
+        display: 'both',
+        conditionalOn: 'landlord_insures_building',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
+        title: 'Please provide written details for your answer above.',
         placeholder: 'Start typing your answer here...',
         order: 2,
       },
     ],
-    displayMode: 'text',
     points: 50,
     order: 1,
   },
+
   {
     sectionKey: 'insurance',
     taskKey: 'buildings_insurance',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'abnormal_premium_rise',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'abnormal_premium_rise',
+        title:
+          'Has any buildings insurance taken out by the seller ever been subject to an abnormal rise in premiums?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: 'Other',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'abnormal_premium_rise',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
+        title: 'Please provide written details for your answer above.',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'insurance',
+    taskKey: 'buildings_insurance',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'high_excesses',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'high_excesses',
+        title:
+          'Has any buildings insurance taken out by the seller ever been subject to high excesses?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'high_excesses',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
+        title: 'Please provide written details for your answer above.',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 2,
+  },
+
+  {
+    sectionKey: 'insurance',
+    taskKey: 'buildings_insurance',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'unusual_conditions',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'unusual_conditions',
+        title:
+          'Has any buildings insurance taken out by the seller ever been subject to unusual conditions?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'unusual_conditions',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
+        title: 'Please provide written details for your answer above.',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 3,
+  },
+
+  {
+    sectionKey: 'insurance',
+    taskKey: 'buildings_insurance',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'insurance_refused',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'insurance_refused',
+        title:
+          'Has any buildings insurance taken out by the seller ever been refused?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText: 'Other',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'insurance_refused',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
+        title: 'Please provide written details for your answer above.',
+        placeholder: 'Start typing your answer here...',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 4,
+  },
+
+  // {
+  //   sectionKey: 'insurance',
+  //   taskKey: 'buildings_insurance',
+  //   title: '',
+  //   description: '',
+  //   type: 'MULTIPART' as QuestionType,
+  //   parts: [
+  //     {
+  //       partKey: 'photos',
+  //       title:
+  //         'What were the circumstances regarding the insurance issue(s) you indicated?',
+  //       description: 'Please provide written details below',
+  //       type: 'text',
+  //       placeholder: 'Start typing your answer here...',
+  //       order: 2,
+  //     },
+  //   ],
+  //   displayMode: 'text',
+  //   points: 50,
+  //   order: 5,
+  // },
+  {
+    sectionKey: 'insurance',
+    taskKey: 'buildings_insurance',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    autoSaveOn: {
+      partKey: 'insurance_issue',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'insurance_issue',
@@ -2632,6 +3002,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'insurance_issue',
+        showOnValues: ['yes'],
+        required: true, // only required if shown
         title:
           'Please provide written details for building insurance claims made by the seller.',
         placeholder: 'Start typing your answer here...',
@@ -2639,7 +3013,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   // ────────────────────────────────────────────
