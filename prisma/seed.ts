@@ -395,7 +395,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'seller_solicitor',
-    title: 'Please provide details of solicitor’s firm',
+    title: 'Sellers Solicitor',
     description: '',
     type: 'MULTIFIELDFORM',
     repeatable: true,
@@ -465,6 +465,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       label: 'Find out your council tax band',
       url: 'https://www.google.com',
     },
+    scaleMin: 0,
+    scaleMax: 7,
+    scaleStep: 1,
     points: 100,
     order: 2,
   },
@@ -584,6 +587,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
           { label: 'No, Rejected by landlord', value: 'rejected' },
           { label: 'Yes, Still pending', value: 'pending' },
         ],
+        showDateInput: true,
+        dateInputLabel: 'Application date',
         order: 2,
       },
       {
@@ -639,7 +644,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'increase_rent_calculation',
         type: 'date',
-        title: 'How this increase is calculated?(If Known)',
+        title: 'How this increase is calculated per year?(If Known)',
         options: [
           {
             label: 'Enter percentage',
@@ -672,6 +677,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'If your lease includes a service charge, it will set out the way the service charge is organised and what can be charged.',
         description:
           'Service charges are usually for the maintenance and upkeep of the property, including common areas and gardens. ',
+        externalLink: {
+          label: 'Find out more about service charges',
+          url: 'https://www.google.com',
+        },
         options: [
           {
             label: 'Frequency of payment',
@@ -714,7 +723,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
-        title: 'Provide a copy of the commonhold statement.',
+        title: '',
         uploadInstruction:
           'The commonhold community statement is a document that makes provision in relation to specified land for the rights and duties of the commonhold association and the rights and duties of the unit-holders.',
         order: 1,
@@ -746,7 +755,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       },
       {
         partKey: 'rent_lease_info',
-        type: 'RADIO',
+        type: 'date',
         title:
           'Does your commonhold community statement includes a reserve fund and how much your unit is required to pay each year into that fund?',
         description:
@@ -755,22 +764,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
         ],
+        showCurrencyInput: true,
+        currencyInputLabel: 'Enter Amount',
         order: 3,
-      },
-      {
-        partKey: 'expiry_length',
-        type: 'date',
-        title: '',
-        options: [
-          {
-            label: 'Enter Amount',
-            value: 'rent_lease_amount',
-            hasDate: true,
-            inputType: 'currency',
-            datePlaceholder: '£ 0000',
-          },
-        ],
-        order: 4,
       },
 
       {
@@ -860,7 +856,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     helpText: '',
     parts: [
       {
-        partKey: 'features',
+        partKey: 'property_type',
         type: 'chips',
         title: 'Specify what type of property you are selling',
         description:
@@ -883,6 +879,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'number_of_rooms',
         type: 'chips',
+        groupKey: 'rooms_bathrooms',
+        singleSelect: true,
+        showNumberInput: true,
+        numberInputLabel: 'Number of bedrooms',
         title: 'Specify what rooms are in this property',
         description: 'Select numbers of bedrooms or specify in the box below’.',
         options: [
@@ -900,6 +900,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'number_of_bathrooms',
         type: 'chips',
+        groupKey: 'rooms_bathrooms',
+        singleSelect: true,
+        showNumberInput: true,
+        numberInputLabel: 'Number of bathrooms',
         title: '',
         description: 'Select numbers of bathrooms or specify in the box below',
         options: [
@@ -916,6 +920,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'kitchen',
         type: 'chips',
+        groupKey: 'special_features',
         title: 'Select any special features of the property',
         description: 'Kitchen',
         options: [
@@ -931,6 +936,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'bathroom',
         type: 'chips',
+        groupKey: 'special_features',
         title: '',
         description: 'Bathroom',
         options: [
@@ -945,6 +951,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'living_space',
         type: 'chips',
+        groupKey: 'special_features',
         title: '',
         description: 'Living Space',
         options: [
@@ -961,6 +968,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'flooring',
         type: 'chips',
+        groupKey: 'special_features',
         title: '',
         description: 'Flooring',
         options: [
@@ -974,6 +982,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'features',
         type: 'chips',
+        groupKey: 'special_features',
         title: '',
         description: 'Features',
         options: [
@@ -1102,30 +1111,144 @@ const QUESTION_TEMPLATES: QSeed[] = [
   //   order: 9,
   // },
 
-  // {
-  //   sectionKey: 'ownershipProfile',
-  //   taskKey: 'give_your_home_a_story',
-  //   title: 'What we love about our home?',
-  //   description: '',
-  //   type: 'CHECKBOX',
-  //   helpText: '',
-  //   options: [
-  //     {
-  //       label: 'Morning light in the kitchen',
-  //       value: 'morning_light_in_the_kitchen',
-  //     },
-  //     {
-  //       label: 'Kids can walk to school in 6 mins',
-  //       value: 'kids_can_walk_to_school_in_6_mins',
-  //     },
-  //     {
-  //       label: 'Neighbors are friendly but not intrusive ',
-  //       value: 'neighbors_are_friendly_but_not_intrusive',
-  //     },
-  //   ],
-  //   points: 100,
-  //   order: 10,
-  // },
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What we love about our home?',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'what_we_love_home',
+        type: 'chips',
+        title: 'What we love about our home?',
+        description: '',
+        options: [
+          {
+            label: 'Morning light in the kitchen',
+            value: 'morning_light_in_the_kitchen',
+          },
+          {
+            label: 'Kids can walk to school in 6 mins',
+            value: 'kids_can_walk_to_school_in_6_mins',
+          },
+          {
+            label: 'Neighbors are friendly but not intrusive',
+            value: 'neighbors_are_friendly_but_not_intrusive',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'what_we_love_area',
+        type: 'chips',
+        title: 'What we love about the area?',
+        description: '',
+        options: [
+          {
+            label: 'Hidden Gems: Cafe, Parks and routes',
+            value: 'hidden_gems',
+          },
+          {
+            label: 'How it feels in the evening - Weekends',
+            value: 'evening_feel_weekends',
+          },
+          {
+            label: 'Noise, light & feel (honest profile)',
+            value: 'noise_light_feel',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'street_quietness',
+        type: 'scale',
+        title: 'Street quietness (day/night)',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Quiet',
+        scaleMaxLabel: 'Loud',
+        order: 3,
+      },
+      {
+        partKey: 'morning_evening_light',
+        type: 'scale',
+        title: 'Morning vs evening light in key rooms',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Dark',
+        scaleMaxLabel: 'Light',
+        order: 4,
+      },
+      {
+        partKey: 'traffic_parking',
+        type: 'scale',
+        title: 'Typical traffic/parking situation',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Good',
+        scaleMaxLabel: 'Bad',
+        order: 5,
+      },
+      {
+        partKey: 'things_to_be_aware',
+        type: 'date',
+        title: 'Things to be aware of...',
+        description: '',
+        options: [
+          {
+            label: 'Bin Days',
+            value: 'bin_days',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Early Tuesdays',
+          },
+          {
+            label: 'Local football traffic',
+            value: 'local_football',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Some Saturdays',
+          },
+        ],
+        order: 6,
+      },
+      {
+        partKey: 'home_usage_text',
+        type: 'text',
+        title: 'Home usage patterns',
+        description: '',
+        placeholder:
+          'e.g. We mostly use the kitchen / living room / garden to gather.',
+        order: 7,
+      },
+      {
+        partKey: 'home_wfh',
+        type: 'date',
+        title: '',
+        description: '',
+        options: [
+          {
+            label: 'We WFH',
+            value: 'wfh',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Sometimes',
+          },
+        ],
+        order: 8,
+      },
+    ],
+    points: 100,
+    order: 10,
+  },
 
   // {
   //   sectionKey: 'ownershipProfile',
@@ -1730,10 +1853,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
       sellers:
         'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      buyers:
+        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
     },
     points: 75,
     order: 1,
@@ -2648,64 +2771,64 @@ const QUESTION_TEMPLATES: QSeed[] = [
     order: 1,
   },
 
-  {
-    sectionKey: 'guaranteesAndWarranties',
-    taskKey: 'other',
-    title:
-      'Does the property benefit from any of the following guarantees or warranties:',
-    description: '',
-    type: 'MULTIPART' as QuestionType,
-    helpText: ' ',
-    autoSaveOn: {
-      partKey: 'other_state',
-      value: 'no',
-    },
-    parts: [
-      {
-        partKey: 'other_state',
-        title:
-          'Does the property benefit from any of the following guarantees or warranties:',
-        description: 'Other/please state',
-        type: 'RADIO',
-        helpText: 'please write the other category here',
-        options: [
-          { label: 'Yes', value: 'yes' },
-          { label: 'No', value: 'no' },
-        ],
-        order: 1,
-      },
-      {
-        partKey: 'photos',
-        type: 'text',
-        title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
-        conditionalOn: 'other_state',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        order: 2,
-        display: 'both',
-      },
-    ],
-    points: 100,
-    order: 1,
-  },
+  // {
+  //   sectionKey: 'guaranteesAndWarranties',
+  //   taskKey: 'other',
+  //   title:
+  //     'Does the property benefit from any of the following guarantees or warranties:',
+  //   description: '',
+  //   type: 'MULTIPART' as QuestionType,
+  //   helpText: ' ',
+  //   autoSaveOn: {
+  //     partKey: 'other_state',
+  //     value: 'no',
+  //   },
+  //   parts: [
+  //     {
+  //       partKey: 'other_state',
+  //       title:
+  //         'Does the property benefit from any of the following guarantees or warranties:',
+  //       description: 'Other/please state',
+  //       type: 'RADIO',
+  //       helpText: 'please write the other category here',
+  //       options: [
+  //         { label: 'Yes', value: 'yes' },
+  //         { label: 'No', value: 'no' },
+  //       ],
+  //       order: 1,
+  //     },
+  //     {
+  //       partKey: 'photos',
+  //       type: 'text',
+  //       title: 'Please provide written instruction for your answer above',
+  //       placeholder:
+  //         'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+  //       conditionalOn: 'other_state',
+  //       showOnValues: [yes'],
+  //       required: true,
+  //       order: 2,
+  //       display: 'both',
+  //     },
+  //   ],
+  //   points: 100,
+  //   order: 1,
+  // },
 
-  {
-    sectionKey: 'guaranteesAndWarranties',
-    taskKey: 'claims_made_under_guarantees_warranties',
-    title:
-      'Does the property benefit from any of the following guarantees or warranties:',
-    description: 'Other/please state',
-    type: 'RADIO',
-    helpText: 'please write the other category here ',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 100,
-    order: 1,
-  },
+  // {
+  //   sectionKey: 'guaranteesAndWarranties',
+  //   taskKey: 'claims_made_under_guarantees_warranties',
+  //   title:
+  //     'Does the property benefit from any of the following guarantees or warranties:',
+  //   description: 'Other/please state',
+  //   type: 'RADIO',
+  //   helpText: 'please write the other category here ',
+  //   options: [
+  //     { label: 'Yes', value: 'yes' },
+  //     { label: 'No', value: 'no' },
+  //   ],
+  //   points: 100,
+  //   order: 1,
+  // },
 
   // ────────────────────────────────────────────
   // INSURANCE
@@ -2766,7 +2889,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'landlord_insures_building',
         title:
           'If the property is a flat, does the landlord insure the building?',
-        description: 'Please answer Yes or No and provide details.',
+        description: '',
         type: 'RADIO',
         helpText: '',
         options: [
@@ -2775,17 +2898,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 1,
       },
-      {
-        partKey: 'photos',
-        type: 'text',
-        display: 'both',
-        conditionalOn: 'landlord_insures_building',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        title: 'Please provide written details for your answer above.',
-        placeholder: 'Start typing your answer here...',
-        order: 2,
-      },
+      // {
+      //   partKey: 'photos',
+      //   type: 'text',
+      //   display: 'both',
+      //   conditionalOn: 'landlord_insures_building',
+      //   showOnValues: ['yes'],
+      //   required: true, // only required if shown
+      //   title: 'Please provide written details for your answer above.',
+      //   placeholder: 'Start typing your answer here...',
+      //   order: 2,
+      // },
     ],
     points: 50,
     order: 1,
@@ -2807,7 +2930,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'abnormal_premium_rise',
         title:
           'Has any buildings insurance taken out by the seller ever been subject to an abnormal rise in premiums?',
-        description: 'Please answer Yes or No and provide details.',
+        description: '',
         type: 'RADIO',
         helpText: 'Other',
         options: [
@@ -2816,17 +2939,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 1,
       },
-      {
-        partKey: 'photos',
-        type: 'text',
-        display: 'both',
-        conditionalOn: 'abnormal_premium_rise',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        title: 'Please provide written details for your answer above.',
-        placeholder: 'Start typing your answer here...',
-        order: 2,
-      },
+      // {
+      //   partKey: 'photos',
+      //   type: 'text',
+      //   display: 'both',
+      //   conditionalOn: 'abnormal_premium_rise',
+      //   showOnValues: ['yes'],
+      //   required: true,
+      //   title: 'Please provide written details for your answer above.',
+      //   placeholder: 'Start typing your answer here...',
+      //   order: 2,
+      // },
     ],
     points: 50,
     order: 1,
@@ -2848,7 +2971,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'high_excesses',
         title:
           'Has any buildings insurance taken out by the seller ever been subject to high excesses?',
-        description: 'Please answer Yes or No and provide details.',
+        description: '',
         type: 'RADIO',
         helpText: '',
         options: [
@@ -2857,17 +2980,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 1,
       },
-      {
-        partKey: 'photos',
-        type: 'text',
-        display: 'both',
-        conditionalOn: 'high_excesses',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        title: 'Please provide written details for your answer above.',
-        placeholder: 'Start typing your answer here...',
-        order: 2,
-      },
+      // {
+      //   partKey: 'photos',
+      //   type: 'text',
+      //   display: 'both',
+      //   conditionalOn: 'high_excesses',
+      //   showOnValues: ['yes'],
+      //   required: true, // only required if shown
+      //   title: 'Please provide written details for your answer above.',
+      //   placeholder: 'Start typing your answer here...',
+      //   order: 2,
+      // },
     ],
     points: 50,
     order: 2,
@@ -2889,7 +3012,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'unusual_conditions',
         title:
           'Has any buildings insurance taken out by the seller ever been subject to unusual conditions?',
-        description: 'Please answer Yes or No and provide details.',
+        description: '',
         type: 'RADIO',
         helpText: '',
         options: [
@@ -2898,17 +3021,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 1,
       },
-      {
-        partKey: 'photos',
-        type: 'text',
-        display: 'both',
-        conditionalOn: 'unusual_conditions',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        title: 'Please provide written details for your answer above.',
-        placeholder: 'Start typing your answer here...',
-        order: 2,
-      },
+      // {
+      //   partKey: 'photos',
+      //   type: 'text',
+      //   display: 'both',
+      //   conditionalOn: 'unusual_conditions',
+      //   showOnValues: ['yes'],
+      //   required: true, // only required if shown
+      //   title: 'Please provide written details for your answer above.',
+      //   placeholder: 'Start typing your answer here...',
+      //   order: 2,
+      // },
     ],
     points: 50,
     order: 3,
@@ -2930,7 +3053,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'insurance_refused',
         title:
           'Has any buildings insurance taken out by the seller ever been refused?',
-        description: 'Please answer Yes or No and provide details.',
+        description: '',
         type: 'RADIO',
         helpText: 'Other',
         options: [
@@ -2939,17 +3062,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 1,
       },
-      {
-        partKey: 'photos',
-        type: 'text',
-        display: 'both',
-        conditionalOn: 'insurance_refused',
-        showOnValues: ['yes'],
-        required: true, // only required if shown
-        title: 'Please provide written details for your answer above.',
-        placeholder: 'Start typing your answer here...',
-        order: 2,
-      },
+      // {
+      //   partKey: 'photos',
+      //   type: 'text',
+      //   display: 'both',
+      //   conditionalOn: 'insurance_refused',
+      //   showOnValues: ['yes'],
+      //   required: true, // only required if shown
+      //   title: 'Please provide written details for your answer above.',
+      //   placeholder: 'Start typing your answer here...',
+      //   order: 2,
+      // },
     ],
     points: 50,
     order: 4,
@@ -3029,10 +3152,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'Flooding may take a variety of forms: it may be seasonal or irregular or simply a one-off occurrence. The property does not need to be near a sea or river for flooding to occur. Please use the  links below for further information.',
     },
     points: 75,
     order: 1,
@@ -3148,7 +3269,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
-        title: 'Please scan or upload a copy of flood risk assesment.',
+        title: '',
         placeholder: '',
         order: 2,
       },
@@ -3197,7 +3318,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
-        title: 'Please scan or upload a copy of Radon Test',
+        title: '',
         placeholder: '',
         order: 2,
       },
@@ -3291,8 +3412,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
-        title: 'Please provide written instruction for your answer above',
-        placeholder: '',
+        title: '',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         display: 'both',
         order: 2,
       },
@@ -3344,7 +3466,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
-        title: 'Please provide written instruction for your answer above',
+        title: '',
         placeholder:
           'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         display: 'both',
@@ -7280,8 +7402,12 @@ async function main() {
         repeatable: qt.repeatable ?? null,
         buttonText: qt.buttonText || null,
         scaleType: qt.scaleType || null,
+        scaleMin: qt.scaleMin ?? null,
+        scaleMax: qt.scaleMax ?? null,
+        scaleStep: qt.scaleStep ?? null,
         scaleFormat: qt.scaleFormat || null,
         scaleMaxLabel: qt.scaleMaxLabel || null,
+        externalLink: qt.externalLink || undefined,
         points: qt.points,
         order: qt.order,
       },
