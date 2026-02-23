@@ -1,4 +1,9 @@
-import { PrismaClient, QuestionType } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  QuestionType,
+  SectionStatus,
+} from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../src/constants/task-metadata';
 
 const prisma = new PrismaClient();
@@ -168,14 +173,14 @@ interface QSeed {
   instructionText?: string;
   type: QuestionType;
   helpText?: string;
-  options?: any;
+  options?: Prisma.InputJsonValue;
   placeholder?: string;
   displayMode?: string;
   uploadInstruction?: string;
-  prewrittenTemplates?: any;
-  dateFields?: any;
-  parts?: any;
-  fields?: any;
+  prewrittenTemplates?: Prisma.InputJsonValue;
+  dateFields?: Prisma.InputJsonValue;
+  parts?: Prisma.InputJsonValue;
+  fields?: Prisma.InputJsonValue;
   autoSaveOn?: {
     partKey?: string;
     value?: string;
@@ -235,7 +240,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         'Please give your solicitor any letters, agreements or other papers which help answer the questions. If you are aware of any which you are not supplying with the answers, tell your solicitor. If you do not have any documentation you may need to obtain copies at your own expense. Also pass to your solicitor any notices you have received concerning the property and any which arrive at any time before completion of the sale.',
       ],
       sellers: [
-        'The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner’s legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.',
+        "The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner's legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.",
         'If you do not know the answer to any question, you must say so. If you are unsure of the meaning of any questions or answers, please ask your solicitor. Completing this form is not mandatory, but omissions or delay in providing some information may delay the sale.',
         'If you later become aware of any information which would alter any replies you have given, you must inform your solicitor immediately. This is as important as giving the right answers in the first place. Do not change any arrangements concerning the property with anyone (such as a tenant or neighbor) without first consulting your solicitor.',
         'It is very important that your answers are accurate. If you give incorrect or incomplete information to the buyer (on this form or otherwise in writing or in conversation, whether through your estate agent or solicitor or directly to the buyer), the buyer may make a claim for compensation from you or refuse to complete the purchase.',
@@ -348,7 +353,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'radio',
         title: 'Are you completing this form on the behalf of the seller?',
         description:
-          'Please state the capacity in which you are providing the information, either as the seller or the seller’s representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.',
+          "Please state the capacity in which you are providing the information, either as the seller or the seller's representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.",
         options: [
           { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
           { label: 'Trustee', value: 'trustee' },
@@ -498,7 +503,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'give_your_home_a_story',
     title: 'What is the type of the ownership?',
     description:
-      'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+      "National Trading Standard's guidance includes a non-traditional tenure category (park homes and riverboats).",
     type: 'CHIPS',
     helpText: '',
     options: [
@@ -723,8 +728,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
-        title: '',
-        uploadInstruction:
+        title: 'Provide a copy of the commonhold statement.',
+        description:
           'The commonhold community statement is a document that makes provision in relation to specified land for the rights and duties of the commonhold association and the rights and duties of the unit-holders.',
         order: 1,
       },
@@ -860,7 +865,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'chips',
         title: 'Specify what type of property you are selling',
         description:
-          'If your property is link-detached, that is linked to another property only by a garage or other structure but not a structural wall of the house, choose ‘detached’.',
+          "If your property is link-detached, that is linked to another property only by a garage or other structure but not a structural wall of the house, choose 'detached'.",
         options: [
           { label: 'Detached', value: 'detached' },
           { label: 'Semi-Detached', value: 'semi_detached' },
@@ -884,7 +889,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         showNumberInput: true,
         numberInputLabel: 'Number of bedrooms',
         title: 'Specify what rooms are in this property',
-        description: 'Select numbers of bedrooms or specify in the box below’.',
+        description: "Select numbers of bedrooms or specify in the box below'.",
         options: [
           { label: 'Studio', value: 'studio' },
           { label: '1', value: '1' },
@@ -1033,7 +1038,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
   //   taskKey: 'give_your_home_a_story',
   //   title: 'What is the type of the ownership?',
   //   description:
-  //     'National Trading Standard’s guidance includes a non-traditional tenure category (park homes and riverboats).',
+  //     'National Trading Standard\'s guidance includes a non-traditional tenure category (park homes and riverboats).',
   //   type: 'CHECKBOX',
   //   helpText: '',
   //   options: [
@@ -1122,6 +1127,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'what_we_love_home',
         type: 'chips',
+        showVoiceInput: true,
         title: 'What we love about our home?',
         description: '',
         options: [
@@ -1143,6 +1149,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'what_we_love_area',
         type: 'chips',
+        showVoiceInput: true,
         title: 'What we love about the area?',
         description: '',
         options: [
@@ -1227,6 +1234,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: '',
         placeholder:
           'e.g. We mostly use the kitchen / living room / garden to gather.',
+        rows: 3,
+        groupKey: 'home_usage',
         order: 7,
       },
       {
@@ -1234,6 +1243,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'date',
         title: '',
         description: '',
+        groupKey: 'home_usage',
         options: [
           {
             label: 'We WFH',
@@ -1385,7 +1395,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'If yes, please give details below',
         type: 'RADIO',
         helpText:
-          'If the property’s boundaries are irregular, ownership should be defined either with a clear written description, using landmarks or measurements, or by referring to a plan or map that shows the exact outline.',
+          "If the property's boundaries are irregular, ownership should be defined either with a clear written description, using landmarks or measurements, or by referring to a plan or map that shows the exact outline.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -1398,8 +1408,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         display: 'both',
         title:
           'Please indicate ownership by written instruction or by reference to a plan:',
-        placeholder:
-          'E.g., The irregular boundary near the stream at the rear of the property is owned by...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'Are_irregular_boundaries',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1428,7 +1437,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'is_seller_aware',
         title:
-          'Is the seller aware of any boundary feature having been moved in the last 10 years, or during the seller’s period of ownership if longer?',
+          "Is the seller aware of any boundary feature having been moved in the last 10 years, or during the seller's period of ownership if longer?",
         description: 'If yes, please give details below',
         helpText:
           'This is to flag any past changes to fences, walls, or hedges that might affect where the legal boundary really is. Even small changes can lead to neighbour disputes or sale delays, so any changes need to be clearly documented.',
@@ -1444,8 +1453,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          'E.g., Back fence in the garden has been moved back 2 yards...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'is_seller_aware',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1475,11 +1483,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'seller_ownership',
         title:
-          'During the seller’s ownership, has any adjacent land or property been purchased by the seller?',
+          "During the seller's ownership, has any adjacent land or property been purchased by the seller?",
         description: 'If yes, please give details below',
         type: 'RADIO',
         helpText:
-          'If you have purchased extra land or property next to your home, please provide details such as the address, title number, or a detailed description. as this could change the size or boundaries of what’s being sold.',
+          "If you have purchased extra land or property next to your home, please provide details such as the address, title number, or a detailed description. as this could change the size or boundaries of what's being sold.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -1491,8 +1499,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          'E.g., Back fence in the garden has been moved back 2 yards...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'seller_ownership',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1526,7 +1533,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'If yes, please give details below',
         type: 'RADIO',
         helpText:
-          'If any part of your home extends beyond its boundary please detail what the feature is, it’s location, size and any applicable rights/ permissions, as this could affect rights/ responsibilities with neighbours or the council.',
+          "If any part of your home extends beyond its boundary please detail what the feature is, it's location, size and any applicable rights/ permissions, as this could affect rights/ responsibilities with neighbours or the council.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -1538,7 +1545,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder: 'E.g., Cellar under the property...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'seller_ownership_complex',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1584,7 +1591,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder: 'E.g., Notice received in 2021 for repair work to fence..',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'notice_received',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1618,7 +1625,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'If yes, please give details below',
         type: 'RADIO',
         helpText:
-          'If there has been any arguments, formal complaints, or legal issues about this home or a nearby one (such as rows over noise, parking, boundaries or shared areas) please detail what it was about, who it involved, when it happened, and how it was resolved or if it’s still ongoing.  ',
+          "If there has been any arguments, formal complaints, or legal issues about this home or a nearby one (such as rows over noise, parking, boundaries or shared areas) please detail what it was about, who it involved, when it happened, and how it was resolved or if it's still ongoing.  ",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -1630,7 +1637,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder: 'E.g., Dispute over noise with neighbours ',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'problems_affecting_property',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1689,8 +1696,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          "E.g., Potential dispute over responsibility for hedge between mine and neighbour to the left's garden..",
+        placeholder: 'Start typing here.....',
         conditionalOn: 'prospect_disputes_question',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1753,7 +1759,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder: 'E.g., Lorem Ipsum',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'notices_or_correspondence',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1812,7 +1818,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder: 'E.g., Lorem Ipsum',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'seller_aware_of_any_proposals',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -1952,8 +1958,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         display: 'both',
         title:
           'Please supply copies of the planning permissions, Building Regulations approvals and Completion Certificates or explain why these are not required',
-        placeholder:
-          'E.g. Permitted development rights applied or the work was exempt from Building Regulations',
+        placeholder: 'Start typing here.....',
         order: 4,
       },
     ],
@@ -2015,8 +2020,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          "E.g., Garage conversion on side of house hasn't been finished yet - windows and doors need to be fitted...",
+        placeholder: 'Start typing here.....',
         conditionalOn: 'Are_irregular_boundaries',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2058,8 +2062,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
   //       type: 'text',
   //       display: 'both',
   //       title: 'Please provide written instruction for your answer above:',
-  //       placeholder:
-  //         "E.g., Garage conversion on side of house hasn't been finished yet - windows and doors need to be fitted...",
   //       conditionalOn: 'Are_irregular_boundaries',
   //       showOnValues: ['yes'],
   //       required: true, // only required if shown
@@ -2118,8 +2120,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          'E.g., Extension was complete without the right approval...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'Are_irregular_boundaries',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2160,8 +2161,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         display: 'both',
         title: 'Please provide written instruction for your answer above:',
-        placeholder:
-          'E.g., Retrospective planning for a garage conversion was applied for on the 17th August 2025, we are awaiting an update from the planning authority...',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'Are_irregular_boundaries',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2242,7 +2242,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'upload',
         display: 'both',
         title: 'Please supply copies of the relevant documents: ',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'Party_Wall',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2284,7 +2284,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'upload',
         display: 'both',
         title: 'Please supply copies of the relevant documents: ',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'roof_air',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2314,7 +2314,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'If yes, please supply copies of the confirmation of conservation status, planning permission/ consents for work, any restrictions or conditions from previous applications',
         type: 'RADIO',
         helpText:
-          'A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council’s planning department keeps a list and map of conservation areas.',
+          "A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council's planning department keeps a list and map of conservation areas.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2326,7 +2326,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'upload',
         display: 'both',
         title: 'Please supply copies of the relevant documents: ',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'roof_air',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2373,7 +2373,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'If yes, please supply copies of the confirmation of conservation status, planning permission/ consents for work, any restrictions or conditions from previous applications',
         type: 'RADIO',
         helpText:
-          'A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council’s planning department keeps a list and map of conservation areas.',
+          "A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council's planning department keeps a list and map of conservation areas.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2385,7 +2385,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'upload',
         display: 'both',
         title: 'Please supply copies of the relevant documents: ',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         conditionalOn: 'roof_air',
         showOnValues: ['yes'],
         required: true, // only required if shown
@@ -2450,13 +2450,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         conditionalOn: 'detail_outcomes',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2495,13 +2494,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
-        placeholder:
-          'E.g., "I had damp proofing done, but I can\'t find the guarantee paperwork.',
         conditionalOn: 'does_property_benefit',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2540,13 +2538,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
-        placeholder:
-          'E.g., I have not had any work carried out or I have but cant find the guarantee/warranty',
         conditionalOn: 'inspection_treatment',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2585,13 +2582,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'text',
         title:
           'Please provide written instruction for your answer above and supply copies of the relevant documents:',
-        placeholder:
-          "E.g.,I have had work done, but my friend did it, or I can't find the certificate",
         conditionalOn: 'glazed_doors_guarantees',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2618,7 +2614,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
         type: 'RADIO',
         helpText:
-          'When electrical work is carried out (such as rewiring, installing a new consumer unit, or adding circuits), the installer sometimes provides a guarantee/warranty. This paperwork would’ve been provided by your supplier after the works have been completed.Provide dates/contractor and term; if missing/expired, buyer may request an EICR or indemnity.',
+          "When electrical work is carried out (such as rewiring, installing a new consumer unit, or adding circuits), the installer sometimes provides a guarantee/warranty. This paperwork would've been provided by your supplier after the works have been completed.Provide dates/contractor and term; if missing/expired, buyer may request an EICR or indemnity.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2629,13 +2625,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          "E.g.,I have had work done, but my friend did it, or I can't find the certificate",
         conditionalOn: 'policy_number',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2672,13 +2667,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         conditionalOn: 'replaced_materials',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2715,13 +2709,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         conditionalOn: 'gase_safe',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2758,13 +2751,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., maybe you had work done but cant find the guarantee.',
         conditionalOn: 'underpinning_strengthens',
         showOnValues: ['yes'],
         required: true, // only required if shown
         order: 2,
         display: 'both',
+        placeholder: 'Start typing here.....',
       },
     ],
     points: 100,
@@ -2850,7 +2842,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
         helpText:
-          'This confirms whether the seller currently has buildings insurance in place for the property, and that it’s protected against things like fire, flood, or damage while it’s still in their ownership.',
+          "This confirms whether the seller currently has buildings insurance in place for the property, and that it's protected against things like fire, flood, or damage while it's still in their ownership.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2865,7 +2857,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         showOnValues: ['no'],
         required: true, // only required if shown
         title: 'Why does the seller not provide insurance for the property?',
-        placeholder: 'Start typing your answer here...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -2906,7 +2898,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       //   showOnValues: ['yes'],
       //   required: true, // only required if shown
       //   title: 'Please provide written details for your answer above.',
-      //   placeholder: 'Start typing your answer here...',
       //   order: 2,
       // },
     ],
@@ -2947,7 +2938,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       //   showOnValues: ['yes'],
       //   required: true,
       //   title: 'Please provide written details for your answer above.',
-      //   placeholder: 'Start typing your answer here...',
       //   order: 2,
       // },
     ],
@@ -2988,7 +2978,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       //   showOnValues: ['yes'],
       //   required: true, // only required if shown
       //   title: 'Please provide written details for your answer above.',
-      //   placeholder: 'Start typing your answer here...',
       //   order: 2,
       // },
     ],
@@ -3029,7 +3018,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       //   showOnValues: ['yes'],
       //   required: true, // only required if shown
       //   title: 'Please provide written details for your answer above.',
-      //   placeholder: 'Start typing your answer here...',
       //   order: 2,
       // },
     ],
@@ -3070,7 +3058,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
       //   showOnValues: ['yes'],
       //   required: true, // only required if shown
       //   title: 'Please provide written details for your answer above.',
-      //   placeholder: 'Start typing your answer here...',
       //   order: 2,
       // },
     ],
@@ -3131,7 +3118,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         required: true, // only required if shown
         title:
           'Please provide written details for building insurance claims made by the seller.',
-        placeholder: 'Start typing your answer here...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3413,9 +3400,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: '',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
-        display: 'both',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3467,9 +3452,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'photos',
         type: 'text',
         title: '',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
         display: 'both',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3507,10 +3491,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'Rights and arrangements may relate to access or shared use. They may also include leases of less than seven years, rights to mines and minerals, manorial rights, chancel repair and similar matters. If you are uncertain about whether a right or arrangement is covered by this question, please ask your solicitor.',
     },
     points: 75,
     order: 1,
@@ -3518,11 +3500,15 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'resposibility_towards_jointly',
+    taskKey: 'shared_costs_maintenance_and_responsibilities',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'provide_details',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'provide_details',
@@ -3531,7 +3517,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          "Some properties share things like roads, driveways, or drains. This checks whether you're expected to chip in for looking after any of these, so there are no surprises later.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3541,65 +3527,39 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'provide_details',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: '2_dunno_how_id_surmise_this',
+    taskKey: 'rights_over_neighbouring_property',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'neighboring_property',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'neighboring_property',
         title:
-          'Does the property benefit from any rights or arrangements over any neighboring property this includes any rights of way?',
-        description: '',
-        type: 'RADIO',
-        helpText: 'what other rights would this include?',
-        options: [
-          { label: 'Yes', value: 'yes' },
-          { label: 'No', value: 'no' },
-        ],
-        order: 1,
-      },
-      {
-        partKey: 'photos',
-        type: 'text',
-        title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
-        order: 2,
-      },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'prevented_access',
-    title: '',
-    description: '',
-    type: 'MULTIPART' as QuestionType,
-    helpText: '',
-    parts: [
-      {
-        partKey: 'neighboring_property',
-        title:
-          'Has anyone taken steps to prevent access to the property or to complain about or demand payment for access to the property?',
+          'Does the property benefit from any rights or arrangements over any neighboring property (this includes any rights of way)?',
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
-        helpText: 'WHAT types of steps could be taken - consider this here...',
+        helpText:
+          "This checks whether your property has any rights to use part of a neighbouring property, like a shared path or driveway. These are common and usually in the legal paperwork, but it's important to record them here.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3609,81 +3569,134 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'neighboring_property',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'right_of_light',
+    taskKey: 'access_disputes_or_restrictions',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'neighboring_property',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'neighboring_property',
+        title:
+          'Has anyone taken steps to prevent access to the property, or to complain about or demand payment for access to the property?',
+        description: 'Please answer Yes or No and provide details.',
+        type: 'RADIO',
+        helpText:
+          "This asks whether anyone has tried to block access to your property, complained about access, or asked for payment to use it. If anything like this has happened before, it's best to record it here to avoid problems later.",
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'neighboring_property',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please provide written instruction for your answer above',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 4,
+  },
+
+  {
+    sectionKey: 'rightsAndInformalArrangements',
+    taskKey: 'property_rights_and_protections',
     title:
       'Does the seller know if any of the following rights benefit the property:',
     description: 'Rights of light',
-    type: 'MULTIPART' as QuestionType,
+    type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    points: 50,
-    order: 1,
+      'A “right to light” is a legal right that protects the natural light coming into a property from being blocked by nearby buildings. This checks whether your home has this right, as it can affect future building or development nearby.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 25,
+    order: 5,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'rights_of_support',
+    taskKey: 'other_rights_or_arrangements',
     title:
       'Does the seller know if any of the following rights benefit the property:',
     description: 'Rights of support from adjoining properties',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This is about whether your property depends on a neighbouring building or structure for support, like a shared wall or structure. These rights are usually in the legal documents and can matter if changes are ever made next door.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 50,
-    order: 1,
+    points: 25,
+    order: 6,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'arrangements',
+    taskKey: 'shared_services_and_utilities',
     title:
       'Does the seller know if any of the following rights benefit the property:',
     description:
       'Customary rights (e.g. rights deriving from local traditions)',
     type: 'RADIO',
     helpText:
-      'What is this? Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'Customary rights are rights that come from long-standing local traditions, not just written legal documents. This checks whether your property benefits from any of these, as they can still be legally important.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 50,
-    order: 1,
+    points: 25,
+    order: 7,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'other_rights_and_arrangements',
+    taskKey: 'shared_services_and_utilities',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'arrangements_affecty',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'arrangements_affecty',
         title:
           'Does the seller know if any of the following arrangements affect the property:',
         description:
-          'Other peoples rights to mines and minerals under the land.',
+          "Other people's rights to mines and minerals under the land.",
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'In some cases, someone else can own the rights to minerals under a property. This checks whether that applies to your home, as it can affect what can be done with the land in the future.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3693,23 +3706,30 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'arrangements_affecty',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'chancel_repair_liability',
+    taskKey: 'shared_services_and_utilities',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_know',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'seller_know',
@@ -3718,7 +3738,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'Chancel repair liability',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          "Chancel repair liability is an old legal rule where some properties can be required to help pay for repairs to a local church. It's uncommon, but this checks whether it applies to your property so there are no surprises later.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3728,33 +3748,40 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'seller_know',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 9,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'chancel_repair_liability',
+    taskKey: 'shared_services_and_utilities',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'following_arrangements',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'following_arrangements',
         title:
           'Does the seller know if any of the following arrangements affect the property:',
         description:
-          'Other peoples rights to take things from the land such as timber hay or fish',
+          "Other people's rights to take things from the land (such as timber, hay or fish)",
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'In some cases, other people can have legal rights to take certain things from land, such as timber, hay, or fish. This checks whether any of these rights affect your property, as they can impact how the land is used.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3764,23 +3791,30 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'following_arrangements',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 10,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'chancel_repair_liability',
+    taskKey: 'shared_services_and_utilities',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'arrangementst_affecting',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'arrangementst_affecting',
@@ -3789,7 +3823,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          "This is for any other rights or arrangements affecting your property that haven't been mentioned already.",
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3799,40 +3833,64 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'arrangementst_affecting',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 11,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'service_crossing_the_property_or_neighboring_property',
+    taskKey: 'hidden_rights_and_histonic_responsibilities',
     title:
-      'Do any drains, pipes or wires leading to any neighbors property cross the property?',
-    description: 'Please answer Yes or No',
+      "Do any drains, pipes or wires leading to any neighbour's property cross the property?",
+    description: 'Please answer Yes or No and provide details.',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This checks whether any drains, pipes, or wires that serve a neighbouring property run through your land. These shared routes are quite common, but it is important to record them in case access or repairs are ever needed.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 50,
-    order: 1,
+    points: 25,
+    order: 12,
   },
 
   {
     sectionKey: 'rightsAndInformalArrangements',
-    taskKey: 'service_crossing_the_property_or_neighboring_property',
+    taskKey: 'shared_services_and_utilities',
+    title:
+      "Do any drains, pipes or wires leading to any neighbour's property cross the property?",
+    description: 'Please answer Yes or No and provide details.',
+    type: 'RADIO',
+    helpText:
+      'This checks whether any drains, pipes, or wires that serve a neighbouring property run through your land. These shared routes are quite common, but it is important to record them in case access or repairs are ever needed.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 25,
+    order: 13,
+  },
+
+  {
+    sectionKey: 'rightsAndInformalArrangements',
+    taskKey: 'shared_services_and_utilities',
     title: '',
     description: 'Please answer Yes or No and provide details.',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'arrangement_ drains',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'arrangement_ drains',
@@ -3841,7 +3899,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'Please answer Yes or No and provide details.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'This asks whether there is any formal or informal agreement about drains, pipes, or wires, such as who can access them or who is responsible for repairs. Recording this helps avoid confusion or disputes later.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3851,14 +3909,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'arrangement_ drains',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
     points: 50,
-    order: 1,
+    order: 14,
   },
 
   // ────────────────────────────────────────────
@@ -3871,8 +3932,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description:
       'For example: garage, carport, driveway, shared driveway, allocated car parking space, on street parking etc.',
     type: 'TEXT',
-    helpText: 'Start typing your answer here...',
-    points: 50,
+    helpText:
+      'This asks whether there is any formal or informal agreement about drains, pipes, or wires, such as who can access them or who is responsible for repairs. Recording this helps avoid confusion or disputes later.',
+    displayMode: 'text',
+    placeholder:
+      'This is about how parking works at the property, such as whether there is a driveway, garage, allocated space, or on-street parking. Sharing the details here helps set clear expectations for buyers and avoids confusion later.',
+    points: 75,
     order: 1,
   },
 
@@ -3882,14 +3947,15 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title:
       'Is the property in a controlled parking zone or within a local authority parking scheme?',
     description: '',
+    helpText:
+      'This checks whether the property is in an area where parking is controlled by the council, such as permit zones or time-limited parking schemes. This can affect where you and visitors are allowed to park.',
     type: 'RADIO',
-    helpText: '',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
-    points: 25,
-    order: 1,
+    points: 75,
+    order: 2,
   },
 
   // ────────────────────────────────────────────
@@ -3903,12 +3969,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     instructionText:
       'Please indicate ownership by written instruction or by reference to a plan:',
     type: 'NOTE',
-    placeholder: 'Enter your notes here...',
+    placeholder: '',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'If the property is leasehold, details of lease expenses such as service charges and ground rent should be set out on the separate TA7 Leasehold Information Form. If the property is freehold, there may still be charges: for example, payments to a management company or for the use of a private drainage system.',
     },
     points: 75,
     order: 1,
@@ -3920,6 +3984,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'council_tax',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'council_tax',
@@ -3929,7 +3997,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please answer Yes or No and provide written instructions.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'This asks whether there are any regular charges linked to the property, like fees paid to a management company. It doesn’t include things like council tax or utilities, just property-related charges that a buyer would need to know about.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3939,9 +4007,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'council_tax',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please provide written instruction for your answer above',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3960,12 +4031,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     instructionText:
       'Please indicate ownership by written instruction or by reference to a plan:',
     type: 'NOTE',
-    placeholder: 'Enter your notes here...',
+    placeholder: '',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'If the property is leasehold, details of lease expenses such as service charges and ground rent should be set out on the separate TA7 Leasehold Information Form. If the property is freehold, there may still be charges: for example, payments to a management company or for the use of a private drainage system.',
     },
     points: 25,
     order: 1,
@@ -3975,11 +4044,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     sectionKey: 'occupiers',
     taskKey: 'the_seller',
     title: 'Does the seller live at the property?',
-    description:
-      'Please answer Yes or No and provide full names of any occupiers (other than the sellers) aged 17 or over:',
+    description: 'Please answer Yes or No. ',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This checks whether the seller currently lives at the property. Some properties are rented out, empty, or the seller may be living elsewhere, such as in a care home or hospital, so this helps explain the situation and how the sale will be handled.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -3990,28 +4058,20 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'occupiers',
-    taskKey: 'other_occupiersr',
+    taskKey: 'other_occupiers',
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
     parts: [
       {
-        partKey: 'full_names_of_sellers',
-        type: 'multitextinput',
-        title: 'Does anyone else, aged 17 or over, live at the property?',
+        partKey: 'anyone_else_aged',
+        type: 'radio',
+        title: 'Does anyone else, aged 17 or over, live at the property??',
         description:
           'Please answer Yes or No and provide full names of any occupiers (other than the sellers) aged 17 or over:',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-        placeholder: 'Enter Name',
-        buttonText: 'Add More Sellers',
-        order: 1,
-      },
-      {
-        partKey: 'are_you_the_owner_of_the_property',
-        type: 'radio',
-        title: 'Are you the owner of the property?',
+          'This is to check whether any other adults live at the property who might have rights to stay there. If they do, those rights may need to be dealt with before the sale can go through, so it’s important to flag this early.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -4019,32 +4079,52 @@ const QUESTION_TEMPLATES: QSeed[] = [
         order: 2,
       },
       {
-        partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
-        type: 'radio',
-        title: 'Are completing this form on the behalf of the seller? ',
-        options: [
-          { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
-          { label: 'Trustee', value: 'trustee' },
-          { label: 'Representative', value: 'representative' },
-          { label: 'Power of Attorney', value: 'power_of_attorney' },
-          { label: 'Limited Company ', value: 'limited_company' },
-        ],
-        order: 3,
+        partKey: 'full_names_of_sellers',
+        type: 'multitextinput',
+        title:
+          'Please provide full names of any occupiers (other than the sellers) aged 17 or over:',
+        description: '',
+        placeholder: 'Enter Occupier Name',
+        buttonText: 'Add More Occupiers',
+        order: 1,
       },
-      {
-        partKey: 'company_details',
-        type: 'multifieldform',
-        title: '',
-        repeatable: false,
-        fields: [
-          {
-            key: 'filler_name',
-            label: 'N',
-            placeholder: 'Enter Name',
-          },
-        ],
-        order: 4,
-      },
+      // {
+      //   partKey: 'are_you_the_owner_of_the_property',
+      //   type: 'radio',
+      //   title: 'Are you the owner of the property?',
+      //   options: [
+      //     { label: 'Yes', value: 'yes' },
+      //     { label: 'No', value: 'no' },
+      //   ],
+      //   order: 2,
+      // },
+      // {
+      //   partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
+      //   type: 'radio',
+      //   title: 'Are completing this form on the behalf of the seller? ',
+      //   options: [
+      //     { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
+      //     { label: 'Trustee', value: 'trustee' },
+      //     { label: 'Representative', value: 'representative' },
+      //     { label: 'Power of Attorney', value: 'power_of_attorney' },
+      //     { label: 'Limited Company ', value: 'limited_company' },
+      //   ],
+      //   order: 3,
+      // },
+      // {
+      //   partKey: 'company_details',
+      //   type: 'multifieldform',
+      //   title: '',
+      //   repeatable: false,
+      //   fields: [
+      //     {
+      //       key: 'filler_name',
+      //       label: 'N',
+      //       placeholder: 'Enter Name',
+      //     },
+      //   ],
+      //   order: 4,
+      // },
     ],
     points: 50,
     order: 1,
@@ -4058,7 +4138,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: 'Please answer Yes or No.',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This is to make sure there are no occupancy rights that could delay or complicate the sale later on.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -4087,7 +4167,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     sectionKey: 'occupiers',
     taskKey: 'vacant_possession',
     title: 'Is the property being sold with vacant possession?',
-    description: 'Agreed to leave prior to completion?',
+    description:
+      'If yes, have all the occupiers over the age of 17 agreed to leave prior to completion?',
     type: 'RADIO',
     helpText:
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
@@ -4106,6 +4187,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'roof_air',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'roof_air',
@@ -4124,8 +4209,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
+        conditionalOn: 'roof_air',
+        showOnValues: ['yes'],
+        required: true,
         title: 'Please supply copies of the relevant documents: ',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -4141,15 +4230,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'notes',
     title: 'Important Notes',
     description: 'You must read notes before starting.',
-    instructionText:
-      'Please indicate ownership by written instruction or by reference to a plan:',
     type: 'NOTE',
-    placeholder: 'Enter your notes here...',
     prewrittenTemplates: {
-      buyers:
-        'If any alterations or improvements have been made since the property was last valued for council tax, the sale of the property may trigger a revaluation. This may mean that following completion of the sale, the property will be put into a higher council tax band. Further information about council tax valuation can be found at: http://www.gov.uk/government/organisations/valuation-office-agency',
-      sellers:
-        'All relevant approvals and supporting paperwork referred to in this form, such as listed building consents, planning permissions, Building Regulations consents and completion certificates should be provided. If the seller has had works carried out the seller should produce the documentation authorising this. Copies may be obtained from the relevant local authority website. Competent Persons Certificates may be obtained from the contractor or the scheme provider (e.g. FENSA or Gas Safe Register). Further information about Competent Persons Certificates can be found at: https://www.gov.uk/guidance/competent-person-scheme-current-schemes-and-how-schemes-are-authorised',
+      content:
+        'If the seller does not have a certificate requested below this can be obtained from the relevant Competent Persons Scheme. Further information about Competent Persons Schemes can be found by using the links given below:',
     },
     points: 75,
     order: 1,
@@ -4157,16 +4241,47 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'electricity',
-    title:
-      'Has the whole or any part of the electrical installation been tested by a qualified and registered electrician?',
-    description:
-      'Please answer Yes or No and provide a copy of the test certificate.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'electrical_installation',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'electrical_installation',
+        title:
+          'Has the whole or any part of the electrical installation been tested by a qualified and registered electrician?',
+        description:
+          'If Yes, please state the year it was tested and provide a copy of the test certificate.',
+        type: 'DATE',
+        helpText:
+          'This helps show whether there’s any recent professional confirmation that the electrics are safe. Having this information can reduce uncertainty for buyers and avoid last-minute checks, renegotiations, or delays later in the sale.',
+        options: [
+          {
+            label: 'Yes, select year',
+            value: 'yes',
+            hasDate: true,
+            dateFormat: 'monthYear',
+            datePlaceholder: 'Select year',
+          },
+          { label: 'No', value: 'no', hasDate: false },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        display: 'both',
+        conditionalOn: 'electrical_installation',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please supply copies of the relevant documents: ',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 75,
     order: 1,
@@ -4175,66 +4290,39 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'electricity',
-    title:
-      'Has the property been rewired or had any electrical installation work carried out since 1 January 2005?',
-    description: 'Please answer Yes or No and provide supporting document.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'property_rewired',
+        title:
+          'Has the property been rewired or had any electrical installation work carried out since 1 January 2005?',
+        description: 'Please answer Yes or No and provide supporting document.',
+        type: 'date',
+        helpText:
+          'This helps build a clear picture of any major electrical work that’s been done to the property and whether it should have been carried out under modern safety rules. Sharing this upfront can help avoid extra checks, delays, or problems later in the sale.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please provide one of the following Document: ',
+        placeholder:
+          'A copy of the signed BS7671 Electrical Safety Certificate The installers Building Regulations Compliance Certificate The Building Control Completion Certificate',
+        display: 'both',
+        order: 2,
+      },
     ],
     points: 75,
     order: 2,
   },
-  {
-    sectionKey: 'services',
-    taskKey: 'electricity',
-    title: 'Does the property have a central heating system?',
-    description: 'Please answer Yes or No.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 25,
-    order: 3,
-  },
-  {
-    sectionKey: 'services',
-    taskKey: 'electricity',
-    title:
-      'What type of system is it (e.g. mains gas, liquid gas, oil, electricity, etc.)?',
-    description: 'Please select one or more options.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 25,
-    order: 4,
-  },
-  {
-    sectionKey: 'services',
-    taskKey: 'central_heating',
-    title: 'When was the heating system installed?',
-    description:
-      "If on or after 1 April 2005 please supply a copy of the 'completion certificate' (e.g. CORGI or Gas Safe Register) or the 'exceptional circumstances' form.",
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 75,
-    order: 1,
-  },
+
   {
     sectionKey: 'services',
     taskKey: 'central_heating',
@@ -4250,28 +4338,124 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 25,
     order: 2,
   },
+
+  // central heating
   {
     sectionKey: 'services',
     taskKey: 'central_heating',
-    title: 'In what year was the heating system last serviced/maintained?',
-    description:
-      'Please provide year info and supply a copy of the inspection report..',
-    type: 'DATE',
+    title: 'When was the heating system installed?',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'heating_system',
+        title: 'When was the heating system installed?',
+        description:
+          'If on or after 1 April 2005 please supply a copy of the completion certificate (e.g. CORGI or Gas Safe Register) or the exceptional circumstances form.',
+        type: 'date',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          {
+            label: 'Select year of service',
+            value: 'yes',
+            hasDate: true,
+            dateFormat: 'year',
+            datePlaceholder: 'Select year',
+          },
+          { label: 'No', value: 'no', hasDate: false },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title:
+          "Please provide a copy of the 'completion certificate' (e.g. CORGI or Gas Safe Register) or the 'exceptional circumstances' form. ",
+        display: 'both',
+        placeholder: 'Start typing here.....',
+        order: 3,
+      },
+    ],
+    points: 75,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'services',
+    taskKey: 'central_heating',
+    title: 'Does the property have a central heating system?',
+    description: 'Please answer Yes or No.',
+    type: 'RADIO',
     helpText:
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
     options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 25,
+    order: 1,
+  },
+
+  {
+    sectionKey: 'services',
+    taskKey: 'central_heating',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
       {
-        label: 'Select year of service',
-        value: 'yes',
-        hasDate: true,
-        dateFormat: 'year',
-        datePlaceholder: 'Select year',
+        partKey: 'heating_system',
+        title: 'In what year was the heating system last serviced/maintained?',
+        description:
+          'Please provide year info and supply a copy of the inspection report..',
+        type: 'date',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          {
+            label: 'Select year of service',
+            value: 'yes',
+            hasDate: true,
+            dateFormat: 'year',
+            datePlaceholder: 'Select year',
+          },
+          { label: 'No', value: 'no', hasDate: false },
+        ],
+        order: 1,
       },
-      { label: 'No', value: 'no', hasDate: false },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: 'Please provide a copy of the inspection report.',
+        display: 'both',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 75,
     order: 3,
   },
+
+  {
+    sectionKey: 'services',
+    taskKey: 'central_heating',
+    title:
+      'What type of system is it (e.g. mains gas, liquid gas, oil, electricity, etc.)?',
+    description: 'Please select one or more options.',
+    type: 'RADIO',
+    helpText:
+      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+    options: [
+      { label: 'Yes', value: 'yes' },
+      { label: 'No', value: 'no' },
+    ],
+    points: 25,
+    order: 4,
+  },
+
   {
     sectionKey: 'services',
     taskKey: 'drainage_and_sewerage',
@@ -4285,7 +4469,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 25,
-    order: 1,
+    order: 5,
   },
   {
     sectionKey: 'services',
@@ -4305,14 +4489,38 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'drainage_and_sewerage',
-    title: 'Is sewerage for the property provided by:',
-    description: 'A septic tank?',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'heating_system',
+        title: 'Is sewerage for the property provided by:',
+        description: 'A septic tank?',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: 'When was the septic tank last replaced or upgraded?',
+        display: 'both',
+        placeholder: 'Start typing here.....',
+        order: 2,
+        options: [
+          {
+            label: 'Select month and year of the service',
+            value: 'yes',
+            hasDate: true,
+            dateFormat: 'year',
+            datePlaceholder: '',
+          },
+          // { label: 'No', value: 'no', hasDate: false },
+        ],
+      },
     ],
     points: 25,
     order: 3,
@@ -4374,11 +4582,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
     options: [
       {
-        label: 'Select month of service',
+        label: 'Select year when the system was last emptied.',
         value: 'yes',
         hasDate: true,
         dateFormat: 'monthYear',
-        datePlaceholder: 'Select Month and Year',
+        datePlaceholder: 'Select Year',
       },
       { label: 'No', value: 'no', hasDate: false },
     ],
@@ -4396,11 +4604,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
     options: [
       {
-        label: 'Select month of service',
+        label: 'Select year when the system was last emptied.',
         value: 'yes',
         hasDate: true,
         dateFormat: 'monthYear',
-        datePlaceholder: 'Select Month and Year',
+        datePlaceholder: 'Select Year',
       },
       { label: 'No', value: 'no', hasDate: false },
     ],
@@ -4417,11 +4625,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
     options: [
       {
-        label: 'Select month of service',
+        label: 'Select year when the system was last emptied.',
         value: 'yes',
         hasDate: true,
         dateFormat: 'monthYear',
-        datePlaceholder: 'Select Month and Year',
+        datePlaceholder: 'Select Year',
       },
       { label: 'No', value: 'no', hasDate: false },
     ],
@@ -4431,16 +4639,40 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'drainage_and_sewerage',
-    title:
-      'Is any part of the septic tank, sewage treatment plant (including any soakaway or outfall) or cesspool, or the access to it, outside the boundary of the property?',
-    description:
-      'Please answer Yes and No and supply a plan showing the location of the system and how access is obtained.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'roof_air',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'roof_air',
+        title:
+          'Is any part of the septic tank, sewage treatment plant (including any soakaway or outfall) or cesspool, or the access to it, outside the boundary of the property?',
+        description:
+          'Please answer Yes and No and supply a plan showing the location of the system and how access is obtained.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        display: 'both',
+        conditionalOn: 'roof_air',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        placeholder: 'Start typing here.....',
+      },
     ],
     points: 75,
     order: 10,
@@ -4448,16 +4680,53 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title:
-      'Mains electricity - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'mains_electricity',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'mains_electricity',
+        title:
+          'Mains electricity - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'mains_electricity',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+          {
+            key: 'location_meter',
+            label: '',
+            placeholder: 'Location of the meter',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -4465,15 +4734,52 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title: 'Mains gas - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '.',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'mains_gas',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'mains_gas',
+        title: 'Mains gas - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'mains_gas',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+          {
+            key: 'location_meter',
+            label: '',
+            placeholder: 'Location of the meter',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
@@ -4481,15 +4787,58 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title: 'Mains water - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'mains_water',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'mains_water',
+        title:
+          'Mains water - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'mains_water',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+          {
+            key: 'location_stopcock',
+            label: '',
+            placeholder: 'Location of the stopcock',
+          },
+          {
+            key: 'location_smeter',
+            label: '',
+            placeholder: 'Location of the meter, if any',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 3,
@@ -4497,15 +4846,48 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title: 'Mains sewage - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'mains_sewage',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'mains_sewage',
+        title:
+          'Mains sewage - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'mains_sewage',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 4,
@@ -4513,28 +4895,95 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title: 'Telephone - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [{ label: 'No', value: 'no' }],
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'telephone_service',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'telephone_service',
+        title: 'Telephone - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'telephone_service',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+        ],
+        order: 2,
+      },
+    ],
     points: 50,
     order: 5,
   },
   {
     sectionKey: 'services',
     taskKey: 'connection_to_services_and_utilities',
-    title: 'Cable - is this service/utility connected to the property?',
-    description:
-      'Please answer Yes or No and provide details of any providers.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'cable_service',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'cable_service',
+        title: 'Cable - is this service/utility connected to the property?',
+        description:
+          'Please answer Yes or No and provide details of any providers.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'company_services',
+        type: 'multifieldform',
+        display: 'both',
+        conditionalOn: 'cable_service',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify the following provider details.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'provide_name',
+            label: '',
+            placeholder: 'Start typing here.....',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 6,
@@ -4563,14 +5012,41 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'transactionInformation',
     taskKey: 'special_requirements',
-    title: 'Does the seller have any special requirements about a moving date?',
-    description: 'Please answer Yes or No and provide information.',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'moving_date',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'moving_date',
+        title:
+          'Does the seller have any special requirements about a moving date?',
+        description:
+          'Please answer Yes or No and provide written instructions.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'moving_date',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please specify special requirements about a moving date.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -4588,6 +5064,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
+      { label: 'No mortgage', value: 'no' },
     ],
     points: 25,
     order: 1,
@@ -4624,7 +5101,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 25,
-    order: 1,
+    order: 2,
   },
 
   {
@@ -4641,7 +5118,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 25,
-    order: 1,
+    order: 3,
   },
 
   {
@@ -4658,7 +5135,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 25,
-    order: 1,
+    order: 4,
   },
 
   // ────────────────────────────────────────────
@@ -4687,15 +5164,48 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Boiler/Immersion Heater',
-    description:
-      'Specify heating equipment and hot water systems included in the sale.',
-    type: 'RADIO',
-    helpText:
-      'This covers your central heating boiler, immersion heater, or other hot water heating systems. Buyers need to know what heating equipment stays with the property and its current condition, as this affects both comfort and ongoing maintenance costs',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'mImmersion_heater',
+        title: 'Boiler/Immersion Heater',
+        description:
+          'Specify heating equipment and hot water systems included in the sale.',
+        type: 'RADIO',
+        helpText:
+          'This covers your central heating boiler, immersion heater, or other hot water heating systems. Buyers need to know what heating equipment stays with the property and its current condition, as this affects both comfort and ongoing maintenance costs',
+        options: [
+          { label: 'include', value: 'include' },
+          { label: 'Excluded', value: 'exclude' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -4704,136 +5214,352 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Radiators/Wall Heaters',
-    description:
-      'Central heating radiators and wall-mounted heating units included in the sale',
-    type: 'RADIO',
-    helpText:
-      'This covers all fixed heating units attached to walls throughout the property  Buyers need to know which radiators and heaters remain  as removing them could affect the heating system s efficiency and leave wall damage',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'wall_eaters',
+        title: 'Radiators/Wall Heaters',
+        description:
+          'Central heating radiators and wall-mounted heating units included in the sale',
+        type: 'RADIO',
+        helpText:
+          'This covers all fixed heating units attached to walls throughout the property  Buyers need to know which radiators and heaters remain  as removing them could affect the heating system s efficiency and leave wall damage',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
     title: 'Night-Storage Heaters',
-    description:
-      'Electric storage heaters that charge overnight and release heat during the day',
-    type: 'RADIO',
-    helpText:
-      'Night storage heaters are electric units that store heat using cheaper overnight electricity They re often the primary heating source in properties without gas central heating, so their inclusion significantly affects heating costs.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'storage heaters',
+        title: 'Night-Storage Heaters',
+        description:
+          'Electric storage heaters that charge overnight and release heat during the day',
+        type: 'RADIO',
+        helpText:
+          'Night storage heaters are electric units that store heat using cheaper overnight electricity They re often the primary heating source in properties without gas central heating, so their inclusion significantly affects heating costs.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Free-Standing Heaters',
-    description:
-      'Portable and moveable heating units not permanently fixed to the property',
-    type: 'RADIO',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
     helpText:
       'These are standalone heaters that can be moved around, such as electric heaters, gas heaters, or oil-filled radiators. While not fixed to the property, they may add value for buyers, especially in rooms without other heating.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    parts: [
+      {
+        partKey: 'standing_heaters',
+        title: 'Free-Standing Heaters',
+        description:
+          'Portable and moveable heating units not permanently fixed to the property',
+        type: 'RADIO',
+        helpText:
+          'These are standalone heaters that can be moved around, such as electric heaters, gas heaters, or oil-filled radiators. While not fixed to the property, they may add value for buyers, especially in rooms without other heating.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'GasFires (with surround)',
-    description:
-      'Gas fireplaces including decorative surrounds and fire installations',
-    type: 'RADIO',
-    helpText:
-      'Gas fires with surrounds are valuable features that provide both heating and aesthetic appeal. The surround (mantelpiece and decorative frame) is often a significant design element that buyers factor into their decision.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gas_fires',
+        title: 'GasFires (with surround)',
+        description:
+          'Gas fireplaces including decorative surrounds and fire installations',
+        type: 'RADIO',
+        helpText:
+          'Gas fires with surrounds are valuable features that provide both heating and aesthetic appeal. The surround (mantelpiece and decorative frame) is often a significant design element that buyers factor into their decision.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Electric Fires (with surround)',
-    description:
-      'Electric fireplaces including decorative surrounds and installations',
-    type: 'RADIO',
-    helpText:
-      'Electric fires offer the ambiance of a fireplace without gas connections. The decorative surround adds character to the room, and these units are often easier to maintain than gas alternatives.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'electric_fires',
+        title: 'Electric Fires (with surround)',
+        description:
+          'Electric fireplaces including decorative surrounds and installations',
+        type: 'RADIO',
+        helpText:
+          'Electric fires offer the ambiance of a fireplace without gas connections. The decorative surround adds character to the room, and these units are often easier to maintain than gas alternatives.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Light Switches',
-    description:
-      'Wall-mounted switches and controls for lighting throughout the property',
-    type: 'RADIO',
-    helpText:
-      '􀛭 What is this This includes all light switches dimmer switches  and special controls like timer switches or smart switches. Modern or high quality switches can add value, while outdated ones may need replacement.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: ' ',
+    parts: [
+      {
+        partKey: 'electric_fires',
+        title: 'wall_mounted',
+        description:
+          'Wall-mounted switches and controls for lighting throughout the property',
+        type: 'RADIO',
+        helpText:
+          'What is this This includes all light switches dimmer switches  and special controls like timer switches or smart switches. Modern or high quality switches can add value, while outdated ones may need replacement.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Light Switches',
-    description:
-      'Wall-mounted switches and controls for lighting throughout the property',
-    type: 'RADIO',
-    helpText:
-      '􀛭 What is this This includes all light switches dimmer switches  and special controls like timer switches or smart switches. Modern or high quality switches can add value, while outdated ones may need replacement.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'attic_area',
+        title: 'Roof_space',
+        description:
+          'Thermal insulation installed in the roof space or attic area',
+        type: 'RADIO',
+        helpText:
+          'Roof insulation is crucial for energy efficiency and heating costs. Good insulation can significantly reduce energy bills and is often checked during surveys. Buyers need to know the type and condition of existing insulation.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'basic_fittings',
-    title: 'Roof Insulation',
-    description: 'Thermal insulation installed in the roof space or attic area',
-    type: 'RADIO',
-    helpText:
-      'Roof insulation is crucial for energy efficiency and heating costs. Good insulation can significantly reduce energy bills and is often checked during surveys. Buyers need to know the type and condition of existing insulation.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
+    order: 8,
   },
 
   {
@@ -4841,117 +5567,349 @@ const QUESTION_TEMPLATES: QSeed[] = [
     taskKey: 'basic_fittings',
     title: 'Window Fittings',
     description: 'Hardware, locks, handles, and mechanisms attached to windows',
-    type: 'RADIO',
-    helpText:
-      'This covers window handles, locks, catches, and opening mechanisms. Proper window fittings are essential for security, ventilation, and window operation. Missing or broken fittings can be costly to replace.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'hardware_locks',
+        title: 'Window Fittings',
+        description:
+          'Hardware, locks, handles, and mechanisms attached to windows',
+        type: 'RADIO',
+        helpText:
+          'Roof insulation is crucial for energy efficiency and heating costs. Good insulation can significantly reduce energy bills and is often checked during surveys. Buyers need to know the type and condition of existing insulation.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 9,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Window Shutters/Grilles',
-    description:
-      'External or internal shutters and security grilles fitted to windows',
-    type: 'RADIO',
-    helpText:
-      'Window shutters provide security, privacy, and sometimes weather protection. Security grilles offer protection against break-ins. These features can be valuable selling points, especially in urban areas.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'window_shutters',
+        title: 'Window Shutters/Grilles',
+        description:
+          'External or internal shutters and security grilles fitted to windows',
+        type: 'RADIO',
+        helpText:
+          'Window shutters provide security, privacy, and sometimes weather protection. Security grilles offer protection against break-ins. These features can be valuable selling points, especially in urban areas.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 10,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Internal Door Fittings',
-    description:
-      'Handles, locks, hinges, and hardware for doors inside the property',
-    type: 'RADIO',
-    helpText:
-      'This includes all door handles locks hinges and closing mechanisms for internal doors. Quality door furniture can enhance the propertys appearance while missing or broken fittings may need immediate replacement.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'internal_door',
+        title: 'Internal Door Fittings',
+        description:
+          'Handles, locks, hinges, and hardware for doors inside the property',
+        type: 'RADIO',
+        helpText:
+          'This includes all door handles locks hinges and closing mechanisms for internal doors. Quality door furniture can enhance the propertys appearance while missing or broken fittings may need immediate replacement.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 11,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'External Door Fittings',
-    description:
-      'Hardware, locks, handles, and security features for external doors',
-    type: 'RADIO',
-    helpText:
-      'External door fittings include handles, locks, security bolts, letterboxes, and door knockers. These are crucial for security and first impressions. High-quality external fittings enhance both security and property value.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'external_door',
+        title: 'External Door Fittings',
+        description:
+          'Hardware, locks, handles, and security features for external doors',
+        type: 'RADIO',
+        helpText:
+          'External door fittings include handles, locks, security bolts, letterboxes, and door knockers. These are crucial for security and first impressions. High-quality external fittings enhance both security and property value.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 12,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Doorbell/Chime',
-    description:
-      'Door entry systems, doorbells, and chime units throughout the property',
-    type: 'RADIO',
-    helpText:
-      'This covers doorbells, entry chimes, and any intercom systems. Modern video doorbells or smart entry systems can be valuable features that buyers appreciate for convenience and security.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'door_entry_system',
+        title: 'Doorbell/Chime',
+        description:
+          'Door entry systems, doorbells, and chime units throughout the property',
+        type: 'RADIO',
+        helpText:
+          'This covers doorbells, entry chimes, and any intercom systems. Modern video doorbells or smart entry systems can be valuable features that buyers appreciate for convenience and security.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 13,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Electric Sockets',
-    description:
-      'Power outlets and electrical socket installations throughout the property',
-    type: 'RADIO',
-    helpText:
-      'Electric sockets are fixed installations that stay with the property. This refers to any special or additional sockets that might have been added, such as USB sockets, outdoor sockets, or high-quality decorative socket plates.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'electric_sockets',
+        title: 'Electric Sockets',
+        description:
+          'Power outlets and electrical socket installations throughout the property',
+        type: 'RADIO',
+        helpText:
+          'Electric sockets are fixed installations that stay with the property. This refers to any special or additional sockets that might have been added, such as USB sockets, outdoor sockets, or high-quality decorative socket plates.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 14,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'basic_fittings',
-    title: 'Burglar Alarm',
-    description:
-      'Security alarm system including control panels and monitoring equipment',
-    type: 'RADIO',
-    helpText:
-      'Burglar alarms can include control panels, sensors, sirens, and monitoring services. A working alarm system is a valuable security feature, but buyers need to know about ongoing monitoring costs and system requirements.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'burglar_alarm',
+        title: 'Burglar Alarm',
+        description:
+          'Security alarm system including control panels and monitoring equipment',
+        type: 'RADIO',
+        helpText:
+          'Burglar alarms can include control panels, sensors, sirens, and monitoring services. A working alarm system is a valuable security feature, but buyers need to know about ongoing monitoring costs and system requirements.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 15,
   },
 
   {
@@ -4960,12 +5918,107 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: 'Other Basic Fittings',
     description:
       'Additional fixtures, electrical items, or installations not listed in previous sections',
-    type: 'RADIO',
+    type: 'MULTIPART' as QuestionType,
     helpText:
       'This covers any other fixed installations like smart home systems, CCTV equipment, intercom systems, additional electrical fittings, or specialized fixtures unique to your property that buyers should know about.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    parts: [
+      {
+        partKey: 'electric_fires',
+        title: 'Roof Insulation',
+        description:
+          'Thermal insulation installed in the roof space or attic area',
+        type: 'RADIO',
+        helpText:
+          'Roof insulation is crucial for energy efficiency and heating costs. Good insulation can significantly reduce energy bills and is often checked during surveys. Buyers need to know the type and condition of existing insulation.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
+    ],
+    points: 50,
+    order: 16,
+  },
+  // kitchen
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'kitchen',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'cooktop_surface',
+        title: 'Hob',
+        description:
+          'Cooktop surface for cooking including gas, electric, or induction hobs',
+        type: 'RADIO',
+        helpText:
+          'The hob is often built into the kitchen worktop and may be gas electric, ceramic, or induction. Built in hobs are usually included in fitted kitchens, but standalone units might be excluded if they re high value items.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
     order: 1,
@@ -4974,168 +6027,538 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Hob',
-    description:
-      'Cooktop surface for cooking including gas, electric, or induction hobs',
-    type: 'RADIO',
-    helpText:
-      'The hob is often built into the kitchen worktop and may be gas electric, ceramic, or induction. Built in hobs are usually included in fitted kitchens, but standalone units might be excluded if they re high value items.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'ventilation_system',
+        title: 'Extractor Hood',
+        description:
+          'Ventilation system above the hob for removing cooking odors and steam',
+        type: 'RADIO',
+        helpText:
+          'Extractorhoods are essential for kitchen ventilation and are usually fitted units connected to external venting. They range from basic models to high-end designer units that can significantly affect kitchen value.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Extractor Hood',
-    description:
-      'Ventilation system above the hob for removing cooking odors and steam',
-    type: 'RADIO',
-    helpText:
-      'Extractorhoods are essential for kitchen ventilation and are usually fitted units connected to external venting. They range from basic models to high-end designer units that can significantly affect kitchen value.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'oven_grill',
+        title: 'Oven/Grill',
+        description:
+          'Built-in or freestanding cooking appliances including ovens and grills',
+        type: 'RADIO',
+        helpText:
+          'This covers all oven units  whether built in undercounter  or freestanding. Modern fitted ovens are typically included but high end or professional grade ovens might be excluded if they re particularly valuable',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Oven/Grill',
-    description:
-      'Built-in or freestanding cooking appliances including ovens and grills',
-    type: 'RADIO',
-    helpText:
-      'This covers all oven units  whether built in undercounter  or freestanding. Modern fitted ovens are typically included but high end or professional grade ovens might be excluded if they re particularly valuable',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'cooktop_surface',
+        title: 'Cooker',
+        description:
+          'Combined cooking appliance including hob, oven, and grill in one unit',
+        type: 'RADIO',
+        helpText:
+          'A cooker combines multiple cooking functions in one appliance. Range cookers and professional-style units can be significant investments that sellers might want to take with them or sell separately.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Cooker',
-    description:
-      'Combined cooking appliance including hob, oven, and grill in one unit',
-    type: 'RADIO',
-    helpText:
-      'A cooker combines multiple cooking functions in one appliance. Range cookers and professional-style units can be significant investments that sellers might want to take with them or sell separately.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'countertop_models',
+        title: 'Microwave',
+        description:
+          'Microwave oven whether built-in, under-counter, or countertop models',
+        type: 'RADIO',
+        helpText:
+          'Microwave oven whether built-in, under-counter, or countertop models',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
+  },
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'kitchen',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'refrigeration_appliance',
+        title: 'Refrigerator/Fridge-Freezer',
+        description:
+          'Refrigeration appliances including fridges, freezers, and combination units',
+        type: 'RADIO',
+        helpText:
+          'Large appliances like American-style fridge-freezers or built-in units are often included, while smaller or high-end appliances might be excluded. Built-in units that match kitchen units are typically included.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
+    ],
+    points: 50,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Microwave',
-    description:
-      'Microwave oven whether built-in, under-counter, or countertop models',
-    type: 'RADIO',
-    helpText:
-      'Built-in microwaves are usually included as part of fitted kitchens, while countertop models are often considered moveable. High-end built-in units might be valuable enough to exclude from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'built_in_freezer',
+        title: 'Freezer',
+        description: 'Standalone or built-in freezer units for food storage',
+        type: 'RADIO',
+        helpText:
+          'Separate freezers, whether upright or chest freezers, are often considered valuable appliances. Built-in freezers integrated into kitchen design are usually included, while standalone units might be negotiable.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
-  },
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'kitchen',
-    title: 'Refrigerator/Fridge-Freezer',
-    description:
-      'Refrigeration appliances including fridges, freezers, and combination units',
-    type: 'RADIO',
-    helpText:
-      'Large appliances like American-style fridge-freezers or built-in units are often included, while smaller or high-end appliances might be excluded. Built-in units that match kitchen units are typically included.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'kitchen',
-    title: 'Freezer',
-    description: 'Standalone or built-in freezer units for food storage',
-    type: 'RADIO',
-    helpText:
-      'Separate freezers, whether upright or chest freezers, are often considered valuable appliances. Built-in freezers integrated into kitchen design are usually included, while standalone units might be negotiable.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'kitchen',
-    title: 'Dishwasher',
-    description: 'Built-in or freestanding dishwashing appliances',
-    type: 'RADIO',
-    helpText:
-      'Dishwashers are highly valued by buyers. Built in models integrated into kitchen units are typically included while freestanding models might be excluded if theyr e new or high end',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Tumble Dryer',
-    description:
-      'Clothes drying appliances whether built-in, stacked, or freestanding',
-    type: 'RADIO',
-    helpText:
-      'Tumble dryers can be valuable appliances especially built in or stacked units in fitted utility areas. Buyers often expect these to be included if they re integrated into the kitchen or utility room design.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'refrigeration_appliance',
+        title: 'Dishwasher',
+        description: 'Built-in or freestanding dishwashing appliances',
+        type: 'RADIO',
+        helpText:
+          'Dishwashers are highly valued by buyers. Built in models integrated into kitchen units are typically included while freestanding models might be excluded if theyr e new or high end',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'kitchen',
-    title: 'Washing Machine',
-    description:
-      'Clothes washing appliances including built-in and freestanding models',
-    type: 'RADIO',
-    helpText:
-      'Tumble dryers can be valuable appliances especially built in or stacked units in fitted utility areas. Buyers often expect these to be included if they re integrated into the kitchen or utility room design.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'clothes_drying',
+        title: 'Tumble Dryer',
+        description:
+          'Clothes drying appliances whether built-in, stacked, or freestanding',
+        type: 'RADIO',
+        helpText:
+          'Tumble dryers can be valuable appliances especially built in or stacked units in fitted utility areas. Buyers often expect these to be included if they re integrated into the kitchen or utility room design.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 9,
+  },
+
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'kitchen',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'clothes_washing',
+        title: 'Washing Machine',
+        description:
+          'Clothes washing appliances including built-in and freestanding models',
+        type: 'RADIO',
+        helpText:
+          'Tumble dryers can be valuable appliances especially built in or stacked units in fitted utility areas. Buyers often expect these to be included if they re integrated into the kitchen or utility room design.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'appliance_installed',
+        description: 'How is this appliance installed?',
+        type: 'RADIO',
+        options: [
+          { label: 'Fitted', value: 'fitted' },
+          { label: 'Freestanding', value: 'freestanding' },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 3,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 4,
+      },
+    ],
+    points: 50,
+    order: 10,
   },
 
   {
@@ -5152,21 +6575,54 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 11,
   },
-
+  // bathroom
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Bath',
-    description:
-      'Bathtub installations including standard, corner, or luxury bath units',
-    type: 'RADIO',
-    helpText:
-      'Baths are fixed bathroom installations that stay with the property. This includes standard baths, corner baths, jacuzzi baths, or luxury installations. Only in very rare cases would a bath be excluded from a sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'bathtub_installations',
+        title: 'Bath',
+        description:
+          'Bathtub installations including standard, corner, or luxury bath units',
+        type: 'RADIO',
+        helpText:
+          'Baths are fixed bathroom installations that stay with the property. This includes standard baths, corner baths, jacuzzi baths, or luxury installations. Only in very rare cases would a bath be excluded from a sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -5175,148 +6631,496 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Shower Fitting for Bath',
-    description:
-      'Bathtub installations including standard, corner, or luxury bath units',
-    type: 'RADIO',
-    helpText:
-      '􀛭 what is this this covers shower attachments that fit over the bath including handheld showers overhead showers and shower screens. these fittings are usually part of the bathroom suite and expected to remain.in',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'shower_attachments',
+        title: 'Shower Fitting for Bath',
+        description:
+          'Shower attachments, screens, and fixtures installed over the bathtub',
+        type: 'RADIO',
+        helpText:
+          'what is this this covers shower attachments that fit over the bath including handheld showers overhead showers and shower screens. these fittings are usually part of the bathroom suite and expected to remain.in',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Shower Curtain',
-    description: 'Fabric or plastic curtains used to contain shower water',
-    type: 'RADIO',
-    helpText:
-      'Shower curtains are inexpensive items that are often included for convenience. However, expensive or designer curtains might be excluded, with basic replacements provided.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'plastic_curtains',
+        title: 'Shower Curtain',
+        description: 'Fabric or plastic curtains used to contain shower water',
+        type: 'RADIO',
+        helpText:
+          'Shower curtains are inexpensive items that are often included for convenience. However, expensive or designer curtains might be excluded, with basic replacements provided.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Shower Curtain',
-    description: 'Storage cabinets and vanity units installed in the bathroom',
-    type: 'RADIO',
-    helpText:
-      'Bathroom cabinets include vanity units, mirror cabinets, and storage units. Built-in or fitted cabinets are typically included, while high-end or antique pieces might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'storage_cabinets',
+        title: 'Bathroom Cabinet',
+        description:
+          'Storage cabinets and vanity units installed in the bathroom',
+        type: 'RADIO',
+        helpText:
+          'Bathroom cabinets include vanity units, mirror cabinets, and storage units. Built-in or fitted cabinets are typically included, while high-end or antique pieces might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Taps',
-    description:
-      'Water taps and faucets for sinks, baths, and shower installations',
-    type: 'RADIO',
-    helpText:
-      'Taps are essential fixtures that are almost always included. However, designer or antique taps might be excluded if they have significant value, with standard replacements provided.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'water_taps',
+        title: 'Taps',
+        description:
+          'Water taps and faucets for sinks, baths, and shower installations',
+        type: 'RADIO',
+        helpText:
+          'Taps are essential fixtures that are almost always included. However, designer or antique taps might be excluded if they have significant value, with standard replacements provided.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Separate Shower and Fittings',
-    description:
-      'Standalone shower cubicles, enclosures, and shower room installations',
-    type: 'RADIO',
-    helpText:
-      'This covers separate shower enclosures, cubicles, and wet rooms. These are major bathroom installations that are always included, as removing them would damage the bathroom.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'shower_cubicles',
+        title: 'Separate Shower and Fittings',
+        description:
+          'Standalone shower cubicles, enclosures, and shower room installations',
+        type: 'RADIO',
+        helpText:
+          'This covers separate shower enclosures, cubicles, and wet rooms. These are major bathroom installations that are always included, as removing them would damage the bathroom.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Towel Rail',
-    description:
-      'Towel hanging fixtures including heated and standard towel rails',
-    type: 'RADIO',
-    helpText:
-      'Towel rails are bathroom fixtures that are typically included. Heated towel rails are particularly valued by buyers as they provide both towel drying and additional bathroom heating.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'towel_hanging',
+        title: 'Towel Rail',
+        description:
+          'Towel hanging fixtures including heated and standard towel rails',
+        type: 'RADIO',
+        helpText:
+          'Towel rails are bathroom fixtures that are typically included. Heated towel rails are particularly valued by buyers as they provide both towel drying and additional bathroom heating.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Soap/Toothbrush Holders',
-    description:
-      'Bathroom accessories for holding toiletries and personal items',
-    type: 'RADIO',
-    helpText:
-      'These are small bathroom accessories that are usually included for convenience. While individually low-value a complete set of matching accessories can enhance the bathroom appearance.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: 'Bathroom accessories for holding toiletries and personal items',
+    parts: [
+      {
+        partKey: 'bathtub_accessoriess',
+        title: 'Soap/Toothbrush Holders',
+        description:
+          'Bathroom accessories for holding toiletries and personal items',
+        type: 'RADIO',
+        helpText:
+          'Baths are fixed bathroom installations that stay with the property. This includes standard baths, corner baths, jacuzzi baths, or luxury installations. Only in very rare cases would a bath be excluded from a sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Toilet Roll Holders',
-    description: 'Wall-mounted fixtures for holding toilet paper rolls',
-    type: 'RADIO',
-    helpText:
-      'Toilet roll holders are basic bathroom fixtures that are typically included. Theyre usually built into the bathroom design and would leave holes in walls or tiles if removed.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'paper_rolls',
+        title: 'Toilet Roll Holders',
+        description: 'Wall-mounted fixtures for holding toilet paper rolls',
+        type: 'RADIO',
+        helpText:
+          'Toilet roll holders are basic bathroom fixtures that are typically included. Theyre usually built into the bathroom design and would leave holes in walls or tiles if removed.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 9,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'bathroom',
-    title: 'Bathroom Mirror',
-    description:
-      'Mirrors installed in bathrooms including illuminated and cabinet mirrors',
-    type: 'RADIO',
-    helpText:
-      'Bathroom mirrors are usually included, especially if they are built-in or match the bathroom suite. Large or designer mirrors might be excluded if they have significant value.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'mirrors_installed',
+        title: 'Bathroom Mirror',
+        description:
+          'Mirrors installed in bathrooms including illuminated and cabinet mirrors',
+        type: 'RADIO',
+        helpText:
+          'Bathroom mirrors are usually included, especially if they are built-in or match the bathroom suite. Large or designer mirrors might be excluded if they have significant value.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
+    ],
+    points: 50,
+    order: 10,
+  },
+  // carpets
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'carpets',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'floor_coverings',
+        title: 'Hall, Stairs and Landing',
+        description:
+          'Floor coverings in entrance areas, stairways, and upstairs landings',
+        type: 'RADIO',
+        helpText:
+          'Stair carpets and hallway flooring are often high-wear areas that buyers pay attention to. Good quality carpets in these areas add value, while worn carpets may need immediate replacement.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -5325,116 +7129,297 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Hall, Stairs and Landing',
-    description:
-      'Floor coverings in entrance areas, stairways, and upstairs landings',
-    type: 'RADIO',
-    helpText:
-      'Stair carpets and hallway flooring are often high-wear areas that buyers pay attention to. Good quality carpets in these areas add value, while worn carpets may need immediate replacement.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'reception_areas',
+        title: 'Living Room',
+        description:
+          'Floor coverings and carpets in the main living and reception areas',
+        type: 'RADIO',
+        helpText:
+          'Living room carpets are major features that affect the room  appearance and comfort. High-quality or fitted carpets are typically included while expensive rugs might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Living Room',
-    description:
-      'Floor coverings and carpets in the main living and reception areas',
-    type: 'RADIO',
-    helpText:
-      'Living room carpets are major features that affect the room  appearance and comfort. High-quality or fitted carpets are typically included while expensive rugs might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'dining_areas',
+        title: 'Dining Room',
+        description: 'Floor coverings in formal and informal dining areas',
+        type: 'RADIO',
+        helpText:
+          'Dining room carpets or flooring set the tone for the space. Fitted carpets are usually included, while valuable rugs or specialized flooring might be excluded from the sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Dining Room',
-    description: 'Floor coverings in formal and informal dining areas',
-    type: 'RADIO',
-    helpText:
-      'Dining room carpets or flooring set the tone for the space. Fitted carpets are usually included, while valuable rugs or specialized flooring might be excluded from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'specialized_flooring',
+        title: 'Kitchen',
+        description:
+          'Floor coverings in kitchen areas including mats and specialized flooring',
+        type: 'RADIO',
+        helpText:
+          'Kitchen flooring is usually tile, vinyl, or wood, but this covers any carpet areas or specialized mats. Non-slip mats and entrance mats are often included for practical reasons.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Kitchen',
-    description:
-      'Floor coverings in kitchen areas including mats and specialized flooring',
-    type: 'RADIO',
-    helpText:
-      'Kitchen flooring is usually tile, vinyl, or wood, but this covers any carpet areas or specialized mats. Non-slip mats and entrance mats are often included for practical reasons.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'bedroom_1_coverings',
+        title: 'Bedroom 1',
+        description: 'Floor coverings and carpets in bedroom 1',
+        type: 'RADIO',
+        helpText:
+          'Bedroom carpets provide comfort and warmth Fitted carpets are typically included as theyre cut to room size. High-quality or new carpets might be highlighted as selling features',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Bedroom 1',
-    description: 'Floor coverings and carpets in bedroom 1',
-    type: 'RADIO',
-    helpText:
-      'Bedroom carpets provide comfort and warmth Fitted carpets are typically included as theyre cut to room size. High-quality or new carpets might be highlighted as selling features',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'bedroom_2_coverings',
+        title: 'Bedroom 2',
+        description: 'Floor coverings and carpets in bedroom 2',
+        type: 'RADIO',
+        helpText:
+          'Bedroom carpets provide comfort and warmth. Fitted carpets are typically included as they are cut to room size. High-quality or new carpets might be highlighted as selling features.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'carpets',
-    title: 'Bedroom 2',
-    description: 'Floor coverings and carpets in bedroom 2',
-    type: 'RADIO',
-    helpText:
-      'Bedroom carpets provide comfort and warmth. Fitted carpets are typically included as they are cut to room size. High-quality or new carpets might be highlighted as selling features.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'bedroom_3_coverings',
+        title: 'Bedroom 3',
+        description: 'Floor coverings and carpets in bedroom 3',
+        type: 'RADIO',
+        helpText:
+          'Bedroom carpets provide comfort and warmth. Fitted carpets are typically included as they are cut to room size. High-quality or new carpets might be highlighted as selling features..',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'carpets',
-    title: 'Bedroom 3',
-    description: 'Floor coverings and carpets in bedroom 3',
-    type: 'RADIO',
-    helpText:
-      'Bedroom carpets provide comfort and warmth. Fitted carpets are typically included as they are cut to room size. High-quality or new carpets might be highlighted as selling features.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
@@ -5451,21 +7436,54 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
-
+  // curtain and curtain
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Hall, Stairs and Landing',
-    description:
-      'Hardware systems for hanging window treatments in entrance and stairway areas',
-    type: 'RADIO',
-    helpText:
-      'Curtain poles and rails in hallways and staircases are usually fixed installations that remain with the property. These areas often have awkward window shapes that require custom-fitted hardware.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'hardware_systems',
+        title: 'Hall, Stairs and Landing',
+        description:
+          'Hardware systems for hanging window treatments in entrance and stairway areas',
+        type: 'RADIO',
+        helpText:
+          'Curtain poles and rails in hallways and staircases are usually fixed installations that remain with the property. These areas often have awkward window shapes that require custom-fitted hardware.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -5474,103 +7492,301 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Living Room',
-    description:
-      'Hardwaresystems for hanging curtains and window treatments in the main living area',
-    type: 'RADIO',
-    helpText:
-      'Living room curtain hardware can range from basic tracks to designer poles. Expensive or decorative poles might be excluded, while standard hardware typically remains as its fitted to the walls.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'hanging_curtains',
+        title: 'Living Room',
+        description:
+          'Hardwaresystems for hanging curtains and window treatments in the main living area',
+        type: 'RADIO',
+        helpText:
+          'Living room curtain hardware can range from basic tracks to designer poles. Expensive or decorative poles might be excluded, while standard hardware typically remains as its fitted to the walls.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Dining Room',
-    description:
-      'Hardware systems for hanging window treatments in the dining area',
-    type: 'RADIO',
-    helpText:
-      'Dining room curtain rails and poles are usually included as theyre fixed to walls. Formal dining rooms may have more expensive decorative hardware that sellers might choose to exclude.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'window_treatments',
+        title: 'Dining Room',
+        description:
+          'Hardware systems for hanging window treatments in the dining area',
+        type: 'RADIO',
+        helpText:
+          'Hardware systems for hanging window treatments in the dining area',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Kitchen',
-    description:
-      'Hardware systems for hanging window treatments in the kitchen area',
-    type: 'RADIO',
-    helpText:
-      'Kitchen curtain hardware is typically basic and included with the property. This covers rails for cafe curtains, blinds tracks, or any window treatment hardware above kitchen windows.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'kitchen_area',
+        title: 'Kitchen',
+        description:
+          'Hardware systems for hanging window treatments in the kitchen area',
+        type: 'RADIO',
+        helpText:
+          'Kitchen curtain hardware is typically basic and included with the property. This covers rails for cafe curtains, blinds tracks, or any window treatment hardware above kitchen windows.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Bedroom 1',
-    description:
-      'Hardware systems for hanging window treatments in the main bedroom',
-    type: 'RADIO',
-    helpText:
-      'Bedroom curtain rails and poles are usually included as they re fitted installations. Master bedrooms may have more elaborate hardware systems that could be considered for exclusion if particularly valuable.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'main_bedroom',
+        title: 'Bedroom 1',
+        description:
+          'Hardware systems for hanging window treatments in the main bedroom',
+        type: 'RADIO',
+        helpText:
+          'Bedroom curtain rails and poles are usually included as they re fitted installations. Master bedrooms may have more elaborate hardware systems that could be considered for exclusion if particularly valuable.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
-    title: 'Bedroom 2',
-    description:
-      'Hardware systems for hanging window treatments in the second bedroom',
-    type: 'RADIO',
-    helpText:
-      'Curtain hardware in bedrooms is typically included with the property. This covers all rails, poles, and tracks fitted to walls for hanging curtains, blinds, or other window treatments.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'second_bedroom',
+        title: 'Bedroom 2',
+        description:
+          'Hardware systems for hanging window treatments in the second bedroom',
+        type: 'RADIO',
+        helpText:
+          'Curtain hardware in bedrooms is typically included with the property. This covers all rails, poles, and tracks fitted to walls for hanging curtains, blinds, or other window treatments.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
     title: 'Bedroom 3',
-    description:
-      'Hardware systems for hanging window treatments in the third bedroom',
-    type: 'RADIO',
-    helpText:
-      'All fitted curtain rails, poles, and hardware in this bedroom are usually included. Removing them would typically leave wall damage, so they re considered part of the property fixtures.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'third_bedroom',
+        title: 'Bedroom 3',
+        description:
+          'Hardware systems for hanging window treatments in the third bedroom',
+        type: 'RADIO',
+        helpText:
+          'All fitted curtain rails, poles, and hardware in this bedroom are usually included. Removing them would typically leave wall damage, so they re considered part of the property fixtures.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
@@ -5587,9 +7803,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
-
+  // curtain and curtain section 2
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'curtains_and_curtain_rails',
@@ -5719,18 +7935,52 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 50,
     order: 1,
   },
-
+  // light fitting
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Hall, Stairs and Landing',
-    description:
-      'Light fixtures and electrical fittings in entrance areas and stairways',
-    type: 'RADIO',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
     helpText: '',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    parts: [
+      {
+        partKey: 'light_fixtures',
+        title: 'Hall, Stairs and Landing',
+        description:
+          'Light fixtures and electrical fittings in entrance areas and stairways',
+        type: 'RADIO',
+        helpText:
+          'Hallway and stair lighting includes ceiling lights, wall lights, and pendant fixtures. These are usually included as they re wired installations though expensive chandeliers or designer fixtures might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -5739,102 +7989,302 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Living Room',
-    description:
-      'Light fixtures and electrical fittings in the main living area',
-    type: 'RADIO',
-    helpText:
-      'Living room lighting can include ceiling lights, wall lights, table lamps, and floor lamps. Fixed ceiling and wall lights are typically included, while expensive or antique fixtures might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'electrical_fittings',
+        title: 'Living Room',
+        description:
+          'Light fixtures and electrical fittings in the main living area',
+        type: 'RADIO',
+        helpText:
+          'Living room lighting can include ceiling lights, wall lights, table lamps, and floor lamps. Fixed ceiling and wall lights are typically included, while expensive or antique fixtures might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Dining Room',
-    description:
-      'Light fixtures and electrical fittings in the main Dining area',
-    type: 'RADIO',
-    helpText:
-      'Dining room lighting often includes chandeliers, pendant lights, or ceiling fixtures. While basic fixtures are included, expensive chandeliers or designer lighting might be excluded from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'dining_area',
+        title: 'Dining Room',
+        description:
+          'Light fixtures and electrical fittings in the dining area',
+        type: 'RADIO',
+        helpText:
+          'Dining room lighting often includes chandeliers, pendant lights, or ceiling fixtures. While basic fixtures are included, expensive chandeliers or designer lighting might be excluded from the sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Kitchen',
-    description:
-      'Light fixtures and electrical fittings in the main Kitchen area',
-    type: 'RADIO',
-    helpText:
-      'Kitchen lighting includes ceiling lights, under-cabinet lighting, pendant lights, and spotlights. Most kitchen lighting is included, though expensive designer fixtures or smart lighting systems might be excluded.',
-    options: [
-      { label: 'Y  es', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'kitchen_lighting',
+        title: 'Kitchen',
+        description:
+          'Light fixtures and electrical fittings in the kitchen area',
+        type: 'RADIO',
+        helpText:
+          'Kitchen lighting includes ceiling lights, under-cabinet lighting, pendant lights, and spotlights. Most kitchen lighting is included, though expensive designer fixtures or smart lighting systems might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Bedroom 1',
-    description: 'Light fixtures and electrical fittings in the main bedroom',
-    type: 'RADIO',
-    helpText:
-      'Bedroom lighting includes ceiling lights, bedside wall lights, and any fitted lighting. Standard fixtures are typically included, while expensive or personal lighting choices might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'main_bedroom',
+        title: 'Bedroom 1',
+        description:
+          'Light fixtures and electrical fittings in the main bedroom',
+        type: 'RADIO',
+        helpText:
+          'Bedroom lighting includes ceiling lights, bedside wall lights, and any fitted lighting. Standard fixtures are typically included, while expensive or personal lighting choices might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
-    title: 'Bedroom 2',
-    description: 'Light fixtures and electrical fittings in the second bedroom',
-    type: 'RADIO',
-    helpText:
-      'All fitted light fixtures in this bedroom are usually included with the property. This covers ceiling lights, wall lights, and any built-in lighting installations.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'second_bedroom',
+        title: 'Bedroom 2',
+        description:
+          'Light fixtures and electrical fittings in the second bedroom',
+        type: 'RADIO',
+        helpText:
+          'All fitted light fixtures in this bedroom are usually included with the property. This covers ceiling lights, wall lights, and any built-in lighting installations.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
     title: 'Bedroom 3',
-    description: 'Light fixtures and electrical fittings in the third bedroom',
-    type: 'RADIO',
-    helpText:
-      'Bedroom lighting fixtures are typically included as they re wired installations. If expensive or designer fixtures are removed, basic replacement fittings should be provided.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'third_bedroom',
+        title: 'Bedroom 3',
+        description:
+          'Light fixtures and electrical fittings in the third bedroom',
+        type: 'RADIO',
+        helpText:
+          'Bedroom lighting fixtures are typically included as they are wired installations. If expensive or designer fixtures are removed, basic replacement fittings should be provided.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
-
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'light_fittings',
@@ -5849,21 +8299,54 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
-
+  // fitted units
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Hall, Stairs and Landing',
-    description:
-      'Built-in storage and cupboards in entrance areas and stairways',
-    type: 'RADIO',
-    helpText:
-      'This includes built-in coat cupboards, under-stair storage, fitted shoe storage, or any custom storage solutions in hallways and landing areas. These are typically included as they are built into the property.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'cupboards_entrance',
+        title: 'Hall, Stairs and Landing',
+        description:
+          'Built-in storage and cupboards in entrance areas and stairways',
+        type: 'RADIO',
+        helpText:
+          'This includes built-in coat cupboards, under-stair storage, fitted shoe storage, or any custom storage solutions in hallways and landing areas. These are typically included as they are built into the property.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -5872,103 +8355,301 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Living Room',
-    description:
-      'Built-in storage, shelving, and furniture in the main living area',
-    type: 'RADIO',
-    helpText:
-      'Living room fitted units include built-in bookcases, entertainment centers, display cabinets, or window seats. These custom installations are typically included as they are designed for specific spaces.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'shelving_furniture',
+        title: 'Living Room',
+        description:
+          'Built-in storage, shelving, and furniture in the main living area',
+        type: 'RADIO',
+        helpText:
+          'Living room fitted units include built-in bookcases, entertainment centers, display cabinets, or window seats. These custom installations are typically included as they are designed for specific spaces.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Dining Room',
-    description: 'Built-in storage and furniture in the dining area',
-    type: 'RADIO',
-    helpText:
-      'Dining room fitted units might include built-in sideboards, display cabinets, wine storage, or custom dining furniture. These are usually included as they are made-to-measure for the space.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Dining_room_fitted',
+        title: 'Dining Room',
+        description: 'Built-in storage and furniture in the dining area',
+        type: 'RADIO',
+        helpText:
+          'Dining room fitted units might include built-in sideboards, display cabinets, wine storage, or custom dining furniture. These are usually included as they are made-to-measure for the space.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Kitchen',
-    description: 'Built-in kitchen cabinets, cupboards, and storage systems',
-    type: 'RADIO',
-    helpText:
-      'Kitchen fitted units include all built-in cabinets, cupboards, drawers, pantry units, and kitchen islands. These are integral parts of the kitchen and are always included in the sale.  ',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'kitchen_fitted',
+        title: 'Kitchen',
+        description:
+          'Built-in kitchen cabinets, cupboards, and storage systems',
+        type: 'RADIO',
+        helpText:
+          'Kitchen fitted units include all built-in cabinets, cupboards, drawers, pantry units, and kitchen islands. These are integral parts of the kitchen and are always included in the sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Bedroom 1',
-    description:
-      'Built-in wardrobes, storage, and furniture in the main bedroom',
-    type: 'RADIO',
-    helpText:
-      'Bedroom fitted units include built-in wardrobes, dressing tables, window seats, or custom storage solutions. These made-to-measure installations are typically included with the property.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'built_in_wardrobes',
+        title: 'Bedroom 1',
+        description:
+          'Built-in wardrobes, storage, and furniture in the main bedroom',
+        type: 'RADIO',
+        helpText:
+          'Bedroom fitted units include built-in wardrobes, dressing tables, window seats, or custom storage solutions. These made-to-measure installations are typically included with the property.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
-    title: 'Bedroom 2',
-    description:
-      'Built-in wardrobes, storage, and furniture in the second bedroom',
-    type: 'RADIO',
-    helpText:
-      'All fitted storage in this bedroom is usually included, including built-in wardrobes, cupboards, shelving, or any custom furniture thats permanently installed.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'custom_furniture',
+        title: 'Bedroom 2',
+        description:
+          'Built-in wardrobes, storage, and furniture in the second bedroom',
+        type: 'RADIO',
+        helpText:
+          'All fitted storage in this bedroom is usually included, including built-in wardrobes, cupboards, shelving, or any custom furniture thats permanently installed.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
     title: 'Bedroom 3',
-    description:
-      'Built-in wardrobes, storage, and furniture in the third bedroom',
-    type: 'RADIO',
-    helpText:
-      'Fitted bedroom furniture includes built-in wardrobes, storage units, or custom installations. These are typically included as they re designed specifically for the room dimensions.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'room_dimensions',
+        title: 'Bedroom 3',
+        description:
+          'Built-in wardrobes, storage, and furniture in the third bedroom',
+        type: 'RADIO',
+        helpText:
+          'Fitted bedroom furniture includes built-in wardrobes, storage units, or custom installations. These are typically included as they are designed specifically for the room dimensions.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
-
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'fitted_units',
@@ -5983,21 +8664,54 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
-
+  // outdoor area
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Garden Furniture',
-    description:
-      'Outdoor seating, tables, and furniture for garden and patio areas',
-    type: 'RADIO',
-    helpText:
-      'Garden furniture can range from basic plastic sets to expensive teak or designer pieces. Built-in seating or heavy stone furniture is often included, while portable or valuable sets might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Outdoor_seating',
+        title: 'Garden Furniture',
+        description:
+          'Outdoor seating, tables, and furniture for garden and patio areas',
+        type: 'RADIO',
+        helpText:
+          'Garden furniture can range from basic plastic sets to expensive teak or designer pieces. Built-in seating or heavy stone furniture is often included, while portable or valuable sets might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -6006,168 +8720,550 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Garden Ornaments',
-    description:
-      'Decorative items including statues, fountains, and ornamental features',
-    type: 'RADIO',
-    helpText:
-      'Garden ornaments can be valuable decorative features. Heavy or built-in ornaments like stone statues or water features are often included, while portable or valuable pieces might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'including_statues',
+        title: 'Garden Ornaments',
+        description:
+          'Decorative items including statues, fountains, and ornamental features',
+        type: 'RADIO',
+        helpText:
+          'Garden ornaments can be valuable decorative features. Heavy or built-in ornaments like stone statues or water features are often included, while portable or valuable pieces might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Trees, Plants, Shrubs',
-    description:
-      'All planted landscaping including trees, bushes, flowers, and garden plants',
-    type: 'RADIO',
-    helpText:
-      'Established trees and shrubs are typically included as theyre part of the propertys landscaping. However, valuable specimens, potted plants, or recently planted items might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'including_trees',
+        title: 'Trees, Plants, Shrubs',
+        description:
+          'All planted landscaping including trees, bushes, flowers, and garden plants',
+        type: 'RADIO',
+        helpText:
+          'Established trees and shrubs are typically included as they are part of the propertys landscaping. However valuable specimens, potted plants or recently planted items might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Barbecue',
-    description:
-      'Outdoor cooking equipment including built-in and portable barbecue units',
-    type: 'RADIO',
-    helpText:
-      'Built in barbecues are usually included as theyre permanent installations. Portable or expensive barbecue units might be exclude  especially if theyre new or high end models.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'portable_barbecue',
+        title: 'Barbecue',
+        description:
+          'Outdoor cooking equipment including built-in and portable barbecue units',
+        type: 'RADIO',
+        helpText:
+          'Built-in barbecues are usually included as they are permanent installations. Portable or expensive barbecue units might be excluded, especially if they are new or high-end models.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Dustbins',
-    description: 'Waste containers and recycling bins for household refuse',
-    type: 'RADIO',
-    helpText:
-      'Basic dustbins are often included for convenience, especially if they are council-provided or built-in storage. Designer or expensive bin storage systems might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Waste_containers',
+        title: 'Dustbins',
+        description: 'Waste containers and recycling bins for household refuse',
+        type: 'RADIO',
+        helpText:
+          'Basic dustbins are often included for convenience, especially if they are council-provided or built-in storage. Designer or expensive bin storage systems might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 5,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Garden Shed',
-    description: 'Outdoor storage buildings and shed structures in the garden',
-    type: 'RADIO',
-    helpText:
-      'Garden sheds are valuable storage spaces that are typically included. They are often considered permanent structures, though high-end or custom sheds might be excluded if they are easily moveable.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'shed_structures',
+        title: 'Garden Shed',
+        description:
+          'Outdoor storage buildings and shed structures in the garden',
+        type: 'RADIO',
+        helpText:
+          'Garden sheds are valuable storage spaces that are typically included. They are often considered permanent structures, though high-end or custom sheds might be excluded if they are easily moveable.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 6,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Greenhouse',
-    description: 'Glass or plastic structures for growing plants and gardening',
-    type: 'RADIO',
-    helpText:
-      'Greenhouses are substantial garden structures that are usually included. They are often permanently installed and add value for gardening enthusiasts. Only very expensive or portable units might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: 'Bedroom 3',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'growing_plants',
+        title: 'Greenhouse',
+        description:
+          'Glass or plastic structures for growing plants and gardening',
+        type: 'RADIO',
+        helpText:
+          'Greenhouses are substantial garden structures that are usually included. They are often permanently installed and add value for gardening enthusiasts. Only very expensive or portable units might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Outdoor Heater',
-    description: 'Patio heaters and outdoor warming equipment for garden areas',
-    type: 'RADIO',
-    helpText:
-      'Outdoor heaters extend the use of garden spaces. Built-in or gas-line connected heaters are typically included, while portable or expensive units might be excluded from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'patio_heaters',
+        title: 'Outdoor Heater',
+        description:
+          'Patio heaters and outdoor warming equipment for garden areas',
+        type: 'RADIO',
+        helpText:
+          'Outdoor heaters extend the use of garden spaces. Built-in or gas-line connected heaters are typically included, while portable or expensive units might be excluded from the sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 8,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Outside Lights',
-    description:
-      'External lighting including security lights, garden lights, and pathway illumination',
-    type: 'RADIO',
-    helpText:
-      'Outside lighting includes security lights, decorative garden lighting, and pathway lights. These are usually permanently wired and included, though expensive decorative lighting might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'security_lights',
+        title: 'Outside Lights',
+        description:
+          'External lighting including security lights, garden lights, and pathway illumination',
+        type: 'RADIO',
+        helpText:
+          'Outside lighting includes security lights, decorative garden lighting, and pathway lights. These are usually permanently wired and included, though expensive decorative lighting might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 9,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Clothes Line',
-    description: 'Outdoor washing lines and clothes drying equipment',
-    type: 'RADIO',
-    helpText:
-      'Clothes lines include rotary dryers, wall-mounted lines, and pulley systems. Fixed installations are typically included, while portable or expensive rotary dryers might be excluded.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'garden_watering',
+        title: 'Water Butt',
+        description:
+          'Rainwater collection containers for garden watering and conservation',
+        type: 'RADIO',
+        helpText:
+          'Water butts are practical garden features for water conservation. They are usually included as they are connected to downpipes and are valuable for garden maintenance.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 10,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
-    title: 'Water Butt',
-    description:
-      'Rainwater collection containers for garden watering and conservation',
-    type: 'RADIO',
-    helpText:
-      'Outdoor heaters extend the use of garden spaces. Built-in or gas-line connected heaters are typically included, while portable or expensive units might be excluded from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'Outdoor_washing',
+        title: 'Clothes Line',
+        description: 'Outdoor washing lines and clothes drying equipment',
+        type: 'RADIO',
+        helpText:
+          'Clothes lines include rotary dryers, wall-mounted lines, and pulley systems. Fixed installations are typically included, while portable or expensive rotary dryers might be excluded.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 11,
   },
 
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'outdoor_area',
+    title: 'Bedroom 3',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'rotating_clothes',
+        title: 'Rotary Line',
+        description:
+          'Rotating clothes drying systems installed in garden areas',
+        type: 'RADIO',
+        helpText:
+          'Rotary lines are popular clothes drying solutions. Permanently installed units are usually included, while high-end or easily removable units might be excluded from the sale.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
+    ],
+    points: 50,
+    order: 12,
+  },
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'outdoor_area',
@@ -6182,20 +9278,53 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 13,
   },
-
+  // television and telephone
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'televison_and_telephone',
-    title: 'Telephone Receivers',
-    description: 'Landline telephone handsets and communication devices',
-    type: 'RADIO',
-    helpText:
-      'Basic telephone handsets are often included for convenience, while expensive or smart phone systems might be excluded. Built-in intercom systems are typically included.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'rotating_clothes',
+        title: 'Telephone Receivers',
+        description: 'Landline telephone handsets and communication devices',
+        type: 'RADIO',
+        helpText:
+          'Basic telephone handsets are often included for convenience, while expensive or smart phone systems might be excluded. Built-in intercom systems are typically included.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -6204,113 +9333,197 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'television_and_telephone',
-    title: 'Rotary Line',
-    description: 'Rotating clothes drying systems installed in garden areas',
-    type: 'RADIO',
-    helpText:
-      'Rotary lines are popular clothes drying solutions. Permanently installed units are usually included, while high-end or easily removable units might be excluded from the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'reception_equipment',
+        title: 'Television Aerial',
+        description:
+          'TV reception equipment including roof aerials and satellite dishes',
+        type: 'RADIO',
+        helpText:
+          'TV aerials and dishes are permanent installations that are typically included. They are often shared with neighbors or require professional installation, making them valuable inclusions.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'television_and_telephone',
-    title: 'Rotary Line',
-    description:
-      'Additional garden features, equipment, or outdoor installations not listed in previous sections',
-    type: 'RADIO',
-    helpText:
-      'Include items like hot tubs, garden offices, pergolas, water features, outdoor kitchens, play equipment, or any other valuable outdoor installations and equipment that enhance your property s outdoor spaces.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'radio_reception',
+        title: 'Radio Aerial',
+        description: 'Radio reception equipment and aerial installations',
+        type: 'RADIO',
+        helpText:
+          'Radio aerials are usually simple installations that are included with the property. They are typically roof-mounted and would be difficult to remove without damage.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 3,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'television_and_telephone',
-    title: 'Telephone Receivers',
-    description: 'Landline telephone handsets and communication devices',
-    type: 'RADIO',
-    helpText:
-      'Basic telephone handsets are often included for convenience, while expensive or smart phone systems might be excluded. Built-in intercom systems are typically included.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'satellite_television',
+        title: 'Satellite Dish',
+        description:
+          'Satellite television reception equipment and dish installations',
+        type: 'RADIO',
+        helpText:
+          'Satellite dishes are permanent roof or wall installations that are typically included. However, the subscription and viewing cards are usually excluded and remain with the seller.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'television_and_telephone',
-    title: 'Television Aerial',
-    description:
-      'TV reception equipment including roof aerials and satellite dishes',
-    type: 'RADIO',
-    helpText:
-      'TV aerials and dishes are permanent installations that are typically included. They re often shared with neighbors or require professional installation, making them valuable inclusions.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'television_and_telephone',
-    title: 'Radio Aerial',
-    description: 'Radio reception equipment and aerial installations',
-    type: 'RADIO',
-    helpText:
-      'Radio aerials are usually simple installations that are included with the property. They are typically roof-mounted and would be difficult to remove without damage.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
-  },
-
-  {
-    sectionKey: 'fixturesAndFittings',
-    taskKey: 'television_and_telephone',
-    title: 'Satellite Dish',
-    description:
-      'Satellite television reception equipment and dish installations',
-    type: 'RADIO',
-    helpText:
-      'Satellite dishes are permanent roof or wall installations that are typically included. However, the subscription and viewing cards are usually excluded and remain with the seller.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 1,
+    order: 4,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'stock_of_fuels',
-    title: 'Oil',
-    description: 'Heating oil reserves in tanks for oil-fired heating systems',
-    type: 'RADIO',
-    helpText:
-      'Heating oil is expensive and buyers often negotiate to purchase remaining fuel at cost price. The amount and quality of remaining oil should be clearly stated and verified at completion..',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'heating_oil',
+        title: 'Oil',
+        description:
+          'Heating oil reserves in tanks for oil-fired heating systems',
+        type: 'RADIO',
+        helpText:
+          'Heating oil is expensive and buyers often negotiate to purchase remaining fuel at cost price. The amount and quality of remaining oil should be clearly stated and verified at completion..',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
     order: 1,
@@ -6320,33 +9533,116 @@ const QUESTION_TEMPLATES: QSeed[] = [
     sectionKey: 'fixturesAndFittings',
     taskKey: 'stock_of_fuels',
     title: 'Wood',
-    description: 'Firewood, logs, and solid fuel supplies for fires and stoves',
-    type: 'RADIO',
-    helpText:
-      'Seasoned firewood can be valuable, especially for properties with wood-burning stoves or open fires. Well-stored, dry wood is often included as a selling feature.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'firewood_logs',
+        title: 'Wood',
+        description:
+          'Firewood, logs, and solid fuel supplies for fires and stoves',
+        type: 'RADIO',
+        helpText:
+          'Seasoned firewood can be valuable, especially for properties with wood-burning stoves or open fires. Well-stored, dry wood is often included as a selling feature.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 2,
   },
 
   {
     sectionKey: 'fixturesAndFittings',
     taskKey: 'stock_of_fuels',
-    title: 'Liquefied Petroleum Gas (LPG)',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gas_supplies',
+        title: 'Liquefied Petroleum Gas (LPG)',
+        description:
+          'Gas supplies in bottles or tanks for heating, cooking, or hot water',
+        type: 'RADIO',
+        helpText:
+          'LPG supplies can be valuable, especially full bottles or tank contents. Buyers often purchase remaining gas at cost price, and tank rental agreements may need to be transferred.',
+        options: [
+          { label: 'Include', value: 'include' },
+          { label: 'Excluded', value: 'excluded' },
+          { label: 'None', value: 'none' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title: 'Enter your asking price for this item',
+        options: [
+          {
+            label: 'Enter Selling Price',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 3,
+      },
+    ],
+    points: 50,
+    order: 3,
+  },
+  {
+    sectionKey: 'fixturesAndFittings',
+    taskKey: 'stock_of_fuels',
+    title: 'Other Items',
     description:
-      'Gas supplies in bottles or tanks for heating, cooking, or hot water',
+      'Any additional fixtures, fittings, or contents not covered in previous sections',
     type: 'RADIO',
     helpText:
-      'LPG supplies can be valuable, especially full bottles or tank contents. Buyers often purchase remaining gas at cost price, and tank rental agreements may need to be transferred.',
+      'This is your final opportunity to include any items throughout the property that weren t covered  the main categories. Include anything else that buyers should know about or that you want to specify pricing for.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 1,
+    order: 4,
   },
 
   // ────────────────────────────────────────────
@@ -6373,15 +9669,32 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'the_property',
-    title: 'What type of leasehold property does the seller own?',
-    description: "'Flat' includes maisonette and apartment.",
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Flat', value: 'flat' },
-      { label: 'Shared Ownership', value: 'shared_ownership' },
-      { label: 'Long leasehold house', value: 'long_leasehold_house' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gas_supplies',
+        title: 'What type of leasehold property does the seller own?',
+        description: 'Flat includes maisonette and apartment.',
+        type: 'RADIO',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        options: [
+          { label: 'Flat', value: 'flat' },
+          { label: 'Shared Ownership', value: 'shared ownership' },
+          { label: 'Long leasehold housee', value: 'long leasehold house' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Add your comments about this item here',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -6390,14 +9703,46 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'the_property',
-    title: 'Does the seller pay rent for the property?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gproperty_rent',
+        title: 'Does the seller pay rent for the property?',
+        description: '',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'increase_rent',
+        type: 'date',
+        title:
+          'How much rent is due each year? and specify how regularly is the rent paid? ',
+        options: [
+          {
+            label: 'Enter Rent Amount due each year',
+            value: 'selling_amount',
+            hasDate: true,
+            inputType: 'currency',
+            datePlaceholder: '£.0000',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder: 'Enter frequency of rent payments (e.g. annually).',
+        order: 3,
+      },
     ],
     points: 50,
     order: 2,
@@ -6406,19 +9751,54 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'the_property',
-    title: 'Is the rent subject to increase?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'gproperty_rent',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'gproperty_rent',
+        title: 'Is the rent subject to increase?',
+        description: '',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'gproperty_rent',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'How often is the rent reviewed?',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'gproperty_rent',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'How is the increase calculated?',
+        placeholder: 'Start typing here.....',
+        order: 3,
+      },
     ],
     points: 50,
     order: 3,
   },
-
+  // ownership management
   {
     sectionKey: 'leasehold',
     taskKey: 'ownership_and_management',
@@ -6454,12 +9834,38 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'ownership_and_management',
-    title: 'Is there a headlease?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'A headlease is when the freeholder gives one big lease to a company or person, and that company then grants the individual leases to the flat owners. It creates an extra layer between the freeholder and the tenants, and sometimes the tenants themselves control the company that holds the headlease.',
-    options: [{ label: 'Yes', value: 'yes' }],
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gproperty_rent',
+        title: 'Is there a headlease?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'A headlease is when the freeholder gives one big lease to a company or person, and that company then grants the individual leases to the flat owners. It creates an extra layer between the freeholder and the tenants, and sometimes the tenants themselves control the company that holds the headlease.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'head_leaseholdert',
+        title:
+          'Is the head leaseholder a person or company that is controlled by the tenants?',
+        description: '',
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 2,
+      },
+    ],
     points: 50,
     order: 3,
   },
@@ -6467,14 +9873,43 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'ownership_and_management',
-    title: 'Who is responsible for managing the building?',
-    description: 'Please select one or more options. ',
-    type: 'RADIO',
-    helpText:
-      'Responsibility for managing a building can fall to different parties, depending on the lease structure and any statutory rights exercised by the tenants. In some cases, the freeholder or a headleaseholder may retain control, while in others, a management company named in the lease takes on the role.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'gproperty_rent',
+        title: 'Who is responsible for managing the building?',
+        description: 'Please select one or more options. ',
+        type: 'CHECKBOX',
+        helpText:
+          'Responsibility for managing a building can fall to different parties, depending on the lease structure and any statutory rights exercised by the tenants. In some cases, the freeholder or a headleaseholder may retain control, while in others, a management company named in the lease takes on the role.',
+        options: [
+          { label: 'The freeholder', value: 'The freeholder' },
+          { label: 'The headleaseholder', value: 'The headleaseholder' },
+          {
+            label: 'A management company named in the lease of the property',
+            value: 'A management company named in the lease of the property',
+          },
+          {
+            label:
+              'A Right to Manage company set up by the tenants under statutory rights',
+            value:
+              'A Right to Manage company set up by the tenants under statutory rights',
+          },
+          { label: 'Other, specify below', value: 'Other, specify below' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        title: '',
+        placeholder:
+          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        order: 2,
+      },
     ],
     points: 50,
     order: 4,
@@ -6513,18 +9948,25 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 50,
     order: 6,
   },
-
+  // DOCUMENT
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title: 'Please supply a copy of the lease and any supplemental deeds.',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'The lease acts as the rulebook for the flat, setting out rights and responsibilities, while supplemental deeds are official updates or amendments to those rules.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'rulebook_flat',
+        title: 'Please supply a copy of the lease and any supplemental deeds.',
+        description: '',
+        helpText:
+          'The lease acts as the rulebook for the flat, setting out rights and responsibilities, while supplemental deeds are official updates or amendments to those rules. ',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 1,
@@ -6533,15 +9975,35 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      "Please supply a copy of any regulations made by the landlord or by the tenants' management company additional to those in the lease",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'These are extra rules introduced after the lease was granted, covering practical matters such as use of communal areas, behaviour in the building, or day-to-day management.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'landlord_tenants',
+        title:
+          'Please supply a copy of any regulations made by the landlord or by the tenants management company additional to those in the lease',
+        description:
+          'Please answer Yes and No and supply a plan showing the location of the system and how access is obtained.',
+        type: 'RADIO',
+        helpText:
+          'These are extra rules introduced after the lease was granted, covering practical matters such as use of communal areas, behaviour in the building, or day-to-day management. ',
+        options: [
+          {
+            label: 'Select this option, if not applicable',
+            value: 'select this option, if not applicable',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: '',
+        placeholder: '',
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
@@ -6550,15 +10012,22 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      'Please supply a copy of any correspondence from the landlord, any management company and any managing agent.',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Includes any letters, notices, or emails from the landlord, management company, or managing agent that relate to building management, charges, decisions, or leaseholder obligations.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'managing_agent',
+        title:
+          'Please supply a copy of any correspondence from the landlord, any management company and any managing agent.',
+        description: '',
+        helpText:
+          'Includes any letters, notices, or emails from the landlord, management company, or managing agent that relate to building management, charges, decisions, or leaseholder obligations.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 3,
@@ -6567,15 +10036,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      'Please supply a copy of any invoices or demands and any statements and receipts for the payment of maintenance or service charges for the last three years.',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Covers financial records for the past three years, including bills, demands, statements, and receipts showing payments made towards maintenance and service charges.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'covers_financial',
+        title:
+          'Please supply a copy of any invoices or demands and any statements and receipts for the payment of maintenance or service charges for the last three years.',
+        description: '',
+        helpText:
+          'Covers financial records for the past three years, including bills, demands, statements, and receipts showing payments made towards maintenance and service charges.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
+      {
+        partKey: 'landlord_tenants',
+        title: '',
+        type: 'RADIO',
+        options: [
+          {
+            label: 'Select this option, if not applicable',
+            value: 'select this option, if not applicable',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 4,
@@ -6584,15 +10072,34 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      'Please supply a copy of any invoices or demands and any statements and receipts for the payment of ground rent for the last three years',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Provides evidence of ground rent payments over the past three years, including invoices or demands issued and receipts or statements confirming payment.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'ground_rent',
+        title:
+          'Please supply a copy of any invoices or demands and any statements and receipts for the payment of ground rent for the last three years',
+        description: '',
+        helpText:
+          'Provides evidence of ground rent payments over the past three years, including invoices or demands issued and receipts or statements confirming payment.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
+      {
+        partKey: 'landlord_tenants',
+        title: '',
+        type: 'RADIO',
+        options: [
+          {
+            label: 'Select this option, if not applicable',
+            value: 'select this option, if not applicable',
+          },
+        ],
+        order: 2,
+      },
     ],
     points: 50,
     order: 5,
@@ -6601,15 +10108,22 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      'Please supply a copy of the buildings insurance policy arranged by the seller and a receipt for payment of the last premium',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Evidence of current buildings insurance cover together with confirmation that the latest premium has been paid.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'last_premium',
+        title:
+          'Please supply a copy of the buildings insurance policy arranged by the seller and a receipt for payment of the last premium',
+        description: '',
+        helpText:
+          'Evidence of current buildings insurance cover together with confirmation that the latest premium has been paid.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 6,
@@ -6618,15 +10132,22 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      'Please supply a copy of the buildings insurance policy arranged by the landlord or management company and the schedule for the current year',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      "Documentation showing the building's insurance cover arranged by the landlord or management company, including the policy schedule for the current year.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'current_year',
+        title:
+          'Please supply a copy of the buildings insurance policy arranged by the landlord or management company and the schedule for the current year',
+        description: '',
+        helpText:
+          'Documentation showing the buildings insurance cover arranged by the landlord or management company, including the policy schedule for the current year.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 7,
@@ -6635,15 +10156,22 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      "If a landlord is a company controlled by the tenants and/or if a tenants' management company or Right to Manage company is managing the building, please supply a copy of the Memorandum and Articles of Association",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'The rulebook for the company that runs the building, explaining what it can do, how decisions are made, and the rights of the members.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'landlord_company',
+        title:
+          'If a landlord is a company controlled by the tenants and/or if a tenants management company or Right to Manage company is managing the building, please supply a copy of the Memorandum and Articles of Association',
+        description: '',
+        helpText:
+          'The rulebook for the company that runs the building, explaining what it can do, how decisions are made, and the rights of the members.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 8,
@@ -6652,15 +10180,21 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      "If a landlord is a company controlled by the tenants and/or if a tenants' management company or Right to Manage company is managing the building, please supply a copy of the share or membership certificate",
-    description: 'The share or membership certificate',
-    type: 'RADIO',
-    helpText:
-      "A document that shows you're a shareholder or member of the company that runs the building, confirming your right to have a say in how it's managed.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'lanlord_controlled',
+        title:
+          'If a landlord is a company controlled by the tenants and/or if a tenants management company or Right to Manage company is managing the building, please supply a copy of the share or membership certificate',
+        description: 'The share or membership certificate',
+        helpText:
+          'A document that shows you are a shareholder or member of the company that runs the building, confirming your right to have a say in how its managed.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 9,
@@ -6669,20 +10203,204 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'documents',
-    title:
-      "If a landlord is a company controlled by the tenants and/or if a tenants' management company or Right to Manage company is managing the building, please supply a copy of the company accounts for the past three years",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      "Financial records showing the company's income and spending over the last three years, giving a picture of how money has been managed.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'tenents_managements',
+        title:
+          'If a landlord is a company controlled by the tenants and/or if a tenants management company or Right to Manage company is managing the building, please supply a copy of the company accounts for the past three years',
+        description: 'The share or membership certificate',
+        helpText:
+          'Financial records showing the companys income and spending over the last three years, giving a picture of how money has been managed.',
+        type: 'upload',
+        placeholder: ' ',
+        order: 1,
+      },
     ],
     points: 50,
     order: 10,
   },
+  // contact detail
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'contact_details',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'personal_details',
+        type: 'multifieldform',
+        title: 'Please supply contact details for The landlord',
+        helpText:
+          'The landlord may be, for example, a private individual, a housing association, or a management company owned by the residents.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'personal_name',
+            label: '',
+            placeholder: 'Name',
+          },
+          {
+            key: 'personal_address',
+            label: '',
+            placeholder: 'Address',
+          },
+          {
+            key: 'home_town',
+            label: '',
+            placeholder: 'Town',
+          },
+          {
+            key: 'home_city',
+            label: '',
+            placeholder: 'City',
+          },
+          {
+            key: 'home_posdcode',
+            label: '',
+            placeholder: 'Postcode',
+          },
+          {
+            key: 'personal_telephone',
+            label: '',
+            placeholder: 'Telephone',
+          },
+          {
+            key: 'Personal_email',
+            label: '',
+            placeholder: 'Email',
+          },
+        ],
+        order: 1,
+      },
+    ],
+    points: 50,
+    order: 1,
+  },
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'contact_details',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'personal_details',
+        type: 'multifieldform',
+        title:
+          'Please supply contact details for Management or Right to Manage Company',
+        helpText:
+          'The landlord may be, for example, a private individual, a housing association, or a management company owned by the residents.',
+        repeatable: false,
+        fields: [
+          {
+            key: 'personal_name',
+            label: '',
+            placeholder: 'Name',
+          },
+          {
+            key: 'personal_address',
+            label: '',
+            placeholder: 'Address',
+          },
+          {
+            key: 'home_town',
+            label: '',
+            placeholder: 'Town',
+          },
+          {
+            key: 'home_city',
+            label: '',
+            placeholder: 'City',
+          },
+          {
+            key: 'home_posdcode',
+            label: '',
+            placeholder: 'Postcode',
+          },
+          {
+            key: 'personal_telephone',
+            label: '',
+            placeholder: 'Telephone',
+          },
+          {
+            key: 'Personal_email',
+            label: '',
+            placeholder: 'Email',
+          },
+        ],
+        order: 1,
+      },
+    ],
+    points: 50,
+    order: 2,
+  },
 
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'contact_details',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'personal_details',
+        type: 'multifieldform',
+        title: 'Please supply contact details for Managing agent',
+        helpText:
+          "A managing agent may be employed by the landlord or by the tenants' management company to collect the rent and/or manage the building.",
+        repeatable: false,
+        fields: [
+          {
+            key: 'personal_name',
+            label: '',
+            placeholder: 'Name',
+          },
+          {
+            key: 'personal_address',
+            label: '',
+            placeholder: 'Address',
+          },
+          {
+            key: 'home_town',
+            label: '',
+            placeholder: 'Town',
+          },
+          {
+            key: 'home_city',
+            label: '',
+            placeholder: 'City',
+          },
+          {
+            key: 'home_posdcode',
+            label: '',
+            placeholder: 'Postcode',
+          },
+          {
+            key: 'personal_telephone',
+            label: '',
+            placeholder: 'Telephone',
+          },
+          {
+            key: 'Personal_email',
+            label: '',
+            placeholder: 'Email',
+          },
+        ],
+        order: 1,
+      },
+    ],
+    points: 50,
+    order: 3,
+  },
+  // maintenance_and_service_charges
   {
     sectionKey: 'leasehold',
     taskKey: 'maintenance_and_service_charges',
@@ -6765,16 +10483,41 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'maintenance_and_service_charges',
-    title:
-      'Does the seller know of any expense likely to be shown in the service charge accounts within the next three years?',
-    description:
-      'e.g. the cost of redecoration of outside or communal areas not usually incurred annually',
-    type: 'RADIO',
-    helpText:
-      'This checks if the seller is aware of any major or irregular upcoming costs, such as large repairs or redecorations, that will appear in future service charge accounts.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_expense',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'seller_expense',
+        title:
+          'Does the seller know of any expense likely to be shown in the service charge accounts within the next three years?',
+        description:
+          'e.g. the cost of redecoration of outside or communal areas not usually incurred annually',
+        type: 'RADIO',
+        helpText:
+          'This checks if the seller is aware of any major or irregular upcoming costs, such as large repairs or redecorations, that will appear in future service charge accounts.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'seller_expense',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please provide details on these expenses',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 5,
@@ -6783,15 +10526,41 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'maintenance_and_service_charges',
-    title:
-      'Does the seller know of any problems in the last three years regarding the level of service charges or with the management?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Asks whether the seller is aware of recent disputes, complaints, or issues about service charges or the way the building has been managed.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_expense',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'seller_expense',
+        title:
+          'Does the seller know of any problems in the last three years regarding the level of service charges or with the management?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Asks whether the seller is aware of recent disputes, complaints, or issues about service charges or the way the building has been managed.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'seller_expense',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please provide details for any known problems in the last three years regarding the level of service charges or with the management',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 6,
@@ -6799,75 +10568,178 @@ const QUESTION_TEMPLATES: QSeed[] = [
 
   {
     sectionKey: 'leasehold',
-    taskKey: 'notices',
-    title:
-      'Has the seller challenged the service charge or any expense in the last three years?',
+    taskKey: 'maintenance_and_service_charges',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Checks whether the seller has previously disputed service charge bills or specific expenses.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'seller_bills',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'seller_bills',
+        title:
+          'Has the seller challenged the service charge or any expense in the last three years? ',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Checks whether the seller has previously disputed service charge bills or specific expenses.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'seller_bills',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please provide details of any challenge made by the seller to the service charge or to any expense in the last three years.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 7,
   },
 
   {
     sectionKey: 'leasehold',
-    taskKey: 'notices',
-    title:
-      'Does the seller know of the existence or suspected existence in the building of cladding or any defects that may create a building safety risk?',
+    taskKey: 'maintenance_and_service_charges',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Aims to uncover any known safety concerns, such as combustible cladding, structural faults, or other defects that could affect compliance with building safety standards.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'building_safety',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'building_safety',
+        title:
+          'Does the seller know of the existence or suspected existence in the building of cladding or any defects that may create a building safety risk?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Aims to uncover any known safety concerns, such as combustible cladding, structural faults, or other defects that could affect compliance with building safety standards.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'building_safety',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please give details of any cladding or suspected cladding in the building, and of any defects known or suspected that may create a building safety risk.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 2,
+    order: 8,
   },
 
   {
     sectionKey: 'leasehold',
-    taskKey: 'consents',
-    title:
-      'Is the seller aware of any difficulties encountered in collecting the service charges from other flat owners?',
+    taskKey: 'maintenance_and_service_charges',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      "Seeks to reveal whether there have been problems with other leaseholders not paying their service charges, which could impact the building's finances and upkeep.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'seeks_problems',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'seeks_problems',
+        title:
+          'Is the seller aware of any difficulties encountered in collecting the service charges from other flat owners?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          "Seeks to reveal whether there have been problems with other leaseholders not paying their service charges, which could impact the building's finances and upkeep.",
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'seeks_problems',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please give details of any difficulties known to the seller in the collection of service charges from other flat owners.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 1,
+    order: 9,
   },
 
   {
     sectionKey: 'leasehold',
-    taskKey: 'consents',
-    title:
-      'Does the seller owe any service charges, rent, insurance premium or other financial contribution?',
+    taskKey: 'maintenance_and_service_charges',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'This ensures the buyer knows if there are any unpaid sums that could transfer with the property.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'ensure_buyers',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'ensure_buyers',
+        title:
+          'Does the seller owe any service charges, rent, insurance premium or other financial contribution? ',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'This ensures the buyer knows if there are any unpaid sums that could transfer with the property.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'ensure_buyers',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please give details of any service charges, rent, insurance premium or other financial contribution currently owed by the seller.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 2,
+    order: 10,
   },
-
   {
     sectionKey: 'leasehold',
-    taskKey: 'consents',
+    taskKey: 'maintenance_and_service_charges',
     title:
       'Does the seller contribute to the cost of maintaining the building?',
     description: '',
@@ -6879,72 +10751,167 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'No', value: 'no' },
     ],
     points: 50,
-    order: 3,
+    order: 11,
+  },
+  // notices
+  {
+    sectionKey: 'leasehold',
+    taskKey: 'notices',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    parts: [
+      {
+        partKey: 'seller_received',
+        title:
+          'Has the seller received a notice that the landlord wants to sell the building? ',
+        description: '',
+        type: 'MULTIPART' as QuestionType,
+        helpText:
+          'Checks if a sale of the freehold is in play, which could trigger tenants rights (e.g., first refusal) and affect the buyer plans. IE:  If the landlord has told you they plan to sell the freehold of the building.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        title: '',
+        placeholder: '',
+        order: 2,
+      },
+    ],
+    points: 50,
+    order: 1,
   },
 
   {
     sectionKey: 'leasehold',
-    taskKey: 'consents',
-    title:
-      'Has the seller received a notice that the landlord wants to sell the building?',
+    taskKey: 'notices',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      "Checks if a sale of the freehold is in play, which could trigger tenants' rights (e.g., first refusal) and affect the buyer's plans. IE: If the landlord has told you they plan to sell the freehold of the building.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'repair_buildings',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'repair_buildings',
+        title:
+          'Has the seller received any other notice about the building, its use, its condition or its repair and maintenance?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'This is to see if the seller has had any official letters about the building that could affect its use, upkeep, or condition, so a buyer knows if there are issues to be aware of.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'upload',
+        display: 'both',
+        conditionalOn: 'repair_buildings',
+        showOnValues: ['yes'],
+        required: true,
+        title: '',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 4,
+    order: 2,
   },
-
+  // consent
   {
     sectionKey: 'leasehold',
     taskKey: 'consents',
-    title:
-      'Has the seller received any other notice about the building, its use, its condition or its repair and maintenance?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'This is to see if the seller has had any official letters about the building that could affect its use, upkeep, or condition, so a buyer knows if there are issues to be aware of.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'does_property_benefit',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'does_property_benefit',
+        title:
+          'Is the seller aware of any changes in the terms of the lease or of the landlord giving any consents under the lease?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
+        type: 'RADIO',
+        helpText:
+          'Checks whether the lease has been altered in any way or if the landlord has granted permissions, such as allowing alterations, pets, or subletting.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'text',
+        display: 'both',
+        conditionalOn: 'does_property_benefit',
+        showOnValues: ['yes'],
+        required: true,
+        title:
+          'Please provide written instruction if you were not supplied a copy',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
-    order: 5,
+    order: 1,
   },
 
-  {
-    sectionKey: 'leasehold',
-    taskKey: 'consents',
-    title:
-      'Is the seller aware of any changes in the terms of the lease or of the landlord giving any consents under the lease?',
-    description: '',
-    type: 'RADIO',
-    helpText:
-      'Checks whether the lease has been altered in any way or if the landlord has granted permissions, such as allowing alterations, pets, or subletting.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
-    ],
-    points: 50,
-    order: 6,
-  },
-
+  // complaints
   {
     sectionKey: 'leasehold',
     taskKey: 'complaints',
-    title:
-      'Has the seller received any complaint from the landlord, the management company or any neighbour about anything the seller has or has not done?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'This says whether anyone (landlord, managing agents, or neighbours) has made formal complaints about the seller or their flat—for example noise, rule breaches, unpaid charges, or unapproved changes.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'formal_complaints',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'formal_complaints',
+        title:
+          'Has the seller received any complaint from the landlord, the management company or any neighbour about anything the seller has or has not done?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'This says whether anyone (landlord, managing agents, or neighbours) has made formal complaints about the seller or their flat—for example noise, rule breaches, unpaid charges, or unapproved changes. ',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'TEXT',
+        display: 'both',
+        conditionalOn: 'formal_complaints',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please describe the complaint(s) and how they were resolved.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -6953,32 +10920,83 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'complaints',
-    title:
-      'Has the seller complained or had cause to complain to or about the landlord, the management company, or any neighbour?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      "This shows if the seller has raised any complaints about how the building is managed, the landlord's actions, or issues with neighbours that a buyer should know about.",
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'agreed_sale',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'agreed_sale',
+        title:
+          'Has the seller complained or had cause to complain to or about the landlord, the management company, or any neighbour? ',
+        description:
+          "This shows if the seller has raised any complaints about how the building is managed, the landlord's actions, or issues with neighbours that a buyer should know about.",
+        type: 'RADIO',
+        helpText: '',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'TEXT',
+        display: 'both',
+        conditionalOn: 'agreed_sale',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please describe what you complained about and the outcome.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
   },
-
+  // alterations
   {
     sectionKey: 'leasehold',
     taskKey: 'alterations',
-    title:
-      'Is the seller aware of any alterations having been made to the property since the lease was originally granted?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Checks if any changes or improvements—like new windows, walls removed, or layout alterations—have been made to the flat since the lease first started.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'aseller_aware',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'aseller_aware',
+        title:
+          'Is the seller aware of any alterations having been made to the property since the lease was originally granted?',
+        description:
+          'Agreed to sign the sale contract? Please answer Yes or No. If No, please supply other evidence that the property will be vacant on completion.',
+        type: 'RADIO',
+        helpText:
+          'Checks if any changes or improvements—like new windows, walls removed, or layout alterations—have been made to the flat since the lease first started.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'TEXT',
+        display: 'both',
+        conditionalOn: 'aseller_aware',
+        showOnValues: ['yes'],
+        required: true,
+        title: 'Please describe what you complained about and the outcome.',
+        placeholder: 'Start typing here.....',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -6987,19 +11005,44 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'alterations',
-    title: "Was the landlord's consent for the alterations obtained?",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Confirms whether the landlord officially approved any alterations made to the flat.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'alanlord_consent',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'alanlord_consent',
+        title: 'Was the landlords consent for the alterations obtained?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Confirms whether the landlord officially approved any alterations made to the flat.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'alanlord_consent',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title: 'Upload proof of landlords consent for the alterations.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
   },
-
+  // Enfranchisment
   {
     sectionKey: 'leasehold',
     taskKey: 'enfranchisement',
@@ -7019,15 +11062,40 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'enfranchisement',
-    title:
-      "Has the seller served on the landlord a formal notice stating the seller's wish to buy the freehold or be granted an extended lease?",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'This finds out if the seller has started the legal process to either buy the freehold of the building or extend the lease on the flat.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'aextended_lease',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'aextended_lease',
+        title:
+          'Has the seller served on the landlord a formal notice stating the sellers wish to buy the freehold or be granted an extended lease?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'This finds out if the seller has started the legal process to either buy the freehold of the building or extend the lease on the flat.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'aextended_lease',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title: 'Please upload the formal notice served to the landlord.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 2,
@@ -7036,15 +11104,40 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'enfranchisement',
-    title:
-      'Is the seller aware of the service of any notice relating to the possible collective purchase of the freehold of the building or part of it by a group of tenants?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Checks if the seller knows about tenants in the building joining together to try to buy the freehold.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'freehold-buildings',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'freehold-buildings',
+        title:
+          'Is the seller aware of the service of any notice relating to the possible collective purchase of the freehold of the building or part of it by a group of tenants?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Checks if the seller knows about tenants in the building joining together to try to buy the freehold.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'freehold-buildings',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title: 'Please upload the collective purchase notice documentation.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 3,
@@ -7053,32 +11146,82 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'enfranchisement',
-    title:
-      'Has there been any response to freehold/lease extension notices - either your own formal notices or any collective tenant group notices?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Checks if the seller knows about tenants in the building joining together to try to buy the freehold.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'alanlord_consent',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'alanlord_consent',
+        title:
+          'Has there been any response to freehold/lease extension notices - either your own formal notices or any collective tenant group notices?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Checks if the seller knows about tenants in the building joining together to try to buy the freehold.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'alanlord_consent',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title: 'Please upload the response documentation.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 4,
   },
-
+  // bUILDINGS-SAFETY
   {
     sectionKey: 'leasehold',
     taskKey: 'building_safety_cladding_and_the_leaseholder_deed_of_certificate',
-    title:
-      'Have any remediation works on the building been proposed or carried out?',
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Asks whether any repair or safety works—such as cladding replacement, fire safety upgrades, or major structural repairs—have been planned or completed on the building',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'remediation_works',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'remediation_works',
+        title:
+          'Have any remediation works on the building been proposed or carried out?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Asks whether any repair or safety works—such as cladding replacement, fire safety upgrades, or major structural repairs—have been planned or completed on the building',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'remediation_works',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title: 'Upload details of the proposed or completed remediation works.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 1,
@@ -7169,15 +11312,41 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'leasehold',
     taskKey: 'building_safety_cladding_and_the_leaseholder_deed_of_certificate',
-    title:
-      "Has the seller received a Landlord's Certificate and the accompanying evidence?",
+    title: '',
     description: '',
-    type: 'RADIO',
-    helpText:
-      'Official documentation from the freeholder confirming lease details, service charges, and building information required for the sale.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    autoSaveOn: {
+      partKey: 'required_sale',
+      value: 'no',
+    },
+    parts: [
+      {
+        partKey: 'required_sale',
+        title:
+          'Has the seller received a Landlords Certificate and the accompanying evidence?',
+        description: '',
+        type: 'RADIO',
+        helpText:
+          'Official documentation from the freeholder confirming lease details, service charges, and building information required for the sale.',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'photos',
+        type: 'UPLOAD',
+        display: 'both',
+        conditionalOn: 'required_sale',
+        showOnValues: ['yes'],
+        required: true,
+        placeholder: 'Start typing here.....',
+        title:
+          'Please upload the Landlords Certificate and supporting evidence.',
+        order: 2,
+      },
     ],
     points: 50,
     order: 7,
@@ -7447,7 +11616,8 @@ async function main() {
         where: { key: sectionKey },
       });
 
-      const sectionStatus = stDef.order === 1 ? 'ACTIVE' : 'LOCKED';
+      const sectionStatus: SectionStatus =
+        stDef.order === 1 ? SectionStatus.ACTIVE : SectionStatus.LOCKED;
 
       const section = await prisma.passportSection.create({
         data: {
@@ -7458,7 +11628,7 @@ async function main() {
           description: sectionTemplate?.description,
           imageKey: sectionTemplate?.icon,
           order: stDef.order,
-          status: sectionStatus as any,
+          status: sectionStatus,
         },
       });
 

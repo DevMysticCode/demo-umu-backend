@@ -30,7 +30,8 @@
       "Bash(wmic:*)",
       "Bash(cmd /c:*)",
       "Bash(powershell -Command:*)",
-      "Bash(npx prisma migrate:*)"
+      "Bash(npx prisma migrate:*)",
+      "Bash(sort:*)"
     ]
   }
 }

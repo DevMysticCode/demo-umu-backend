@@ -103,24 +103,20 @@ export const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
   },
   rightsAndInformalArrangements: {
     notes: 'You must read notes before starting.',
-    resposibility_towards_jointly:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    '2_dunno_how_id_surmise_this':
-      'Record utility connections and service lines that cross property boundaries',
-    prevented_access:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    right_of_light:
-      'Including but not limited to rights of light, customary rights, rights of support from adjoining properties, extraction rights',
-    rights_of_support:
-      'Document property rights, shared responsibilities, and informal agreements affecting your property',
-    arrangements:
-      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
-    other_rights_and_arrangements:
-      "Mining and mineral rights, chancel repair liability and other people's rights to take things from the land (such as timber, hay or fish)",
-    chancel_repair_liability:
-      'Record utility connections and service lines that cross property boundaries',
-    service_crossing_the_property_or_neighboring_property:
-      'Record utility connections and service lines that cross property boundaries',
+    shared_costs_maintenance_and_responsibilities:
+      'Capture any shared access, shared responsibilities, or informal arrangements tied to your property',
+    rights_over_neighbouring_property:
+      'Record any access, shared use, or special arrangements your property has with neighbouring land',
+    access_disputes_or_restrictions:
+      'Tell us if there have been any issues, complaints, or attempts to block access to your property',
+    property_rights_and_protections:
+      'Tell us if your property benefits from rights like support from neighbouring buildings, local or traditional rights, or legal rights to natural light',
+    hidden_rights_and_histonic_responsibilities:
+      'Let us know if anything like mineral rights, church repair liability, or rights to take things from the land affects your property',
+    other_rights_or_arrangements:
+      'Let us know if there are any other rights or arrangements affecting your property, including rights of way',
+    shared_services_and_utilities:
+      'RTell us about any drains, pipes, or wires that cross your property or a neighbour’s, and any agreements about them',
   },
   parking: {
     parking_arrangements:
@@ -280,15 +276,13 @@ export const TASK_ORDERS: Record<string, Record<string, number>> = {
   },
   rightsAndInformalArrangements: {
     notes: 1,
-    resposibility_towards_jointly: 2,
-    '2_dunno_how_id_surmise_this': 3,
-    prevented_access: 4,
-    right_of_light: 5,
-    rights_of_support: 6,
-    arrangements: 7,
-    other_rights_and_arrangements: 8,
-    chancel_repair_liability: 9,
-    service_crossing_the_property_or_neighboring_property: 10,
+    shared_costs_maintenance_and_responsibilities: 2,
+    rights_over_neighbouring_property: 3,
+    access_disputes_or_restrictions: 4,
+    property_rights_and_protections: 5,
+    hidden_rights_and_histonic_responsibilities: 6,
+    other_rights_or_arrangements: 7,
+    arrangements: 8,
   },
   parking: {
     parking_arrangements: 1,
