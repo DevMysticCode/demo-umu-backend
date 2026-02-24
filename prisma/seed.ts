@@ -3141,6 +3141,23 @@ const QUESTION_TEMPLATES: QSeed[] = [
     prewrittenTemplates: {
       content:
         'Flooding may take a variety of forms: it may be seasonal or irregular or simply a one-off occurrence. The property does not need to be near a sea or river for flooding to occur. Please use the  links below for further information.',
+      links: [
+        {
+          title: 'Further information about flooding',
+          url: 'https://www.gov.uk/government/organisations/department-for-environment-food-rural-affairs',
+          icon: 'environmental',
+        },
+        {
+          title: 'The flood risk check can be found at:',
+          url: 'https://www.gov.uk/check-flooding',
+          icon: 'environmental',
+        },
+        {
+          title: 'Read our updated Flood Risk Practice Note at:',
+          url: 'https://www.lawsociety.org.uk/support-services/practice-notes/flood-risk',
+          icon: 'environmental',
+        },
+      ],
     },
     points: 75,
     order: 1,
@@ -3170,6 +3187,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'have_any_part',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'have_any_part',
@@ -3188,10 +3209,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
+        required: true,
         title:
           'If Yes, please state when the flooding occurred and identify the parts that flooded:',
-        placeholder:
-          'E.g., Kitchen appliance warranty, garden landscaping guarantee, pest control treatment...',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
       {
@@ -3200,7 +3224,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'What kind of flooding occurred?. Please select all the options that apply:',
         description: '',
         type: 'CHECKBOX',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
         helpText: '',
+        otherPlaceholder:
+          "If relevant, specify what 'other' type of flooding occurred here",
         options: [
           { label: 'Ground Water', value: 'ground_water' },
           { label: 'Sewer flooding', value: 'sewer_flooding' },
@@ -3240,6 +3268,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'have_any_part',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'have_any_part',
@@ -3256,8 +3288,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
+        required: true,
         title: '',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3288,6 +3324,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'have_any_part',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'have_any_part',
@@ -3305,8 +3345,12 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
+        display: 'both',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
+        required: true,
         title: '',
-        placeholder: '',
+        placeholder: 'Start typing here.....',
         order: 2,
       },
     ],
@@ -3364,11 +3408,33 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'environmental',
     taskKey: 'energy_efficiency',
-    title: 'Please supply a copy of the EPC for the property.',
-    description: 'Others',
-    type: 'UPLOAD',
-    helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+    title: '',
+    description: '',
+    type: 'MULTIPART' as QuestionType,
+    helpText: '',
+    prewrittenTemplates: {
+      links: [
+        {
+          title: 'Energy Performance Certificates',
+          url: 'https://www.gov.uk/selling-a-home/energy-performance-certificates',
+          description:
+            "If you don't have EPC, you can get one from following the link below and then download the EPC to upload in above area.",
+        },
+      ],
+    },
+    parts: [
+      {
+        partKey: 'epc_upload',
+        title: 'Please supply a copy of the EPC for the property.',
+        description: '',
+        type: 'upload',
+        display: 'upload',
+        helpText:
+          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+        required: true,
+        order: 1,
+      },
+    ],
     points: 50,
     order: 1,
   },
@@ -3380,6 +3446,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'have_any_part',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'have_any_part',
@@ -3399,6 +3469,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
+        display: 'both',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
+        required: true,
         title: '',
         placeholder: 'Start typing here.....',
         order: 2,
@@ -3433,6 +3507,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART' as QuestionType,
     helpText: '',
+    autoSaveOn: {
+      partKey: 'have_any_part',
+      value: 'no',
+    },
     parts: [
       {
         partKey: 'have_any_part',
@@ -3451,8 +3529,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'text',
-        title: '',
         display: 'both',
+        conditionalOn: 'have_any_part',
+        showOnValues: ['yes'],
+        required: true,
+        title: '',
         placeholder: 'Start typing here.....',
         order: 2,
       },
