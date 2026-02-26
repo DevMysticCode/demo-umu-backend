@@ -134,6 +134,7 @@ model QuestionTemplate {
   scaleFormat         String?
   scaleMaxLabel       String?
   externalLink        Json?
+  otherPlaceholder    String?
   points              Int
   order               Int
   createdAt           DateTime           @default(now())

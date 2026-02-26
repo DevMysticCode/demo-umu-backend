@@ -31,7 +31,8 @@
       "Bash(cmd /c:*)",
       "Bash(powershell -Command:*)",
       "Bash(npx prisma migrate:*)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(npx kill-port 3000)"
     ]
   }
 }

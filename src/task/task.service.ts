@@ -71,6 +71,7 @@ export class TaskService {
             scaleFormat: true,
             scaleMaxLabel: true,
             externalLink: true,
+            otherPlaceholder: true,
             points: true,
           },
         },
@@ -115,6 +116,7 @@ export class TaskService {
       scaleFormat: question.questionTemplate.scaleFormat,
       scaleMaxLabel: question.questionTemplate.scaleMaxLabel,
       externalLink: question.questionTemplate.externalLink,
+      otherPlaceholder: question.questionTemplate.otherPlaceholder,
       points: question.questionTemplate.points,
       answer: question.answer
         ? question.answer.answerText ||

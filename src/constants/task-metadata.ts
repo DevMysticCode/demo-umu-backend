@@ -175,7 +175,7 @@ export const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
       'Built-in storage, cupboards, shelves, and wardrobes included',
     outdoor_area:
       'Garden furniture, plants, and outdoor equipment included in the sale',
-    televison_and_telephone:
+    television_and_telephone:
       'Communication equipment and aerial installations included',
     stock_of_fuels:
       'Appliances, fixtures, and fittings included in the kitchen',
@@ -322,7 +322,7 @@ export const TASK_ORDERS: Record<string, Record<string, number>> = {
     light_fittings: 7,
     fitted_units: 8,
     outdoor_area: 9,
-    televison_and_telephone: 10,
+    television_and_telephone: 10,
     stock_of_fuels: 11,
     other_items: 12,
   },
