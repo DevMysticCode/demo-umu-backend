@@ -228,7 +228,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           {
             title: 'Definitions',
             content:
-              "'Seller' means all sellers together where the property is owned by more than one person. 'Buyer' means all buyers together where the property is being bought by more than one person. 'Property' includes all buildings and land within its boundaries.",
+              'Seller means all sellers together where the property is owned by more than one person. Buyer means all buyers together where the property is being bought by more than one person. Property includes all buildings and land within its boundaries.',
           },
         ],
       },
@@ -298,7 +298,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please state the full names of everyone who is named as owner on the HM Land Registry title or on the deeds. If you are completing the form on behalf of the seller, for example, under a power of attorney, grant of probate or representation, then they should provide their names here.',
         helpText: '',
         placeholder: 'Enter Name',
-        buttonText: 'Add More Sellers',
+        buttonText: 'Add Seller',
         order: 1,
       },
       {
@@ -652,14 +652,21 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'increase_rent_calculation',
         type: 'date',
-        title: 'How this increase is calculated per year?(If Known)',
+        title: 'How this increase is calculated?(If Known)',
         options: [
           {
-            label: 'Enter percentage',
+            label: 'Percentage',
             value: 'percentage',
             hasDate: true,
             inputType: 'percentage',
             datePlaceholder: '00%',
+          },
+          {
+            label: 'Year',
+            value: 'years',
+            hasDate: true,
+            inputType: 'number',
+            datePlaceholder: '1',
           },
         ],
         order: 6,
