@@ -356,7 +356,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'radio',
         title: 'Are you completing this form on the behalf of the seller?',
         description:
-          "Please state the capacity in which you are providing the information, either as the seller or the seller's representative, for example, under a will or power of attorney or as a trustee. If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.",
+          "• Please state the capacity in which you are providing the information, either as the seller or the seller's representative, for example, under a will or power of attorney or as a trustee.\n• If the seller is a company, then the name of the company, its company registration number, the name of a director or authorized person, and the country in which it is incorporated must be provided.",
         options: [
           { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
           { label: 'Trustee', value: 'trustee' },
@@ -459,6 +459,150 @@ const QUESTION_TEMPLATES: QSeed[] = [
   // },
 
   // Question 1
+
+  {
+    sectionKey: 'ownershipProfile',
+    taskKey: 'give_your_home_a_story',
+    title: 'What we love about our home?',
+    description: '',
+    type: 'MULTIPART',
+    helpText: '',
+    parts: [
+      {
+        partKey: 'what_we_love_home',
+        type: 'chips',
+        showVoiceInput: true,
+        title: 'What we love about our home?',
+        description: '',
+        options: [
+          {
+            label: 'Morning light in the kitchen',
+            value: 'morning_light_in_the_kitchen',
+          },
+          {
+            label: 'Kids can walk to school in 6 mins',
+            value: 'kids_can_walk_to_school_in_6_mins',
+          },
+          {
+            label: 'Neighbors are friendly but not intrusive',
+            value: 'neighbors_are_friendly_but_not_intrusive',
+          },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'what_we_love_area',
+        type: 'chips',
+        showVoiceInput: true,
+        title: 'What we love about the area?',
+        description: '',
+        options: [
+          {
+            label: 'Hidden Gems: Cafe, Parks and routes',
+            value: 'hidden_gems',
+          },
+          {
+            label: 'How it feels in the evening - Weekends',
+            value: 'evening_feel_weekends',
+          },
+          {
+            label: 'Noise, light & feel (honest profile)',
+            value: 'noise_light_feel',
+          },
+        ],
+        order: 2,
+      },
+      {
+        partKey: 'street_quietness',
+        type: 'scale',
+        title: 'Street quietness (day/night)',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Quiet',
+        scaleMaxLabel: 'Loud',
+        order: 3,
+      },
+      {
+        partKey: 'morning_evening_light',
+        type: 'scale',
+        title: 'Morning vs evening light in key rooms',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Dark',
+        scaleMaxLabel: 'Light',
+        order: 4,
+      },
+      {
+        partKey: 'traffic_parking',
+        type: 'scale',
+        title: 'Typical traffic/parking situation',
+        description: '',
+        scaleMin: 0,
+        scaleMax: 10,
+        scaleStep: 1,
+        scaleMinLabel: 'Good',
+        scaleMaxLabel: 'Bad',
+        order: 5,
+      },
+      {
+        partKey: 'things_to_be_aware',
+        type: 'date',
+        title: 'Things to be aware of...',
+        description: '',
+        options: [
+          {
+            label: 'Bin Days',
+            value: 'bin_days',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Early Tuesdays',
+          },
+          {
+            label: 'Local football traffic',
+            value: 'local_football',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Some Saturdays',
+          },
+        ],
+        order: 6,
+      },
+      {
+        partKey: 'home_usage_text',
+        type: 'text',
+        title: 'Home usage patterns',
+        description: '',
+        placeholder:
+          'e.g. We mostly use the kitchen / living room / garden to gather.',
+        rows: 3,
+        groupKey: 'home_usage',
+        order: 7,
+      },
+      {
+        partKey: 'home_wfh',
+        type: 'date',
+        title: '',
+        description: '',
+        groupKey: 'home_usage',
+        options: [
+          {
+            label: 'We WFH',
+            value: 'wfh',
+            hasDate: true,
+            inputType: 'text',
+            datePlaceholder: 'e.g. Sometimes',
+          },
+        ],
+        order: 8,
+      },
+    ],
+    points: 100,
+    order: 1,
+  },
 
   {
     sectionKey: 'ownershipProfile',
@@ -1126,150 +1270,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
   //   order: 9,
   // },
 
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'give_your_home_a_story',
-    title: 'What we love about our home?',
-    description: '',
-    type: 'MULTIPART',
-    helpText: '',
-    parts: [
-      {
-        partKey: 'what_we_love_home',
-        type: 'chips',
-        showVoiceInput: true,
-        title: 'What we love about our home?',
-        description: '',
-        options: [
-          {
-            label: 'Morning light in the kitchen',
-            value: 'morning_light_in_the_kitchen',
-          },
-          {
-            label: 'Kids can walk to school in 6 mins',
-            value: 'kids_can_walk_to_school_in_6_mins',
-          },
-          {
-            label: 'Neighbors are friendly but not intrusive',
-            value: 'neighbors_are_friendly_but_not_intrusive',
-          },
-        ],
-        order: 1,
-      },
-      {
-        partKey: 'what_we_love_area',
-        type: 'chips',
-        showVoiceInput: true,
-        title: 'What we love about the area?',
-        description: '',
-        options: [
-          {
-            label: 'Hidden Gems: Cafe, Parks and routes',
-            value: 'hidden_gems',
-          },
-          {
-            label: 'How it feels in the evening - Weekends',
-            value: 'evening_feel_weekends',
-          },
-          {
-            label: 'Noise, light & feel (honest profile)',
-            value: 'noise_light_feel',
-          },
-        ],
-        order: 2,
-      },
-      {
-        partKey: 'street_quietness',
-        type: 'scale',
-        title: 'Street quietness (day/night)',
-        description: '',
-        scaleMin: 0,
-        scaleMax: 10,
-        scaleStep: 1,
-        scaleMinLabel: 'Quiet',
-        scaleMaxLabel: 'Loud',
-        order: 3,
-      },
-      {
-        partKey: 'morning_evening_light',
-        type: 'scale',
-        title: 'Morning vs evening light in key rooms',
-        description: '',
-        scaleMin: 0,
-        scaleMax: 10,
-        scaleStep: 1,
-        scaleMinLabel: 'Dark',
-        scaleMaxLabel: 'Light',
-        order: 4,
-      },
-      {
-        partKey: 'traffic_parking',
-        type: 'scale',
-        title: 'Typical traffic/parking situation',
-        description: '',
-        scaleMin: 0,
-        scaleMax: 10,
-        scaleStep: 1,
-        scaleMinLabel: 'Good',
-        scaleMaxLabel: 'Bad',
-        order: 5,
-      },
-      {
-        partKey: 'things_to_be_aware',
-        type: 'date',
-        title: 'Things to be aware of...',
-        description: '',
-        options: [
-          {
-            label: 'Bin Days',
-            value: 'bin_days',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Early Tuesdays',
-          },
-          {
-            label: 'Local football traffic',
-            value: 'local_football',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Some Saturdays',
-          },
-        ],
-        order: 6,
-      },
-      {
-        partKey: 'home_usage_text',
-        type: 'text',
-        title: 'Home usage patterns',
-        description: '',
-        placeholder:
-          'e.g. We mostly use the kitchen / living room / garden to gather.',
-        rows: 3,
-        groupKey: 'home_usage',
-        order: 7,
-      },
-      {
-        partKey: 'home_wfh',
-        type: 'date',
-        title: '',
-        description: '',
-        groupKey: 'home_usage',
-        options: [
-          {
-            label: 'We WFH',
-            value: 'wfh',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Sometimes',
-          },
-        ],
-        order: 8,
-      },
-    ],
-    points: 100,
-    order: 10,
-  },
-
   // {
   //   sectionKey: 'ownershipProfile',
   //   taskKey: 'name_and_address_multipart',
@@ -1881,20 +1881,21 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'alterationsAndPlanning',
     taskKey: 'building_works',
-    title: '',
-    description: '',
+    title:
+      'Have any of the following changes been made to the whole or any part of the property (including the garden)?',
+    description:
+      'If yes, please give details including dates of all work undertaken below and supply copies of the planning permissions, Building Regulations approvals and Completion Certificates',
     type: 'MULTIPART' as QuestionType,
-    helpText: '',
+    helpText:
+      'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls. These details help identify if planning permission or building control approval was required.',
     parts: [
       {
         partKey: 'Are_irregular_boundaries',
         title:
-          'Have any of the following changes been made to the whole or any part of the property (including the garden)?',
-        description:
-          'If yes, please give details including dates of all work undertaken below and supply copies of the planning permissions, Building Regulations approvals and Completion Certificates',
+          'Building works (e.g. extension, loft or garage conversion, removal of internal walls)',
+        description: '',
         type: 'DATE',
-        helpText:
-          'This section asks whether any alterations or building works have been carried out to the property or garden, such as extensions, loft or garage conversions, or the removal of internal walls. These details help identify if planning permission or building control approval was required.',
+        helpText: '',
         options: [
           {
             label: 'Yes, select year',
@@ -2380,10 +2381,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
         partKey: 'roof_air',
         title: 'Have the terms of the Order been complied with?',
         description:
-          'If yes, please supply copies of the confirmation of conservation status, planning permission/ consents for work, any restrictions or conditions from previous applications',
+          'Please select yes or no and supply copies of evidence of permission applications, consent letters, evidence of replanting if necessary or any evidence of non-compliance.',
         type: 'RADIO',
         helpText:
-          "A conservation area is a designated zone of special architectural or historic interest, where extra planning controls protect the character of the neighbourhood. The local council's planning department keeps a list and map of conservation areas.",
+          'The council sets conditions under a Tree Preservation Order about what you can and can’t do to protected trees. Compliance means you have only carried out works with proper permission and followed any conditions.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -2921,7 +2922,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
-    helpText: '',
+    helpText:
+      'This helps confirm who is responsible for insuring the building. In many flats, the landlord or freeholder arranges the buildings insurance, and it’s important for buyers to know what’s already covered and what they may need to arrange themselves.',
     autoSaveOn: {
       partKey: 'abnormal_premium_rise',
       value: 'no',
@@ -2973,7 +2975,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Has any buildings insurance taken out by the seller ever been subject to high excesses?',
         description: '',
         type: 'RADIO',
-        helpText: '',
+        helpText:
+          'This helps flag whether there have been any unusual insurance issues linked to the property. A big increase in premiums can sometimes point to higher risk or past problems, so sharing this early helps avoid surprises for the buyer later.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3013,7 +3016,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Has any buildings insurance taken out by the seller ever been subject to unusual conditions?',
         description: '',
         type: 'RADIO',
-        helpText: '',
+        helpText:
+          'This helps highlight whether the property has had any unusual insurance terms in the past. High excesses can sometimes suggest higher risk or previous issues, so it’s useful for buyers to understand this upfront.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3041,7 +3045,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
-    helpText: '',
+    helpText:
+      'This helps flag whether the property has ever had special or restrictive insurance terms. Unusual conditions can sometimes point to specific risks or past issues, so sharing this early helps buyers avoid surprises later.',
     autoSaveOn: {
       partKey: 'insurance_refused',
       value: 'no',
@@ -3053,7 +3058,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Has any buildings insurance taken out by the seller ever been refused?',
         description: '',
         type: 'RADIO',
-        helpText: '',
+        helpText:
+          'This helps highlight whether there have been any serious issues that could make the property difficult or more expensive to insure. Knowing this upfront helps buyers avoid surprises and plan properly before moving forward.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3209,7 +3215,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description:
           'If Yes, please state when the flooding occurred and identify the parts that flooded:',
         type: 'RADIO',
-        helpText: '',
+        helpText:
+          'This helps highlight any past flooding risk linked to the property or land. Flood history can affect insurance, future costs, and how comfortable a buyer feels about the home, so it’s important to be open about this early on.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3262,7 +3269,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description:
       'If Yes, please state when the flooding occurred and identify the parts that flooded:',
     type: 'RADIO',
-    helpText: '',
+    helpText:
+      'This helps flag any history of water-related issues that could affect insurance, future maintenance, or peace of mind. Being open about this early helps buyers understand potential risks and avoid surprises later in the process.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -3288,7 +3296,8 @@ const QUESTION_TEMPLATES: QSeed[] = [
         title: 'Has a Flood Risk Report been prepared?',
         description: 'If Yes, please supply a copy.',
         type: 'RADIO',
-        helpText: '',
+        helpText:
+          'This helps show whether there’s already professional information about flood risk for the property. Having this available can give buyers confidence and may reduce delays or extra checks later in the process.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3345,7 +3354,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         description: 'If Yes, please supply a copy.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'This helps show whether the property has ever been checked for radon levels. Having this information can reassure buyers about safety and may avoid the need for extra tests or delays later on. - also bottom bit is wrong  remove this Please provide written instruction for your answer above:',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3390,7 +3399,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: 'Please answer Yes or No.',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This helps show whether the property meets recommended safety guidelines. Knowing this upfront can reassure buyers and avoid extra checks, concerns, or delays later in the process.- please remove text answer yes or no',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -3407,7 +3416,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: 'Please answer Yes or No.',
     type: 'RADIO',
     helpText:
-      'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for T marks on your property title plan or check your deeds for each side. Still not sure how to answer this question, please watch a short 40 seconds video explaining on how to answer...',
+      'This helps show whether any steps were taken to manage or reduce radon levels when the property was built. Sharing this can reassure buyers about safety and help avoid extra questions or delays later on.- remove please answer yes or no',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -3441,7 +3450,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
         type: 'upload',
         display: 'upload',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'An Energy Performance Certificate (EPC) shows how energy-efficient a property is and gives an idea of typical running costs. It also suggests improvements that could make the home cheaper to run and more environmentally friendly. Buyers often use it to compare properties and understand ongoing costs.',
         required: true,
         order: 1,
       },
@@ -3470,7 +3479,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please answer Yes or No and give details of all installations and supply a copy of your latest electricity bill.',
         type: 'RADIO',
         helpText:
-          'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+          'This helps identify whether any energy improvements were paid for through a scheme where the cost is repaid through the energy bill. If so, those payments can sometimes pass to the new owner, so it’s important for buyers to understand this upfront and avoid surprises later.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -3530,7 +3539,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Please answer Yes or No and state whether there is a Japanese knotweed management and treatment plan in place and supply a copy with any insurance cover linked to the plan.',
         type: 'RADIO',
         helpText:
-          'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for "T" marks on your property title plan or check your deeds for each side.',
+          'Japanese knotweed is a fast-growing invasive plant that can cause damage and be costly to treat. This helps flag whether it affects the property, as it can impact maintenance, insurance, and mortgage options. Being upfront about it helps avoid delays or problems later in the sale.',
         options: [
           { label: 'Yes', value: 'yes' },
           { label: 'No', value: 'no' },
@@ -4025,7 +4034,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'For example: garage, carport, driveway, shared driveway, allocated car parking space, on street parking etc.',
     type: 'TEXT',
     helpText:
-      'This asks whether there is any formal or informal agreement about drains, pipes, or wires, such as who can access them or who is responsible for repairs. Recording this helps avoid confusion or disputes later.',
+      'This is about how parking works at the property, such as whether there is a driveway, garage, allocated space, or on-street parking. Sharing the details here helps set clear expectations for buyers and avoids confusion later.',
     displayMode: 'text',
     placeholder:
       'This is about how parking works at the property, such as whether there is a driveway, garage, allocated space, or on-street parking. Sharing the details here helps set clear expectations for buyers and avoids confusion later.',
@@ -4246,7 +4255,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: 'If Yes, have all the occupiers aged 17 or over:',
     type: 'RADIO',
     helpText:
-      'Other warranties might include appliance guarantees, garden landscaping, driveway sealing, pest control treatments, or specialized contractor warranties not covered in the main categories.',
+      'This helps confirm whether the property will be completely empty and ready for the buyer to move into on completion. Knowing this upfront avoids confusion about who, if anyone, will still be living there and helps prevent delays or last-minute issues.',
     options: [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
@@ -4445,9 +4454,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'photos',
         type: 'upload',
-        title: 'Please provide one of the following Document: ',
-        placeholder:
-          'A copy of the signed BS7671 Electrical Safety Certificate The installers Building Regulations Compliance Certificate The Building Control Completion Certificate',
+        title: 'Please provide one of the following documents:',
+        description:
+          "• (a) a copy of the signed BS7671 Electrical Safety Certificate\n• (b) the installer's Building Regulations Compliance Certificate\n• (c) the Building Control Completion Certificate",
         display: 'both',
         order: 2,
       },
@@ -5192,12 +5201,31 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title:
       'Is this sale dependent on the seller completing the purchase of another property on the same day?',
     description: 'Please answer Yes or No.',
-    type: 'RADIO',
+    type: 'MULTIPART' as QuestionType,
     helpText:
       'This helps clarify whether the sale is part of a linked move, where one transaction depends on another happening at the same time. This matters because linked sales can affect timescales, flexibility, and the risk of delays.',
-    options: [
-      { label: 'Yes', value: 'yes' },
-      { label: 'No', value: 'no' },
+    parts: [
+      {
+        partKey: 'sale_dependent',
+        title:
+          'Is this sale dependent on the seller completing the purchase of another property on the same day?',
+        type: 'RADIO',
+        options: [
+          { label: 'Yes', value: 'yes' },
+          { label: 'No', value: 'no' },
+        ],
+        order: 1,
+      },
+      {
+        partKey: 'sale_dependent_details',
+        type: 'text',
+        display: 'text',
+        title: 'Please provide details:',
+        placeholder: 'Start typing here.....',
+        conditionalOn: 'sale_dependent',
+        showOnValues: ['yes'],
+        order: 2,
+      },
     ],
     points: 25,
     order: 1,
@@ -5734,7 +5762,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
     title: '',
     description: '',
     type: 'MULTIPART' as QuestionType,
-    helpText: ' ',
+    helpText: '',
     parts: [
       {
         partKey: 'electric_fires',
@@ -5847,7 +5875,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
           'Hardware, locks, handles, and mechanisms attached to windows',
         type: 'RADIO',
         helpText:
-          'Roof insulation is crucial for energy efficiency and heating costs. Good insulation can significantly reduce energy bills and is often checked during surveys. Buyers need to know the type and condition of existing insulation.',
+          'This covers window handles, locks, catches, and opening mechanisms. Proper window fittings are essential for security, ventilation, and window operation. Missing or broken fittings can be costly to replace.',
         options: [
           { label: 'Included', value: 'included' },
           { label: 'Excluded', value: 'excluded' },

@@ -21,6 +21,7 @@ model User {
   postcode               String?
   passports              Passport[]
   passportCollaborations PassportCollaborator[]
+  preference             UserPreference?
 }
 
 model OtpCode {
@@ -31,6 +32,49 @@ model OtpCode {
   createdAt DateTime @default(now())
 
   @@index([email])
+}
+
+model Property {
+  id             String    @id @default(uuid())
+  udprn          String?   @unique
+  addressLine1   String
+  addressLine2   String?
+  city           String?
+  county         String?
+  postcode       String
+  latitude       Float?
+  longitude      Float?
+  propertyType   String?
+  bedrooms       Int?
+  bathrooms      Int?
+  sqft           Int?
+  epcRating      String?
+  tenure         String?
+  yearBuilt      Int?
+  estimatedPrice Float?
+  imageUrl       String?
+  titleNumber    String?
+  createdAt      DateTime  @default(now())
+  passport       Passport?
+
+  @@index([postcode])
+}
+
+model UserPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  purpose           Json?
+  buyingTimeline    String?
+  budgetMin         Float?
+  budgetMax         Float?
+  propertyTypes     Json?
+  propertyStyles    Json?
+  importantFeatures Json?
+  sellingTimeline   String?
+  propertyValue     Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model SectionTemplate {
@@ -50,9 +94,11 @@ model Passport {
   addressLine1  String                 @unique
   postcode      String
   ownerId       String
+  propertyId    String?                @unique
   status        PassportStatus         @default(IN_PROGRESS)
   createdAt     DateTime               @default(now())
   owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  property      Property?              @relation(fields: [propertyId], references: [id])
   sections      PassportSection[]
   collaborators PassportCollaborator[]
 
