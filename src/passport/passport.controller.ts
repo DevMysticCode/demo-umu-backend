@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 interface CreatePassportDto {
   addressLine1: string;
   postcode: string;
+  propertyId?: string;
 }
 
 @Controller('passport')
@@ -23,12 +24,12 @@ export class PassportController {
   @Post('create')
   @UseGuards(JwtAuthGuard)
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
-    console.log('req.user:', req.user);
     const userId = req.user.id;
     return this.passportService.createPassport(
       userId,
       dto.addressLine1,
       dto.postcode,
+      dto.propertyId,
     );
   }
 
@@ -42,7 +43,6 @@ export class PassportController {
       throw new ForbiddenException('Passport not found');
     }
 
-    // Check if user is owner or collaborator
     const hasAccess = await this.passportService.checkUserAccess(
       passportId,
       userId,
@@ -61,12 +61,7 @@ export class PassportController {
     @Request() req: any,
   ) {
     const userId = req.user.id;
-    const sections = await this.passportService.getPassportSections(
-      passportId,
-      userId,
-    );
-
-    return sections;
+    return this.passportService.getPassportSections(passportId, userId);
   }
 
   @Post(':id/collaborators')

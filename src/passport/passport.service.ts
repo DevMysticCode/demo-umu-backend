@@ -97,9 +97,23 @@ export class PassportService {
     userId: string,
     addressLine1: string,
     postcode: string,
+    propertyId?: string,
   ): Promise<{ passportId: string }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User does not exist: ' + userId);
+
+    // If propertyId provided, check if a passport already exists for it
+    if (propertyId) {
+      const existing = await this.prisma.passport.findUnique({
+        where: { propertyId },
+      });
+      if (existing) {
+        if (existing.ownerId === userId) {
+          return { passportId: existing.id };
+        }
+        throw new ForbiddenException('This property already has a passport owned by another user');
+      }
+    }
 
     // Create passport
     const passport = await this.prisma.passport.create({
@@ -107,6 +121,7 @@ export class PassportService {
         addressLine1,
         postcode,
         ownerId: userId,
+        ...(propertyId ? { propertyId } : {}),
       },
     });
 

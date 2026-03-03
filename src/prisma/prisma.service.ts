@@ -75,4 +75,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get passportCollaborator() {
     return this.prisma.passportCollaborator;
   }
+
+  get property() {
+    return this.prisma.property;
+  }
+
+  get userPreference() {
+    return this.prisma.userPreference;
+  }
 }

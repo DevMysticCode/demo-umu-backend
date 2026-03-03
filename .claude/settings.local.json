@@ -32,7 +32,11 @@
       "Bash(powershell -Command:*)",
       "Bash(npx prisma migrate:*)",
       "Bash(sort:*)",
-      "Bash(npx kill-port 3000)"
+      "Bash(npx kill-port 3000)",
+      "Bash(npx prisma db push)",
+      "Bash(npx prisma db push --accept-data-loss)",
+      "Bash(npm run build)",
+      "Bash(timeout /t 5 /nobreak)"
     ]
   }
 }
