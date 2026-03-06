@@ -8,6 +8,7 @@ import { TaskModule } from './task/task.module';
 import { QuestionModule } from './question/question.module';
 import { PropertyModule } from './property/property.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
+import { CollectionModule } from './collection/collection.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
     QuestionModule,
     PropertyModule,
     OnboardingModule,
+    CollectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

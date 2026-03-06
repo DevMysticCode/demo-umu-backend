@@ -237,6 +237,32 @@ export class PassportService {
     return grouped;
   }
 
+  // Get all passports the user owns or collaborates on
+  async getUserPassports(userId: string) {
+    const owned = await this.prisma.passport.findMany({
+      where: { ownerId: userId },
+      select: { id: true, addressLine1: true, postcode: true, status: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const collaborated = await this.prisma.passportCollaborator.findMany({
+      where: { userId },
+      include: {
+        passport: {
+          select: { id: true, addressLine1: true, postcode: true, status: true, createdAt: true },
+        },
+      },
+    });
+
+    const result = [...owned];
+    for (const c of collaborated) {
+      if (!result.find((p) => p.id === c.passport.id)) {
+        result.push(c.passport);
+      }
+    }
+    return result;
+  }
+
   // Check if user has access to passport (owner or collaborator)
   async checkUserAccess(passportId: string, userId: string): Promise<boolean> {
     const passport = await this.prisma.passport.findUnique({
