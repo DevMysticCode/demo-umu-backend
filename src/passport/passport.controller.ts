@@ -33,6 +33,12 @@ export class PassportController {
     );
   }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  async getMyPassports(@Request() req: any) {
+    return this.passportService.getUserPassports(req.user.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {

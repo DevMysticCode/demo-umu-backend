@@ -22,6 +22,7 @@ model User {
   passports              Passport[]
   passportCollaborations PassportCollaborator[]
   preference             UserPreference?
+  collections            PassportCollection[]
 }
 
 model OtpCode {
@@ -100,9 +101,32 @@ model Passport {
   owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   property      Property?              @relation(fields: [propertyId], references: [id])
   sections      PassportSection[]
-  collaborators PassportCollaborator[]
+  collaborators   PassportCollaborator[]
+  collectionItems PassportCollectionItem[]
 
   @@index([ownerId])
+}
+
+model PassportCollection {
+  id        String                  @id @default(uuid())
+  name      String
+  userId    String
+  createdAt DateTime                @default(now())
+  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     PassportCollectionItem[]
+
+  @@index([userId])
+}
+
+model PassportCollectionItem {
+  id           String             @id @default(uuid())
+  collectionId String
+  passportId   String
+  collection   PassportCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  passport     Passport           @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, passportId])
+  @@index([collectionId])
 }
 
 model PassportCollaborator {
