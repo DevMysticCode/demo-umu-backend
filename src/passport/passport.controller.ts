@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -104,5 +105,23 @@ export class PassportController {
       userId,
       collaboratorId,
     );
+  }
+
+  @Post(':id/buyer-unlock')
+  @UseGuards(JwtAuthGuard)
+  async buyerUnlock(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.createBuyerAccess(passportId, req.user.id);
+  }
+
+  @Get(':id/buyer-view')
+  @UseGuards(JwtAuthGuard)
+  async getBuyerView(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getBuyerView(passportId, req.user.id);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async deletePassport(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.deletePassport(passportId, req.user.id);
   }
 }
