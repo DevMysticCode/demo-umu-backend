@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PassportService } from '../passport/passport.service';
 import { Property } from '@prisma/client';
 
 const STREET_NAMES = [
@@ -87,7 +88,10 @@ function getAreaInfo(postcode: string) {
 
 @Injectable()
 export class PropertyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private passportService: PassportService,
+  ) {}
 
   async searchProperties(query: string): Promise<Property[]> {
     const q = query.trim();
@@ -153,20 +157,32 @@ export class PropertyService {
             ownerId: true,
             status: true,
             collaborators: { where: { userId }, select: { id: true } },
+            buyerAccesses: { where: { userId }, select: { id: true } },
           },
         },
       },
     });
 
-    if (!property) return { hasPassport: false, passportId: null, isOwner: false, isCollaborator: false };
+    if (!property) return { hasPassport: false, passportId: null, isOwner: false, isCollaborator: false, isBuyer: false, verificationStatus: null };
 
     if (!property.passport) {
-      return { hasPassport: false, passportId: null, isOwner: false, isCollaborator: false };
+      const verification = await this.prisma.ownershipVerification.findUnique({
+        where: { propertyId_userId: { propertyId, userId } },
+      });
+      return {
+        hasPassport: false,
+        passportId: null,
+        isOwner: false,
+        isCollaborator: false,
+        isBuyer: false,
+        verificationStatus: verification?.status ?? null,
+      };
     }
 
     const passport = property.passport;
     const isOwner = passport.ownerId === userId;
     const isCollaborator = passport.collaborators.length > 0;
+    const isBuyer = !isOwner && !isCollaborator && (passport.buyerAccesses?.length ?? 0) > 0;
 
     return {
       hasPassport: true,
@@ -174,8 +190,53 @@ export class PropertyService {
       passportStatus: passport.status,
       isOwner,
       isCollaborator,
-      canAccess: isOwner || isCollaborator,
+      isBuyer,
+      canAccess: isOwner || isCollaborator || isBuyer,
+      verificationStatus: null,
     };
+  }
+
+  async startVerification(propertyId: string, userId: string) {
+    return this.prisma.ownershipVerification.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      update: { status: 'SUBMITTED', submittedAt: new Date() },
+      create: { propertyId, userId, status: 'SUBMITTED' },
+    });
+  }
+
+  async getVerificationStatus(propertyId: string, userId: string) {
+    return this.prisma.ownershipVerification.findUnique({
+      where: { propertyId_userId: { propertyId, userId } },
+    });
+  }
+
+  async completeVerification(propertyId: string, userId: string) {
+    // Mark verification as verified
+    await this.prisma.ownershipVerification.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      update: { status: 'VERIFIED', verifiedAt: new Date() },
+      create: { propertyId, userId, status: 'VERIFIED', verifiedAt: new Date() },
+    });
+
+    // Get property details to create passport
+    const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property) throw new Error('Property not found');
+
+    // Use PassportService to create a fully-populated passport (sections, tasks, questions)
+    const { passportId } = await this.passportService.createPassport(
+      userId,
+      property.addressLine1,
+      property.postcode,
+      property.id,
+    );
+
+    // Update verification with passportId
+    await this.prisma.ownershipVerification.update({
+      where: { propertyId_userId: { propertyId, userId } },
+      data: { passportId },
+    });
+
+    return { passportId };
   }
 
   private async generateAndSaveMockProperties(

@@ -23,6 +23,7 @@ model User {
   passportCollaborations PassportCollaborator[]
   preference             UserPreference?
   collections            PassportCollection[]
+  buyerPassportAccesses  BuyerPassportAccess[]
 }
 
 model OtpCode {
@@ -36,29 +37,45 @@ model OtpCode {
 }
 
 model Property {
-  id             String    @id @default(uuid())
-  udprn          String?   @unique
-  addressLine1   String
-  addressLine2   String?
-  city           String?
-  county         String?
-  postcode       String
-  latitude       Float?
-  longitude      Float?
-  propertyType   String?
-  bedrooms       Int?
-  bathrooms      Int?
-  sqft           Int?
-  epcRating      String?
-  tenure         String?
-  yearBuilt      Int?
-  estimatedPrice Float?
-  imageUrl       String?
-  titleNumber    String?
-  createdAt      DateTime  @default(now())
-  passport       Passport?
+  id                     String                  @id @default(uuid())
+  udprn                  String?                 @unique
+  addressLine1           String
+  addressLine2           String?
+  city                   String?
+  county                 String?
+  postcode               String
+  latitude               Float?
+  longitude              Float?
+  propertyType           String?
+  bedrooms               Int?
+  bathrooms              Int?
+  sqft                   Int?
+  epcRating              String?
+  tenure                 String?
+  yearBuilt              Int?
+  estimatedPrice         Float?
+  imageUrl               String?
+  titleNumber            String?
+  createdAt              DateTime                @default(now())
+  passport               Passport?
+  ownershipVerifications OwnershipVerification[]
 
   @@index([postcode])
+}
+
+model OwnershipVerification {
+  id          String                      @id @default(uuid())
+  propertyId  String
+  userId      String
+  status      OwnershipVerificationStatus @default(SUBMITTED)
+  submittedAt DateTime                    @default(now())
+  verifiedAt  DateTime?
+  passportId  String?
+  property    Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, userId])
+  @@index([propertyId])
+  @@index([userId])
 }
 
 model UserPreference {
@@ -103,6 +120,7 @@ model Passport {
   sections      PassportSection[]
   collaborators   PassportCollaborator[]
   collectionItems PassportCollectionItem[]
+  buyerAccesses   BuyerPassportAccess[]
 
   @@index([ownerId])
 }
@@ -134,6 +152,19 @@ model PassportCollaborator {
   passportId String
   userId     String
   createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([passportId, userId])
+  @@index([passportId])
+  @@index([userId])
+}
+
+model BuyerPassportAccess {
+  id         String   @id @default(uuid())
+  passportId String
+  userId     String
+  unlockedAt DateTime @default(now())
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -241,6 +272,14 @@ model QuestionAnswer {
 enum PassportStatus {
   IN_PROGRESS
   COMPLETED
+}
+
+enum OwnershipVerificationStatus {
+  SUBMITTED
+  IN_PROGRESS
+  VERIFIED
+  FAILED
+  ADDITIONAL_INFO_NEEDED
 }
 
 enum SectionStatus {

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Query,
   Param,
   UseGuards,
@@ -27,6 +28,24 @@ export class PropertyController {
   async getPassportStatus(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.id;
     return this.propertyService.getPassportStatus(id, userId);
+  }
+
+  @Post(':id/start-verification')
+  @UseGuards(JwtAuthGuard)
+  async startVerification(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.startVerification(id, req.user.id);
+  }
+
+  @Get(':id/verification-status')
+  @UseGuards(JwtAuthGuard)
+  async getVerificationStatus(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getVerificationStatus(id, req.user.id);
+  }
+
+  @Post(':id/complete-verification')
+  @UseGuards(JwtAuthGuard)
+  async completeVerification(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.completeVerification(id, req.user.id);
   }
 
   @Get(':id')

@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Passport,
@@ -392,6 +392,116 @@ export class PassportService {
       lastName: c.user.lastName,
       createdAt: c.createdAt,
     }));
+  }
+
+  // Delete passport (owner only)
+  async deletePassport(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('Only the owner can delete this passport');
+    }
+    await this.prisma.passport.delete({ where: { id: passportId } });
+    return { message: 'Passport deleted successfully' };
+  }
+
+  // Create buyer access (simulated payment unlock)
+  async createBuyerAccess(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    // Owner already has full access
+    if (passport.ownerId === userId) {
+      return { passportId };
+    }
+
+    // Upsert buyer access record
+    await this.prisma.buyerPassportAccess.upsert({
+      where: { passportId_userId: { passportId, userId } },
+      update: {},
+      create: { passportId, userId },
+    });
+
+    return { passportId };
+  }
+
+  // Get full passport data in buyer-friendly read-only format
+  async getBuyerView(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        property: true,
+        collaborators: { where: { userId } },
+        buyerAccesses: { where: { userId } },
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            tasks: {
+              orderBy: { order: 'asc' },
+              include: {
+                passportQuestions: {
+                  include: {
+                    questionTemplate: true,
+                    answer: true,
+                  },
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    const isOwner = passport.ownerId === userId;
+    const isCollaborator = passport.collaborators.length > 0;
+    const hasBuyerAccess = passport.buyerAccesses.length > 0;
+
+    if (!isOwner && !isCollaborator && !hasBuyerAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+
+    return {
+      passport: {
+        id: passport.id,
+        addressLine1: passport.addressLine1,
+        postcode: passport.postcode,
+      },
+      property: passport.property,
+      sections: passport.sections.map((s) => ({
+        id: s.id,
+        key: s.key,
+        title: s.title,
+        subtitle: s.subtitle,
+        description: s.description,
+        imageKey: s.imageKey,
+        order: s.order,
+        tasks: s.tasks.map((t) => ({
+          id: t.id,
+          key: t.key,
+          title: t.title,
+          description: t.description,
+          order: t.order,
+          questions: t.passportQuestions.map((q) => ({
+            id: q.id,
+            type: q.questionTemplate.type,
+            question: q.questionTemplate.title,
+            description: q.questionTemplate.description,
+            parts: q.questionTemplate.parts,
+            answer: q.answer
+              ? {
+                  answerText: q.answer.answerText,
+                  answerJson: q.answer.answerJson,
+                  fileUrl: q.answer.fileUrl,
+                  createdAt: q.answer.createdAt,
+                }
+              : null,
+          })),
+        })),
+      })),
+    };
   }
 
   // Remove collaborator

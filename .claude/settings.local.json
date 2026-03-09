@@ -36,7 +36,8 @@
       "Bash(npx prisma db push)",
       "Bash(npx prisma db push --accept-data-loss)",
       "Bash(npm run build)",
-      "Bash(timeout /t 5 /nobreak)"
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(ls -la \"D:\\\\ReactProjects\\\\op_nuxt\\\\umu-backend\\\\src\\\\passport\"\" 2>/dev/null || echo \"Directory might not exist \")"
     ]
   }
 }
