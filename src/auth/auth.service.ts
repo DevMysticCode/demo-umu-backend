@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
 
@@ -12,6 +13,9 @@ import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
 export class AuthService {
   private readonly HARDCODED_OTP = '123456';
   private readonly OTP_EXPIRY_MINUTES = 5;
+  private readonly googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+  );
 
   constructor(
     private prisma: PrismaService,
@@ -219,6 +223,48 @@ export class AuthService {
 
     return {
       message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isVerified: user.isVerified,
+      },
+    };
+  }
+
+  async googleLogin(credential: string) {
+    const ticket = await this.googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const { email, given_name, family_name } = payload;
+
+    let user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          password: '',
+          firstName: given_name ?? '',
+          lastName: family_name ?? '',
+          isVerified: true,
+        },
+      });
+    }
+
+    const token = this.jwtService.sign({ sub: user.id, email: user.email });
+
+    return {
+      message: 'Google login successful',
       token,
       user: {
         id: user.id,
