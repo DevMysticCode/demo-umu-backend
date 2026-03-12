@@ -19,11 +19,63 @@ model User {
   lastName               String?
   phone                  String?
   postcode               String?
+  avatarUrl              String?
+  contactVisible         Boolean                @default(true)
+  pushNotifications      Boolean                @default(true)
+  emailNewsletter        Boolean                @default(true)
+  smsNotifications       Boolean                @default(false)
   passports              Passport[]
   passportCollaborations PassportCollaborator[]
   preference             UserPreference?
   collections            PassportCollection[]
   buyerPassportAccesses  BuyerPassportAccess[]
+  addresses              UserAddress[]
+  companies              UserCompany[]
+  solicitors             UserSolicitor[]
+}
+
+model UserAddress {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String
+  line1     String
+  line2     String?
+  city      String?
+  county    String?
+  postcode  String
+  isCurrent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserCompany {
+  id            String   @id @default(uuid())
+  userId        String
+  name          String
+  address       String?
+  companyNumber String?
+  director      String?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserSolicitor {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  address     String?
+  contactName String?
+  email       String?
+  phone       String?
+  reference   String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model OtpCode {
