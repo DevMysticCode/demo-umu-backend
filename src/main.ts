@@ -5,17 +5,22 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // app.enableCors({
+  //   origin: [
+  //     'http://localhost:3000',
+  //     'http://localhost:3002',
+  //     'https://demo-umu-frontend.vercel.app',
+  //     'https://demo-umu-frontend-dly7s9uz1-devmysticcodes-projects.vercel.app',
+  //     'http://localhost',
+  //     'https://localhost',
+  //     'capacitor://localhost',
+  //   ],
+  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  //   credentials: true,
+  // });
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3002',
-      'https://demo-umu-frontend.vercel.app',
-      'https://demo-umu-frontend-dly7s9uz1-devmysticcodes-projects.vercel.app',
-      'http://localhost',
-      'https://localhost',
-      'capacitor://localhost',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: true,
     credentials: true,
   });
 
