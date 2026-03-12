@@ -99,4 +99,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get buyerPassportAccess() {
     return this.prisma.buyerPassportAccess;
   }
+
+  get userAddress() {
+    return this.prisma.userAddress;
+  }
+
+  get userCompany() {
+    return this.prisma.userCompany;
+  }
+
+  get userSolicitor() {
+    return this.prisma.userSolicitor;
+  }
 }
