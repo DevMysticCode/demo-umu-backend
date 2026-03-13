@@ -59,3 +59,13 @@ export class UpdateSolicitorDto {
   phone?: string;
   reference?: string;
 }
+
+export class AddCollaboratorDto {
+  collaboratorId: string;
+  role?: string;
+  permission?: string;
+  accessDuration?: string;
+  expiresAt?: string;
+  clientAccess?: string;
+  allowComms?: boolean;
+}

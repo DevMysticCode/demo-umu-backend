@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import {
   UpdateCompanyDto,
   CreateSolicitorDto,
   UpdateSolicitorDto,
+  AddCollaboratorDto,
 } from './dto/update-profile.dto';
 
 @Controller('profile')
@@ -89,8 +91,23 @@ export class ProfileController {
 
   // ─── Collaborators ────────────────────────────────────────────────────────
 
+  @Get('users/search')
+  searchUsers(@Req() req: any, @Query('q') q: string) {
+    return this.profileService.searchUsers(q, req.user.id);
+  }
+
   @Get('collaborators')
   getCollaborators(@Req() req: any) {
     return this.profileService.getCollaborators(req.user.id);
+  }
+
+  @Post('collaborators')
+  addCollaborator(@Req() req: any, @Body() dto: AddCollaboratorDto) {
+    return this.profileService.addCollaborator(req.user.id, dto);
+  }
+
+  @Delete('collaborators/:id')
+  removeCollaborator(@Req() req: any, @Param('id') id: string) {
+    return this.profileService.removeCollaborator(req.user.id, id);
   }
 }
