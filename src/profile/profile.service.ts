@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdateProfileDto,
@@ -8,6 +8,7 @@ import {
   UpdateCompanyDto,
   CreateSolicitorDto,
   UpdateSolicitorDto,
+  AddCollaboratorDto,
 } from './dto/update-profile.dto';
 
 @Injectable()
@@ -125,49 +126,126 @@ export class ProfileService {
 
   // ─── Collaborators ────────────────────────────────────────────────────────
 
-  async getCollaborators(userId: string) {
-    // Fetch all passports owned by user with their collaborators
-    const passports = await this.prisma.passport.findMany({
-      where: { ownerId: userId },
-      include: {
-        collaborators: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatarUrl: true,
-              },
-            },
+  async searchUsers(query: string, currentUserId: string) {
+    if (!query || query.trim().length < 2) return [];
+
+    const users = await this.prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: currentUserId } },
+          {
+            OR: [
+              { email: { contains: query, mode: 'insensitive' } },
+              { firstName: { contains: query, mode: 'insensitive' } },
+              { lastName: { contains: query, mode: 'insensitive' } },
+            ],
           },
+        ],
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+      },
+      take: 10,
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
+      avatarUrl: u.avatarUrl,
+    }));
+  }
+
+  async getCollaborators(userId: string) {
+    const rows = await this.prisma.userCollaborator.findMany({
+      where: { userId },
+      include: {
+        collaborator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      collaboratorId: r.collaborator.id,
+      name: [r.collaborator.firstName, r.collaborator.lastName].filter(Boolean).join(' ') || r.collaborator.email,
+      email: r.collaborator.email,
+      avatarUrl: r.collaborator.avatarUrl,
+      role: r.role,
+      permission: r.permission,
+      accessDuration: r.accessDuration,
+      expiresAt: r.expiresAt,
+      clientAccess: r.clientAccess,
+      allowComms: r.allowComms,
+      addedAt: r.createdAt,
+    }));
+  }
+
+  async addCollaborator(userId: string, dto: AddCollaboratorDto) {
+    if (dto.collaboratorId === userId) {
+      throw new ConflictException('Cannot add yourself as a collaborator');
+    }
+
+    const target = await this.prisma.user.findUnique({ where: { id: dto.collaboratorId } });
+    if (!target) throw new NotFoundException('User not found');
+
+    const existing = await this.prisma.userCollaborator.findUnique({
+      where: { userId_collaboratorId: { userId, collaboratorId: dto.collaboratorId } },
+    });
+    if (existing) throw new ConflictException('User is already a collaborator');
+
+    const row = await this.prisma.userCollaborator.create({
+      data: {
+        userId,
+        collaboratorId: dto.collaboratorId,
+        role: dto.role,
+        permission: dto.permission ?? 'all',
+        accessDuration: dto.accessDuration ?? 'permanent',
+        expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+        clientAccess: dto.clientAccess ?? 'shared',
+        allowComms: dto.allowComms ?? true,
+      },
+      include: {
+        collaborator: {
+          select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true },
         },
       },
     });
 
-    // Flatten and deduplicate collaborators across passports
-    const seen = new Set<string>();
-    const collaborators: any[] = [];
+    return {
+      id: row.id,
+      collaboratorId: row.collaborator.id,
+      name: [row.collaborator.firstName, row.collaborator.lastName].filter(Boolean).join(' ') || row.collaborator.email,
+      email: row.collaborator.email,
+      avatarUrl: row.collaborator.avatarUrl,
+      role: row.role,
+      permission: row.permission,
+      accessDuration: row.accessDuration,
+      expiresAt: row.expiresAt,
+      clientAccess: row.clientAccess,
+      allowComms: row.allowComms,
+      addedAt: row.createdAt,
+    };
+  }
 
-    for (const passport of passports) {
-      for (const collab of passport.collaborators) {
-        if (!seen.has(collab.user.id)) {
-          seen.add(collab.user.id);
-          collaborators.push({
-            id: collab.id,
-            userId: collab.user.id,
-            name: [collab.user.firstName, collab.user.lastName].filter(Boolean).join(' ') || collab.user.email,
-            email: collab.user.email,
-            avatarUrl: collab.user.avatarUrl,
-            passportAddress: passport.addressLine1,
-            passportId: passport.id,
-            addedAt: collab.createdAt,
-          });
-        }
-      }
-    }
+  async removeCollaborator(userId: string, collaboratorRowId: string) {
+    const row = await this.prisma.userCollaborator.findUnique({ where: { id: collaboratorRowId } });
+    if (!row) throw new NotFoundException('Collaborator not found');
+    if (row.userId !== userId) throw new ForbiddenException();
 
-    return collaborators;
+    await this.prisma.userCollaborator.delete({ where: { id: collaboratorRowId } });
+    return { message: 'Collaborator removed' };
   }
 }

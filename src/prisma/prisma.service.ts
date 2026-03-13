@@ -111,4 +111,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get userSolicitor() {
     return this.prisma.userSolicitor;
   }
+
+  get userCollaborator() {
+    return this.prisma.userCollaborator;
+  }
 }

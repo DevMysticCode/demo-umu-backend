@@ -32,6 +32,8 @@ model User {
   addresses              UserAddress[]
   companies              UserCompany[]
   solicitors             UserSolicitor[]
+  collaboratorsAdded     UserCollaborator[]     @relation("CollaboratorOwner")
+  collaboratorOf         UserCollaborator[]     @relation("CollaboratorUser")
 }
 
 model UserAddress {
@@ -210,6 +212,25 @@ model PassportCollaborator {
   @@unique([passportId, userId])
   @@index([passportId])
   @@index([userId])
+}
+
+model UserCollaborator {
+  id             String    @id @default(uuid())
+  userId         String
+  collaboratorId String
+  role           String?
+  permission     String?   @default("all")
+  accessDuration String?   @default("permanent")
+  expiresAt      DateTime?
+  clientAccess   String?   @default("shared")
+  allowComms     Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  user           User      @relation("CollaboratorOwner", fields: [userId], references: [id], onDelete: Cascade)
+  collaborator   User      @relation("CollaboratorUser", fields: [collaboratorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collaboratorId])
+  @@index([userId])
+  @@index([collaboratorId])
 }
 
 model BuyerPassportAccess {
