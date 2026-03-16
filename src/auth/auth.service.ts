@@ -6,6 +6,13 @@ import {
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const appleSignin = require('apple-signin-auth') as {
+  verifyIdToken: (
+    idToken: string,
+    options: { audience: string; ignoreExpiration: boolean },
+  ) => Promise<{ sub: string; email?: string }>;
+};
 import { PrismaService } from '../prisma/prisma.service';
 import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
 
@@ -136,7 +143,7 @@ export class AuthService {
     // Parse DOB if provided
     const dobDate = dob ? new Date(dob) : null;
 
-    let user;
+    let user: Awaited<ReturnType<typeof this.prisma.user.findUnique>>;
 
     if (existingUser) {
       // If user exists and is verified (from OTP), update their details
@@ -265,6 +272,96 @@ export class AuthService {
 
     return {
       message: 'Google login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isVerified: user.isVerified,
+      },
+    };
+  }
+
+  async appleLogin(idToken: string, firstName?: string, lastName?: string) {
+    let claims: { sub: string; email?: string };
+    try {
+      claims = await appleSignin.verifyIdToken(idToken, {
+        audience: process.env.APPLE_CLIENT_ID ?? '',
+        ignoreExpiration: false,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid Apple token');
+    }
+
+    const sub: string = claims.sub;
+    const email: string | undefined = claims.email;
+
+    if (!sub) throw new UnauthorizedException('Invalid Apple token: missing sub');
+
+    // Use real email, or a stable address derived from Apple's sub
+    const userEmail = email ?? `${sub}@apple.private`;
+
+    let user = await this.prisma.user.findUnique({
+      where: { email: userEmail },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: userEmail,
+          password: '',
+          firstName: firstName ?? '',
+          lastName: lastName ?? '',
+          isVerified: true,
+        },
+      });
+    } else if ((firstName || lastName) && !user.firstName && !user.lastName) {
+      // Apple sends name only on first auth — update if profile is still blank
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          firstName: firstName ?? user.firstName ?? '',
+          lastName: lastName ?? user.lastName ?? '',
+        },
+      });
+    }
+
+    const token = this.jwtService.sign({ sub: user.id, email: user.email });
+
+    return {
+      message: 'Apple login successful',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isVerified: user.isVerified,
+      },
+    };
+  }
+
+  /** Dev-only: skips Apple token verification — localhost testing only */
+  async appleDevMock(email: string, firstName?: string, lastName?: string) {
+    let user = await this.prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          password: '',
+          firstName: firstName ?? 'Apple',
+          lastName: lastName ?? 'Test',
+          isVerified: true,
+        },
+      });
+    }
+
+    const token = this.jwtService.sign({ sub: user.id, email: user.email });
+
+    return {
+      message: 'Apple login successful',
       token,
       user: {
         id: user.id,

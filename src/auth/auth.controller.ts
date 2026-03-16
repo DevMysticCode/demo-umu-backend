@@ -30,4 +30,27 @@ export class AuthController {
   async googleLogin(@Body('credential') credential: string) {
     return this.authService.googleLogin(credential);
   }
+
+  @Post('apple')
+  async appleLogin(
+    @Body('idToken') idToken: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+  ) {
+    return this.authService.appleLogin(idToken, firstName, lastName);
+  }
+
+  /** Dev-only: bypasses Apple token verification for local testing */
+  @Post('apple/mock')
+  appleMockLogin(
+    @Body('email') email: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+  ) {
+    return this.authService.appleDevMock(
+      email || 'apple-test@dev.local',
+      firstName,
+      lastName,
+    );
+  }
 }

@@ -64,6 +64,7 @@ export class AddCollaboratorDto {
   collaboratorId: string;
   role?: string;
   permission?: string;
+  propertyIds?: string[];
   accessDuration?: string;
   expiresAt?: string;
   clientAccess?: string;
