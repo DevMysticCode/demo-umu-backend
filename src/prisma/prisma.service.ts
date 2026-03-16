@@ -115,4 +115,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get userCollaborator() {
     return this.prisma.userCollaborator;
   }
+
+  get userDocument() {
+    return this.prisma.userDocument;
+  }
+
+  get userWishlist() {
+    return this.prisma.userWishlist;
+  }
+
+  get userSavedProperty() {
+    return this.prisma.userSavedProperty;
+  }
 }

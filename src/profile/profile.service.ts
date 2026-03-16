@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
+import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import { join, extname } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdateProfileDto,
@@ -14,6 +16,33 @@ import {
 @Injectable()
 export class ProfileService {
   constructor(private prisma: PrismaService) {}
+
+  async uploadAvatar(userId: string, file: any, host: string) {
+    if (!file) throw new BadRequestException('No file provided');
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Only image files are allowed (jpg, png, webp, gif)');
+    }
+
+    // Delete old avatar file if it was locally stored
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (user?.avatarUrl?.startsWith('/uploads/')) {
+      const oldPath = join(process.cwd(), user.avatarUrl);
+      if (existsSync(oldPath)) {
+        try { unlinkSync(oldPath); } catch { /* ignore */ }
+      }
+    }
+
+    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+    });
+
+    const { password, ...safe } = updated;
+    return { ...safe, avatarUrl };
+  }
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -126,6 +155,23 @@ export class ProfileService {
 
   // ─── Collaborators ────────────────────────────────────────────────────────
 
+  async getUserPassports(userId: string) {
+    const passports = await this.prisma.passport.findMany({
+      where: { ownerId: userId },
+      include: { property: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return passports.map((p) => ({
+      id: p.id,
+      addressLine1: p.addressLine1,
+      postcode: p.postcode,
+      address: p.property
+        ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
+        : p.addressLine1,
+    }));
+  }
+
   async searchUsers(query: string, currentUserId: string) {
     if (!query || query.trim().length < 2) return [];
 
@@ -177,20 +223,107 @@ export class ProfileService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return rows.map((r) => ({
-      id: r.id,
-      collaboratorId: r.collaborator.id,
-      name: [r.collaborator.firstName, r.collaborator.lastName].filter(Boolean).join(' ') || r.collaborator.email,
-      email: r.collaborator.email,
-      avatarUrl: r.collaborator.avatarUrl,
-      role: r.role,
-      permission: r.permission,
-      accessDuration: r.accessDuration,
-      expiresAt: r.expiresAt,
-      clientAccess: r.clientAccess,
-      allowComms: r.allowComms,
-      addedAt: r.createdAt,
-    }));
+    const hasAll = rows.some((r) => r.permission === 'all');
+    const ownerPassportCount = hasAll
+      ? await this.prisma.passport.count({ where: { ownerId: userId } })
+      : 0;
+
+    return rows.map((r) => {
+      let propertyCount = 0;
+      if (r.permission === 'all') {
+        propertyCount = ownerPassportCount;
+      } else if (r.permission === 'specific' && Array.isArray(r.propertyIds)) {
+        propertyCount = (r.propertyIds as string[]).length;
+      }
+
+      return {
+        id: r.id,
+        collaboratorId: r.collaborator.id,
+        name: [r.collaborator.firstName, r.collaborator.lastName].filter(Boolean).join(' ') || r.collaborator.email,
+        email: r.collaborator.email,
+        avatarUrl: r.collaborator.avatarUrl,
+        role: r.role,
+        permission: r.permission,
+        propertyIds: r.propertyIds ?? [],
+        propertyCount,
+        accessDuration: r.accessDuration,
+        expiresAt: r.expiresAt,
+        clientAccess: r.clientAccess,
+        allowComms: r.allowComms,
+        addedAt: r.createdAt,
+      };
+    });
+  }
+
+  async getCollaborator(userId: string, collaboratorRowId: string) {
+    const row = await this.prisma.userCollaborator.findUnique({
+      where: { id: collaboratorRowId },
+      include: {
+        collaborator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatarUrl: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!row) throw new NotFoundException('Collaborator not found');
+    if (row.userId !== userId) throw new ForbiddenException();
+
+    let sharedPassports: { id: string; addressLine1: string; postcode: string; address: string }[] = [];
+
+    if (row.permission === 'all') {
+      const passports = await this.prisma.passport.findMany({
+        where: { ownerId: userId },
+        include: { property: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      sharedPassports = passports.map((p) => ({
+        id: p.id,
+        addressLine1: p.addressLine1,
+        postcode: p.postcode,
+        address: p.property
+          ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
+          : p.addressLine1,
+      }));
+    } else if (row.permission === 'specific' && Array.isArray(row.propertyIds) && (row.propertyIds as string[]).length > 0) {
+      const passports = await this.prisma.passport.findMany({
+        where: { id: { in: row.propertyIds as string[] }, ownerId: userId },
+        include: { property: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      sharedPassports = passports.map((p) => ({
+        id: p.id,
+        addressLine1: p.addressLine1,
+        postcode: p.postcode,
+        address: p.property
+          ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
+          : p.addressLine1,
+      }));
+    }
+
+    return {
+      id: row.id,
+      collaboratorId: row.collaborator.id,
+      name: [row.collaborator.firstName, row.collaborator.lastName].filter(Boolean).join(' ') || row.collaborator.email,
+      email: row.collaborator.email,
+      avatarUrl: row.collaborator.avatarUrl,
+      joinedAt: row.collaborator.createdAt,
+      role: row.role,
+      permission: row.permission,
+      propertyIds: row.propertyIds ?? [],
+      accessDuration: row.accessDuration,
+      expiresAt: row.expiresAt,
+      clientAccess: row.clientAccess,
+      allowComms: row.allowComms,
+      addedAt: row.createdAt,
+      sharedPassports,
+    };
   }
 
   async addCollaborator(userId: string, dto: AddCollaboratorDto) {
@@ -212,6 +345,7 @@ export class ProfileService {
         collaboratorId: dto.collaboratorId,
         role: dto.role,
         permission: dto.permission ?? 'all',
+        propertyIds: dto.propertyIds ?? [],
         accessDuration: dto.accessDuration ?? 'permanent',
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
         clientAccess: dto.clientAccess ?? 'shared',
@@ -232,6 +366,7 @@ export class ProfileService {
       avatarUrl: row.collaborator.avatarUrl,
       role: row.role,
       permission: row.permission,
+      propertyIds: row.propertyIds ?? [],
       accessDuration: row.accessDuration,
       expiresAt: row.expiresAt,
       clientAccess: row.clientAccess,

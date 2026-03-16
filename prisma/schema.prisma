@@ -34,6 +34,9 @@ model User {
   solicitors             UserSolicitor[]
   collaboratorsAdded     UserCollaborator[]     @relation("CollaboratorOwner")
   collaboratorOf         UserCollaborator[]     @relation("CollaboratorUser")
+  userDocuments          UserDocument[]
+  wishlistedProperties   UserWishlist[]
+  savedProperties        UserSavedProperty[]
 }
 
 model UserAddress {
@@ -113,6 +116,8 @@ model Property {
   createdAt              DateTime                @default(now())
   passport               Passport?
   ownershipVerifications OwnershipVerification[]
+  wishlistedBy           UserWishlist[]
+  savedBy                UserSavedProperty[]
 
   @@index([postcode])
 }
@@ -220,6 +225,7 @@ model UserCollaborator {
   collaboratorId String
   role           String?
   permission     String?   @default("all")
+  propertyIds    Json?
   accessDuration String?   @default("permanent")
   expiresAt      DateTime?
   clientAccess   String?   @default("shared")
@@ -340,6 +346,45 @@ model QuestionAnswer {
   fileUrl            String?
   createdAt          DateTime         @default(now())
   passportQuestion   PassportQuestion @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
+}
+
+model UserWishlist {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+}
+
+model UserSavedProperty {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+}
+
+model UserDocument {
+  id        String    @id @default(uuid())
+  userId    String
+  name      String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  tags      Json?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum PassportStatus {

@@ -318,4 +318,64 @@ export class PropertyService {
 
     return created;
   }
+
+  // ── Wishlist ──────────────────────────────────────────────────────────────
+
+  async toggleWishlist(userId: string, propertyId: string) {
+    const existing = await this.prisma.userWishlist.findUnique({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+    if (existing) {
+      await this.prisma.userWishlist.delete({ where: { id: existing.id } });
+      return { wishlisted: false };
+    }
+    await this.prisma.userWishlist.create({ data: { userId, propertyId } });
+    return { wishlisted: true };
+  }
+
+  async getWishlist(userId: string) {
+    const items = await this.prisma.userWishlist.findMany({
+      where: { userId },
+      include: { property: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return items.map((item) => ({ ...item.property, wishlistedAt: item.createdAt }));
+  }
+
+  // ── Saved Properties ──────────────────────────────────────────────────────
+
+  async toggleSave(userId: string, propertyId: string) {
+    const existing = await this.prisma.userSavedProperty.findUnique({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+    if (existing) {
+      await this.prisma.userSavedProperty.delete({ where: { id: existing.id } });
+      return { saved: false };
+    }
+    await this.prisma.userSavedProperty.create({ data: { userId, propertyId } });
+    return { saved: true };
+  }
+
+  async getSavedProperties(userId: string) {
+    const items = await this.prisma.userSavedProperty.findMany({
+      where: { userId },
+      include: { property: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return items.map((item) => ({ ...item.property, savedAt: item.createdAt }));
+  }
+
+  // ── Combined action status for a single property ──────────────────────────
+
+  async getPropertyActions(userId: string, propertyId: string) {
+    const [wishlist, saved] = await Promise.all([
+      this.prisma.userWishlist.findUnique({
+        where: { userId_propertyId: { userId, propertyId } },
+      }),
+      this.prisma.userSavedProperty.findUnique({
+        where: { userId_propertyId: { userId, propertyId } },
+      }),
+    ]);
+    return { wishlisted: !!wishlist, saved: !!saved };
+  }
 }

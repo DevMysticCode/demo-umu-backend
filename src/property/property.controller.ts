@@ -7,6 +7,7 @@ import {
   UseGuards,
   Request,
   NotFoundException,
+  Delete,
 } from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -46,6 +47,37 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   async completeVerification(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.completeVerification(id, req.user.id);
+  }
+
+  // These must stay above @Get(':id') to avoid route conflict
+  @Get('wishlist')
+  @UseGuards(JwtAuthGuard)
+  async getWishlist(@Request() req: any) {
+    return this.propertyService.getWishlist(req.user.id);
+  }
+
+  @Get('saved')
+  @UseGuards(JwtAuthGuard)
+  async getSaved(@Request() req: any) {
+    return this.propertyService.getSavedProperties(req.user.id);
+  }
+
+  @Get(':id/actions')
+  @UseGuards(JwtAuthGuard)
+  async getPropertyActions(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getPropertyActions(req.user.id, id);
+  }
+
+  @Post(':id/wishlist')
+  @UseGuards(JwtAuthGuard)
+  async toggleWishlist(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.toggleWishlist(req.user.id, id);
+  }
+
+  @Post(':id/save')
+  @UseGuards(JwtAuthGuard)
+  async toggleSave(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.toggleSave(req.user.id, id);
   }
 
   @Get(':id')

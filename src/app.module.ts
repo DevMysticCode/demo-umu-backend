@@ -10,6 +10,7 @@ import { PropertyModule } from './property/property.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { CollectionModule } from './collection/collection.module';
 import { ProfileModule } from './profile/profile.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ProfileModule } from './profile/profile.module';
     OnboardingModule,
     CollectionModule,
     ProfileModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

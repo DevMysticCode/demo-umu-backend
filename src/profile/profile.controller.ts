@@ -8,8 +8,14 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Req,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { ProfileService } from './profile.service';
 import {
@@ -27,6 +33,27 @@ import {
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
+
+  @Post('avatar')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'avatars');
+          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    }),
+  )
+  uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
+    return this.profileService.uploadAvatar(req.user.id, file, req.hostname);
+  }
 
   @Get('me')
   getProfile(@Req() req: any) {
@@ -91,6 +118,11 @@ export class ProfileController {
 
   // ─── Collaborators ────────────────────────────────────────────────────────
 
+  @Get('passports')
+  getUserPassports(@Req() req: any) {
+    return this.profileService.getUserPassports(req.user.id);
+  }
+
   @Get('users/search')
   searchUsers(@Req() req: any, @Query('q') q: string) {
     return this.profileService.searchUsers(q, req.user.id);
@@ -99,6 +131,11 @@ export class ProfileController {
   @Get('collaborators')
   getCollaborators(@Req() req: any) {
     return this.profileService.getCollaborators(req.user.id);
+  }
+
+  @Get('collaborators/:id')
+  getCollaborator(@Req() req: any, @Param('id') id: string) {
+    return this.profileService.getCollaborator(req.user.id, id);
   }
 
   @Post('collaborators')
