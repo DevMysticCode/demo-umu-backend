@@ -11,6 +11,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { CollectionModule } from './collection/collection.module';
 import { ProfileModule } from './profile/profile.module';
 import { DocumentsModule } from './documents/documents.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DocumentsModule } from './documents/documents.module';
     CollectionModule,
     ProfileModule,
     DocumentsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
