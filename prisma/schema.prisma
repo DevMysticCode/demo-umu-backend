@@ -37,6 +37,7 @@ model User {
   userDocuments          UserDocument[]
   wishlistedProperties   UserWishlist[]
   savedProperties        UserSavedProperty[]
+  reminders              UserReminder[]
 }
 
 model UserAddress {
@@ -370,6 +371,22 @@ model UserSavedProperty {
 
   @@unique([userId, propertyId])
   @@index([userId])
+}
+
+model UserReminder {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  date      DateTime // stored as UTC date (no time component)
+  time      String?  // "14:00" HH:mm format
+  repeats   String   @default("never") // "never" | "annually"
+  notes     String?
+  type      String   @default("manual") // "manual" | "tradesperson" | "business"
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, date])
 }
 
 model UserDocument {
