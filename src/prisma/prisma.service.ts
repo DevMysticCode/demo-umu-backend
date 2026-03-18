@@ -127,4 +127,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get userSavedProperty() {
     return this.prisma.userSavedProperty;
   }
+
+  get userReminder() {
+    return this.prisma.userReminder;
+  }
 }

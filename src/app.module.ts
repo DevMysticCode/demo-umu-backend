@@ -12,6 +12,7 @@ import { CollectionModule } from './collection/collection.module';
 import { ProfileModule } from './profile/profile.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ChatModule } from './chat/chat.module';
+import { CalendarModule } from './calendar/calendar.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ChatModule } from './chat/chat.module';
     ProfileModule,
     DocumentsModule,
     ChatModule,
+    CalendarModule,
   ],
   controllers: [AppController],
   providers: [AppService],
