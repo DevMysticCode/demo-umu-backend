@@ -13,6 +13,8 @@ import { ProfileModule } from './profile/profile.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ChatModule } from './chat/chat.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { SupportModule } from './support/support.module';
+import { LearnModule } from './learn/learn.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { CalendarModule } from './calendar/calendar.module';
     DocumentsModule,
     ChatModule,
     CalendarModule,
+    SupportModule,
+    LearnModule,
   ],
   controllers: [AppController],
   providers: [AppService],
