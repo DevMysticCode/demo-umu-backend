@@ -131,4 +131,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get userReminder() {
     return this.prisma.userReminder;
   }
+
+  get supportRequest() {
+    return this.prisma.supportRequest;
+  }
+
+  get video() {
+    return this.prisma.video;
+  }
+
+  get videoProgress() {
+    return this.prisma.videoProgress;
+  }
 }
