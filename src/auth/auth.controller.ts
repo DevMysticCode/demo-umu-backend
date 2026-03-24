@@ -1,10 +1,16 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
+import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @Post('check-email')
+  async checkEmail(@Body('email') email: string) {
+    return this.authService.checkEmail(email);
+  }
 
   @Post('request-otp')
   async requestOtp(@Body() dto: RequestOtpDto) {
@@ -38,6 +44,16 @@ export class AuthController {
     @Body('lastName') lastName?: string,
   ) {
     return this.authService.appleLogin(idToken, firstName, lastName);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  async logout(@Request() req: any) {
+    // JWT is stateless — token is cleared client-side.
+    // This endpoint exists so the client can confirm with the server and
+    // gives a hook for future token-blacklist / session cleanup.
+    return { success: true, message: 'Logged out successfully' };
   }
 
   /** Dev-only: bypasses Apple token verification for local testing */

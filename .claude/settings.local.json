@@ -40,7 +40,8 @@
       "Bash(ls -la \"D:\\\\ReactProjects\\\\op_nuxt\\\\umu-backend\\\\src\\\\passport\"\" 2>/dev/null || echo \"Directory might not exist \")",
       "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db push --accept-data-loss --skip-generate)",
       "Bash(find D:/ReactProjects/op_nuxt/umu-mobile-webapp -name useProfile* -o -name useAuth*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp -name auth.ts -o -name *.middleware.ts)"
     ]
   }
 }
