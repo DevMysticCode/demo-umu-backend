@@ -2,6 +2,8 @@ import {
   Injectable,
   UnauthorizedException,
   ConflictException,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
@@ -15,7 +17,15 @@ const appleSignin = require('apple-signin-auth') as {
   ) => Promise<{ sub: string; email?: string }>;
 };
 import { PrismaService } from '../prisma/prisma.service';
-import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
+import {
+  RequestOtpDto,
+  VerifyOtpDto,
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  VerifyResetOtpDto,
+  ResetPasswordDto,
+} from './dto';
 
 @Injectable()
 export class AuthService {
@@ -390,6 +400,133 @@ export class AuthService {
         isVerified: user.isVerified,
       },
     };
+  }
+
+  // ── Password Reset ───────────────────────────────────────────────────────
+
+  private readonly RESET_RESPONSE =
+    'If an account exists for this email, a reset code has been sent.';
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const { email } = dto;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, isVerified: true },
+    });
+
+    // Always return a generic message to avoid user enumeration
+    if (!user || !user.isVerified) {
+      return { message: this.RESET_RESPONSE };
+    }
+
+    // Invalidate any existing OTPs for this email
+    await this.prisma.otpCode.deleteMany({ where: { email } });
+
+    const otp = this.generateOtp();
+    const expiresAt = new Date(
+      Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
+    );
+
+    await this.prisma.otpCode.create({
+      data: { email, code: otp, expiresAt },
+    });
+
+    const year = new Date().getFullYear();
+    const expiryMins = this.OTP_EXPIRY_MINUTES;
+
+    try {
+      await this.mailer.sendMail({
+        from: process.env.SMTP_FROM ?? 'UMovingU <info@umovingu.io>',
+        to: email,
+        subject: `Reset your password — code: ${otp}`,
+        html: `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h2 style="color:#1f2024;font-size:22px;margin:16px 0 4px;">Reset your password</h2>
+    <p style="color:#8f9094;font-size:14px;margin:0;">Use this code to set a new UMovingU password</p>
+  </div>
+  <div style="background:#f6f6f7;border-radius:16px;padding:28px;text-align:center;margin-bottom:24px;">
+    <p style="color:#8f9094;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Your reset code</p>
+    <div style="font-size:40px;font-weight:700;letter-spacing:10px;color:#00a19a;">${otp}</div>
+    <p style="color:#8f9094;font-size:12px;margin:12px 0 0;">Expires in ${expiryMins} minutes</p>
+  </div>
+  <p style="color:#8f9094;font-size:13px;text-align:center;margin:0;">If you did not request a password reset you can safely ignore this email.</p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">&#169; ${year} UMovingU. All rights reserved.</p>
+</div>`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[PASSWORD RESET] Failed to send email:', msg);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[PASSWORD RESET DEV] Code for ${email}: ${otp}`);
+      }
+    }
+
+    return { message: this.RESET_RESPONSE };
+  }
+
+  async verifyResetOtp(dto: VerifyResetOtpDto) {
+    const { email, code } = dto;
+
+    const otpRecord = await this.prisma.otpCode.findFirst({
+      where: {
+        email,
+        code,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException('Invalid or expired reset code');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+
+    // Delete the OTP — consumed
+    await this.prisma.otpCode.delete({ where: { id: otpRecord.id } });
+
+    // Short-lived reset token (15 min), purpose-locked to password reset
+    const resetToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, purpose: 'password_reset' },
+      { expiresIn: '15m' },
+    );
+
+    return { resetToken };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { resetToken, newPassword } = dto;
+
+    type ResetPayload = { sub: string; email: string; purpose: string };
+    let payload: ResetPayload;
+    try {
+      payload = this.jwtService.verify<ResetPayload>(resetToken);
+    } catch {
+      throw new UnauthorizedException('Reset token is invalid or has expired');
+    }
+
+    if (payload.purpose !== 'password_reset') {
+      throw new UnauthorizedException('Invalid reset token');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: payload.sub },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Password updated successfully' };
   }
 
   /** Dev-only: skips Apple token verification — localhost testing only */
