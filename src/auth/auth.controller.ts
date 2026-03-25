@@ -1,6 +1,14 @@
 import { Controller, Post, Body, UseGuards, Request, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RequestOtpDto, VerifyOtpDto, RegisterDto, LoginDto } from './dto';
+import {
+  RequestOtpDto,
+  VerifyOtpDto,
+  RegisterDto,
+  LoginDto,
+  ForgotPasswordDto,
+  VerifyResetOtpDto,
+  ResetPasswordDto,
+} from './dto';
 import { JwtAuthGuard } from './jwt.guard';
 
 @Controller('auth')
@@ -54,6 +62,24 @@ export class AuthController {
     // This endpoint exists so the client can confirm with the server and
     // gives a hook for future token-blacklist / session cleanup.
     return { success: true, message: 'Logged out successfully' };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('verify-reset-otp')
+  @HttpCode(200)
+  async verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
+    return this.authService.verifyResetOtp(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   /** Dev-only: bypasses Apple token verification for local testing */
