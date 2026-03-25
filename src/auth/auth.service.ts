@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
 import { OAuth2Client } from 'google-auth-library';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,56 +32,44 @@ export class AuthService {
   private readonly googleClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
   );
-  private readonly mailer = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: Number(process.env.SMTP_PORT) === 465,
-    requireTLS: true,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  private readonly resend: Resend;
 
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
   ) {
-    // Verify SMTP connection on startup — logs a warning but does not crash
-    this.mailer.verify().then(() => {
-      console.log('[SMTP] Connection verified — emails ready to send');
-    }).catch((err) => {
-      console.warn('[SMTP] Connection failed — emails will not be sent:', err?.message ?? err);
-    });
+    this.resend = new Resend(process.env.RESEND_API_KEY ?? '');
   }
 
   private generateOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
+  private readonly FROM =
+    process.env.RESEND_FROM ?? 'UMovingU <onboarding@resend.dev>';
+
   private async sendOtpEmail(email: string, otp: string): Promise<void> {
     const expiryMins = this.OTP_EXPIRY_MINUTES;
-    await this.mailer.sendMail({
-      from: process.env.SMTP_FROM || 'UmovingU <info@umovingu.io>',
+    const year = new Date().getFullYear();
+    await this.resend.emails.send({
+      from: this.FROM,
       to: email,
-      subject: `Your UmovingU verification code: ${otp}`,
+      subject: `Your UMovingU verification code: ${otp}`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; background: #ffffff;">
-          <div style="text-align: center; margin-bottom: 32px;">
-            <img src="https://umovingu.io/logo.png" alt="UmovingU" style="height: 40px;" onerror="this.style.display='none'" />
-            <h2 style="color: #1f2024; font-size: 22px; margin: 16px 0 4px;">Verify your email</h2>
-            <p style="color: #8f9094; font-size: 14px; margin: 0;">Enter this code to continue signing up</p>
-          </div>
-          <div style="background: #f6f6f7; border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 24px;">
-            <p style="color: #8f9094; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 0 0 12px;">Your verification code</p>
-            <div style="font-size: 40px; font-weight: 700; letter-spacing: 10px; color: #00a19a;">${otp}</div>
-            <p style="color: #8f9094; font-size: 12px; margin: 12px 0 0;">Expires in ${expiryMins} minutes</p>
-          </div>
-          <p style="color: #8f9094; font-size: 13px; text-align: center; margin: 0;">If you didn't request this, you can safely ignore this email. Someone may have typed your email address by mistake.</p>
-          <hr style="border: none; border-top: 1px solid #e5e5ea; margin: 24px 0;" />
-          <p style="color: #b4b5b8; font-size: 11px; text-align: center; margin: 0;">© ${new Date().getFullYear()} UmovingU. All rights reserved.</p>
-        </div>
-      `,
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h2 style="color:#1f2024;font-size:22px;margin:16px 0 4px;">Verify your email</h2>
+    <p style="color:#8f9094;font-size:14px;margin:0;">Enter this code to continue signing up</p>
+  </div>
+  <div style="background:#f6f6f7;border-radius:16px;padding:28px;text-align:center;margin-bottom:24px;">
+    <p style="color:#8f9094;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Your verification code</p>
+    <div style="font-size:40px;font-weight:700;letter-spacing:10px;color:#00a19a;">${otp}</div>
+    <p style="color:#8f9094;font-size:12px;margin:12px 0 0;">Expires in ${expiryMins} minutes</p>
+  </div>
+  <p style="color:#8f9094;font-size:13px;text-align:center;margin:0;">If you did not request this you can safely ignore this email.</p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">&#169; ${year} UMovingU. All rights reserved.</p>
+</div>`,
     });
   }
 
@@ -436,12 +424,12 @@ export class AuthService {
     const expiryMins = this.OTP_EXPIRY_MINUTES;
 
     try {
-      await this.mailer.sendMail({
-        from: process.env.SMTP_FROM ?? 'UMovingU <info@umovingu.io>',
+      await this.resend.emails.send({
+        from: this.FROM,
         to: email,
         subject: `Reset your password — code: ${otp}`,
         html: `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
   <div style="text-align:center;margin-bottom:32px;">
     <h2 style="color:#1f2024;font-size:22px;margin:16px 0 4px;">Reset your password</h2>
     <p style="color:#8f9094;font-size:14px;margin:0;">Use this code to set a new UMovingU password</p>
