@@ -131,6 +131,15 @@ function getAreaInfo(postcode: string) {
   return POSTCODE_AREAS[twoChar] || POSTCODE_AREAS[oneChar] || POSTCODE_AREAS['DEFAULT'];
 }
 
+function estimateCouncilTaxAmount(band: string): number | null {
+  // Statutory ratios relative to Band D (9 parts)
+  const parts: Record<string, number> = { A: 6, B: 7, C: 8, D: 9, E: 11, F: 13, G: 15, H: 18 };
+  const BASE_D = 2065; // approximate England average 2024/25 Band D
+  const ratio = parts[band.toUpperCase()];
+  if (!ratio) return null;
+  return Math.round((BASE_D * ratio) / 9 / 10) * 10; // round to nearest £10
+}
+
 // ── Service ──────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -299,23 +308,81 @@ export class PropertyService {
     const lat = property.latitude;
     const lon = property.longitude;
     const postcode = property.postcode;
+    const uprn = property.uprn;
 
-    const [nearby, floodRisk, priceHistory] = await Promise.allSettled([
+    const [
+      nearby,
+      floodRiskRaw,
+      salesHistory,
+      broadband,
+      listedBuildings,
+      osPlaces,
+      epcData,
+      planningData,
+    ] = await Promise.allSettled([
       lat && lon ? this.fetchNearbyPlaces(lat, lon) : Promise.resolve({ schools: [], trains: [], parks: [] }),
-      lat && lon ? this.fetchFloodRisk(lat, lon) : Promise.resolve(null),
-      this.fetchPriceHistory(postcode),
+      lat && lon ? this.fetchFloodDetail(lat, lon) : Promise.resolve(null),
+      this.fetchPropertySalesHistory(postcode, property.addressLine1),
+      this.fetchBroadband(postcode),
+      lat && lon ? this.fetchListedBuildings(lat, lon) : Promise.resolve([]),
+      this.fetchOsPlaces(postcode),
+      uprn ? this.fetchEpcData(uprn) : Promise.resolve(null),
+      lat && lon ? this.fetchPlanningData(lat, lon, uprn) : Promise.resolve({ constraints: [], applications: [] }),
     ]);
 
     const googleKey = process.env.GOOGLE_API_KEY ?? '';
     const streetViewUrl = lat && lon && googleKey
-      ? `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${lat},${lon}&key=${googleKey}&return_error_codes=true`
+      ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${lat},${lon}&key=${googleKey}&fov=90&pitch=10&return_error_codes=true`
       : null;
 
+    const floodData = floodRiskRaw.status === 'fulfilled' ? floodRiskRaw.value : null;
+    const osData = osPlaces.status === 'fulfilled' ? osPlaces.value : null;
+    const epc = epcData.status === 'fulfilled' ? epcData.value : null;
+    const planning = planningData.status === 'fulfilled'
+      ? planningData.value
+      : { constraints: [], applications: [] };
+
+    // Council tax: read from DB (no free API available; band stored when available)
+    const councilTax = {
+      band: property.councilTaxBand ?? null,
+      annualEstimate: property.councilTaxBand ? estimateCouncilTaxAmount(property.councilTaxBand) : null,
+      councilName: osData?.localAuthority ?? null,
+      checkUrl: 'https://www.gov.uk/council-tax-bands',
+    };
+
     return {
+      // Google Street View Static API
       streetViewUrl,
+
+      // Google Places API
       nearby: nearby.status === 'fulfilled' ? nearby.value : { schools: [], trains: [], parks: [] },
-      floodRisk: floodRisk.status === 'fulfilled' ? floodRisk.value : null,
-      priceHistory: priceHistory.status === 'fulfilled' ? priceHistory.value : [],
+
+      // Environment Agency Flood Risk API
+      floodRisk: floodData?.rating ?? null,
+      floodZones: floodData?.zones ?? [],
+
+      // HM Land Registry Price Paid API — property-specific sales history
+      salesHistory: salesHistory.status === 'fulfilled' ? salesHistory.value : [],
+
+      // Ofcom Connected Nations API
+      broadband: broadband.status === 'fulfilled' ? broadband.value : null,
+
+      // Historic England ArcGIS API
+      listedBuildings: listedBuildings.status === 'fulfilled' ? listedBuildings.value : [],
+
+      // OS Data Hub Places API
+      osPlaces: osData,
+
+      // EPC Open Data Communities API
+      epcCert: epc,
+      epcPotentialRating: epc?.potentialRating ?? null,
+      epcPotentialScore: epc?.potentialScore ?? null,
+
+      // Council tax from DB (populated when available)
+      councilTax,
+
+      // planning.data.gov.uk — constraints + applications
+      planningHistory: planning,
     };
   }
 
@@ -332,13 +399,13 @@ export class PropertyService {
       fetch(`${base}?location=${location}&radius=1000&type=park&key=${key}`).then((r) => r.json()),
     ]);
 
-    function mapPlaces(res: PromiseSettledResult<any>, limit = 3) {
+    function mapPlaces(res: PromiseSettledResult<any>, limit = 4) {
       if (res.status !== 'fulfilled') return [];
       return (res.value?.results ?? []).slice(0, limit).map((p: any) => ({
         name: p.name,
         rating: p.rating ?? null,
-        distance: null, // could compute with Haversine if needed
         vicinity: p.vicinity,
+        placeId: p.place_id,
       }));
     }
 
@@ -349,20 +416,28 @@ export class PropertyService {
     };
   }
 
-  private async fetchFloodRisk(lat: number, lon: number): Promise<string | null> {
+  private async fetchFloodDetail(lat: number, lon: number): Promise<{ rating: string; zones: any[] } | null> {
     try {
-      const url = `https://environment.data.gov.uk/flood-monitoring/id/floodAreas?lat=${lat}&long=${lon}&dist=1`;
+      const url = `https://environment.data.gov.uk/flood-monitoring/id/floodAreas?lat=${lat}&long=${lon}&dist=2`;
       const res = await fetch(url);
-      if (!res.ok) return 'Unknown';
+      if (!res.ok) return { rating: 'Very Low', zones: [] };
       const data = await res.json();
       const items = data.items ?? [];
-      if (items.length === 0) return 'Very Low';
-      // Check severity: 1=severe, 2=high, 3=medium, 4=low
+      if (items.length === 0) return { rating: 'Very Low', zones: [] };
+
       const minSev = Math.min(...items.map((i: any) => i.currentWarning?.severity?.severityLevel ?? 4));
-      if (minSev <= 1) return 'Severe';
-      if (minSev <= 2) return 'High';
-      if (minSev <= 3) return 'Medium';
-      return 'Low';
+      let rating = 'Low';
+      if (minSev <= 1) rating = 'Severe';
+      else if (minSev <= 2) rating = 'High';
+      else if (minSev <= 3) rating = 'Medium';
+
+      const zones = items.slice(0, 3).map((i: any) => ({
+        name: i.label ?? i['@id'],
+        severity: i.currentWarning?.severity?.label ?? 'No current warning',
+        riverSea: i.riverOrSea ?? null,
+      }));
+
+      return { rating, zones };
     } catch {
       return null;
     }
@@ -371,7 +446,7 @@ export class PropertyService {
   private async fetchPriceHistory(postcode: string): Promise<any[]> {
     try {
       const clean = encodeURIComponent(postcode);
-      const url = `https://landregistry.data.gov.uk/data/ppi/transaction-record.json?propertyAddress.postcode=${clean}&_limit=5&_sort=-transactionDate`;
+      const url = `https://landregistry.data.gov.uk/data/ppi/transaction-record.json?propertyAddress.postcode=${clean}&_limit=8&_sort=-transactionDate`;
       const res = await fetch(url, { headers: { Accept: 'application/json' } });
       if (!res.ok) return [];
       const data = await res.json();
@@ -379,8 +454,221 @@ export class PropertyService {
       return items.map((item: any) => ({
         price: item.pricePaid,
         date: item.transactionDate,
-        address: item.propertyAddress?.['paon'] ? `${item.propertyAddress['paon']} ${item.propertyAddress['street'] ?? ''}`.trim() : null,
+        address: [item.propertyAddress?.['paon'], item.propertyAddress?.['street']]
+          .filter(Boolean).join(' ').trim() || null,
         propertyType: item.propertyType?.prefLabel?.[0] ?? null,
+        tenure: item.estateType?.prefLabel?.[0] ?? null,
+        newBuild: item.newBuild ?? false,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  private async fetchBroadband(postcode: string): Promise<any> {
+    try {
+      // Ofcom Connected Nations open API
+      const url = `https://api.ofcom.org.uk/connected-nations/broadband/coverage?postcode=${encodeURIComponent(postcode.replace(/\s/g, ''))}`;
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json', 'api-version': '2.0' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      // Ofcom returns an array of premises
+      const premises = Array.isArray(data) ? data[0] : data?.value?.[0] ?? null;
+      if (!premises) return null;
+      return {
+        fttp: premises.fttpAvailability ?? premises.FTTPAvailability ?? false,
+        fttc: premises.fttcAvailability ?? premises.FTTCAvailability ?? false,
+        cable: premises.cableAvailability ?? premises.CableAvailability ?? false,
+        maxDownload: premises.maxDownloadSpeed ?? premises.MaxDownloadSpeed ?? null,
+        maxUpload: premises.maxUploadSpeed ?? premises.MaxUploadSpeed ?? null,
+        superfast: premises.superfastBBAvailability ?? premises.SuperfastBBAvailability ?? false,
+        ultrafast: premises.ultrafastBBAvailability ?? premises.UltrafastBBAvailability ?? false,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchListedBuildings(lat: number, lon: number): Promise<any[]> {
+    try {
+      // Historic England ArcGIS REST — Listed Buildings layer (1)
+      const url =
+        `https://services.historicengland.org.uk/arcgis/rest/services/NMR/ScheduledMonuments_and_ListedBuildings/FeatureServer/1/query` +
+        `?geometry=${lon}%2C${lat}&geometryType=esriGeometryPoint&inSR=4326` +
+        `&spatialRel=esriSpatialRelIntersects&distance=500&units=esriSRUnit_Meter` +
+        `&outFields=ENTRY_NAME,GRADE,UPRN,LOCATION_DESCRIPTION,HYPERLINK&f=json`;
+      const res = await fetch(url);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.features ?? []).slice(0, 5).map((f: any) => ({
+        name: f.attributes?.ENTRY_NAME ?? 'Listed Building',
+        grade: f.attributes?.GRADE ?? null,
+        location: f.attributes?.LOCATION_DESCRIPTION ?? null,
+        link: f.attributes?.HYPERLINK ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  private async fetchOsPlaces(postcode: string): Promise<any> {
+    const key = process.env.OS_API_KEY;
+    if (!key) return null;
+    try {
+      const url = `https://api.os.uk/search/places/v1/postcode?postcode=${encodeURIComponent(postcode)}&dataset=DPA&key=${key}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const results: any[] = data.results ?? [];
+      return {
+        totalAddresses: data.header?.totalresults ?? results.length,
+        ward: results[0]?.DPA?.WARD_CODE ?? null,
+        localAuthority: results[0]?.DPA?.LOCAL_CUSTODIAN_CODE_DESCRIPTION ?? null,
+        country: results[0]?.DPA?.COUNTRY_CODE ?? 'E',
+        addresses: results.slice(0, 6).map((r: any) => ({
+          uprn: r.DPA?.UPRN,
+          address: r.DPA?.ADDRESS,
+          classification: r.DPA?.CLASSIFICATION_CODE_DESCRIPTION ?? null,
+        })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchEpcData(uprn: string): Promise<{
+    certUrl: string | null;
+    potentialRating: string | null;
+    potentialScore: number | null;
+  } | null> {
+    try {
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${uprn}&size=1`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const row = data.rows?.[0];
+      if (!row) return null;
+      const lmkKey = row['lmk-key'];
+      return {
+        certUrl: lmkKey ? `https://epc.opendatacommunities.org/files/${lmkKey}` : null,
+        potentialRating: row['potential-energy-rating'] ?? null,
+        potentialScore: row['potential-energy-efficiency']
+          ? parseInt(String(row['potential-energy-efficiency']), 10)
+          : null,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchPlanningData(lat: number, lon: number, uprn: string | null): Promise<{
+    constraints: { type: string; name: string; reference: string | null; category: string }[];
+    applications: {
+      reference: string | null;
+      description: string | null;
+      status: string | null;
+      decision: string | null;
+      decisionDate: string | null;
+      applicationType: string | null;
+      docUrl: string | null;
+    }[];
+  }> {
+    const constraints: { type: string; name: string; reference: string | null; category: string }[] = [];
+    const applications: any[] = [];
+
+    const BASE = 'https://www.planning.data.gov.uk/entity.json';
+
+    // All constraint datasets, grouped by category
+    const datasets = [
+      { id: 'conservation-area',              label: 'Conservation Area',              category: 'heritage' },
+      { id: 'listed-building',                label: 'Listed Building',                category: 'heritage' },
+      { id: 'scheduled-monument',             label: 'Scheduled Monument',             category: 'heritage' },
+      { id: 'heritage-at-risk',               label: 'Heritage at Risk',               category: 'heritage' },
+      { id: 'article-4-direction',            label: 'Article 4 Direction',            category: 'development' },
+      { id: 'brownfield-land',                label: 'Brownfield Land',                category: 'development' },
+      { id: 'tree-preservation-zone',         label: 'Tree Preservation Order',        category: 'environment' },
+      { id: 'green-belt',                     label: 'Green Belt',                     category: 'environment' },
+      { id: 'area-of-outstanding-natural-beauty', label: 'Area of Outstanding Natural Beauty', category: 'environment' },
+      { id: 'ancient-woodland',               label: 'Ancient Woodland',               category: 'environment' },
+    ];
+
+    // Fetch all constraints in parallel
+    await Promise.allSettled(datasets.map(async ({ id, label, category }) => {
+      try {
+        const url = `${BASE}?dataset=${id}&longitude=${lon}&latitude=${lat}&limit=3`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        for (const e of (data.entities ?? [])) {
+          constraints.push({
+            type: label,
+            name: e.name ?? e.reference ?? label,
+            reference: e.reference ?? null,
+            category,
+          });
+        }
+      } catch { /* ignore */ }
+    }));
+
+    // Fetch planning applications — prefer UPRN lookup, fall back to proximity
+    const appUrls = [
+      ...(uprn ? [`${BASE}?dataset=planning-application&uprn=${uprn}&limit=10`] : []),
+      `${BASE}?dataset=planning-application&longitude=${lon}&latitude=${lat}&limit=10`,
+    ];
+
+    for (const url of appUrls) {
+      if (applications.length > 0) break;
+      try {
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!res.ok) continue;
+        const data = await res.json();
+        for (const e of (data.entities ?? [])) {
+          applications.push({
+            reference: e.reference ?? null,
+            description: e.description ?? e['address-text'] ?? e.name ?? null,
+            status: e['planning-application-status'] ?? null,
+            decision: e['planning-decision'] ?? null,
+            decisionDate: e['decision-date'] ?? e['start-date'] ?? null,
+            applicationType: e['planning-application-type'] ?? null,
+            docUrl: e['documentation-url'] ?? null,
+          });
+        }
+      } catch { /* ignore */ }
+    }
+
+    return { constraints, applications };
+  }
+
+  private async fetchPropertySalesHistory(postcode: string, addressLine1: string): Promise<any[]> {
+    try {
+      // Parse PAON (house number/name) from first part of addressLine1 e.g. "9, Woodfield Road" → "9"
+      const paonMatch = addressLine1.match(/^([^,]+)/);
+      const paon = paonMatch ? paonMatch[1].trim() : null;
+
+      const clean = encodeURIComponent(postcode);
+      let url = `https://landregistry.data.gov.uk/data/ppi/transaction-record.json?propertyAddress.postcode=${clean}&_limit=10&_sort=-transactionDate`;
+      if (paon) {
+        url += `&propertyAddress.paon=${encodeURIComponent(paon)}`;
+      }
+
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const items: any[] = data.result?.items ?? [];
+
+      return items.map((item: any) => ({
+        price: item.pricePaid,
+        date: item.transactionDate,
+        address: [item.propertyAddress?.['paon'], item.propertyAddress?.['street']]
+          .filter(Boolean).join(' ').trim() || null,
+        propertyType: item.propertyType?.prefLabel?.[0] ?? null,
+        tenure: item.estateType?.prefLabel?.[0] ?? null,
+        newBuild: item.newBuild ?? false,
+        category: item.transactionCategory?.prefLabel?.[0] ?? null,
       }));
     } catch {
       return [];

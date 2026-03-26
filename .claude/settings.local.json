@@ -46,7 +46,11 @@
       "WebFetch(domain:www.sprift.com)",
       "WebFetch(domain:sprift.com)",
       "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages -name explore*.vue -o -name search*.vue)",
-      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages -name *.vue)"
+      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages -name *.vue)",
+      "WebSearch",
+      "WebFetch(domain:epc.opendatacommunities.org)",
+      "WebFetch(domain:www.planning.data.gov.uk)",
+      "WebFetch(domain:digital-land.github.io)"
     ]
   }
 }
