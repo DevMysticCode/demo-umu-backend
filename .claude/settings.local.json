@@ -41,7 +41,12 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db push --accept-data-loss --skip-generate)",
       "Bash(find D:/ReactProjects/op_nuxt/umu-mobile-webapp -name useProfile* -o -name useAuth*)",
       "Bash(npx prisma:*)",
-      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp -name auth.ts -o -name *.middleware.ts)"
+      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp -name auth.ts -o -name *.middleware.ts)",
+      "WebFetch(domain:reports.sprift.com)",
+      "WebFetch(domain:www.sprift.com)",
+      "WebFetch(domain:sprift.com)",
+      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages -name explore*.vue -o -name search*.vue)",
+      "Bash(find d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages -name *.vue)"
     ]
   }
 }
