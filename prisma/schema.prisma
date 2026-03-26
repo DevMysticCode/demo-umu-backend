@@ -98,6 +98,7 @@ model OtpCode {
 model Property {
   id                     String                  @id @default(uuid())
   udprn                  String?                 @unique
+  uprn                   String?                 @unique
   addressLine1           String
   addressLine2           String?
   city                   String?
@@ -109,12 +110,21 @@ model Property {
   bedrooms               Int?
   bathrooms              Int?
   sqft                   Int?
+  floorAreaSqm           Float?
   epcRating              String?
+  epcScore               Int?
+  heatingType            String?
+  co2Emissions           Float?
   tenure                 String?
   yearBuilt              Int?
   estimatedPrice         Float?
+  lastSoldPrice          Float?
+  lastSoldDate           DateTime?
+  councilTaxBand         String?
+  floodRisk              String?
   imageUrl               String?
   titleNumber            String?
+  epcEnrichedAt          DateTime?
   createdAt              DateTime                @default(now())
   passport               Passport?
   ownershipVerifications OwnershipVerification[]
@@ -122,6 +132,7 @@ model Property {
   savedBy                UserSavedProperty[]
 
   @@index([postcode])
+  @@index([uprn])
 }
 
 model OwnershipVerification {

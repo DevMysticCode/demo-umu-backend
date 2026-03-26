@@ -17,11 +17,17 @@ export class PropertyController {
   constructor(private propertyService: PropertyService) {}
 
   @Get('search')
-  async searchProperties(@Query('q') query: string) {
+  async searchProperties(
+    @Query('q') query: string,
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
+  ) {
     if (!query || query.trim().length < 2) {
-      return [];
+      return { items: [], total: 0 };
     }
-    return this.propertyService.searchProperties(query.trim());
+    const off = parseInt(offset ?? '0') || 0;
+    const lim = Math.min(parseInt(limit ?? '10') || 10, 50);
+    return this.propertyService.searchProperties(query.trim(), off, lim);
   }
 
   @Get(':id/passport-status')
@@ -78,6 +84,13 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   async toggleSave(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.toggleSave(req.user.id, id);
+  }
+
+  @Get(':id/enrichment')
+  async getEnrichment(@Param('id') id: string) {
+    const data = await this.propertyService.getPropertyEnrichment(id);
+    if (!data) throw new NotFoundException('Property not found');
+    return data;
   }
 
   @Get(':id')
