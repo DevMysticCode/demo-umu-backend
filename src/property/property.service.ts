@@ -31,6 +31,10 @@ interface EpcRow {
   'co2-emissions-current'?: number | string;
   'transaction-type'?: string;
   'lodgement-date'?: string;
+  'council-tax-band'?: string;
+  'potential-energy-rating'?: string;
+  'potential-energy-efficiency'?: number | string;
+  'local-authority-label'?: string;
 }
 
 function epcRowToProperty(row: EpcRow) {
@@ -70,6 +74,7 @@ function epcRowToProperty(row: EpcRow) {
     yearBuilt: yearBuilt,
     heatingType: row['main-heating-description'] ?? null,
     co2Emissions: parseFloat(String(row['co2-emissions-current'] ?? '0')) || null,
+    councilTaxBand: row['council-tax-band'] ?? null,
     epcEnrichedAt: new Date(),
   };
 }
@@ -152,8 +157,7 @@ export class PropertyService {
   async searchProperties(query: string, offset = 0, limit = 10): Promise<{ items: Property[]; total: number }> {
     const q = query.trim();
 
-    // 1. Check our DB first — count + paginate
-    const where = {
+    const searchCondition = {
       OR: [
         { postcode: { contains: q, mode: 'insensitive' as const } },
         { addressLine1: { contains: q, mode: 'insensitive' as const } },
@@ -162,23 +166,50 @@ export class PropertyService {
       ],
     };
 
-    const dbTotal = await this.prisma.property.count({ where });
+    // Only treat DB as a cache for real EPC-sourced properties (udprn starts with 'EPC-').
+    // Mock properties (udprn 'MOCK-') are skipped so the live EPC API is always tried first.
+    const epcCacheWhere = {
+      AND: [
+        searchCondition,
+        { udprn: { startsWith: 'EPC-' } },
+      ],
+    };
 
-    if (dbTotal > 0) {
+    const cachedTotal = await this.prisma.property.count({ where: epcCacheWhere });
+
+    if (cachedTotal > 0) {
       const items = await this.prisma.property.findMany({
-        where,
+        where: epcCacheWhere,
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
       });
-      return { items, total: dbTotal };
+      return { items, total: cachedTotal };
     }
 
-    // 2. Nothing in DB — fetch from EPC API (first page seeds the DB)
+    // 2. No real EPC data cached — call EPC API (also upserts results into DB)
     const epcResult = await this.fetchFromEpc(q, offset, limit);
     if (epcResult.total > 0) return epcResult;
 
-    // 3. Fallback: generate mocks (offset 0 only — mocks are always 5 total)
+    // 3. EPC returned nothing — fall back to any existing mock data for this postcode
+    const mockWhere = {
+      AND: [
+        searchCondition,
+        { udprn: { startsWith: 'MOCK-' } },
+      ],
+    };
+    const mockTotal = await this.prisma.property.count({ where: mockWhere });
+    if (mockTotal > 0) {
+      const items = await this.prisma.property.findMany({
+        where: mockWhere,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+      });
+      return { items, total: mockTotal };
+    }
+
+    // 4. Nothing at all — generate mocks as last resort (offset 0 only)
     if (offset === 0) {
       let postcodeInfo: { latitude: number; longitude: number; postcode: string } | null = null;
       try {
@@ -257,6 +288,7 @@ export class PropertyService {
               floorAreaSqm: mapped.floorAreaSqm,
               heatingType: mapped.heatingType,
               co2Emissions: mapped.co2Emissions,
+              ...(mapped.councilTaxBand ? { councilTaxBand: mapped.councilTaxBand } : {}),
               epcEnrichedAt: new Date(),
             },
             create: {
@@ -279,6 +311,7 @@ export class PropertyService {
               yearBuilt: mapped.yearBuilt,
               heatingType: mapped.heatingType,
               co2Emissions: mapped.co2Emissions,
+              councilTaxBand: mapped.councilTaxBand,
               estimatedPrice,
               imageUrl: PEXELS_IMAGES[imgIndex],
               epcEnrichedAt: new Date(),
@@ -315,19 +348,23 @@ export class PropertyService {
       floodRiskRaw,
       salesHistory,
       broadband,
+      mobileSignal,
       listedBuildings,
       osPlaces,
       epcData,
       planningData,
+      nearbyCtData,
     ] = await Promise.allSettled([
       lat && lon ? this.fetchNearbyPlaces(lat, lon) : Promise.resolve({ schools: [], trains: [], parks: [] }),
       lat && lon ? this.fetchFloodDetail(lat, lon) : Promise.resolve(null),
       this.fetchPropertySalesHistory(postcode, property.addressLine1),
       this.fetchBroadband(postcode),
+      this.fetchMobileSignal(postcode),
       lat && lon ? this.fetchListedBuildings(lat, lon) : Promise.resolve([]),
       this.fetchOsPlaces(postcode),
       uprn ? this.fetchEpcData(uprn) : Promise.resolve(null),
       lat && lon ? this.fetchPlanningData(lat, lon, uprn) : Promise.resolve({ constraints: [], applications: [] }),
+      this.fetchNearbyCouncilTax(postcode),
     ]);
 
     const googleKey = process.env.GOOGLE_API_KEY ?? '';
@@ -342,11 +379,20 @@ export class PropertyService {
       ? planningData.value
       : { constraints: [], applications: [] };
 
-    // Council tax: read from DB (no free API available; band stored when available)
+    // Council tax band — best available source: EPC per-property lookup → DB → null
+    const ctBand = epc?.councilTaxBand ?? property.councilTaxBand ?? null;
+    // If we got a band from EPC that isn't in DB yet, persist it
+    if (epc?.councilTaxBand && !property.councilTaxBand) {
+      this.prisma.property.update({
+        where: { id: propertyId },
+        data: { councilTaxBand: epc.councilTaxBand },
+      }).catch(() => { /* non-critical */ });
+    }
     const councilTax = {
-      band: property.councilTaxBand ?? null,
-      annualEstimate: property.councilTaxBand ? estimateCouncilTaxAmount(property.councilTaxBand) : null,
-      councilName: osData?.localAuthority ?? null,
+      band: ctBand,
+      annualEstimate: ctBand ? estimateCouncilTaxAmount(ctBand) : null,
+      councilName: epc?.localAuthority ?? osData?.localAuthority ?? null,
+      nearby: nearbyCtData.status === 'fulfilled' ? nearbyCtData.value : [],
       checkUrl: 'https://www.gov.uk/council-tax-bands',
     };
 
@@ -361,11 +407,14 @@ export class PropertyService {
       floodRisk: floodData?.rating ?? null,
       floodZones: floodData?.zones ?? [],
 
-      // HM Land Registry Price Paid API — property-specific sales history
-      salesHistory: salesHistory.status === 'fulfilled' ? salesHistory.value : [],
+      // HM Land Registry Price Paid — local DB query
+      salesHistory: salesHistory.status === 'fulfilled'
+        ? salesHistory.value
+        : { thisProperty: [], nearbySales: [] },
 
       // Ofcom Connected Nations API
       broadband: broadband.status === 'fulfilled' ? broadband.value : null,
+      mobileSignal: mobileSignal.status === 'fulfilled' ? mobileSignal.value : null,
 
       // Historic England ArcGIS API
       listedBuildings: listedBuildings.status === 'fulfilled' ? listedBuildings.value : [],
@@ -491,6 +540,55 @@ export class PropertyService {
     }
   }
 
+  private async fetchMobileSignal(postcode: string): Promise<any> {
+    try {
+      const clean = postcode.replace(/\s/g, '').toUpperCase();
+      // Same Ofcom Connected Nations API base — mobile endpoint
+      const url = `https://api.ofcom.org.uk/connected-nations/mobile/coverage?postcode=${clean}`;
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json', 'api-version': '2.0' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const row = Array.isArray(data) ? data[0] : data?.value?.[0] ?? data ?? null;
+      if (!row) return null;
+
+      // Ofcom field naming varies — handle both camelCase and PascalCase
+      const get = (a: string, b: string) => row[a] ?? row[b] ?? null;
+
+      return {
+        EE: {
+          voice4g: get('EE4GVoiceOutdoor', 'ee4GVoiceOutdoor'),
+          data4g:  get('EE4GDataOutdoor',  'ee4GDataOutdoor'),
+          data5g:  get('EE5GDataOutdoor',  'ee5GDataOutdoor'),
+          indoor4g: get('EE4GDataIndoor',  'ee4GDataIndoor'),
+        },
+        O2: {
+          voice4g:  get('O24GVoiceOutdoor', 'o24GVoiceOutdoor'),
+          data4g:   get('O24GDataOutdoor',  'o24GDataOutdoor'),
+          data5g:   get('O25GDataOutdoor',  'o25GDataOutdoor'),
+          indoor4g: get('O24GDataIndoor',   'o24GDataIndoor'),
+        },
+        Three: {
+          voice4g:  get('Three4GVoiceOutdoor', 'three4GVoiceOutdoor'),
+          data4g:   get('Three4GDataOutdoor',  'three4GDataOutdoor'),
+          data5g:   get('Three5GDataOutdoor',  'three5GDataOutdoor'),
+          indoor4g: get('Three4GDataIndoor',   'three4GDataIndoor'),
+        },
+        Vodafone: {
+          voice4g:  get('Vodafone4GVoiceOutdoor', 'vodafone4GVoiceOutdoor'),
+          data4g:   get('Vodafone4GDataOutdoor',  'vodafone4GDataOutdoor'),
+          data5g:   get('Vodafone5GDataOutdoor',  'vodafone5GDataOutdoor'),
+          indoor4g: get('Vodafone4GDataIndoor',   'vodafone4GDataIndoor'),
+        },
+        // Raw response kept for debugging / field discovery
+        _raw: row,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   private async fetchListedBuildings(lat: number, lon: number): Promise<any[]> {
     try {
       // Historic England ArcGIS REST — Listed Buildings layer (1)
@@ -542,6 +640,8 @@ export class PropertyService {
     certUrl: string | null;
     potentialRating: string | null;
     potentialScore: number | null;
+    councilTaxBand: string | null;
+    localAuthority: string | null;
   } | null> {
     try {
       const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${uprn}&size=1`;
@@ -553,15 +653,51 @@ export class PropertyService {
       const row = data.rows?.[0];
       if (!row) return null;
       const lmkKey = row['lmk-key'];
+      const ctBand = row['council-tax-band'] ?? null;
       return {
         certUrl: lmkKey ? `https://epc.opendatacommunities.org/files/${lmkKey}` : null,
         potentialRating: row['potential-energy-rating'] ?? null,
         potentialScore: row['potential-energy-efficiency']
           ? parseInt(String(row['potential-energy-efficiency']), 10)
           : null,
+        councilTaxBand: ctBand,
+        localAuthority: row['local-authority-label'] ?? null,
       };
     } catch {
       return null;
+    }
+  }
+
+  private async fetchNearbyCouncilTax(postcode: string): Promise<{
+    address: string;
+    band: string;
+    annualEstimate: number | null;
+  }[]> {
+    try {
+      // Fetch up to 25 EPC records for the postcode — many include council-tax-band
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=25`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const rows: any[] = data.rows ?? [];
+
+      const results: { address: string; band: string; annualEstimate: number | null }[] = [];
+      for (const row of rows) {
+        const band = row['council-tax-band'];
+        if (!band) continue;
+        const addr = [row['address1'], row['address2']].filter(Boolean).join(', ');
+        results.push({
+          address: addr || row['postcode'],
+          band,
+          annualEstimate: estimateCouncilTaxAmount(band),
+        });
+        if (results.length >= 8) break;
+      }
+      return results;
+    } catch {
+      return [];
     }
   }
 
@@ -643,35 +779,76 @@ export class PropertyService {
     return { constraints, applications };
   }
 
-  private async fetchPropertySalesHistory(postcode: string, addressLine1: string): Promise<any[]> {
+  private async fetchPropertySalesHistory(
+    postcode: string,
+    addressLine1: string,
+  ): Promise<{ thisProperty: any[]; nearbySales: any[] }> {
     try {
-      // Parse PAON (house number/name) from first part of addressLine1 e.g. "9, Woodfield Road" → "9"
       const paonMatch = addressLine1.match(/^([^,]+)/);
       const paon = paonMatch ? paonMatch[1].trim() : null;
 
-      const clean = encodeURIComponent(postcode);
-      let url = `https://landregistry.data.gov.uk/data/ppi/transaction-record.json?propertyAddress.postcode=${clean}&_limit=10&_sort=-transactionDate`;
-      if (paon) {
-        url += `&propertyAddress.paon=${encodeURIComponent(paon)}`;
+      function mapRecord(r: any, isThisProperty: boolean) {
+        const propTypeMap: Record<string, string> = {
+          D: 'Detached', S: 'Semi-detached', T: 'Terraced', F: 'Flat/Maisonette', O: 'Other',
+        };
+        const tenureMap: Record<string, string> = { F: 'Freehold', L: 'Leasehold', U: 'Unknown' };
+        return {
+          price: r.price,
+          date: r.transactionDate,
+          address: [r.paon, r.street].filter(Boolean).join(' ').trim() || null,
+          town: r.town || null,
+          propertyType: propTypeMap[r.propertyType] ?? r.propertyType ?? null,
+          tenure: tenureMap[r.tenure] ?? r.tenure ?? null,
+          newBuild: r.isNewBuild,
+          isThisProperty,
+        };
       }
 
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
-      if (!res.ok) return [];
-      const data = await res.json();
-      const items: any[] = data.result?.items ?? [];
+      // This property: match by postcode + PAON (case-insensitive)
+      const thisPropertyRows = paon
+        ? await this.prisma.pricePaidTransaction.findMany({
+            where: {
+              postcode: postcode.toUpperCase(),
+              paon: { equals: paon, mode: 'insensitive' },
+            },
+            orderBy: { transactionDate: 'desc' },
+            take: 20,
+          })
+        : [];
 
-      return items.map((item: any) => ({
-        price: item.pricePaid,
-        date: item.transactionDate,
-        address: [item.propertyAddress?.['paon'], item.propertyAddress?.['street']]
-          .filter(Boolean).join(' ').trim() || null,
-        propertyType: item.propertyType?.prefLabel?.[0] ?? null,
-        tenure: item.estateType?.prefLabel?.[0] ?? null,
-        newBuild: item.newBuild ?? false,
-        category: item.transactionCategory?.prefLabel?.[0] ?? null,
-      }));
+      // Nearby sales: same postcode, different PAON, most recent 20
+      // Try last 5 years first; if nothing found, return all-time for this postcode
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+
+      let nearbyRows = await this.prisma.pricePaidTransaction.findMany({
+        where: {
+          postcode: postcode.toUpperCase(),
+          transactionDate: { gte: fiveYearsAgo },
+          ...(paon ? { NOT: { paon: { equals: paon, mode: 'insensitive' } } } : {}),
+        },
+        orderBy: { transactionDate: 'desc' },
+        take: 20,
+      });
+
+      // Fallback: no date filter if nothing in last 5 years
+      if (nearbyRows.length === 0) {
+        nearbyRows = await this.prisma.pricePaidTransaction.findMany({
+          where: {
+            postcode: postcode.toUpperCase(),
+            ...(paon ? { NOT: { paon: { equals: paon, mode: 'insensitive' } } } : {}),
+          },
+          orderBy: { transactionDate: 'desc' },
+          take: 20,
+        });
+      }
+
+      return {
+        thisProperty: thisPropertyRows.map((r) => mapRecord(r, true)),
+        nearbySales: nearbyRows.map((r) => mapRecord(r, false)),
+      };
     } catch {
-      return [];
+      return { thisProperty: [], nearbySales: [] };
     }
   }
 

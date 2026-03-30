@@ -501,3 +501,27 @@ model VideoProgress {
   @@unique([userId, videoId])
   @@index([userId])
 }
+
+// HM Land Registry Price Paid Data — imported via scripts/import-price-paid.ts
+model PricePaidTransaction {
+  id              String   @id @default(uuid())
+  transactionId   String   @unique // Land Registry transaction ID (e.g. {GUID})
+  price           Int
+  transactionDate DateTime
+  postcode        String
+  propertyType    String?  // D=Detached, S=Semi-detached, T=Terraced, F=Flat, O=Other
+  isNewBuild      Boolean  @default(false)
+  tenure          String?  // F=Freehold, L=Leasehold, U=Unknown
+  paon            String?  // Primary Addressable Object Name (house number/name)
+  saon            String?  // Secondary Addressable Object Name (flat/unit)
+  street          String?
+  locality        String?
+  town            String?
+  district        String?
+  county          String?
+  category        String?  // A=Standard, B=Additional (non-standard)
+
+  @@index([postcode])
+  @@index([postcode, paon])
+  @@index([transactionDate])
+}
