@@ -50,7 +50,12 @@
       "WebSearch",
       "WebFetch(domain:epc.opendatacommunities.org)",
       "WebFetch(domain:www.planning.data.gov.uk)",
-      "WebFetch(domain:digital-land.github.io)"
+      "WebFetch(domain:digital-land.github.io)",
+      "WebFetch(domain:landregistry.data.gov.uk)",
+      "WebFetch(domain:api.ofcom.org.uk)",
+      "WebFetch(domain:use-land-property-data.service.gov.uk)",
+      "WebFetch(domain:www.gov.uk)",
+      "Bash(node -e \":*)"
     ]
   }
 }
