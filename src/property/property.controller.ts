@@ -8,6 +8,7 @@ import {
   Request,
   NotFoundException,
   Delete,
+  Body,
 } from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -91,6 +92,18 @@ export class PropertyController {
     const data = await this.propertyService.getPropertyEnrichment(id);
     if (!data) throw new NotFoundException('Property not found');
     return data;
+  }
+
+  @Post(':id/homescore')
+  @UseGuards(JwtAuthGuard)
+  async saveHomeScore(@Param('id') id: string, @Request() req: any, @Body() body: any) {
+    return this.propertyService.saveHomeScore(id, req.user.id, body);
+  }
+
+  @Get(':id/homescore')
+  @UseGuards(JwtAuthGuard)
+  async getHomeScore(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getHomeScore(id, req.user.id);
   }
 
   @Get(':id')

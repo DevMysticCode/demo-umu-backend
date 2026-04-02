@@ -502,6 +502,26 @@ model VideoProgress {
   @@index([userId])
 }
 
+model HomeScoreResult {
+  id          String   @id @default(uuid())
+  propertyId  String
+  userId      String
+  total       Int
+  rating      String
+  heating     Int
+  structure   Int
+  efficiency  Int
+  electrics   Int
+  plumbing    Int
+  answers     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([propertyId, userId])
+  @@index([propertyId])
+  @@index([userId])
+}
+
 // HM Land Registry Price Paid Data — imported via scripts/import-price-paid.ts
 model PricePaidTransaction {
   id              String   @id @default(uuid())

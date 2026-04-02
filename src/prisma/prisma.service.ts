@@ -144,6 +144,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.videoProgress;
   }
 
+  get homeScoreResult() {
+    return this.prisma.homeScoreResult;
+  }
+
   get pricePaidTransaction() {
     return this.prisma.pricePaidTransaction;
   }
