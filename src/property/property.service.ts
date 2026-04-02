@@ -852,6 +852,23 @@ export class PropertyService {
     }
   }
 
+  async saveHomeScore(propertyId: string, userId: string, data: {
+    total: number; rating: string; heating: number; structure: number;
+    efficiency: number; electrics: number; plumbing: number; answers: Record<string, string>;
+  }) {
+    return this.prisma.homeScoreResult.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      create: { propertyId, userId, ...data },
+      update: { ...data, updatedAt: new Date() },
+    });
+  }
+
+  async getHomeScore(propertyId: string, userId: string) {
+    return this.prisma.homeScoreResult.findUnique({
+      where: { propertyId_userId: { propertyId, userId } },
+    });
+  }
+
   // ── Passport status ────────────────────────────────────────────────────────
 
   async getPassportStatus(propertyId: string, userId: string) {

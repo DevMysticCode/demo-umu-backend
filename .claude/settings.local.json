@@ -55,7 +55,9 @@
       "WebFetch(domain:api.ofcom.org.uk)",
       "WebFetch(domain:use-land-property-data.service.gov.uk)",
       "WebFetch(domain:www.gov.uk)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/components/homescore)",
+      "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore)"
     ]
   }
 }
