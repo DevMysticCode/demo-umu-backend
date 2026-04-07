@@ -57,7 +57,9 @@
       "WebFetch(domain:www.gov.uk)",
       "Bash(node -e \":*)",
       "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/components/homescore)",
-      "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore)"
+      "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[0]['id'] if d else 'empty'\\)\")",
+      "Bash(python -c ':*)"
     ]
   }
 }

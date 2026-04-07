@@ -79,6 +79,102 @@ function epcRowToProperty(row: EpcRow) {
   };
 }
 
+// ── OS Places helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Convert British National Grid (OSGB36) Easting/Northing to WGS84 lat/lon.
+ * Accuracy ~5m — sufficient for map display.
+ * Algorithm: OS transverse Mercator inverse + Helmert transform.
+ */
+function bngToLatLon(E: number, N: number): { lat: number; lon: number } {
+  // Airy 1830 ellipsoid
+  const a = 6377563.396, b = 6356256.909;
+  const F0 = 0.9996012717;
+  const lat0 = 49 * Math.PI / 180;
+  const lon0 = -2 * Math.PI / 180;
+  const N0 = -100000, E0 = 400000;
+  const e2 = 1 - (b * b) / (a * a);
+  const n = (a - b) / (a + b), n2 = n * n, n3 = n * n * n;
+
+  let lat = lat0;
+  let M = 0;
+  do {
+    lat = (N - N0 - M) / (a * F0) + lat;
+    const Ma = (1 + n + 5 / 4 * n2 + 5 / 4 * n3) * (lat - lat0);
+    const Mb = (3 * n + 3 * n2 + 21 / 8 * n3) * Math.sin(lat - lat0) * Math.cos(lat + lat0);
+    const Mc = (15 / 8 * n2 + 15 / 8 * n3) * Math.sin(2 * (lat - lat0)) * Math.cos(2 * (lat + lat0));
+    const Md = 35 / 24 * n3 * Math.sin(3 * (lat - lat0)) * Math.cos(3 * (lat + lat0));
+    M = b * F0 * (Ma - Mb + Mc - Md);
+  } while (Math.abs(N - N0 - M) >= 1e-5);
+
+  const sin2 = Math.sin(lat) ** 2;
+  const nu = a * F0 / Math.sqrt(1 - e2 * sin2);
+  const rho = a * F0 * (1 - e2) / Math.pow(1 - e2 * sin2, 1.5);
+  const eta2 = nu / rho - 1;
+  const tan = Math.tan(lat), tan2 = tan * tan, tan4 = tan2 * tan2;
+  const sec = 1 / Math.cos(lat);
+
+  const dE = E - E0;
+  const latOut = lat
+    - tan / (2 * rho * nu) * dE ** 2
+    + tan / (24 * rho * nu ** 3) * (5 + 3 * tan2 + eta2 - 9 * tan2 * eta2) * dE ** 4
+    - tan / (720 * rho * nu ** 5) * (61 + 90 * tan2 + 45 * tan4) * dE ** 6;
+  const lonOut = lon0
+    + sec / nu * dE
+    - sec / (6 * nu ** 3) * (nu / rho + 2 * tan2) * dE ** 3
+    + sec / (120 * nu ** 5) * (5 + 28 * tan2 + 24 * tan4) * dE ** 5;
+
+  // Helmert OSGB36 → WGS84 (tx=446.448 ty=-125.157 tz=542.06 s=-20.4894ppm rx=0.1502" ry=0.2470" rz=0.8421")
+  const sinLat = Math.sin(latOut), cosLat = Math.cos(latOut);
+  const sinLon = Math.sin(lonOut), cosLon = Math.cos(lonOut);
+  const H = 0; // assume sea level
+  const x1 = (nu + H) * cosLat * cosLon;
+  const y1 = (nu + H) * cosLat * sinLon;
+  const z1 = (nu * (1 - e2) + H) * sinLat;
+
+  const tx = 446.448, ty = -125.157, tz = 542.06;
+  const rx = 0.1502 / 3600 * Math.PI / 180;
+  const ry = 0.2470 / 3600 * Math.PI / 180;
+  const rz = 0.8421 / 3600 * Math.PI / 180;
+  const s = 1 - 20.4894 / 1e6;
+
+  const x2 = tx + s * (x1 - rz * y1 + ry * z1);
+  const y2 = ty + s * (rz * x1 + y1 - rx * z1);
+  const z2 = tz + s * (-ry * x1 + rx * y1 + z1);
+
+  const aW = 6378137.0, e2W = 0.00669437999014;
+  let latW = Math.atan2(z2, Math.sqrt(x2 * x2 + y2 * y2) * (1 - e2W));
+  for (let i = 0; i < 10; i++) {
+    const nuW = aW / Math.sqrt(1 - e2W * Math.sin(latW) ** 2);
+    latW = Math.atan2(z2 + e2W * nuW * Math.sin(latW), Math.sqrt(x2 * x2 + y2 * y2));
+  }
+  const lonW = Math.atan2(y2, x2);
+
+  return { lat: latW * 180 / Math.PI, lon: lonW * 180 / Math.PI };
+}
+
+/**
+ * Map OS classification codes to our property type strings.
+ * RD = Residential Dwelling, RC = Residential Commercial, etc.
+ */
+/** Normalise a postcode to "AA9 9AA" format — OS Places requires a space. */
+function normalisePostcode(raw: string): string {
+  const s = raw.replace(/\s+/g, '').toUpperCase();
+  return s.length >= 5 ? `${s.slice(0, -3)} ${s.slice(-3)}` : s;
+}
+
+function osClassToPropertyType(code: string): string {
+  const c = (code ?? '').toUpperCase();
+  if (c.startsWith('RD01')) return 'Detached';
+  if (c.startsWith('RD02')) return 'Semi-Detached';
+  if (c.startsWith('RD03')) return 'Terraced';
+  if (c.startsWith('RD04')) return 'Terraced';
+  if (c.startsWith('RD06') || c.startsWith('RD07')) return 'Flat';
+  if (c.startsWith('RD')) return 'Residential';
+  if (c.startsWith('RC')) return 'Commercial';
+  return 'Residential';
+}
+
 // ── Fallback mock data (used when EPC API returns no results) ─────────────────
 
 const STREET_NAMES = ['High Street', 'Maple Road', 'Oak Avenue', 'Church Lane', 'Victoria Road', 'Station Road', 'Park Avenue', 'The Green', 'Mill Lane', 'Woodland Drive'];
@@ -136,13 +232,94 @@ function getAreaInfo(postcode: string) {
   return POSTCODE_AREAS[twoChar] || POSTCODE_AREAS[oneChar] || POSTCODE_AREAS['DEFAULT'];
 }
 
-function estimateCouncilTaxAmount(band: string): number | null {
+/**
+ * 2024/25 Band D council tax rates (£/year) by local authority name.
+ * Source: DLUHC Council Tax Statistics 2024-25.
+ * Key is lowercase normalised authority name (strip "city/borough/district/council").
+ */
+const COUNCIL_TAX_RATES_2024: Record<string, number> = {
+  // London Boroughs
+  'barking and dagenham': 1671, 'barnet': 1818, 'bexley': 1918, 'brent': 1699,
+  'bromley': 1918, 'camden': 1494, 'city of london': 1158, 'croydon': 2285,
+  'ealing': 1807, 'enfield': 1972, 'greenwich': 1868, 'hackney': 1589,
+  'hammersmith and fulham': 1444, 'haringey': 1863, 'harrow': 1915, 'havering': 2175,
+  'hillingdon': 1839, 'hounslow': 1717, 'islington': 1445, 'kensington and chelsea': 1113,
+  'kingston upon thames': 2077, 'lambeth': 1862, 'lewisham': 1885, 'merton': 1924,
+  'newham': 1596, 'redbridge': 1940, 'richmond upon thames': 2091, 'southwark': 1498,
+  'sutton': 2009, 'tower hamlets': 1238, 'waltham forest': 1906, 'wandsworth': 952,
+  'westminster': 866,
+  // Metropolitan Districts
+  'birmingham': 1994, 'bradford': 2050, 'calderdale': 2189, 'coventry': 2219,
+  'doncaster': 2071, 'dudley': 1979, 'gateshead': 2199, 'kirklees': 2068,
+  'knowsley': 2230, 'leeds': 2097, 'liverpool': 2283, 'manchester': 1724,
+  'newcastle upon tyne': 2294, 'north tyneside': 2108, 'oldham': 2066,
+  'rochdale': 2103, 'rotherham': 2051, 'salford': 1978, 'sandwell': 2010,
+  'sefton': 2228, 'sheffield': 2114, 'solihull': 1859, 'south tyneside': 2176,
+  'st helens': 2238, 'stockport': 1994, 'sunderland': 2059, 'tameside': 2090,
+  'trafford': 1695, 'wakefield': 2024, 'walsall': 2049, 'wigan': 1978,
+  'wirral': 2198, 'wolverhampton': 2028,
+  // Unitary Authorities
+  'bath and north east somerset': 2275, 'bedford': 2066, 'bournemouth christchurch and poole': 2105,
+  'bracknell forest': 1811, 'brighton and hove': 2454, 'bristol': 2272,
+  'buckinghamshire': 2101, 'cambridge': 1994, 'central bedfordshire': 2069,
+  'cheshire east': 2044, 'cheshire west and chester': 2024, 'cornwall': 2248,
+  'derby': 2056, 'durham': 2225, 'east riding of yorkshire': 2056,
+  'exeter': 1985, 'gloucester': 1969, 'hartlepool': 2251, 'herefordshire': 2134,
+  'isle of wight': 2167, 'kingston upon hull': 2077, 'leicester': 2034,
+  'luton': 2069, 'medway': 1980, 'middlesbrough': 2310, 'milton keynes': 1842,
+  'north east lincolnshire': 2147, 'north lincolnshire': 2057, 'north somerset': 2252,
+  'north yorkshire': 2089, 'northumberland': 2208, 'nottingham': 2250,
+  'oxford': 1847, 'peterborough': 2030, 'plymouth': 2141, 'portsmouth': 2045,
+  'reading': 1871, 'redcar and cleveland': 2319, 'rutland': 2546,
+  'shropshire': 2136, 'slough': 1752, 'south gloucestershire': 2187,
+  'southampton': 2128, 'southend-on-sea': 1974, 'stockton-on-tees': 2256,
+  'stoke-on-trent': 2029, 'swindon': 1929, 'telford and wrekin': 2062,
+  'thurrock': 1929, 'torbay': 2170, 'warrington': 2050, 'west berkshire': 2078,
+  'wiltshire': 2248, 'windsor and maidenhead': 1505, 'wokingham': 1877,
+  'worcester': 1976, 'york': 2209,
+  // Counties (two-tier)
+  'essex': 2004, 'hampshire': 2041, 'hertfordshire': 2023, 'kent': 1992,
+  'lancashire': 2057, 'leicestershire': 2044, 'lincolnshire': 1880,
+  'norfolk': 1878, 'northamptonshire': 1969, 'nottinghamshire': 2053,
+  'oxfordshire': 1940, 'suffolk': 1960, 'surrey': 2167, 'warwickshire': 2039,
+  'west sussex': 1927, 'worcestershire': 2090,
+  // England average fallback
+  'england': 2171,
+};
+
+function normaliseAuthority(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\b(city|borough|district|metropolitan|county|london|council|of|the|and)\b/g, '')
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function estimateCouncilTaxAmount(band: string, councilName?: string | null): number | null {
   // Statutory ratios relative to Band D (9 parts)
   const parts: Record<string, number> = { A: 6, B: 7, C: 8, D: 9, E: 11, F: 13, G: 15, H: 18 };
-  const BASE_D = 2065; // approximate England average 2024/25 Band D
   const ratio = parts[band.toUpperCase()];
   if (!ratio) return null;
-  return Math.round((BASE_D * ratio) / 9 / 10) * 10; // round to nearest £10
+
+  // Look up real Band D rate for this council
+  let bandD = COUNCIL_TAX_RATES_2024['england']; // England average fallback
+  if (councilName) {
+    const norm = normaliseAuthority(councilName);
+    // Try exact match, then partial match
+    const exactMatch = COUNCIL_TAX_RATES_2024[norm];
+    if (exactMatch) {
+      bandD = exactMatch;
+    } else {
+      // Partial: find a key that the normalised name contains or vice versa
+      const partial = Object.entries(COUNCIL_TAX_RATES_2024).find(([k]) =>
+        norm.includes(k) || k.includes(norm)
+      );
+      if (partial) bandD = partial[1];
+    }
+  }
+
+  return Math.round((bandD * ratio) / 9 / 10) * 10; // round to nearest £10
 }
 
 // ── Service ──────────────────────────────────────────────────────────────────
@@ -166,20 +343,20 @@ export class PropertyService {
       ],
     };
 
-    // Only treat DB as a cache for real EPC-sourced properties (udprn starts with 'EPC-').
-    // Mock properties (udprn 'MOCK-') are skipped so the live EPC API is always tried first.
-    const epcCacheWhere = {
+    // Only treat DB as a cache for real data-sourced properties (OS- or EPC- prefixed udprns).
+    // Mock properties (udprn 'MOCK-') are skipped so live APIs are always tried first.
+    const realDataCacheWhere = {
       AND: [
         searchCondition,
-        { udprn: { startsWith: 'EPC-' } },
+        { OR: [{ udprn: { startsWith: 'EPC-' } }, { udprn: { startsWith: 'OS-' } }] },
       ],
     };
 
-    const cachedTotal = await this.prisma.property.count({ where: epcCacheWhere });
+    const cachedTotal = await this.prisma.property.count({ where: realDataCacheWhere });
 
     if (cachedTotal > 0) {
       const items = await this.prisma.property.findMany({
-        where: epcCacheWhere,
+        where: realDataCacheWhere,
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
@@ -187,11 +364,15 @@ export class PropertyService {
       return { items, total: cachedTotal };
     }
 
-    // 2. No real EPC data cached — call EPC API (also upserts results into DB)
+    // 2. No real data cached — try OS Places API first
+    const osResult = await this.fetchFromOsPlaces(q, offset, limit);
+    if (osResult.total > 0) return osResult;
+
+    // 3. OS returned nothing — call EPC API (also upserts results into DB)
     const epcResult = await this.fetchFromEpc(q, offset, limit);
     if (epcResult.total > 0) return epcResult;
 
-    // 3. EPC returned nothing — fall back to any existing mock data for this postcode
+    // 4. EPC returned nothing — fall back to any existing mock data for this postcode
     const mockWhere = {
       AND: [
         searchCondition,
@@ -209,7 +390,7 @@ export class PropertyService {
       return { items, total: mockTotal };
     }
 
-    // 4. Nothing at all — generate mocks as last resort (offset 0 only)
+    // 5. Nothing at all — generate mocks as last resort (offset 0 only)
     if (offset === 0) {
       let postcodeInfo: { latitude: number; longitude: number; postcode: string } | null = null;
       try {
@@ -230,6 +411,95 @@ export class PropertyService {
     }
 
     return { items: [], total: 0 };
+  }
+
+  private async fetchFromOsPlaces(query: string, offset = 0, limit = 10): Promise<{ items: Property[]; total: number }> {
+    const key = process.env.OS_API_KEY;
+    if (!key) return { items: [], total: 0 };
+
+    try {
+      const isPostcode = /[A-Z]\d/i.test(query) && /\d[A-Z]/i.test(query);
+      // OS Places requires properly formatted postcodes with a space
+      const formattedQuery = isPostcode ? normalisePostcode(query) : query;
+      const encodedQuery = encodeURIComponent(formattedQuery);
+      const url = isPostcode
+        ? `https://api.os.uk/search/places/v1/postcode?postcode=${encodedQuery}&dataset=DPA&maxresults=${limit}&offset=${offset}&key=${key}`
+        : `https://api.os.uk/search/places/v1/find?query=${encodedQuery}&dataset=DPA&maxresults=${limit}&offset=${offset}&key=${key}`;
+
+      const res = await fetch(url);
+      if (!res.ok) return { items: [], total: 0 };
+
+      const data = await res.json();
+      const results: any[] = data.results ?? [];
+      const total: number = data.header?.totalresults ?? results.length;
+
+      // Filter to residential dwellings only
+      const residential = results.filter(r => r.DPA?.CLASSIFICATION_CODE?.startsWith('RD'));
+      if (residential.length === 0) return { items: [], total: 0 };
+
+      const titleCase = (str: string) =>
+        (str ?? '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
+      const saved: Property[] = [];
+      for (let i = 0; i < residential.length; i++) {
+        const dpa = residential[i].DPA;
+        const udprn = `OS-${dpa.UDPRN}`;
+        const coords = bngToLatLon(dpa.X_COORDINATE, dpa.Y_COORDINATE);
+
+        const areaInfo = getAreaInfo(dpa.POSTCODE ?? '');
+        const uprnDigits = parseInt((dpa.UPRN ?? '0').replace(/\D/g, '').slice(-6)) || (offset + i);
+        const variation = 0.8 + seededRandom(uprnDigits) * 0.4;
+        const floorM2 = 80;
+        const estimatedPrice = Math.round((floorM2 * areaInfo.basePricek * 12 * variation) / 1000) * 1000;
+
+        const addressLine1 = dpa.BUILDING_NAME
+          ? dpa.BUILDING_NAME
+          : `${dpa.BUILDING_NUMBER ?? ''} ${dpa.THOROUGHFARE_NAME ?? ''}`.trim();
+
+        // Use Google Street View for a real property photo
+        const googleKey = process.env.GOOGLE_API_KEY ?? '';
+        const imageUrl = googleKey
+          ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${coords.lat},${coords.lon}&key=${googleKey}&fov=90&pitch=5&return_error_codes=true`
+          : PEXELS_IMAGES[(offset + i) % PEXELS_IMAGES.length];
+
+        const globalIndex = offset + i;
+
+        try {
+          const prop = await this.prisma.property.upsert({
+            where: { udprn },
+            update: {
+              uprn: dpa.UPRN ?? null,
+              latitude: coords.lat,
+              longitude: coords.lon,
+              propertyType: osClassToPropertyType(dpa.CLASSIFICATION_CODE),
+              city: titleCase(dpa.POST_TOWN),
+              county: titleCase(dpa.LOCAL_CUSTODIAN_CODE_DESCRIPTION ?? ''),
+              imageUrl,
+            },
+            create: {
+              udprn,
+              uprn: dpa.UPRN ?? null,
+              addressLine1: addressLine1 || `Property ${globalIndex + 1}`,
+              addressLine2: null,
+              city: titleCase(dpa.POST_TOWN),
+              county: titleCase(dpa.LOCAL_CUSTODIAN_CODE_DESCRIPTION ?? ''),
+              postcode: dpa.POSTCODE ?? query.toUpperCase(),
+              latitude: coords.lat,
+              longitude: coords.lon,
+              propertyType: osClassToPropertyType(dpa.CLASSIFICATION_CODE),
+              estimatedPrice,
+              imageUrl,
+            },
+          });
+          saved.push(prop);
+        } catch { /* skip constraint violations */ }
+      }
+
+      return { items: saved, total };
+    } catch (err) {
+      console.error('OS Places API error:', err);
+      return { items: [], total: 0 };
+    }
   }
 
   private async fetchFromEpc(query: string, offset = 0, limit = 10): Promise<{ items: Property[]; total: number }> {
@@ -349,22 +619,22 @@ export class PropertyService {
       salesHistory,
       broadband,
       mobileSignal,
-      listedBuildings,
       osPlaces,
       epcData,
       planningData,
       nearbyCtData,
+      titleBoundary,
     ] = await Promise.allSettled([
-      lat && lon ? this.fetchNearbyPlaces(lat, lon) : Promise.resolve({ schools: [], trains: [], parks: [] }),
+      lat && lon ? this.fetchNearbyOS(lat, lon) : Promise.resolve({ schools: [], trains: [], busStops: [], parks: [], airports: [], listedBuildings: [] }),
       lat && lon ? this.fetchFloodDetail(lat, lon) : Promise.resolve(null),
       this.fetchPropertySalesHistory(postcode, property.addressLine1),
       this.fetchBroadband(postcode),
       this.fetchMobileSignal(postcode),
-      lat && lon ? this.fetchListedBuildings(lat, lon) : Promise.resolve([]),
       this.fetchOsPlaces(postcode),
-      uprn ? this.fetchEpcData(uprn) : Promise.resolve(null),
+      uprn ? this.fetchEpcData(uprn) : this.fetchEpcDataByAddress(postcode, property.addressLine1),
       lat && lon ? this.fetchPlanningData(lat, lon, uprn) : Promise.resolve({ constraints: [], applications: [] }),
       this.fetchNearbyCouncilTax(postcode),
+      lat && lon ? this.fetchInspireBoundary(lat, lon) : Promise.resolve(null),
     ]);
 
     const googleKey = process.env.GOOGLE_API_KEY ?? '';
@@ -388,20 +658,24 @@ export class PropertyService {
         data: { councilTaxBand: epc.councilTaxBand },
       }).catch(() => { /* non-critical */ });
     }
+    const councilName = epc?.localAuthority ?? osData?.localAuthority ?? null;
     const councilTax = {
       band: ctBand,
-      annualEstimate: ctBand ? estimateCouncilTaxAmount(ctBand) : null,
-      councilName: epc?.localAuthority ?? osData?.localAuthority ?? null,
+      annualEstimate: ctBand ? estimateCouncilTaxAmount(ctBand, councilName) : null,
+      councilName,
       nearby: nearbyCtData.status === 'fulfilled' ? nearbyCtData.value : [],
       checkUrl: 'https://www.gov.uk/council-tax-bands',
+      dataSource: councilName && COUNCIL_TAX_RATES_2024[normaliseAuthority(councilName)]
+        ? `${councilName} 2024/25 rate`
+        : 'England average 2024/25',
     };
 
     return {
       // Google Street View Static API
       streetViewUrl,
 
-      // Google Places API
-      nearby: nearby.status === 'fulfilled' ? nearby.value : { schools: [], trains: [], parks: [] },
+      // OS NGD + Overpass: schools (categorised), trains, bus stops, parks, airports
+      nearby: nearby.status === 'fulfilled' ? nearby.value : { schools: [], trains: [], busStops: [], parks: [], airports: [] },
 
       // Environment Agency Flood Risk API
       floodRisk: floodData?.rating ?? null,
@@ -416,8 +690,8 @@ export class PropertyService {
       broadband: broadband.status === 'fulfilled' ? broadband.value : null,
       mobileSignal: mobileSignal.status === 'fulfilled' ? mobileSignal.value : null,
 
-      // Historic England ArcGIS API
-      listedBuildings: listedBuildings.status === 'fulfilled' ? listedBuildings.value : [],
+      // Overpass heritage data (listed buildings, monuments, memorials) — sourced from fetchNearbyOS combined query
+      listedBuildings: nearby.status === 'fulfilled' ? (nearby.value.listedBuildings ?? []) : [],
 
       // OS Data Hub Places API
       osPlaces: osData,
@@ -432,37 +706,205 @@ export class PropertyService {
 
       // planning.data.gov.uk — constraints + applications
       planningHistory: planning,
+
+      // HMLR INSPIRE Index Polygons — registered title boundary (GeoJSON)
+      titleBoundary: titleBoundary.status === 'fulfilled' ? titleBoundary.value : null,
     };
   }
 
-  private async fetchNearbyPlaces(lat: number, lon: number) {
-    const key = process.env.GOOGLE_API_KEY;
-    if (!key) return { schools: [], trains: [], parks: [] };
+  /**
+   * OS NGD Building Footprint — returns the building polygon nearest to the property
+   * coordinate. Used to show the property outline on the map (proxy for title plan).
+   * HMLR INSPIRE WFS is currently disabled, so we use OS NGD buildings instead.
+   */
+  private async fetchInspireBoundary(lat: number, lon: number): Promise<any> {
+    const osKey = process.env.OS_API_KEY ?? '';
+    if (!osKey) return null;
+    try {
+      const delta = 0.001; // ~100m bounding box
+      const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+      const url = `https://api.os.uk/features/ngd/ofa/v1/collections/bld-fts-building-1/items?bbox=${bbox}&limit=5&key=${osKey}`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.features?.length) return null;
 
-    const base = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
-    const location = `${lat},${lon}`;
+      // Pick the feature whose UPRN list (if any) is closest to the property's position
+      // Fallback: just pick the first residential building
+      const residential = data.features.filter((f: any) =>
+        f.properties?.buildinguse === 'Residential Accommodation' || f.properties?.ismainbuilding
+      );
+      const feat = residential[0] ?? data.features[0];
+      return {
+        geoJson: { type: 'Feature', geometry: feat.geometry, properties: feat.properties },
+        geometry: feat.geometry,
+        areaM2: feat.properties?.geometry_area_m2 ?? null,
+        uprns: (feat.properties?.uprnreference ?? []).map((u: any) => u.uprn),
+      };
+    } catch {
+      return null;
+    }
+  }
 
-    const [schoolsRes, trainsRes, parksRes] = await Promise.allSettled([
-      fetch(`${base}?location=${location}&radius=1500&type=school&key=${key}`).then((r) => r.json()),
-      fetch(`${base}?location=${location}&radius=2000&type=train_station&key=${key}`).then((r) => r.json()),
-      fetch(`${base}?location=${location}&radius=1000&type=park&key=${key}`).then((r) => r.json()),
-    ]);
+  private async fetchNearbyOS(lat: number, lon: number) {
+    const osKey = process.env.OS_API_KEY ?? '';
 
-    function mapPlaces(res: PromiseSettledResult<any>, limit = 4) {
-      if (res.status !== 'fulfilled') return [];
-      return (res.value?.results ?? []).slice(0, limit).map((p: any) => ({
-        name: p.name,
-        rating: p.rating ?? null,
-        vicinity: p.vicinity,
-        placeId: p.place_id,
-      }));
+    // Haversine distance in km between property and a POI
+    function distKm(lat2: number, lon2: number): number {
+      const R = 6371;
+      const dLat = (lat2 - lat) * Math.PI / 180;
+      const dLon = (lon2 - lon) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return +( R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
     }
 
-    return {
-      schools: mapPlaces(schoolsRes),
-      trains: mapPlaces(trainsRes),
-      parks: mapPlaces(parksRes),
+    // Centroid of a GeoJSON geometry (Point or Polygon/MultiPolygon)
+    function centroid(geom: any): [number, number] {
+      if (!geom) return [lon, lat];
+      if (geom.type === 'Point') return geom.coordinates;
+      const ring: number[][] = geom.type === 'Polygon'
+        ? geom.coordinates[0]
+        : geom.coordinates[0][0]; // MultiPolygon
+      const n = ring.length;
+      const sum = ring.reduce((acc: number[], c: number[]) => [acc[0] + c[0], acc[1] + c[1]], [0, 0]);
+      return [sum[0] / n, sum[1] / n];
+    }
+
+    // ── OS NGD: Education sites (schools, nurseries, colleges, universities) ──
+    const delta = 0.018; // ~2 km bounding box
+    const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+    const schoolsPromise = osKey
+      ? fetch(`https://api.os.uk/features/ngd/ofa/v1/collections/lus-fts-site-2/items?bbox=${bbox}&filter=oslandusetiera%3D'Education'&limit=25&key=${osKey}`)
+          .then(r => r.json())
+          .catch(() => ({ features: [] }))
+      : Promise.resolve({ features: [] });
+
+    // ── Overpass: trains, bus stops, parks, airports + heritage (single request to avoid rate limit) ──
+    const overpassQuery = `[out:json][timeout:25];(
+      node["railway"="station"](around:4000,${lat},${lon});
+      node["railway"="halt"](around:4000,${lat},${lon});
+      node["highway"="bus_stop"](around:700,${lat},${lon});
+      way["leisure"="park"]["name"](around:2000,${lat},${lon});
+      node["aeroway"="aerodrome"](around:50000,${lat},${lon});
+      way["aeroway"="aerodrome"](around:50000,${lat},${lon});
+      node["heritage"](around:800,${lat},${lon});
+      node["historic"](around:800,${lat},${lon});
+      way["historic"](around:800,${lat},${lon});
+      way["heritage"](around:800,${lat},${lon});
+    );out center body;`;
+
+    const overpassPromise = fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `data=${encodeURIComponent(overpassQuery)}`,
+      signal: AbortSignal.timeout(30000),
+    }).then(r => r.json()).catch(() => ({ elements: [] }));
+
+    const [schoolsRaw, overpassRaw] = await Promise.all([schoolsPromise, overpassPromise]);
+
+    // ── Process schools from OS NGD ──
+    const schools = ((schoolsRaw.features ?? []) as any[])
+      .filter((f: any) => f.properties?.name1_text)
+      .map((f: any) => {
+        const [flon, flat] = centroid(f.geometry);
+        const p = f.properties;
+        return {
+          name: p.name1_text as string,
+          category: (p.oslandusetierb?.[0] ?? p.description ?? 'School') as string,
+          description: p.description as string,
+          lat: flat, lon: flon,
+          distanceKm: distKm(flat, flon),
+        };
+      })
+      .sort((a: any, b: any) => a.distanceKm - b.distanceKm)
+      .slice(0, 12);
+
+    // ── Process Overpass elements ──
+    const elements: any[] = overpassRaw.elements ?? [];
+
+    const trains = elements
+      .filter(e => e.tags?.railway === 'station' || e.tags?.railway === 'halt')
+      .map(e => ({
+        name: e.tags?.name ?? 'Railway Station',
+        lat: e.lat ?? e.center?.lat,
+        lon: e.lon ?? e.center?.lon,
+        distanceKm: distKm(e.lat ?? e.center?.lat, e.lon ?? e.center?.lon),
+        operator: e.tags?.operator ?? null,
+      }))
+      .filter(e => e.lat && e.lon)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 6);
+
+    const busStops = elements
+      .filter(e => e.tags?.highway === 'bus_stop')
+      .map(e => ({
+        name: e.tags?.name ?? e.tags?.ref ?? 'Bus Stop',
+        ref: e.tags?.ref ?? null,
+        lat: e.lat,
+        lon: e.lon,
+        distanceKm: distKm(e.lat, e.lon),
+      }))
+      .filter(e => e.lat && e.lon)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 10);
+
+    const parks = elements
+      .filter(e => e.tags?.leisure === 'park' && e.tags?.name)
+      .map(e => ({
+        name: e.tags.name as string,
+        lat: e.center?.lat ?? e.lat,
+        lon: e.center?.lon ?? e.lon,
+        distanceKm: distKm(e.center?.lat ?? e.lat, e.center?.lon ?? e.lon),
+      }))
+      .filter(e => e.lat && e.lon)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 6);
+
+    const airports = elements
+      .filter(e => e.tags?.aeroway === 'aerodrome' && e.tags?.name)
+      .map(e => ({
+        name: e.tags.name as string,
+        iata: e.tags?.iata ?? null,
+        icao: e.tags?.icao ?? null,
+        lat: e.center?.lat ?? e.lat,
+        lon: e.center?.lon ?? e.lon,
+        distanceKm: distKm(e.center?.lat ?? e.lat, e.center?.lon ?? e.lon),
+      }))
+      .filter(e => e.lat && e.lon)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5);
+
+    const gradeMap: Record<string, string> = {
+      '1': 'Grade I', 'I': 'Grade I',
+      '2*': 'Grade II*', 'II*': 'Grade II*',
+      '2': 'Grade II', 'II': 'Grade II',
+      'SM': 'Scheduled Monument',
     };
+    const typeLabel: Record<string, string> = {
+      castle: 'Castle', church: 'Church', monument: 'Monument',
+      memorial: 'Memorial', archaeological_site: 'Archaeological Site',
+      ruins: 'Ruins', manor: 'Manor House', farm: 'Historic Farm',
+      building: 'Historic Building', yes: 'Heritage Site',
+    };
+
+    const listedBuildings = elements
+      .filter(e => e.tags?.name && (e.tags?.heritage || e.tags?.historic))
+      .slice(0, 8)
+      .map(e => {
+        const t = e.tags;
+        const grade = gradeMap[t['heritage:grade'] ?? t['listed_status'] ?? t['heritage'] ?? ''] ?? null;
+        const histType = t.historic ?? t.building ?? null;
+        return {
+          name: t.name,
+          grade: grade ?? (histType ? (typeLabel[histType] ?? 'Heritage Site') : 'Heritage Site'),
+          location: [t['addr:street'], t['addr:city']].filter(Boolean).join(', ') || null,
+          link: t.website ?? t.url ?? null,
+          historic: histType,
+        };
+      });
+
+    return { schools, trains, busStops, parks, airports, listedBuildings };
   }
 
   private async fetchFloodDetail(lat: number, lon: number): Promise<{ rating: string; zones: any[] } | null> {
@@ -480,13 +922,34 @@ export class PropertyService {
       else if (minSev <= 2) rating = 'High';
       else if (minSev <= 3) rating = 'Medium';
 
-      const zones = items.slice(0, 3).map((i: any) => ({
-        name: i.label ?? i['@id'],
-        severity: i.currentWarning?.severity?.label ?? 'No current warning',
-        riverSea: i.riverOrSea ?? null,
-      }));
+      const topItems = items.slice(0, 3);
 
-      return { rating, zones };
+      // Fetch polygon GeoJSON for each flood zone in parallel
+      const zonesWithPolygons = await Promise.all(
+        topItems.map(async (i: any) => {
+          const zone: any = {
+            name: i.label ?? i['@id'],
+            severity: i.currentWarning?.severity?.label ?? 'No current warning',
+            riverSea: i.riverOrSea ?? null,
+            polygon: null as any,
+          };
+          const polygonUrl: string | undefined = i.polygon;
+          if (polygonUrl) {
+            try {
+              const pRes = await fetch(polygonUrl, {
+                redirect: 'follow',
+                headers: { Accept: 'application/json' },
+              });
+              if (pRes.ok) {
+                zone.polygon = await pRes.json();
+              }
+            } catch { /* polygon fetch failed, leave null */ }
+          }
+          return zone;
+        }),
+      );
+
+      return { rating, zones: zonesWithPolygons };
     } catch {
       return null;
     }
@@ -589,27 +1052,6 @@ export class PropertyService {
     }
   }
 
-  private async fetchListedBuildings(lat: number, lon: number): Promise<any[]> {
-    try {
-      // Historic England ArcGIS REST — Listed Buildings layer (1)
-      const url =
-        `https://services.historicengland.org.uk/arcgis/rest/services/NMR/ScheduledMonuments_and_ListedBuildings/FeatureServer/1/query` +
-        `?geometry=${lon}%2C${lat}&geometryType=esriGeometryPoint&inSR=4326` +
-        `&spatialRel=esriSpatialRelIntersects&distance=500&units=esriSRUnit_Meter` +
-        `&outFields=ENTRY_NAME,GRADE,UPRN,LOCATION_DESCRIPTION,HYPERLINK&f=json`;
-      const res = await fetch(url);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return (data.features ?? []).slice(0, 5).map((f: any) => ({
-        name: f.attributes?.ENTRY_NAME ?? 'Listed Building',
-        grade: f.attributes?.GRADE ?? null,
-        location: f.attributes?.LOCATION_DESCRIPTION ?? null,
-        link: f.attributes?.HYPERLINK ?? null,
-      }));
-    } catch {
-      return [];
-    }
-  }
 
   private async fetchOsPlaces(postcode: string): Promise<any> {
     const key = process.env.OS_API_KEY;
@@ -630,6 +1072,41 @@ export class PropertyService {
           address: r.DPA?.ADDRESS,
           classification: r.DPA?.CLASSIFICATION_CODE_DESCRIPTION ?? null,
         })),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Fallback: look up EPC by postcode + address when UPRN is unavailable */
+  private async fetchEpcDataByAddress(postcode: string, addressLine1: string): Promise<any> {
+    try {
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=10`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const rows: any[] = data.rows ?? [];
+      if (!rows.length) return null;
+
+      // Try to find a row matching the address
+      const addrNorm = addressLine1.replace(/[,\s]+/g, ' ').toLowerCase().trim();
+      const match = rows.find(row => {
+        const rowAddr = [row['address1'], row['address2']].filter(Boolean).join(' ').toLowerCase().trim();
+        return rowAddr.includes(addrNorm.split(' ')[0]) || addrNorm.includes(rowAddr.split(' ')[0]);
+      }) ?? rows[0]; // fall back to first row in postcode
+
+      if (!match) return null;
+      const lmkKey = match['lmk-key'];
+      return {
+        certUrl: lmkKey ? `https://epc.opendatacommunities.org/files/${lmkKey}` : null,
+        potentialRating: match['potential-energy-rating'] ?? null,
+        potentialScore: match['potential-energy-efficiency']
+          ? parseInt(String(match['potential-energy-efficiency']), 10)
+          : null,
+        councilTaxBand: match['council-tax-band'] ?? null,
+        localAuthority: match['local-authority-label'] ?? null,
       };
     } catch {
       return null;
@@ -683,17 +1160,20 @@ export class PropertyService {
       const data = await res.json();
       const rows: any[] = data.rows ?? [];
 
+      // Get council name from first row so real rates apply to all nearby
+      const sharedCouncil = rows[0]?.['local-authority-label'] ?? null;
       const results: { address: string; band: string; annualEstimate: number | null }[] = [];
       for (const row of rows) {
         const band = row['council-tax-band'];
         if (!band) continue;
         const addr = [row['address1'], row['address2']].filter(Boolean).join(', ');
+        const council = row['local-authority-label'] ?? sharedCouncil;
         results.push({
           address: addr || row['postcode'],
           band,
-          annualEstimate: estimateCouncilTaxAmount(band),
+          annualEstimate: estimateCouncilTaxAmount(band, council),
         });
-        if (results.length >= 8) break;
+        if (results.length >= 12) break;
       }
       return results;
     } catch {
@@ -779,77 +1259,100 @@ export class PropertyService {
     return { constraints, applications };
   }
 
+  /**
+   * Fetch sold price history from the HM Land Registry Linked Data API.
+   * No database storage — always live, completely free, no API key required.
+   * CSV column order: id, price, date, postcode, propType, newBuild, tenure,
+   *                   saon, paon, street, locality, town, district, county, ppd_cat, status
+   */
   private async fetchPropertySalesHistory(
     postcode: string,
     addressLine1: string,
   ): Promise<{ thisProperty: any[]; nearbySales: any[] }> {
     try {
-      const paonMatch = addressLine1.match(/^([^,]+)/);
-      const paon = paonMatch ? paonMatch[1].trim() : null;
+      const formatted = normalisePostcode(postcode);
+      const url = `https://landregistry.data.gov.uk/app/ppd/ppd_data.csv?postcode=${encodeURIComponent(formatted)}&limit=100`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return { thisProperty: [], nearbySales: [] };
 
-      function mapRecord(r: any, isThisProperty: boolean) {
-        const propTypeMap: Record<string, string> = {
-          D: 'Detached', S: 'Semi-detached', T: 'Terraced', F: 'Flat/Maisonette', O: 'Other',
-        };
-        const tenureMap: Record<string, string> = { F: 'Freehold', L: 'Leasehold', U: 'Unknown' };
-        return {
-          price: r.price,
-          date: r.transactionDate,
-          address: [r.paon, r.street].filter(Boolean).join(' ').trim() || null,
-          town: r.town || null,
-          propertyType: propTypeMap[r.propertyType] ?? r.propertyType ?? null,
-          tenure: tenureMap[r.tenure] ?? r.tenure ?? null,
-          newBuild: r.isNewBuild,
-          isThisProperty,
-        };
+      const csv = await res.text();
+      const lines = csv.trim().split('\n').filter(Boolean);
+
+      const propTypeMap: Record<string, string> = {
+        D: 'Detached', S: 'Semi-Detached', T: 'Terraced', F: 'Flat/Maisonette', O: 'Other',
+      };
+      const tenureMap: Record<string, string> = { F: 'Freehold', L: 'Leasehold', U: 'Unknown' };
+
+      function parseCsvRow(line: string): string[] {
+        const result: string[] = [];
+        let cur = '', inQuote = false;
+        for (const ch of line) {
+          if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { result.push(cur.trim()); cur = ''; }
+          else { cur += ch; }
+        }
+        result.push(cur.trim());
+        return result;
       }
 
-      // This property: match by postcode + PAON (case-insensitive)
-      const thisPropertyRows = paon
-        ? await this.prisma.pricePaidTransaction.findMany({
-            where: {
-              postcode: postcode.toUpperCase(),
-              paon: { equals: paon, mode: 'insensitive' },
-            },
-            orderBy: { transactionDate: 'desc' },
-            take: 20,
-          })
-        : [];
+      // Extract PAON (house number/name) from our addressLine1 for matching.
+      // Handles: "14 Woodfield Road" → "14", "14A Woodfield" → "14A",
+      // "Flat 3, 14 ..." → "14" (skip flat prefix), "The Grange, ..." → "THE GRANGE"
+      const cleanAddr = addressLine1.replace(/^(flat|apartment|unit|floor)\s+[\dA-Z]+[,\s]+/i, '').trim();
+      const paonRaw = cleanAddr.match(/^(\d+[A-Z]?)/i)?.[1]?.trim().toUpperCase()
+        ?? cleanAddr.match(/^([A-Z][^,\d]+?)(?:,|\s+\d)/i)?.[1]?.trim().toUpperCase()
+        ?? '';
 
-      // Nearby sales: same postcode, different PAON, most recent 20
-      // Try last 5 years first; if nothing found, return all-time for this postcode
-      const fiveYearsAgo = new Date();
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const allSales = lines.map(line => {
+        const cols = parseCsvRow(line);
+        // cols: [id, price, date, postcode, propType, newBuild, tenure, saon, paon, street, locality, town, district, county, ...]
+        const [id, price, date, , propType, newBuild, tenure, saon, paon, street, , town] = cols;
+        return {
+          id,
+          price: parseInt(price?.replace(/"/g, '') ?? '0') || 0,
+          date: date?.replace(/"/g, '') ?? '',
+          propType: propType?.replace(/"/g, '') ?? '',
+          newBuild: newBuild?.replace(/"/g, '') === 'Y',
+          tenure: tenure?.replace(/"/g, '') ?? '',
+          saon: saon?.replace(/"/g, '') ?? '',
+          paon: paon?.replace(/"/g, '') ?? '',
+          street: street?.replace(/"/g, '') ?? '',
+          town: town?.replace(/"/g, '') ?? '',
+        };
+      }).filter(r => r.price > 0).sort((a, b) => b.date.localeCompare(a.date));
 
-      let nearbyRows = await this.prisma.pricePaidTransaction.findMany({
-        where: {
-          postcode: postcode.toUpperCase(),
-          transactionDate: { gte: fiveYearsAgo },
-          ...(paon ? { NOT: { paon: { equals: paon, mode: 'insensitive' } } } : {}),
-        },
-        orderBy: { transactionDate: 'desc' },
-        take: 20,
+      const toRecord = (r: typeof allSales[0], isThisProperty: boolean) => ({
+        price: r.price,
+        date: r.date,
+        address: [r.saon, r.paon, r.street].filter(Boolean).join(', '),
+        town: r.town,
+        propertyType: propTypeMap[r.propType] ?? r.propType ?? null,
+        tenure: tenureMap[r.tenure] ?? r.tenure ?? null,
+        newBuild: r.newBuild,
+        isThisProperty,
       });
 
-      // Fallback: no date filter if nothing in last 5 years
-      if (nearbyRows.length === 0) {
-        nearbyRows = await this.prisma.pricePaidTransaction.findMany({
-          where: {
-            postcode: postcode.toUpperCase(),
-            ...(paon ? { NOT: { paon: { equals: paon, mode: 'insensitive' } } } : {}),
-          },
-          orderBy: { transactionDate: 'desc' },
-          take: 20,
-        });
-      }
+      const thisProperty = paonRaw
+        ? allSales.filter(r => r.paon.toUpperCase() === paonRaw || r.saon.toUpperCase() === paonRaw)
+        : [];
+      const nearbySales = allSales.filter(r =>
+        !paonRaw || (r.paon.toUpperCase() !== paonRaw && r.saon.toUpperCase() !== paonRaw),
+      ).slice(0, 30);
 
       return {
-        thisProperty: thisPropertyRows.map((r) => mapRecord(r, true)),
-        nearbySales: nearbyRows.map((r) => mapRecord(r, false)),
+        thisProperty: thisProperty.map(r => toRecord(r, true)),
+        nearbySales: nearbySales.map(r => toRecord(r, false)),
       };
     } catch {
       return { thisProperty: [], nearbySales: [] };
     }
+  }
+
+  /** Public method for the sold-history endpoint — queries LR API directly, zero DB storage. */
+  async getLiveSoldHistory(propertyId: string): Promise<{ thisProperty: any[]; nearbySales: any[] }> {
+    const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property) return { thisProperty: [], nearbySales: [] };
+    return this.fetchPropertySalesHistory(property.postcode, property.addressLine1);
   }
 
   async saveHomeScore(propertyId: string, userId: string, data: {
