@@ -87,6 +87,11 @@ export class PropertyController {
     return this.propertyService.toggleSave(req.user.id, id);
   }
 
+  @Get(':id/sold-history')
+  async getSoldHistory(@Param('id') id: string) {
+    return this.propertyService.getLiveSoldHistory(id);
+  }
+
   @Get(':id/enrichment')
   async getEnrichment(@Param('id') id: string) {
     const data = await this.propertyService.getPropertyEnrichment(id);
