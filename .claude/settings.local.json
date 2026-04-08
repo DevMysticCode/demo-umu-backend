@@ -59,7 +59,14 @@
       "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/components/homescore)",
       "Bash(mkdir -p /d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[0]['id'] if d else 'empty'\\)\")",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('start:', d.get\\('scripts',{}\\).get\\('start'\\)\\); print\\('build:', d.get\\('scripts',{}\\).get\\('build'\\)\\); print\\('start:prod:', d.get\\('scripts',{}\\).get\\('start:prod'\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); items=d.get\\('result',{}\\).get\\('items',[]\\); print\\(len\\(items\\), 'items'\\); [print\\(i.get\\('titleNumber','no-title'\\), i.get\\('paon'\\), i.get\\('street'\\)\\) for i in items[:3]]\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); items=d.get\\('result',{}\\).get\\('items',[]\\); print\\(len\\(items\\),'items'\\); [print\\(i\\) for i in items[:1]]\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); items=d.get\\('result',{}\\).get\\('items',[]\\); print\\(len\\(items\\),'items'\\); print\\(list\\(items[0].keys\\(\\)\\) if items else 'empty'\\)\")",
+      "Bash(python -c \"import sys,json; t=sys.stdin.read\\(\\); print\\(t[:500]\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('uprn:', d.get\\('uprn'\\)\\); print\\('titleNumber:', d.get\\('titleNumber'\\)\\); print\\('floorArea:', d.get\\('floorAreaSqm'\\)\\); print\\('epcRating:', d.get\\('epcRating'\\)\\); print\\('tenure:', d.get\\('tenure'\\)\\); print\\('yearBuilt:', d.get\\('yearBuilt'\\)\\); print\\('imageUrl:', d.get\\('imageUrl',''\\)[:80]\\); print\\('udprn:', d.get\\('udprn'\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); rows=d.get\\('rows',[]\\); print\\(len\\(rows\\),'rows'\\); print\\({k:rows[0][k] for k in ['total-floor-area','number-habitable-rooms','property-type','current-energy-rating','tenure','construction-age-band'] if k in rows[0]} if rows else 'no rows'\\)\")"
     ]
   }
 }
