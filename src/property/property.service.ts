@@ -829,7 +829,7 @@ export class PropertyService {
         // Use Google Street View for a real property photo
         const googleKey = process.env.GOOGLE_API_KEY ?? '';
         const imageUrl = googleKey
-          ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${coords.lat},${coords.lon}&key=${googleKey}&fov=90&pitch=5&return_error_codes=true`
+          ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${coords.lat},${coords.lon}&key=${googleKey}&fov=90&pitch=5&radius=200&source=outdoor&return_error_codes=true`
           : PEXELS_IMAGES[(offset + i) % PEXELS_IMAGES.length];
 
         const globalIndex = offset + i;
@@ -1191,7 +1191,7 @@ export class PropertyService {
     const googleKey = process.env.GOOGLE_API_KEY ?? '';
     const streetViewUrl =
       lat && lon && googleKey
-        ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${lat},${lon}&key=${googleKey}&fov=90&pitch=10&return_error_codes=true`
+        ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${lat},${lon}&key=${googleKey}&fov=90&pitch=10&radius=200&source=outdoor&return_error_codes=true`
         : null;
 
     const floodData =
