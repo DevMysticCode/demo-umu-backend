@@ -126,6 +126,46 @@ model Property {
   titleNumber            String?
   epcEnrichedAt          DateTime?
   createdAt              DateTime                @default(now())
+
+  // ── HomeScore V2 EPC cost fields ─────────────────────────────────────────
+  heatingCostCurrent     Float?   // EPC heating-cost-current (£/yr)
+  hotWaterCostCurrent    Float?   // EPC hot-water-cost-current (£/yr)
+  lightingCostCurrent    Float?   // EPC lighting-cost-current (£/yr)
+
+  // ── HomeScore V2 insulation fields ───────────────────────────────────────
+  wallsEnergyEff         String?  // "Very Good" | "Good" | "Average" | "Poor" | "Very Poor"
+  roofEnergyEff          String?
+  floorEnergyEff         String?
+  floorDescription       String?  // used to detect "assumed" no insulation
+  windowsEnergyEff       String?
+  glazedArea             String?  // "Less than typical" | "Normal" | "More than typical" | "Much more than typical"
+  multiGlazeProportion   Float?   // 0–100 percentage
+
+  // ── HomeScore V2 heating fields ──────────────────────────────────────────
+  mainheatEnergyEff      String?  // main heating system efficiency rating
+  mainheatcEnergyEff     String?  // heating controls efficiency rating
+  hotWaterEnergyEff      String?
+  hotwaterDescription    String?  // used to detect "no cylinder thermostat"
+  secondheatDescription  String?  // secondary heating type (for penalty)
+  mainheatcontDescription String? // controls description
+
+  // ── HomeScore V2 ventilation ─────────────────────────────────────────────
+  mechanicalVentilation  String?  // "natural" | "balanced with heat recovery" | etc.
+
+  // ── HomeScore V2 lighting ────────────────────────────────────────────────
+  lightingEnergyEff      String?
+  lowEnergyLighting      Float?   // percentage 0–100
+
+  // ── HomeScore V2 renewables ──────────────────────────────────────────────
+  photoSupply            Float?   // solar PV supply (kW) — >0 means PV present
+  solarWaterHeatingFlag  String?  // "Y" | "N"
+  windTurbineCount       Int?
+
+  // ── HomeScore V2 EPC metadata ────────────────────────────────────────────
+  lodgementDate          String?  // EPC lodgement date (YYYY-MM-DD)
+  constructionAgeBand    String?  // e.g. "1930-1949"
+  builtForm              String?  // "Detached" | "Semi-Detached" | "Mid-Terrace" | etc.
+
   passport               Passport?
   ownershipVerifications OwnershipVerification[]
   wishlistedBy           UserWishlist[]
@@ -508,12 +548,33 @@ model HomeScoreResult {
   userId      String
   total       Int
   rating      String
-  heating     Int
-  structure   Int
-  efficiency  Int
-  electrics   Int
-  plumbing    Int
   answers     Json
+
+  // ── V2 fields (all nullable — V1 records remain valid) ───────────────────
+  tier             String?  // "estimated" | "verified" | "certified"
+  baseBill         Float?   // estimated annual energy bill from EPC (£)
+  adjustedBill     Float?   // recency-adjusted bill (£)
+  actualBill       Float?   // user-entered real bill for Tier 2 (£)
+  costPerSqm       Float?
+  neighbourMedian  Float?   // median annual bill for similar neighbourhood properties (£)
+  billDifference   Float?   // positive = paying more than median, negative = paying less
+
+  // V2 component scores (0–5 scale before weighting)
+  costEfficiency   Float?
+  insulation       Float?
+  heating          Float?
+  controls         Float?
+  ventilation      Float?
+  lighting         Float?
+  renewableBonus   Float?
+
+  // V1 component scores (kept for backward compat)
+  heatingV1    Int?
+  structure    Int?
+  efficiency   Int?
+  electrics    Int?
+  plumbing     Int?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

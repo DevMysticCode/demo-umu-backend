@@ -35,6 +35,34 @@ interface EpcRow {
   'potential-energy-rating'?: string;
   'potential-energy-efficiency'?: number | string;
   'local-authority-label'?: string;
+  // HomeScore V2 cost fields
+  'heating-cost-current'?: number | string;
+  'hot-water-cost-current'?: number | string;
+  'lighting-cost-current'?: number | string;
+  // HomeScore V2 insulation fields
+  'walls-energy-eff'?: string;
+  'roof-energy-eff'?: string;
+  'floor-energy-eff'?: string;
+  'floor-description'?: string;
+  'windows-energy-eff'?: string;
+  'glazed-area'?: string;
+  'multi-glaze-proportion'?: number | string;
+  // HomeScore V2 heating fields
+  'mainheat-energy-eff'?: string;
+  'mainheatc-energy-eff'?: string;
+  'hot-water-energy-eff'?: string;
+  'hotwater-description'?: string;
+  'secondheat-description'?: string;
+  'mainheatcont-description'?: string;
+  // HomeScore V2 ventilation
+  'mechanical-ventilation'?: string;
+  // HomeScore V2 lighting
+  'lighting-energy-eff'?: string;
+  'low-energy-lighting'?: number | string;
+  // HomeScore V2 renewables
+  'photo-supply'?: number | string;
+  'solar-water-heating-flag'?: string;
+  'wind-turbine-count'?: number | string;
 }
 
 function epcRowToProperty(row: EpcRow) {
@@ -89,6 +117,125 @@ function epcRowToProperty(row: EpcRow) {
       parseFloat(String(row['co2-emissions-current'] ?? '0')) || null,
     councilTaxBand: row['council-tax-band'] ?? null,
     epcEnrichedAt: new Date(),
+  };
+}
+
+// ── EpcCert type + builder (all fields used by HomeScore V2) ─────────────────
+
+interface EpcCert {
+  certUrl: string | null;
+  potentialRating: string | null;
+  potentialScore: number | null;
+  councilTaxBand: string | null;
+  localAuthority: string | null;
+  // Standard property fields
+  epcRating: string | null;
+  epcScore: number | null;
+  floorAreaSqm: number | null;
+  sqft: number | null;
+  bedrooms: number | null;
+  tenure: string | null;
+  yearBuilt: number | null;
+  heatingType: string | null;
+  propertyType: string | null;
+  uprn: string | null;
+  constructionAgeBand: string | null;
+  builtForm: string | null;
+  lodgementDate: string | null;
+  // HomeScore V2 cost fields
+  heatingCostCurrent: number | null;
+  hotWaterCostCurrent: number | null;
+  lightingCostCurrent: number | null;
+  // HomeScore V2 insulation
+  wallsEnergyEff: string | null;
+  roofEnergyEff: string | null;
+  floorEnergyEff: string | null;
+  floorDescription: string | null;
+  windowsEnergyEff: string | null;
+  glazedArea: string | null;
+  multiGlazeProportion: number | null;
+  // HomeScore V2 heating
+  mainheatEnergyEff: string | null;
+  mainheatcEnergyEff: string | null;
+  hotWaterEnergyEff: string | null;
+  hotwaterDescription: string | null;
+  secondheatDescription: string | null;
+  mainheatcontDescription: string | null;
+  // HomeScore V2 ventilation
+  mechanicalVentilation: string | null;
+  // HomeScore V2 lighting
+  lightingEnergyEff: string | null;
+  lowEnergyLighting: number | null;
+  // HomeScore V2 renewables
+  photoSupply: number | null;
+  solarWaterHeatingFlag: string | null;
+  windTurbineCount: number | null;
+}
+
+function epcRowToCert(row: EpcRow): EpcCert {
+  const mapped = epcRowToProperty(row);
+  const lmkKey = (row as any)['lmk-key'];
+
+  const parseFloat2 = (v: any) => {
+    const n = parseFloat(String(v ?? ''));
+    return isNaN(n) ? null : n;
+  };
+  const parseInt2 = (v: any) => {
+    const n = parseInt(String(v ?? ''), 10);
+    return isNaN(n) ? null : n;
+  };
+  const str = (v: any): string | null =>
+    v != null && String(v).trim() ? String(v).trim() : null;
+
+  return {
+    certUrl: lmkKey
+      ? `https://epc.opendatacommunities.org/files/${lmkKey}`
+      : null,
+    potentialRating: str(row['potential-energy-rating']),
+    potentialScore: parseInt2(row['potential-energy-efficiency']),
+    councilTaxBand: mapped.councilTaxBand,
+    localAuthority: str((row as any)['local-authority-label']),
+    epcRating: mapped.epcRating,
+    epcScore: mapped.epcScore,
+    floorAreaSqm: mapped.floorAreaSqm,
+    sqft: mapped.sqft,
+    bedrooms: mapped.bedrooms,
+    tenure: mapped.tenure,
+    yearBuilt: mapped.yearBuilt,
+    heatingType: mapped.heatingType,
+    propertyType: mapped.propertyType,
+    uprn: mapped.uprn,
+    constructionAgeBand: str(row['construction-age-band']),
+    builtForm: str(row['built-form']),
+    lodgementDate: str(row['lodgement-date']),
+    // Cost
+    heatingCostCurrent: parseFloat2(row['heating-cost-current']),
+    hotWaterCostCurrent: parseFloat2(row['hot-water-cost-current']),
+    lightingCostCurrent: parseFloat2(row['lighting-cost-current']),
+    // Insulation
+    wallsEnergyEff: str(row['walls-energy-eff']),
+    roofEnergyEff: str(row['roof-energy-eff']),
+    floorEnergyEff: str(row['floor-energy-eff']),
+    floorDescription: str(row['floor-description']),
+    windowsEnergyEff: str(row['windows-energy-eff']),
+    glazedArea: str(row['glazed-area']),
+    multiGlazeProportion: parseFloat2(row['multi-glaze-proportion']),
+    // Heating
+    mainheatEnergyEff: str(row['mainheat-energy-eff']),
+    mainheatcEnergyEff: str(row['mainheatc-energy-eff']),
+    hotWaterEnergyEff: str(row['hot-water-energy-eff']),
+    hotwaterDescription: str(row['hotwater-description']),
+    secondheatDescription: str(row['secondheat-description']),
+    mainheatcontDescription: str(row['mainheatcont-description']),
+    // Ventilation
+    mechanicalVentilation: str(row['mechanical-ventilation']),
+    // Lighting
+    lightingEnergyEff: str(row['lighting-energy-eff']),
+    lowEnergyLighting: parseFloat2(row['low-energy-lighting']),
+    // Renewables
+    photoSupply: parseFloat2(row['photo-supply']),
+    solarWaterHeatingFlag: str(row['solar-water-heating-flag']),
+    windTurbineCount: parseInt2(row['wind-turbine-count']),
   };
 }
 
@@ -995,13 +1142,14 @@ export class PropertyService {
    * This is called after fetching a property to guarantee EPC data (titleNumber, floorAreaSqm, epcRating, tenure, yearBuilt).
    */
   private async enrichPropertyWithEpc(property: Property): Promise<Property> {
-    // If EPC fields are already present, return as-is
+    // If all basic AND V2 cost fields are present, return as-is
     if (
       property.epcRating &&
       property.floorAreaSqm &&
       property.tenure &&
       property.yearBuilt &&
-      property.titleNumber
+      property.titleNumber &&
+      (property as any).heatingCostCurrent != null
     ) {
       console.log(
         `[Enrich] Property ${property.id} already has all EPC fields`,
@@ -1057,6 +1205,62 @@ export class PropertyService {
         updateData.heatingType = epcData.heatingType ?? null;
       if (!property.councilTaxBand)
         updateData.councilTaxBand = epcData.councilTaxBand ?? null;
+
+      // V2 EPC cost fields — always populate if EPC data has them
+      if ((property as any).heatingCostCurrent == null && epcData.heatingCostCurrent != null)
+        updateData.heatingCostCurrent = epcData.heatingCostCurrent;
+      if ((property as any).hotWaterCostCurrent == null && epcData.hotWaterCostCurrent != null)
+        updateData.hotWaterCostCurrent = epcData.hotWaterCostCurrent;
+      if ((property as any).lightingCostCurrent == null && epcData.lightingCostCurrent != null)
+        updateData.lightingCostCurrent = epcData.lightingCostCurrent;
+
+      // V2 EPC insulation/fabric fields
+      if (!(property as any).wallsEnergyEff && epcData.wallsEnergyEff)
+        updateData.wallsEnergyEff = epcData.wallsEnergyEff;
+      if (!(property as any).roofEnergyEff && epcData.roofEnergyEff)
+        updateData.roofEnergyEff = epcData.roofEnergyEff;
+      if (!(property as any).floorEnergyEff && epcData.floorEnergyEff)
+        updateData.floorEnergyEff = epcData.floorEnergyEff;
+      if (!(property as any).windowsEnergyEff && epcData.windowsEnergyEff)
+        updateData.windowsEnergyEff = epcData.windowsEnergyEff;
+      if ((property as any).multiGlazeProportion == null && epcData.multiGlazeProportion != null)
+        updateData.multiGlazeProportion = epcData.multiGlazeProportion;
+
+      // V2 EPC heating/HW fields
+      if (!(property as any).mainheatEnergyEff && epcData.mainheatEnergyEff)
+        updateData.mainheatEnergyEff = epcData.mainheatEnergyEff;
+      if (!(property as any).mainheatcEnergyEff && epcData.mainheatcEnergyEff)
+        updateData.mainheatcEnergyEff = epcData.mainheatcEnergyEff;
+      if (!(property as any).hotWaterEnergyEff && epcData.hotWaterEnergyEff)
+        updateData.hotWaterEnergyEff = epcData.hotWaterEnergyEff;
+      if (!(property as any).hotwaterDescription && epcData.hotwaterDescription)
+        updateData.hotwaterDescription = epcData.hotwaterDescription;
+      if (!(property as any).mainheatcontDescription && epcData.mainheatcontDescription)
+        updateData.mainheatcontDescription = epcData.mainheatcontDescription;
+
+      // V2 EPC controls/ventilation/lighting fields
+      if (!(property as any).mechanicalVentilation && epcData.mechanicalVentilation)
+        updateData.mechanicalVentilation = epcData.mechanicalVentilation;
+      if (!(property as any).lightingEnergyEff && epcData.lightingEnergyEff)
+        updateData.lightingEnergyEff = epcData.lightingEnergyEff;
+      if ((property as any).lowEnergyLighting == null && epcData.lowEnergyLighting != null)
+        updateData.lowEnergyLighting = epcData.lowEnergyLighting;
+
+      // V2 EPC renewables
+      if ((property as any).photoSupply == null && epcData.photoSupply != null)
+        updateData.photoSupply = epcData.photoSupply;
+      if ((property as any).solarWaterHeatingFlag == null && epcData.solarWaterHeatingFlag != null)
+        updateData.solarWaterHeatingFlag = epcData.solarWaterHeatingFlag;
+      if ((property as any).windTurbineCount == null && epcData.windTurbineCount != null)
+        updateData.windTurbineCount = epcData.windTurbineCount;
+
+      // V2 EPC metadata
+      if (!(property as any).constructionAgeBand && epcData.constructionAgeBand)
+        updateData.constructionAgeBand = epcData.constructionAgeBand;
+      if (!(property as any).builtForm && epcData.builtForm)
+        updateData.builtForm = epcData.builtForm;
+      if (!(property as any).lodgementDate && epcData.lodgementDate)
+        updateData.lodgementDate = epcData.lodgementDate;
 
       // Generate titleNumber if missing
       if (!property.titleNumber) {
@@ -1223,6 +1427,83 @@ export class PropertyService {
             ...(epc.councilTaxBand
               ? { councilTaxBand: epc.councilTaxBand }
               : {}),
+            // V2 EPC cost fields
+            ...(epc.heatingCostCurrent != null
+              ? { heatingCostCurrent: epc.heatingCostCurrent }
+              : {}),
+            ...(epc.hotWaterCostCurrent != null
+              ? { hotWaterCostCurrent: epc.hotWaterCostCurrent }
+              : {}),
+            ...(epc.lightingCostCurrent != null
+              ? { lightingCostCurrent: epc.lightingCostCurrent }
+              : {}),
+            // V2 EPC insulation/fabric fields
+            ...(epc.wallsEnergyEff
+              ? { wallsEnergyEff: epc.wallsEnergyEff }
+              : {}),
+            ...(epc.roofEnergyEff
+              ? { roofEnergyEff: epc.roofEnergyEff }
+              : {}),
+            ...(epc.floorEnergyEff
+              ? { floorEnergyEff: epc.floorEnergyEff }
+              : {}),
+            ...(epc.floorDescription
+              ? { floorDescription: epc.floorDescription }
+              : {}),
+            ...(epc.windowsEnergyEff
+              ? { windowsEnergyEff: epc.windowsEnergyEff }
+              : {}),
+            ...(epc.glazedArea ? { glazedArea: epc.glazedArea } : {}),
+            ...(epc.multiGlazeProportion != null
+              ? { multiGlazeProportion: epc.multiGlazeProportion }
+              : {}),
+            // V2 EPC heating/HW fields
+            ...(epc.mainheatEnergyEff
+              ? { mainheatEnergyEff: epc.mainheatEnergyEff }
+              : {}),
+            ...(epc.mainheatcEnergyEff
+              ? { mainheatcEnergyEff: epc.mainheatcEnergyEff }
+              : {}),
+            ...(epc.hotWaterEnergyEff
+              ? { hotWaterEnergyEff: epc.hotWaterEnergyEff }
+              : {}),
+            ...(epc.hotwaterDescription
+              ? { hotwaterDescription: epc.hotwaterDescription }
+              : {}),
+            ...(epc.secondheatDescription
+              ? { secondheatDescription: epc.secondheatDescription }
+              : {}),
+            ...(epc.mainheatcontDescription
+              ? { mainheatcontDescription: epc.mainheatcontDescription }
+              : {}),
+            // V2 EPC controls/ventilation/lighting fields
+            ...(epc.mechanicalVentilation
+              ? { mechanicalVentilation: epc.mechanicalVentilation }
+              : {}),
+            ...(epc.lightingEnergyEff
+              ? { lightingEnergyEff: epc.lightingEnergyEff }
+              : {}),
+            ...(epc.lowEnergyLighting != null
+              ? { lowEnergyLighting: epc.lowEnergyLighting }
+              : {}),
+            // V2 EPC renewables fields
+            ...(epc.photoSupply != null
+              ? { photoSupply: epc.photoSupply }
+              : {}),
+            ...(epc.solarWaterHeatingFlag != null
+              ? { solarWaterHeatingFlag: epc.solarWaterHeatingFlag }
+              : {}),
+            ...(epc.windTurbineCount != null
+              ? { windTurbineCount: epc.windTurbineCount }
+              : {}),
+            // V2 EPC metadata fields
+            ...(epc.lodgementDate
+              ? { lodgementDate: epc.lodgementDate }
+              : {}),
+            ...(epc.constructionAgeBand
+              ? { constructionAgeBand: epc.constructionAgeBand }
+              : {}),
+            ...(epc.builtForm ? { builtForm: epc.builtForm } : {}),
             // Generate titleNumber if missing
             ...(epc.uprn && !property.titleNumber
               ? {
@@ -1792,23 +2073,7 @@ export class PropertyService {
   private async fetchEpcDataByAddress(
     postcode: string,
     addressLine1: string,
-  ): Promise<{
-    certUrl: string | null;
-    potentialRating: string | null;
-    potentialScore: number | null;
-    councilTaxBand: string | null;
-    localAuthority: string | null;
-    epcRating: string | null;
-    epcScore: number | null;
-    floorAreaSqm: number | null;
-    sqft: number | null;
-    bedrooms: number | null;
-    tenure: string | null;
-    yearBuilt: number | null;
-    heatingType: string | null;
-    propertyType: string | null;
-    uprn: string | null;
-  } | null> {
+  ): Promise<EpcCert | null> {
     try {
       const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=10`;
       const res = await fetch(url, {
@@ -1823,17 +2088,9 @@ export class PropertyService {
       console.log(
         `[EPC] Found ${rows.length} results for postcode ${postcode}, searching for address: ${addressLine1}`,
       );
+      if (!rows.length) return null;
 
-      if (!rows.length) {
-        console.log(`[EPC] No results for postcode ${postcode}`);
-        return null;
-      }
-
-      // Try to find a row matching the address
-      const addrNorm = addressLine1
-        .replace(/[,\s]+/g, ' ')
-        .toLowerCase()
-        .trim();
+      const addrNorm = addressLine1.replace(/[,\s]+/g, ' ').toLowerCase().trim();
       const match =
         rows.find((row) => {
           const rowAddr = [row['address1'], row['address2']]
@@ -1841,77 +2098,20 @@ export class PropertyService {
             .join(' ')
             .toLowerCase()
             .trim();
-          const match =
+          return (
             rowAddr.includes(addrNorm.split(' ')[0]) ||
-            addrNorm.includes(rowAddr.split(' ')[0]);
-          if (match) {
-            console.log(
-              `[EPC] Matched address: "${rowAddr}" against input "${addressLine1}"`,
-            );
-          }
-          return match;
-        }) ?? rows[0]; // fall back to first row in postcode
+            addrNorm.includes(rowAddr.split(' ')[0])
+          );
+        }) ?? rows[0];
 
-      if (!match) {
-        console.log(
-          `[EPC] No match found for "${addressLine1}". Using first result: ${rows[0]?.['address1']} ${rows[0]?.['address2']}`,
-        );
-      }
-
-      const lmkKey = match['lmk-key'];
-      const mapped = epcRowToProperty(match);
-      console.log(
-        `[EPC] Returning data - epcRating: ${mapped.epcRating}, floorAreaSqm: ${mapped.floorAreaSqm}, tenure: ${mapped.tenure}, yearBuilt: ${mapped.yearBuilt}`,
-      );
-
-      return {
-        certUrl: lmkKey
-          ? `https://epc.opendatacommunities.org/files/${lmkKey}`
-          : null,
-        potentialRating: match['potential-energy-rating'] ?? null,
-        potentialScore: match['potential-energy-efficiency']
-          ? parseInt(String(match['potential-energy-efficiency']), 10)
-          : null,
-        councilTaxBand: mapped.councilTaxBand,
-        localAuthority: match['local-authority-label'] ?? null,
-        epcRating: mapped.epcRating,
-        epcScore: mapped.epcScore,
-        floorAreaSqm: mapped.floorAreaSqm,
-        sqft: mapped.sqft,
-        bedrooms: mapped.bedrooms,
-        tenure: mapped.tenure,
-        yearBuilt: mapped.yearBuilt,
-        heatingType: mapped.heatingType,
-        propertyType: mapped.propertyType,
-        uprn: mapped.uprn,
-      };
+      return epcRowToCert(match);
     } catch (error) {
-      console.error(
-        `[EPC] Error fetching data for ${postcode}/${addressLine1}:`,
-        error,
-      );
+      console.error(`[EPC] Error fetching data for ${postcode}/${addressLine1}:`, error);
       return null;
     }
   }
 
-  private async fetchEpcData(uprn: string): Promise<{
-    certUrl: string | null;
-    potentialRating: string | null;
-    potentialScore: number | null;
-    councilTaxBand: string | null;
-    localAuthority: string | null;
-    // Full EPC fields — used to back-fill OS properties that have no EPC at creation time
-    epcRating: string | null;
-    epcScore: number | null;
-    floorAreaSqm: number | null;
-    sqft: number | null;
-    bedrooms: number | null;
-    tenure: string | null;
-    yearBuilt: number | null;
-    heatingType: string | null;
-    propertyType: string | null;
-    uprn: string | null;
-  } | null> {
+  private async fetchEpcData(uprn: string): Promise<EpcCert | null> {
     try {
       const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${uprn}&size=1`;
       const res = await fetch(url, {
@@ -1921,29 +2121,7 @@ export class PropertyService {
       const data = await res.json();
       const row = data.rows?.[0];
       if (!row) return null;
-      const lmkKey = row['lmk-key'];
-      const mapped = epcRowToProperty(row);
-      return {
-        certUrl: lmkKey
-          ? `https://epc.opendatacommunities.org/files/${lmkKey}`
-          : null,
-        potentialRating: row['potential-energy-rating'] ?? null,
-        potentialScore: row['potential-energy-efficiency']
-          ? parseInt(String(row['potential-energy-efficiency']), 10)
-          : null,
-        councilTaxBand: mapped.councilTaxBand,
-        localAuthority: row['local-authority-label'] ?? null,
-        epcRating: mapped.epcRating,
-        epcScore: mapped.epcScore,
-        floorAreaSqm: mapped.floorAreaSqm,
-        sqft: mapped.sqft,
-        bedrooms: mapped.bedrooms,
-        tenure: mapped.tenure,
-        yearBuilt: mapped.yearBuilt,
-        heatingType: mapped.heatingType,
-        propertyType: mapped.propertyType,
-        uprn: mapped.uprn,
-      };
+      return epcRowToCert(row);
     } catch {
       return null;
     }
@@ -2281,18 +2459,46 @@ export class PropertyService {
     data: {
       total: number;
       rating: string;
-      heating: number;
-      structure: number;
-      efficiency: number;
-      electrics: number;
-      plumbing: number;
       answers: Record<string, string>;
+      // V1 pillar scores
+      heating?: number;
+      structure?: number;
+      efficiency?: number;
+      electrics?: number;
+      plumbing?: number;
+      // V2 fields
+      tier?: string;
+      baseBill?: number;
+      adjustedBill?: number;
+      actualBill?: number;
+      costPerSqm?: number;
+      neighbourMedian?: number;
+      billDifference?: number;
+      costEfficiency?: number;
+      insulation?: number;
+      heatingV2?: number;
+      controls?: number;
+      ventilation?: number;
+      lighting?: number;
+      renewableBonus?: number;
     },
   ) {
+    const { heating, structure, efficiency, electrics, plumbing, heatingV2, ...rest } = data;
+    const payload = {
+      ...rest,
+      // Map V1 pillars to their nullable DB columns
+      ...(heating != null ? { heatingV1: heating } : {}),
+      ...(structure != null ? { structure } : {}),
+      ...(efficiency != null ? { efficiency } : {}),
+      ...(electrics != null ? { electrics } : {}),
+      ...(plumbing != null ? { plumbing } : {}),
+      // V2 heating component
+      ...(heatingV2 != null ? { heating: heatingV2 } : {}),
+    };
     return this.prisma.homeScoreResult.upsert({
       where: { propertyId_userId: { propertyId, userId } },
-      create: { propertyId, userId, ...data },
-      update: { ...data, updatedAt: new Date() },
+      create: { propertyId, userId, ...payload },
+      update: { ...payload, updatedAt: new Date() },
     });
   }
 
@@ -2550,5 +2756,90 @@ export class PropertyService {
       }),
     ]);
     return { wishlisted: !!wishlist, saved: !!saved };
+  }
+
+  /**
+   * HomeScore V2 Neighbourhood: queries EPC API for postcode, returns
+   * median & std-dev of cost_per_sqm for matching property type + age band.
+   * Used to compute neighbourhood-adjusted score on the frontend.
+   */
+  async getNeighbourhoodStats(propertyId: string): Promise<{
+    median: number | null;
+    stdDev: number | null;
+    sampleSize: number;
+    postcode: string | null;
+  }> {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+    if (!property?.postcode) {
+      return { median: null, stdDev: null, sampleSize: 0, postcode: null };
+    }
+
+    const postcode = property.postcode;
+
+    try {
+      // Fetch up to 100 EPC records for the postcode
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=100`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) {
+        return { median: null, stdDev: null, sampleSize: 0, postcode };
+      }
+
+      const data = await res.json();
+      const rows: any[] = data.rows ?? [];
+      if (rows.length === 0) {
+        return { median: null, stdDev: null, sampleSize: 0, postcode };
+      }
+
+      // Extract cost_per_sqm for each record (heating + hotwater + lighting / floor area)
+      const costPerSqmSamples: number[] = [];
+      for (const row of rows) {
+        const heatingCost = parseFloat(String(row['heating-cost-current'] ?? ''));
+        const hwCost = parseFloat(String(row['hot-water-cost-current'] ?? ''));
+        const lightingCost = parseFloat(String(row['lighting-cost-current'] ?? ''));
+        const floorArea = parseFloat(String(row['total-floor-area'] ?? ''));
+
+        if (
+          isNaN(heatingCost) || isNaN(hwCost) || isNaN(lightingCost) ||
+          isNaN(floorArea) || floorArea <= 0
+        ) continue;
+
+        const baseBill = heatingCost + hwCost + lightingCost;
+        const costPerSqm = baseBill / floorArea;
+        if (costPerSqm > 0 && costPerSqm < 500) {
+          // Sanity cap: exclude obvious outliers
+          costPerSqmSamples.push(costPerSqm);
+        }
+      }
+
+      if (costPerSqmSamples.length < 3) {
+        return { median: null, stdDev: null, sampleSize: costPerSqmSamples.length, postcode };
+      }
+
+      // Compute median
+      const sorted = [...costPerSqmSamples].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+
+      // Compute population std dev
+      const mean = costPerSqmSamples.reduce((s, v) => s + v, 0) / costPerSqmSamples.length;
+      const variance = costPerSqmSamples.reduce((s, v) => s + (v - mean) ** 2, 0) / costPerSqmSamples.length;
+      const stdDev = Math.sqrt(variance);
+
+      return {
+        median: Math.round(median * 100) / 100,
+        stdDev: Math.round(stdDev * 100) / 100,
+        sampleSize: costPerSqmSamples.length,
+        postcode,
+      };
+    } catch (error) {
+      console.error(`[Neighbourhood] Error fetching EPC data for ${postcode}:`, error);
+      return { median: null, stdDev: null, sampleSize: 0, postcode };
+    }
   }
 }
