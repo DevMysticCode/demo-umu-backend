@@ -334,8 +334,15 @@ export class AuthService {
   async appleLogin(idToken: string, firstName?: string, lastName?: string) {
     let claims: { sub: string; email?: string };
     try {
+      // Accept both the web Service ID (io.umovingu.webapp) and the native
+      // Bundle ID (io.umovingu.app) — Apple signs with different audience
+      // depending on whether the user signed in via web SDK or native iOS.
+      const audiences = [
+        process.env.APPLE_CLIENT_ID ?? '',
+        process.env.APPLE_BUNDLE_ID ?? 'io.umovingu.app',
+      ].filter(Boolean);
       claims = await appleSignin.verifyIdToken(idToken, {
-        audience: process.env.APPLE_CLIENT_ID ?? '',
+        audience: audiences.length === 1 ? audiences[0] : (audiences as any),
         ignoreExpiration: false,
       });
     } catch {

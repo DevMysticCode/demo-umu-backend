@@ -93,7 +93,7 @@ export class PropertyController {
   }
 
   @Get(':id/enrichment')
-  async getEnrichment(@Param('id') id: string) {
+  async getEnrichment(@Param('id') id: string): Promise<any> {
     const data = await this.propertyService.getPropertyEnrichment(id);
     if (!data) throw new NotFoundException('Property not found');
     return data;
@@ -109,6 +109,11 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   async getHomeScore(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getHomeScore(id, req.user.id);
+  }
+
+  @Get(':id/neighbourhood')
+  async getNeighbourhood(@Param('id') id: string) {
+    return this.propertyService.getNeighbourhoodStats(id);
   }
 
   @Get(':id')
