@@ -849,12 +849,37 @@ export class PropertyService {
         orderBy: { createdAt: 'desc' },
         skip: offset,
         take: limit,
-        include: { passport: { select: { id: true } } },
+        include: {
+          passport: {
+            select: {
+              id: true,
+              status: true,
+              sections: {
+                select: {
+                  tasks: { select: { status: true } },
+                },
+              },
+            },
+          },
+        },
       });
-      const items = rows.map(({ passport, ...p }) => ({
-        ...p,
-        hasPassport: !!passport,
-      }));
+      const items = rows.map(({ passport, ...p }) => {
+        const isPublished = passport?.status === 'PUBLISHED';
+        // Compute completion % from tasks
+        let passportCompletion: number | null = null;
+        if (passport && isPublished) {
+          const allTasks = passport.sections.flatMap((s) => s.tasks);
+          const done = allTasks.filter((t) => t.status === 'COMPLETED').length;
+          passportCompletion =
+            allTasks.length > 0 ? Math.round((done / allTasks.length) * 100) : 0;
+        }
+        return {
+          ...p,
+          hasPassport: !!passport,
+          passportPublished: isPublished,
+          passportCompletion,
+        };
+      });
       return { items, total: cachedTotal };
     }
 
@@ -2555,15 +2580,18 @@ export class PropertyService {
     const isCollaborator = passport.collaborators.length > 0;
     const isBuyer =
       !isOwner && !isCollaborator && (passport.buyerAccesses?.length ?? 0) > 0;
+    const isPublished = passport.status === 'PUBLISHED';
 
     return {
       hasPassport: true,
       passportId: passport.id,
       passportStatus: passport.status,
+      isPublished,
       isOwner,
       isCollaborator,
       isBuyer,
-      canAccess: isOwner || isCollaborator || isBuyer,
+      // Owner/collaborator can always access; buyers and public only if published
+      canAccess: isOwner || isCollaborator || isBuyer || isPublished,
       verificationStatus: null,
     };
   }

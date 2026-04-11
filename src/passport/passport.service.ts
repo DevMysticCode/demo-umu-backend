@@ -534,4 +534,36 @@ export class PassportService {
       message: 'Collaborator removed successfully',
     };
   }
+
+  async publishPassport(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== userId)
+      throw new ForbiddenException('Only the owner can publish this passport');
+
+    return this.prisma.passport.update({
+      where: { id: passportId },
+      data: { status: 'PUBLISHED' as any },
+      select: { id: true, status: true },
+    });
+  }
+
+  async unpublishPassport(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== userId)
+      throw new ForbiddenException(
+        'Only the owner can unpublish this passport',
+      );
+
+    return this.prisma.passport.update({
+      where: { id: passportId },
+      data: { status: 'IN_PROGRESS' as any },
+      select: { id: true, status: true },
+    });
+  }
 }

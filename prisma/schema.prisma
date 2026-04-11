@@ -459,6 +459,7 @@ model UserDocument {
 enum PassportStatus {
   IN_PROGRESS
   COMPLETED
+  PUBLISHED
 }
 
 enum OwnershipVerificationStatus {
