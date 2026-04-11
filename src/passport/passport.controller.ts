@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Put,
   Get,
   Delete,
   Body,
@@ -117,6 +118,21 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async getBuyerView(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerView(passportId, req.user.id);
+  }
+
+  @Put(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  async publishPassport(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.publishPassport(passportId, req.user.id);
+  }
+
+  @Put(':id/unpublish')
+  @UseGuards(JwtAuthGuard)
+  async unpublishPassport(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.unpublishPassport(passportId, req.user.id);
   }
 
   @Delete(':id')
