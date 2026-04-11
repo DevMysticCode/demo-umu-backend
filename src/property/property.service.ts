@@ -586,6 +586,26 @@ function seededRandom(seed: number): number {
   return x - Math.floor(x);
 }
 
+/**
+ * Approximate UK House Price Index multiplier to convert a historical sale price
+ * to an estimated current (April 2026) value.
+ * Based on ONS UK HPI (England & Wales residential).
+ */
+function hpiMultiplier(soldYear: number): number {
+  const factors: Record<number, number> = {
+    1990: 5.2, 1991: 5.0, 1992: 5.2, 1993: 5.3, 1994: 4.8,
+    1995: 4.2, 1996: 3.8, 1997: 3.5, 1998: 3.2, 1999: 2.9,
+    2000: 3.0, 2001: 2.7, 2002: 2.4, 2003: 2.1, 2004: 1.9,
+    2005: 2.2, 2006: 2.1, 2007: 2.0, 2008: 2.1, 2009: 2.2,
+    2010: 1.8, 2011: 1.75, 2012: 1.75, 2013: 1.70, 2014: 1.60,
+    2015: 1.50, 2016: 1.42, 2017: 1.35, 2018: 1.28, 2019: 1.22,
+    2020: 1.18, 2021: 1.10, 2022: 1.00, 2023: 1.02, 2024: 1.03,
+    2025: 1.02,
+  };
+  if (soldYear < 1990) return 6.0;
+  return factors[soldYear] ?? 1.0;
+}
+
 function getAreaInfo(postcode: string) {
   const upper = postcode.trim().toUpperCase();
   const twoChar = upper.substring(0, 2).replace(/[0-9]/g, '');
@@ -1571,6 +1591,43 @@ export class PropertyService {
           /* non-critical */
         });
     }
+    // ── Land Registry HPI estimate ──────────────────────────────────────────
+    const salesData =
+      salesHistory.status === 'fulfilled' ? salesHistory.value : null;
+    let landRegistryEstimate: number | null = null;
+    let landRegistrySource: string | null = null;
+
+    if (salesData?.thisProperty?.length) {
+      const mostRecent = salesData.thisProperty[0];
+      const soldYear = parseInt((mostRecent.date ?? '').substring(0, 4)) || 0;
+      if (soldYear >= 1990 && mostRecent.price > 0) {
+        const multiplier = hpiMultiplier(soldYear);
+        landRegistryEstimate = Math.round((mostRecent.price * multiplier) / 1000) * 1000;
+        landRegistrySource = `Land Registry sold price (${soldYear}), HPI adjusted`;
+      }
+    }
+
+    if (!landRegistryEstimate && salesData?.nearbySales?.length) {
+      // Fallback: median of nearby recent sales as proxy
+      const recent = salesData.nearbySales
+        .filter((s) => s.date >= `${new Date().getFullYear() - 5}-01-01` && s.price > 0)
+        .slice(0, 10);
+      if (recent.length >= 3) {
+        const sorted = [...recent].sort((a, b) => a.price - b.price);
+        const median = sorted[Math.floor(sorted.length / 2)].price;
+        const soldYear = parseInt((recent[0].date ?? '').substring(0, 4)) || 2022;
+        landRegistryEstimate = Math.round((median * hpiMultiplier(soldYear)) / 1000) * 1000;
+        landRegistrySource = 'Estimated from nearby Land Registry sales';
+      }
+    }
+
+    // Non-blockingly update DB estimatedPrice if Land Registry gives us a better figure
+    if (landRegistryEstimate && landRegistryEstimate !== property.estimatedPrice) {
+      this.prisma.property
+        .update({ where: { id: propertyId }, data: { estimatedPrice: landRegistryEstimate } })
+        .catch(() => { /* non-critical */ });
+    }
+
     const councilName = epc?.localAuthority ?? osData?.localAuthority ?? null;
     const councilTax = {
       band: ctBand,
@@ -1605,6 +1662,10 @@ export class PropertyService {
         salesHistory.status === 'fulfilled'
           ? salesHistory.value
           : { thisProperty: [], nearbySales: [] },
+
+      // HPI-adjusted estimated value from Land Registry sold prices
+      landRegistryEstimate,
+      landRegistrySource,
 
       // Ofcom Connected Nations API
       broadband: broadband.status === 'fulfilled' ? broadband.value : null,
