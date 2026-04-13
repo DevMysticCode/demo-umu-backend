@@ -65,6 +65,18 @@ interface EpcRow {
   'wind-turbine-count'?: number | string;
 }
 
+/**
+ * Convert a string to Title Case, handling UK address conventions.
+ * "14 WOODFIELD ROAD" → "14 Woodfield Road"
+ * Preserves numeric tokens and handles null/undefined gracefully.
+ */
+function titleCase(str: string | null | undefined): string {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (c) => c.toUpperCase());
+}
+
 function epcRowToProperty(row: EpcRow) {
   const address1 = row['address1'] ?? '';
   const address2 = row['address2'] ?? '';
@@ -97,11 +109,11 @@ function epcRowToProperty(row: EpcRow) {
 
   return {
     uprn: uprn || null,
-    addressLine1: address1.trim(),
-    addressLine2: address2.trim() || null,
-    city: town.trim() || null,
-    county: county.trim() || null,
-    postcode: postcode.trim(),
+    addressLine1: titleCase(address1),
+    addressLine2: titleCase(address2) || null,
+    city: titleCase(town) || null,
+    county: titleCase(county) || null,
+    postcode: postcode.trim().toUpperCase(),
     propertyType: propType,
     bedrooms: bedrooms || null,
     floorAreaSqm: parseFloat(String(row['total-floor-area'] ?? '0')) || null,
@@ -377,14 +389,8 @@ const STREET_NAMES = [
 const PROPERTY_TYPES = ['Detached', 'Semi-Detached', 'Terraced', 'Flat'];
 const TENURES = ['Freehold', 'Leasehold'];
 const EPC_RATINGS = ['A', 'B', 'C', 'D', 'E'];
-const PEXELS_IMAGES = [
-  'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=800',
-  'https://images.pexels.com/photos/1350789/pexels-photo-1350789.jpeg?auto=compress&cs=tinysrgb&w=800',
-  'https://images.pexels.com/photos/1457842/pexels-photo-1457842.jpeg?auto=compress&cs=tinysrgb&w=800',
-  'https://images.pexels.com/photos/1643387/pexels-photo-1643387.jpeg?auto=compress&cs=tinysrgb&w=800',
-  'https://images.pexels.com/photos/1568605/pexels-photo-1568605.jpeg?auto=compress&cs=tinysrgb&w=800',
-  'https://images.pexels.com/photos/1732414/pexels-photo-1732414.jpeg?auto=compress&cs=tinysrgb&w=800',
-];
+// Placeholder images removed — properties without a real image return imageUrl: null
+// and the frontend shows the UMU "no image" placeholder instead.
 
 const POSTCODE_AREAS: Record<
   string,
@@ -895,6 +901,11 @@ export class PropertyService {
         }
         return {
           ...p,
+          // Normalise casing for properties already in DB with incorrect casing
+          addressLine1: titleCase(p.addressLine1) || p.addressLine1,
+          addressLine2: p.addressLine2 ? titleCase(p.addressLine2) : p.addressLine2,
+          city: p.city ? titleCase(p.city) : p.city,
+          county: p.county ? titleCase(p.county) : p.county,
           hasPassport: !!passport,
           passportPublished: isPublished,
           passportCompletion,
@@ -995,9 +1006,6 @@ export class PropertyService {
       );
       if (residential.length === 0) return { items: [], total: 0 };
 
-      const titleCase = (str: string) =>
-        (str ?? '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-
       const saved: Property[] = [];
       for (let i = 0; i < residential.length; i++) {
         const dpa = residential[i].DPA;
@@ -1014,15 +1022,16 @@ export class PropertyService {
           Math.round((floorM2 * areaInfo.basePricek * 12 * variation) / 1000) *
           1000;
 
-        const addressLine1 = dpa.BUILDING_NAME
+        const rawAddress1 = dpa.BUILDING_NAME
           ? dpa.BUILDING_NAME
           : `${dpa.BUILDING_NUMBER ?? ''} ${dpa.THOROUGHFARE_NAME ?? ''}`.trim();
+        const addressLine1 = titleCase(rawAddress1);
 
         // Use Google Street View for a real property photo
         const googleKey = process.env.GOOGLE_API_KEY ?? '';
         const imageUrl = googleKey
           ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${coords.lat},${coords.lon}&key=${googleKey}&fov=90&pitch=5&radius=200&source=outdoor&return_error_codes=true`
-          : PEXELS_IMAGES[(offset + i) % PEXELS_IMAGES.length];
+          : null;
 
         const globalIndex = offset + i;
 
@@ -1126,8 +1135,6 @@ export class PropertyService {
         const pricePerSqm = areaInfo.basePricek * 12;
         const estimatedPrice =
           Math.round((floorM2 * pricePerSqm) / 1000) * 1000;
-        const imgIndex = globalIndex % PEXELS_IMAGES.length;
-
         try {
           const prop = await this.prisma.property.upsert({
             where: { udprn },
@@ -1165,7 +1172,7 @@ export class PropertyService {
               co2Emissions: mapped.co2Emissions,
               councilTaxBand: mapped.councilTaxBand,
               estimatedPrice,
-              imageUrl: PEXELS_IMAGES[imgIndex],
+              imageUrl: null,
               epcEnrichedAt: new Date(),
             },
           });
@@ -1383,8 +1390,17 @@ export class PropertyService {
     const property = await this.prisma.property.findUnique({ where: { id } });
     if (!property) return null;
 
+    // Normalise casing for properties already in DB with incorrect casing
+    const normalised = {
+      ...property,
+      addressLine1: titleCase(property.addressLine1) || property.addressLine1,
+      addressLine2: property.addressLine2 ? titleCase(property.addressLine2) : property.addressLine2,
+      city: property.city ? titleCase(property.city) : property.city,
+      county: property.county ? titleCase(property.county) : property.county,
+    };
+
     // Enrich with EPC data if fields are missing (non-blocking, always returns a property)
-    return this.enrichPropertyWithEpc(property);
+    return this.enrichPropertyWithEpc(normalised);
   }
 
   // ── Enrichment (on-demand, not stored) ────────────────────────────────────
@@ -2728,7 +2744,6 @@ export class PropertyService {
       );
       const tenureIndex = Math.floor(seededRandom(seed + 3) * TENURES.length);
       const epcIndex = Math.floor(seededRandom(seed + 4) * EPC_RATINGS.length);
-      const imgIndex = i % PEXELS_IMAGES.length;
       const propType = PROPERTY_TYPES[typeIndex];
       const bedrooms =
         propType === 'Flat'
@@ -2762,7 +2777,7 @@ export class PropertyService {
             tenure: TENURES[tenureIndex],
             yearBuilt,
             estimatedPrice: price,
-            imageUrl: PEXELS_IMAGES[imgIndex],
+            imageUrl: null,
             titleNumber: `${basePostcode.replace(/\s/g, '').substring(0, 2)}${100000 + Math.floor(seededRandom(seed + 11) * 900000)}`,
           },
         });
