@@ -16,6 +16,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { SupportModule } from './support/support.module';
 import { LearnModule } from './learn/learn.module';
 import { PaymentModule } from './payment/payment.module';
+import { MaintenanceModule } from './maintenance/maintenance.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PaymentModule } from './payment/payment.module';
     SupportModule,
     LearnModule,
     PaymentModule,
+    MaintenanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

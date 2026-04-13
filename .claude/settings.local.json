@@ -69,7 +69,10 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); rows=d.get\\('rows',[]\\); print\\(len\\(rows\\),'rows'\\); print\\({k:rows[0][k] for k in ['total-floor-area','number-habitable-rooms','property-type','current-energy-rating','tenure','construction-age-band'] if k in rows[0]} if rows else 'no rows'\\)\")",
       "Bash(npx nuxi:*)",
       "Bash(tail -20 pages/property/[id].vue)",
-      "Bash(npx nuxt:*)"
+      "Bash(npx nuxt:*)",
+      "WebFetch(domain:chatgpt.com)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db execute --stdin)",
+      "Bash(psql \"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" -c \"SELECT \\(SELECT COUNT\\(*\\) FROM \\\\\"Passport\\\\\"\\) AS passports, \\(SELECT COUNT\\(*\\) FROM \\\\\"PassportSection\\\\\"\\) AS sections, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\"\\) AS properties, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\" WHERE \\\\\"imageUrl\\\\\" LIKE '%pexels%'\\) AS pexels_remaining;\")"
     ]
   }
 }
