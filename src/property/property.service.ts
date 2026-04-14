@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportService } from '../passport/passport.service';
 import { Property } from '@prisma/client';
+import { Resend } from 'resend';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
 
@@ -2944,6 +2945,233 @@ export class PropertyService {
     } catch (error) {
       console.error(`[Neighbourhood] Error fetching EPC data for ${postcode}:`, error);
       return { median: null, stdDev: null, sampleSize: 0, postcode };
+    }
+  }
+
+  // ── Register Interest ────────────────────────────────────────────────────────
+
+  async registerInterest(
+    propertyId: string,
+    userId: string,
+    body: { interestLevel: string; name?: string; userEmail?: string },
+  ) {
+    const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property) throw new NotFoundException('Property not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, phone: true },
+    });
+
+    const passport = await this.prisma.passport.findFirst({
+      where: { propertyId },
+      include: { owner: { select: { email: true } } },
+    });
+
+    const propertyAddress = [property.addressLine1, property.city, property.postcode]
+      .filter(Boolean).join(', ');
+    const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || body.name || 'A UMovingU user';
+    const userEmail = user?.email || body.userEmail;
+
+    const interestLabels: Record<string, string> = {
+      dream: '🏡 Dream Home — This is exactly what they\'re looking for',
+      super: '🛋️ Super Keen — Very interested and ready to move quickly',
+      browsing: '🌳 Just Browsing — Interested but still exploring options',
+    };
+    const interestLabel = interestLabels[body.interestLevel] || body.interestLevel;
+
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="color:#00a19a;margin:0 0 4px;">New Interest Registered</h2>
+  <p style="color:#8f9094;font-size:14px;margin:0 0 24px;">via UMovingU</p>
+  <div style="background:#f6f6f7;border-radius:12px;padding:20px;margin-bottom:16px;">
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>Property:</strong> ${propertyAddress}</p>
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>From:</strong> ${userName}${userEmail ? ` (${userEmail})` : ''}</p>
+    <p style="margin:0;color:#1f2024;"><strong>Interest Level:</strong> ${interestLabel}</p>
+  </div>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">UMovingU · hello@umovingu.io</p>
+</div>`;
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM ?? 'UMovingU <info@umovingu.io>';
+    const to = ['hello@umovingu.io'];
+    if (passport?.owner?.email && passport.owner.email !== 'hello@umovingu.io') {
+      to.push(passport.owner.email);
+    }
+
+    await resend.emails.send({
+      from,
+      to,
+      subject: `New Interest: ${property.addressLine1}, ${property.postcode}`,
+      html,
+    });
+
+    return { success: true };
+  }
+
+  // ── Tap the Owner ────────────────────────────────────────────────────────────
+
+  async tapOwner(
+    propertyId: string,
+    userId: string,
+    body: { message: string; sharePhone?: boolean },
+  ): Promise<{ success: boolean; ownerPhone: string | null }> {
+    const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property) throw new NotFoundException('Property not found');
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, phone: true },
+    });
+
+    if (!user?.phone || !user.phone.trim()) {
+      throw new BadRequestException('A phone number is required on your profile to contact an owner. Please add it in Profile → Personal Information.');
+    }
+
+    const passport = await this.prisma.passport.findFirst({
+      where: { propertyId },
+      include: { owner: { select: { email: true, phone: true, firstName: true } } },
+    });
+
+    const propertyAddress = [property.addressLine1, property.city, property.postcode]
+      .filter(Boolean).join(', ');
+    const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A UMovingU user';
+    const userPhone = body.sharePhone ? (user?.phone ?? null) : null;
+
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="color:#00a19a;margin:0 0 4px;">Message via UMovingU</h2>
+  <p style="color:#8f9094;font-size:14px;margin:0 0 24px;">Someone wants to connect about your property</p>
+  <div style="background:#f6f6f7;border-radius:12px;padding:20px;margin-bottom:16px;">
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>Property:</strong> ${propertyAddress}</p>
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>From:</strong> ${userName}</p>
+    ${user?.email ? `<p style="margin:0 0 8px;color:#1f2024;"><strong>Email:</strong> ${user.email}</p>` : ''}
+    ${userPhone ? `<p style="margin:0;color:#1f2024;"><strong>Phone:</strong> ${userPhone}</p>` : ''}
+  </div>
+  <div style="border:1.5px solid #e5e5ea;border-radius:12px;padding:20px;margin-bottom:16px;">
+    <p style="margin:0;color:#1f2024;white-space:pre-wrap;">${body.message}</p>
+  </div>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">UMovingU · hello@umovingu.io</p>
+</div>`;
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM ?? 'UMovingU <info@umovingu.io>';
+    const to = ['hello@umovingu.io'];
+    if (passport?.owner?.email && passport.owner.email !== 'hello@umovingu.io') {
+      to.push(passport.owner.email);
+    }
+
+    await resend.emails.send({
+      from,
+      to,
+      subject: `Message about: ${property.addressLine1}, ${property.postcode}`,
+      html,
+    });
+
+    return { success: true, ownerPhone: passport?.owner?.phone ?? null };
+  }
+
+  // ── For You ──────────────────────────────────────────────────────────────────
+
+  async getForYou(userId: string): Promise<{ items: any[]; total: number }> {
+    const [user, preference] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { postcode: true },
+      }),
+      this.prisma.userPreference.findUnique({ where: { userId } }),
+    ]);
+
+    const postcode = user?.postcode?.trim() || 'TW18';
+    const { items } = await this.searchProperties(postcode, 0, 20);
+
+    const budgetMin = preference?.budgetMin ?? null;
+    const budgetMax = preference?.budgetMax ?? null;
+    const preferredTypes: string[] = Array.isArray(preference?.propertyTypes)
+      ? (preference.propertyTypes as string[])
+      : [];
+    const importantFeatures: string[] = Array.isArray(preference?.importantFeatures)
+      ? (preference.importantFeatures as string[])
+      : [];
+    const wantsEfficientEnergy =
+      importantFeatures.some((f) =>
+        /energy|epc|efficient|green|eco/i.test(f),
+      );
+
+    const scored = items.map((property) => {
+      // ── Budget score (40%) ──────────────────────────────────────────────────
+      let budgetScore = 50; // neutral when no budget pref or no price data
+      const price = property.estimatedPrice ?? property.lastSoldPrice ?? null;
+      if ((budgetMin != null || budgetMax != null) && price != null) {
+        const min = budgetMin ?? 0;
+        const max = budgetMax ?? Infinity;
+        if (price < min) {
+          // Under budget — good but might be too cheap
+          budgetScore = 80;
+        } else if (price <= max) {
+          // Within budget — perfect
+          budgetScore = 100;
+        } else {
+          // Over budget — penalise proportionally (0 at 50%+ over max)
+          const overBy = (price - max) / max;
+          budgetScore = Math.max(0, Math.round(100 - overBy * 200));
+        }
+      }
+
+      // ── Type score (30%) ────────────────────────────────────────────────────
+      let typeScore = 50; // neutral when no type pref
+      if (preferredTypes.length > 0 && property.propertyType) {
+        const propType = (property.propertyType as string).toLowerCase();
+        const matched = preferredTypes.some((t) =>
+          propType.includes(t.toLowerCase()) || t.toLowerCase().includes(propType),
+        );
+        typeScore = matched ? 100 : 0;
+      }
+
+      // ── EPC / features score (30%) ──────────────────────────────────────────
+      let featuresScore = 50; // neutral when no feature pref
+      if (wantsEfficientEnergy && property.epcRating) {
+        const rating = (property.epcRating as string).toUpperCase();
+        const epcMap: Record<string, number> = {
+          A: 100, B: 90, C: 75, D: 50, E: 25, F: 10, G: 0,
+        };
+        featuresScore = epcMap[rating] ?? 50;
+      }
+
+      const matchScore = Math.round(
+        budgetScore * 0.4 + typeScore * 0.3 + featuresScore * 0.3,
+      );
+
+      return { ...property, matchScore };
+    });
+
+    // Sort by match score descending; return top 5
+    scored.sort((a, b) => b.matchScore - a.matchScore);
+    const top = scored.slice(0, 5);
+    return { items: top, total: top.length };
+  }
+
+  // ── EPC Download proxy ───────────────────────────────────────────────────────
+
+  async getEpcDownloadInfo(propertyId: string): Promise<{ certUrl: string; lmkKey: string } | null> {
+    const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
+    if (!property?.uprn) return null;
+
+    try {
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${property.uprn}&size=1`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const row = data.rows?.[0];
+      if (!row?.['lmk-key']) return null;
+      const lmkKey = row['lmk-key'];
+      return { lmkKey, certUrl: `https://epc.opendatacommunities.org/files/${lmkKey}` };
+    } catch {
+      return null;
     }
   }
 }
