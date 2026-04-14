@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Delete,
   Body,
+  Res,
 } from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -69,6 +70,12 @@ export class PropertyController {
     return this.propertyService.getSavedProperties(req.user.id);
   }
 
+  @Get('for-you')
+  @UseGuards(JwtAuthGuard)
+  async getForYou(@Request() req: any) {
+    return this.propertyService.getForYou(req.user.id);
+  }
+
   @Get(':id/actions')
   @UseGuards(JwtAuthGuard)
   async getPropertyActions(@Param('id') id: string, @Request() req: any) {
@@ -121,5 +128,46 @@ export class PropertyController {
     const property = await this.propertyService.getPropertyById(id);
     if (!property) throw new NotFoundException('Property not found');
     return property;
+  }
+
+  @Post(':id/register-interest')
+  @UseGuards(JwtAuthGuard)
+  async registerInterest(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { interestLevel: string; name?: string; userEmail?: string },
+  ) {
+    return this.propertyService.registerInterest(id, req.user.id, body);
+  }
+
+  @Post(':id/tap-owner')
+  @UseGuards(JwtAuthGuard)
+  async tapOwner(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { message: string; sharePhone?: boolean },
+  ) {
+    return this.propertyService.tapOwner(id, req.user.id, body);
+  }
+
+  @Get(':id/epc-download')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async downloadEpc(@Param('id') id: string, @Res() res: any) {
+    const info = await this.propertyService.getEpcDownloadInfo(id);
+    if (!info) throw new NotFoundException('EPC certificate not available for this property');
+
+    const email = process.env.EPC_EMAIL ?? '';
+    const key = process.env.EPC_API_KEY ?? '';
+    const authHeader = `Basic ${Buffer.from(`${email}:${key}`).toString('base64')}`;
+
+    const certRes = await fetch(info.certUrl, {
+      headers: { Authorization: authHeader },
+    });
+    if (!certRes.ok) throw new NotFoundException('EPC certificate could not be retrieved');
+
+    res.setHeader('Content-Disposition', `attachment; filename="epc-certificate.pdf"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    const buffer = Buffer.from(await certRes.arrayBuffer());
+    res.send(buffer);
   }
 }

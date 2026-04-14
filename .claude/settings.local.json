@@ -72,7 +72,8 @@
       "Bash(npx nuxt:*)",
       "WebFetch(domain:chatgpt.com)",
       "Bash(DATABASE_URL=\"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" npx prisma db execute --stdin)",
-      "Bash(psql \"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" -c \"SELECT \\(SELECT COUNT\\(*\\) FROM \\\\\"Passport\\\\\"\\) AS passports, \\(SELECT COUNT\\(*\\) FROM \\\\\"PassportSection\\\\\"\\) AS sections, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\"\\) AS properties, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\" WHERE \\\\\"imageUrl\\\\\" LIKE '%pexels%'\\) AS pexels_remaining;\")"
+      "Bash(psql \"postgresql://postgres:XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX@maglev.proxy.rlwy.net:30563/railway\" -c \"SELECT \\(SELECT COUNT\\(*\\) FROM \\\\\"Passport\\\\\"\\) AS passports, \\(SELECT COUNT\\(*\\) FROM \\\\\"PassportSection\\\\\"\\) AS sections, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\"\\) AS properties, \\(SELECT COUNT\\(*\\) FROM \\\\\"Property\\\\\" WHERE \\\\\"imageUrl\\\\\" LIKE '%pexels%'\\) AS pexels_remaining;\")",
+      "Bash(start \"\" /B node dist/src/main.js)"
     ]
   }
 }

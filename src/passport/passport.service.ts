@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Passport,
@@ -101,6 +101,13 @@ export class PassportService {
   ): Promise<{ passportId: string }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User does not exist: ' + userId);
+
+    // Phone is required to become a passport owner (needed for WhatsApp contact)
+    if (!user.phone || !user.phone.trim()) {
+      throw new BadRequestException(
+        'A phone number is required on your profile before claiming a property passport. Please add your phone number in Profile → Personal Information.',
+      );
+    }
 
     // If propertyId provided, check if a passport already exists for it
     if (propertyId) {
