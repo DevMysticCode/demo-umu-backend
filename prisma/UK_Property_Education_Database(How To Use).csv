@@ -1,0 +1,31 @@
+UK Property Education Database,
+,
+PURPOSE,"This spreadsheet is the content database for the UK Property Education platform. Each row in the DATABASE sheet is one question that appears in the app. When a user taps a question, your app retrieves the corresponding row and displays the content."
+,
+HOW YOUR DEVELOPERS USE IT,"Import the DATABASE sheet into your backend. Map each row to a question by QUESTION_ID. When a user taps a question in the app, query the database by QUESTION_ID and return the relevant content fields."
+,
+COLUMN GUIDE,
+QUESTION_ID,Unique identifier for each question. Use this as the primary key in your database.
+CATEGORY,"The thematic group the question belongs to (e.g. Boundaries, Environmental, Leasehold)."
+QUESTION,The question exactly as it appears to the user in the app.
+AUDIENCE,Who this content is for: BOTH / BUYER / SELLER. Use this to show/hide content based on user type.
+SHORT_DESCRIPTION,"One-sentence summary. Use for preview text, tooltips, or search results."
+MAIN_EXPLANATION,Full plain-English educational content. This is the primary content shown when a user taps the question.
+BUYER_GUIDANCE,Specific guidance for buyers. Display only when user type = Buyer or Both.
+SELLER_GUIDANCE,Specific guidance for sellers. Display only when user type = Seller or Both.
+KEY_POINTS,Bullet-point summary of the most important takeaways. Use for quick-read mode or summary cards.
+VIDEO_SCRIPT_FULL,90-120 second script for long-form video content linked to this question.
+VIDEO_SCRIPT_SHORT,30-second script for TikTok / Instagram Reels / YouTube Shorts.
+DISCLAIMER,Standard disclaimer to display with all educational content.
+,
+RECOMMENDED DISPLAY LOGIC,
+Step 1,User taps a question in the app
+Step 2,App queries database WHERE QUESTION_ID = [tapped question]
+Step 3,Display MAIN_EXPLANATION as the primary content
+Step 4,"If user.type == BUYER, also show BUYER_GUIDANCE"
+Step 5,"If user.type == SELLER, also show SELLER_GUIDANCE"
+Step 6,Show KEY_POINTS as a summary card at the bottom
+Step 7,Link to video if VIDEO_SCRIPT_FULL has been produced
+Step 8,Always display DISCLAIMER at the bottom of the content
+,
+DISCLAIMER,This content is for general educational purposes only — not legal advice. Always consult a qualified solicitor for guidance specific to your situation.

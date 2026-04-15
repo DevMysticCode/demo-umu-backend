@@ -67,28 +67,41 @@ export class PassportService {
       orderBy: { order: 'asc' },
     });
 
+    // Fetch section templates to get helpContent / helpVideoUrl
+    const sectionKeys = sections.map((s) => s.key);
+    const sectionTemplates = await this.prisma.sectionTemplate.findMany({
+      where: { key: { in: sectionKeys } },
+      select: { key: true, helpContent: true, helpVideoUrl: true },
+    });
+    const sectionTemplateMap = new Map(sectionTemplates.map((st) => [st.key, st]));
+
     // Transform tasks to include question counts
-    const transformedSections = sections.map((section) => ({
-      id: section.id,
-      key: section.key,
-      title: section.title,
-      subtitle: section.subtitle,
-      description: section.description,
-      imageKey: section.imageKey,
-      status: section.status,
-      order: section.order,
-      tasks: section.tasks.map((task) => ({
-        id: task.id,
-        key: task.key,
-        title: task.title,
-        description: task.description,
-        order: task.order,
-        totalQuestions: task.passportQuestions.length,
-        answeredQuestions: task.passportQuestions.filter(
-          (q) => q.answer !== null,
-        ).length,
-      })),
-    }));
+    const transformedSections = sections.map((section) => {
+      const template = sectionTemplateMap.get(section.key);
+      return {
+        id: section.id,
+        key: section.key,
+        title: section.title,
+        subtitle: section.subtitle,
+        description: section.description,
+        imageKey: section.imageKey,
+        status: section.status,
+        order: section.order,
+        helpContent: template?.helpContent ?? null,
+        helpVideoUrl: template?.helpVideoUrl ?? null,
+        tasks: section.tasks.map((task) => ({
+          id: task.id,
+          key: task.key,
+          title: task.title,
+          description: task.description,
+          order: task.order,
+          totalQuestions: task.passportQuestions.length,
+          answeredQuestions: task.passportQuestions.filter(
+            (q) => q.answer !== null,
+          ).length,
+        })),
+      };
+    });
 
     return transformedSections;
   }
@@ -470,6 +483,16 @@ export class PassportService {
       throw new ForbiddenException('You do not have access to this passport');
     }
 
+    // Fetch section templates to get helpContent / helpVideoUrl per section
+    const sectionKeys = passport.sections.map((s) => s.key);
+    const sectionTemplates = await this.prisma.sectionTemplate.findMany({
+      where: { key: { in: sectionKeys } },
+      select: { key: true, helpContent: true, helpVideoUrl: true },
+    });
+    const sectionTemplateMap = new Map(
+      sectionTemplates.map((st) => [st.key, st]),
+    );
+
     return {
       passport: {
         id: passport.id,
@@ -477,37 +500,46 @@ export class PassportService {
         postcode: passport.postcode,
       },
       property: passport.property,
-      sections: passport.sections.map((s) => ({
-        id: s.id,
-        key: s.key,
-        title: s.title,
-        subtitle: s.subtitle,
-        description: s.description,
-        imageKey: s.imageKey,
-        order: s.order,
-        tasks: s.tasks.map((t) => ({
-          id: t.id,
-          key: t.key,
-          title: t.title,
-          description: t.description,
-          order: t.order,
-          questions: t.passportQuestions.map((q) => ({
-            id: q.id,
-            type: q.questionTemplate.type,
-            question: q.questionTemplate.title,
-            description: q.questionTemplate.description,
-            parts: q.questionTemplate.parts,
-            answer: q.answer
-              ? {
-                  answerText: q.answer.answerText,
-                  answerJson: q.answer.answerJson,
-                  fileUrl: q.answer.fileUrl,
-                  createdAt: q.answer.createdAt,
-                }
-              : null,
+      sections: passport.sections.map((s) => {
+        const template = sectionTemplateMap.get(s.key);
+        return {
+          id: s.id,
+          key: s.key,
+          title: s.title,
+          subtitle: s.subtitle,
+          description: s.description,
+          imageKey: s.imageKey,
+          order: s.order,
+          helpContent: template?.helpContent ?? null,
+          helpVideoUrl: template?.helpVideoUrl ?? null,
+          tasks: s.tasks.map((t) => ({
+            id: t.id,
+            key: t.key,
+            title: t.title,
+            description: t.description,
+            order: t.order,
+            questions: t.passportQuestions.map((q) => ({
+              id: q.id,
+              type: q.questionTemplate.type,
+              question: q.questionTemplate.title,
+              description: q.questionTemplate.description,
+              parts: q.questionTemplate.parts,
+              options: q.questionTemplate.options,
+              fields: q.questionTemplate.fields,
+              helpContent: q.questionTemplate.helpContent,
+              helpVideoUrl: q.questionTemplate.helpVideoUrl,
+              answer: q.answer
+                ? {
+                    answerText: q.answer.answerText,
+                    answerJson: q.answer.answerJson,
+                    fileUrl: q.answer.fileUrl,
+                    createdAt: q.answer.createdAt,
+                  }
+                : null,
+            })),
           })),
-        })),
-      })),
+        };
+      }),
     };
   }
 

@@ -7,7 +7,7 @@ import {
   SectionStatus,
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../src/constants/task-metadata';
-import { TASK_HELP_CONTENT, SECTION_HELP_CONTENT } from './passport-help-content';
+import { TASK_HELP_CONTENT, SECTION_HELP_CONTENT, QUESTION_HELP_CONTENT, toSlug } from './passport-help-content';
 
 const prisma = new PrismaClient();
 
@@ -12694,7 +12694,13 @@ async function main() {
     await prisma.sectionTemplate.create({
       data: {
         ...st,
-        helpText: sectionHelp?.helpText || null,
+        helpContent: sectionHelp
+          ? {
+              sellerGuidance: sectionHelp.sellerGuidance,
+              buyerGuidance: sectionHelp.buyerGuidance,
+              disclaimer: sectionHelp.disclaimer || null,
+            }
+          : undefined,
         helpVideoUrl: sectionHelp?.helpVideoUrl || null,
       },
     });
@@ -12704,8 +12710,14 @@ async function main() {
   // 4. Create QuestionTemplates
   console.log('Creating question templates...');
   for (const qt of QUESTION_TEMPLATES) {
-    const helpKey = `${qt.sectionKey}.${qt.taskKey}`;
-    const taskHelp = TASK_HELP_CONTENT[helpKey];
+    // Per-question lookup: sectionKey.taskKey.questionTitleSlug  (highest priority)
+    const titleSlug = qt.title ? toSlug(qt.title) : '';
+    const questionKey = titleSlug ? `${qt.sectionKey}.${qt.taskKey}.${titleSlug}` : '';
+    const questionHelp = questionKey ? QUESTION_HELP_CONTENT[questionKey] : undefined;
+    // Task-level fallback: sectionKey.taskKey
+    const taskKey = `${qt.sectionKey}.${qt.taskKey}`;
+    const taskHelp = TASK_HELP_CONTENT[taskKey];
+    const helpData = questionHelp ?? taskHelp ?? null;
     await prisma.questionTemplate.create({
       data: {
         sectionKey: qt.sectionKey,
@@ -12715,16 +12727,14 @@ async function main() {
         instructionText: qt.instructionText || null,
         type: qt.type,
         helpText: qt.helpText || null,
-        helpContent: taskHelp
+        helpContent: helpData
           ? {
-              mainExplanation: taskHelp.mainExplanation,
-              keyPoints: taskHelp.keyPoints,
-              sellerGuidance: taskHelp.sellerGuidance || null,
-              buyerGuidance: taskHelp.buyerGuidance || null,
-              disclaimer: taskHelp.disclaimer || null,
+              sellerGuidance: helpData.sellerGuidance,
+              buyerGuidance: helpData.buyerGuidance,
+              disclaimer: helpData.disclaimer || null,
             }
           : undefined,
-        helpVideoUrl: taskHelp?.helpVideoUrl || null,
+        helpVideoUrl: helpData?.helpVideoUrl || null,
         options: qt.options || undefined,
         placeholder: qt.placeholder || null,
         displayMode: qt.displayMode || null,

@@ -1,10 +1,31 @@
+import { IsOptional, IsString, Matches } from 'class-validator';
+
 export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
   firstName?: string;
+
+  @IsOptional()
+  @IsString()
   lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+[1-9]\d{6,14}$/, {
+    message: 'phone must be in E.164 format, e.g. +447911123456',
+  })
   phone?: string;
+
+  @IsOptional()
   contactVisible?: boolean;
+
+  @IsOptional()
   pushNotifications?: boolean;
+
+  @IsOptional()
   emailNewsletter?: boolean;
+
+  @IsOptional()
   smsNotifications?: boolean;
 }
 
