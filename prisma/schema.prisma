@@ -214,7 +214,7 @@ model SectionTemplate {
   subtitle          String?
   description       String?
   icon              String?
-  helpText          String?
+  helpContent       Json?
   helpVideoUrl      String?
   order             Int
   createdAt         DateTime           @default(now())

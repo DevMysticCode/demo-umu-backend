@@ -2,7 +2,10 @@
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
@@ -91,5 +94,26 @@ export class QuestionService {
     });
 
     return { success: true };
+  }
+
+  async uploadQuestionFile(questionId: string, userId: string, file: any) {
+    if (!file) throw new BadRequestException('No file provided');
+
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: questionId },
+      include: {
+        passportSectionTask: {
+          include: { passportSection: { include: { passport: { select: { ownerId: true } } } } },
+        },
+      },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+
+    const passportId = question.passportSectionTask.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
+    if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
+
+    const fileUrl = `${BASE_URL}/uploads/passport-docs/${file.filename}`;
+    return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
   }
 }
