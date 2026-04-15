@@ -7,6 +7,7 @@ import {
   SectionStatus,
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../src/constants/task-metadata';
+import { TASK_HELP_CONTENT, SECTION_HELP_CONTENT } from './passport-help-content';
 
 const prisma = new PrismaClient();
 
@@ -12689,13 +12690,22 @@ async function main() {
   // 3. Create SectionTemplates
   console.log('Creating section templates...');
   for (const st of SECTION_TEMPLATES) {
-    await prisma.sectionTemplate.create({ data: st });
+    const sectionHelp = SECTION_HELP_CONTENT[st.key];
+    await prisma.sectionTemplate.create({
+      data: {
+        ...st,
+        helpText: sectionHelp?.helpText || null,
+        helpVideoUrl: sectionHelp?.helpVideoUrl || null,
+      },
+    });
   }
   console.log(`  -> ${SECTION_TEMPLATES.length} section templates created`);
 
   // 4. Create QuestionTemplates
   console.log('Creating question templates...');
   for (const qt of QUESTION_TEMPLATES) {
+    const helpKey = `${qt.sectionKey}.${qt.taskKey}`;
+    const taskHelp = TASK_HELP_CONTENT[helpKey];
     await prisma.questionTemplate.create({
       data: {
         sectionKey: qt.sectionKey,
@@ -12705,6 +12715,16 @@ async function main() {
         instructionText: qt.instructionText || null,
         type: qt.type,
         helpText: qt.helpText || null,
+        helpContent: taskHelp
+          ? {
+              mainExplanation: taskHelp.mainExplanation,
+              keyPoints: taskHelp.keyPoints,
+              sellerGuidance: taskHelp.sellerGuidance || null,
+              buyerGuidance: taskHelp.buyerGuidance || null,
+              disclaimer: taskHelp.disclaimer || null,
+            }
+          : undefined,
+        helpVideoUrl: taskHelp?.helpVideoUrl || null,
         options: qt.options || undefined,
         placeholder: qt.placeholder || null,
         displayMode: qt.displayMode || null,

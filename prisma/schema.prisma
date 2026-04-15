@@ -214,6 +214,8 @@ model SectionTemplate {
   subtitle          String?
   description       String?
   icon              String?
+  helpText          String?
+  helpVideoUrl      String?
   order             Int
   createdAt         DateTime           @default(now())
   questionTemplates QuestionTemplate[]
@@ -348,6 +350,8 @@ model QuestionTemplate {
   description         String?
   instructionText     String?
   helpText            String?
+  helpContent         Json?
+  helpVideoUrl        String?
   type                QuestionType
   options             Json?
   placeholder         String?
