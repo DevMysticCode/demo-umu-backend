@@ -12,6 +12,7 @@ import {
   QuestionTemplate,
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
+import OpenAI from 'openai';
 
 interface GroupedQuestion {
   sectionKey: string;
@@ -21,7 +22,14 @@ interface GroupedQuestion {
 
 @Injectable()
 export class PassportService {
-  constructor(private prisma: PrismaService) {}
+  private groq: OpenAI;
+
+  constructor(private prisma: PrismaService) {
+    this.groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+    });
+  }
 
   async getPassport(passportId: string) {
     const passport = await this.prisma.passport.findUnique({
@@ -701,5 +709,286 @@ export class PassportService {
     });
 
     return { images: (property?.images as string[]) ?? [] };
+  }
+
+  // ── Comparables ─────────────────────────────────────────────────────────
+
+  async getComparables(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: { buyerAccesses: { where: { userId } }, collaborators: { where: { userId } } },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    if (!isOwner && !passport.collaborators.length && !passport.buyerAccesses.length) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const postcode = passport.postcode.replace(/\s+/g, '').toUpperCase();
+    // Match on postcode sector (e.g. "TW181" from "TW18 1AB") for nearby results
+    const sector = postcode.slice(0, -2);
+
+    const rows = await this.prisma.pricePaidTransaction.findMany({
+      where: {
+        postcode: { startsWith: sector },
+      },
+      orderBy: { transactionDate: 'desc' },
+      take: 6,
+      select: {
+        price: true,
+        transactionDate: true,
+        postcode: true,
+        propertyType: true,
+        paon: true,
+        street: true,
+        town: true,
+        tenure: true,
+      },
+    });
+
+    const typeMap: Record<string, string> = {
+      D: 'Detached', S: 'Semi-detached', T: 'Terraced', F: 'Flat/Maisonette', O: 'Other',
+    };
+    const tenureMap: Record<string, string> = { F: 'Freehold', L: 'Leasehold', U: 'Unknown' };
+
+    return rows.map((r) => ({
+      price: r.price,
+      date: r.transactionDate,
+      postcode: r.postcode,
+      address: [r.paon, r.street, r.town].filter(Boolean).join(', '),
+      propertyType: typeMap[r.propertyType ?? ''] ?? r.propertyType ?? 'Property',
+      tenure: tenureMap[r.tenure ?? ''] ?? r.tenure ?? null,
+    }));
+  }
+
+  // ── Share Link ───────────────────────────────────────────────────────────
+
+  async createShareLink(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    const isCollaborator = await this.prisma.passportCollaborator.findFirst({
+      where: { passportId, userId },
+    });
+    const isBuyer = await this.prisma.buyerPassportAccess.findFirst({
+      where: { passportId, userId },
+    });
+    if (!isOwner && !isCollaborator && !isBuyer) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const token = require('crypto').randomUUID() as string;
+    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+
+    await this.prisma.sharedPassportLink.create({
+      data: { passportId, token, expiresAt },
+    });
+
+    const baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    const url = `${baseUrl}/shared/${token}`;
+    return { token, url, expiresAt };
+  }
+
+  async getSharedPassport(token: string) {
+    const link = await this.prisma.sharedPassportLink.findUnique({
+      where: { token },
+      include: { passport: true },
+    });
+    if (!link) throw new NotFoundException('Share link not found');
+    if (link.expiresAt < new Date()) {
+      await this.prisma.sharedPassportLink.delete({ where: { token } });
+      throw new ForbiddenException('This share link has expired');
+    }
+
+    const passportId = link.passportId;
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        property: true,
+        sections: {
+          orderBy: { order: 'asc' },
+          include: {
+            tasks: {
+              orderBy: { order: 'asc' },
+              include: {
+                passportQuestions: {
+                  include: { questionTemplate: true, answer: true },
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    const sectionKeys = passport.sections.map((s) => s.key);
+    const sectionTemplates = await this.prisma.sectionTemplate.findMany({
+      where: { key: { in: sectionKeys } },
+      select: { key: true, helpContent: true, helpVideoUrl: true },
+    });
+    const stMap = new Map(sectionTemplates.map((st) => [st.key, st]));
+
+    const propertyTenure = (passport.property as any)?.tenure ?? null;
+    const isLeasehold = this.isLeaseholdTenure(propertyTenure);
+    const visibleSections = passport.sections.filter((s) => s.key !== 'leasehold' || isLeasehold);
+
+    return {
+      passport: { id: passport.id, addressLine1: passport.addressLine1, postcode: passport.postcode },
+      property: { ...(passport.property as any), isLeasehold },
+      expiresAt: link.expiresAt,
+      sections: visibleSections.map((s) => {
+        const tpl = stMap.get(s.key);
+        return {
+          id: s.id, key: s.key, title: s.title, subtitle: s.subtitle,
+          description: s.description, imageKey: s.imageKey, order: s.order,
+          helpContent: tpl?.helpContent ?? null,
+          tasks: s.tasks.map((t) => ({
+            id: t.id, key: t.key, title: t.title, description: t.description, order: t.order,
+            questions: t.passportQuestions.map((q) => ({
+              id: q.id, type: q.questionTemplate.type, question: q.questionTemplate.title,
+              description: q.questionTemplate.description, parts: q.questionTemplate.parts,
+              options: q.questionTemplate.options, fields: q.questionTemplate.fields,
+              answer: q.answer ? {
+                answerText: q.answer.answerText, answerJson: q.answer.answerJson,
+                fileUrl: q.answer.fileUrl, createdAt: q.answer.createdAt,
+              } : null,
+            })),
+          })),
+        };
+      }),
+    };
+  }
+
+  // ── AI Section Summary ───────────────────────────────────────────────────
+
+  async getSectionAiSummary(passportId: string, sectionKey: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        buyerAccesses: { where: { userId } },
+        collaborators: { where: { userId } },
+        sections: {
+          where: { key: sectionKey },
+          include: {
+            tasks: {
+              include: {
+                passportQuestions: {
+                  include: { questionTemplate: true, answer: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    if (!isOwner && !passport.collaborators.length && !passport.buyerAccesses.length) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const section = passport.sections[0];
+    if (!section) throw new NotFoundException('Section not found');
+
+    // Build Q&A list
+    const qaList: string[] = [];
+    for (const task of section.tasks) {
+      for (const pq of task.passportQuestions) {
+        const q = pq.questionTemplate.title;
+        let a = '';
+        if (pq.answer) {
+          a = pq.answer.answerText ?? '';
+          if (!a && pq.answer.answerJson) {
+            try {
+              const j: any = typeof pq.answer.answerJson === 'string'
+                ? JSON.parse(pq.answer.answerJson as string)
+                : pq.answer.answerJson;
+              a = j?.mainAnswer ?? j?.radioAnswer ?? j?.text ?? JSON.stringify(j);
+            } catch { a = String(pq.answer.answerJson); }
+          }
+          if (!a && pq.answer.fileUrl) a = '[Document uploaded]';
+        }
+        if (a) qaList.push(`Q: ${q}\nA: ${a}`);
+      }
+    }
+
+    if (!qaList.length) {
+      return { summary: 'The seller has not yet answered any questions in this section.' };
+    }
+
+    const prompt = `You are a UK property buying assistant helping a buyer understand a property passport section.
+
+Section: ${section.title}
+${section.subtitle ? `Description: ${section.subtitle}` : ''}
+
+Seller's answers:
+${qaList.join('\n\n')}
+
+Write a short, plain-English summary (3-5 sentences) of what these answers mean for the buyer.
+Focus on: what is good news, what needs attention, and any questions the buyer should ask their solicitor.
+Be factual, helpful, and concise. Do not repeat the questions verbatim.`;
+
+    const completion = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 300,
+      temperature: 0.4,
+    });
+
+    return { summary: completion.choices[0]?.message?.content ?? 'Unable to generate summary.' };
+  }
+
+  // ── Buyer Notes ──────────────────────────────────────────────────────────
+
+  async createBuyerNote(passportId: string, userId: string, text: string, sectionKey?: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        buyerAccesses: { where: { userId } },
+        collaborators: { where: { userId } },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    if (!isOwner && !passport.collaborators.length && !passport.buyerAccesses.length) {
+      throw new ForbiddenException('Access denied');
+    }
+    if (!text?.trim()) throw new BadRequestException('Note text is required');
+
+    return this.prisma.buyerNote.create({
+      data: { passportId, userId, text: text.trim(), sectionKey: sectionKey ?? null },
+      select: { id: true, passportId: true, sectionKey: true, text: true, createdAt: true },
+    });
+  }
+
+  async getBuyerNotes(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        buyerAccesses: { where: { userId } },
+        collaborators: { where: { userId } },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    if (!isOwner && !passport.collaborators.length && !passport.buyerAccesses.length) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.prisma.buyerNote.findMany({
+      where: { passportId, userId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, passportId: true, sectionKey: true, text: true, createdAt: true },
+    });
+  }
+
+  async deleteBuyerNote(noteId: string, userId: string) {
+    const note = await this.prisma.buyerNote.findUnique({ where: { id: noteId } });
+    if (!note) throw new NotFoundException('Note not found');
+    if (note.userId !== userId) throw new ForbiddenException('Not your note');
+    await this.prisma.buyerNote.delete({ where: { id: noteId } });
+    return { deleted: true };
   }
 }

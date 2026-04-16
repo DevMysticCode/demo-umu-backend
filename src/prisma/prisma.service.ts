@@ -151,4 +151,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get pricePaidTransaction() {
     return this.prisma.pricePaidTransaction;
   }
+
+  get sharedPassportLink() {
+    return this.prisma.sharedPassportLink;
+  }
+
+  get buyerNote() {
+    return this.prisma.buyerNote;
+  }
 }
