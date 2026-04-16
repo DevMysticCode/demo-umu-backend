@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   Passport,
@@ -73,7 +78,9 @@ export class PassportService {
       where: { key: { in: sectionKeys } },
       select: { key: true, helpContent: true, helpVideoUrl: true },
     });
-    const sectionTemplateMap = new Map(sectionTemplates.map((st) => [st.key, st]));
+    const sectionTemplateMap = new Map(
+      sectionTemplates.map((st) => [st.key, st]),
+    );
 
     // Transform tasks to include question counts
     const transformedSections = sections.map((section) => {
@@ -132,7 +139,9 @@ export class PassportService {
         if (existing.ownerId === userId) {
           return { passportId: existing.id };
         }
-        throw new ForbiddenException('This property already has a passport owned by another user');
+        throw new ForbiddenException(
+          'This property already has a passport owned by another user',
+        );
       }
       // Fetch tenure so we can skip the leasehold section for non-leasehold properties
       const prop = await this.prisma.property.findUnique({
@@ -280,7 +289,13 @@ export class PassportService {
   async getUserPassports(userId: string) {
     const owned = await this.prisma.passport.findMany({
       where: { ownerId: userId },
-      select: { id: true, addressLine1: true, postcode: true, status: true, createdAt: true },
+      select: {
+        id: true,
+        addressLine1: true,
+        postcode: true,
+        status: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -288,7 +303,13 @@ export class PassportService {
       where: { userId },
       include: {
         passport: {
-          select: { id: true, addressLine1: true, postcode: true, status: true, createdAt: true },
+          select: {
+            id: true,
+            addressLine1: true,
+            postcode: true,
+            status: true,
+            createdAt: true,
+          },
         },
       },
     });
@@ -318,13 +339,15 @@ export class PassportService {
     }
 
     // User has access if they are the owner or a collaborator
-    return (
-      passport.ownerId === userId || passport.collaborators.length > 0
-    );
+    return passport.ownerId === userId || passport.collaborators.length > 0;
   }
 
   // Add collaborator by email
-  async addCollaborator(passportId: string, requesterId: string, email: string) {
+  async addCollaborator(
+    passportId: string,
+    requesterId: string,
+    email: string,
+  ) {
     // Verify requester is the owner
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
@@ -335,9 +358,7 @@ export class PassportService {
     }
 
     if (passport.ownerId !== requesterId) {
-      throw new ForbiddenException(
-        'Only the owner can add collaborators',
-      );
+      throw new ForbiddenException('Only the owner can add collaborators');
     }
 
     // Find user by email
@@ -435,7 +456,9 @@ export class PassportService {
 
   // Delete passport (owner only)
   async deletePassport(passportId: string, userId: string) {
-    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
     if (!passport) throw new NotFoundException('Passport not found');
     if (passport.ownerId !== userId) {
       throw new ForbiddenException('Only the owner can delete this passport');
@@ -446,7 +469,9 @@ export class PassportService {
 
   // Create buyer access (simulated payment unlock)
   async createBuyerAccess(passportId: string, userId: string) {
-    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
     if (!passport) throw new NotFoundException('Passport not found');
 
     // Owner already has full access
@@ -586,9 +611,7 @@ export class PassportService {
     }
 
     if (passport.ownerId !== requesterId) {
-      throw new ForbiddenException(
-        'Only the owner can remove collaborators',
-      );
+      throw new ForbiddenException('Only the owner can remove collaborators');
     }
 
     // Delete collaborator
@@ -631,5 +654,52 @@ export class PassportService {
       data: { status: 'IN_PROGRESS' as any },
       select: { id: true, status: true },
     });
+  }
+
+  // ── Property Images ──────────────────────────────────────────────────────
+
+  async updatePropertyImages(
+    passportId: string,
+    userId: string,
+    images: string[],
+  ) {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess)
+      throw new ForbiddenException('You do not have access to this passport');
+
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { propertyId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (!passport.propertyId)
+      throw new BadRequestException('This passport has no linked property');
+
+    await this.prisma.property.update({
+      where: { id: passport.propertyId },
+      data: { images },
+    });
+
+    return { images };
+  }
+
+  async getPropertyImages(passportId: string, userId: string) {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess)
+      throw new ForbiddenException('You do not have access to this passport');
+
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { propertyId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (!passport.propertyId) return { images: [] };
+
+    const property = await this.prisma.property.findUnique({
+      where: { id: passport.propertyId },
+      select: { images: true },
+    });
+
+    return { images: (property?.images as string[]) ?? [] };
   }
 }

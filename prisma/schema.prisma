@@ -123,6 +123,7 @@ model Property {
   councilTaxBand         String?
   floodRisk              String?
   imageUrl               String?
+  images                 Json?
   titleNumber            String?
   epcEnrichedAt          DateTime?
   createdAt              DateTime                @default(now())
