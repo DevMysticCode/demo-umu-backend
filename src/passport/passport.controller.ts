@@ -9,9 +9,17 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { PassportService } from './passport.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 interface CreatePassportDto {
   addressLine1: string;
@@ -85,10 +93,7 @@ export class PassportController {
 
   @Get(':id/collaborators')
   @UseGuards(JwtAuthGuard)
-  async getCollaborators(
-    @Param('id') passportId: string,
-    @Request() req: any,
-  ) {
+  async getCollaborators(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
     return this.passportService.getCollaborators(passportId, userId);
   }
@@ -139,5 +144,72 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async deletePassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.deletePassport(passportId, req.user.id);
+  }
+
+  @Post(':id/upload-image')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'property-images');
+          if (!existsSync(uploadPath))
+            mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 20 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new Error('Only image files are allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadPropertyImage(
+    @Param('id') passportId: string,
+    @UploadedFile() file: any,
+    @Request() req: any,
+  ) {
+    const hasAccess = await this.passportService.checkUserAccess(
+      passportId,
+      req.user.id,
+    );
+    if (!hasAccess) throw new ForbiddenException('Access denied');
+    const url = `${BASE_URL}/uploads/property-images/${file.filename}`;
+    return {
+      url,
+      name: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    };
+  }
+
+  @Get(':id/property-images')
+  @UseGuards(JwtAuthGuard)
+  async getPropertyImages(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getPropertyImages(passportId, req.user.id);
+  }
+
+  @Put(':id/property-images')
+  @UseGuards(JwtAuthGuard)
+  async updatePropertyImages(
+    @Param('id') passportId: string,
+    @Body('images') images: string[],
+    @Request() req: any,
+  ) {
+    return this.passportService.updatePropertyImages(
+      passportId,
+      req.user.id,
+      images,
+    );
   }
 }
