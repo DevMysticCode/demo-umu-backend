@@ -883,7 +883,13 @@ export class PropertyService {
               status: true,
               sections: {
                 select: {
-                  tasks: { select: { status: true } },
+                  tasks: {
+                    select: {
+                      passportQuestions: {
+                        select: { id: true, answer: true },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -892,13 +898,23 @@ export class PropertyService {
       });
       const items = rows.map(({ passport, ...p }) => {
         const isPublished = passport?.status === 'PUBLISHED';
-        // Compute completion % from tasks
+        // Compute completion % the same way the passport view does:
+        // a task is "done" when every one of its questions is answered;
+        // overall % = done tasks / total tasks (task-level, matching usePassportRuntime).
         let passportCompletion: number | null = null;
         if (passport && isPublished) {
           const allTasks = passport.sections.flatMap((s) => s.tasks);
-          const done = allTasks.filter((t) => t.status === 'COMPLETED').length;
+          const doneTasks = allTasks.filter((t) => {
+            const total = t.passportQuestions.length;
+            const answered = t.passportQuestions.filter(
+              (q: any) => q.answer !== null,
+            ).length;
+            return total > 0 && answered === total;
+          }).length;
           passportCompletion =
-            allTasks.length > 0 ? Math.round((done / allTasks.length) * 100) : 0;
+            allTasks.length > 0
+              ? Math.round((doneTasks / allTasks.length) * 100)
+              : 0;
         }
         return {
           ...p,
