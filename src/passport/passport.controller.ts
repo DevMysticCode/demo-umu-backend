@@ -212,4 +212,62 @@ export class PassportController {
       images,
     );
   }
+
+  // ── Comparables ─────────────────────────────────────────────────────────
+
+  @Get(':id/comparables')
+  @UseGuards(JwtAuthGuard)
+  async getComparables(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getComparables(passportId, req.user.id);
+  }
+
+  // ── Share Link ───────────────────────────────────────────────────────────
+
+  @Post(':id/share')
+  @UseGuards(JwtAuthGuard)
+  async createShareLink(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.createShareLink(passportId, req.user.id);
+  }
+
+  @Get('shared/:token')
+  async getSharedPassport(@Param('token') token: string) {
+    return this.passportService.getSharedPassport(token);
+  }
+
+  // ── AI Summary ───────────────────────────────────────────────────────────
+
+  @Post(':id/ai-summary/:sectionKey')
+  @UseGuards(JwtAuthGuard)
+  async getSectionAiSummary(
+    @Param('id') passportId: string,
+    @Param('sectionKey') sectionKey: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getSectionAiSummary(passportId, sectionKey, req.user.id);
+  }
+
+  // ── Buyer Notes ───────────────────────────────────────────────────────────
+
+  @Post(':id/notes')
+  @UseGuards(JwtAuthGuard)
+  async createBuyerNote(
+    @Param('id') passportId: string,
+    @Body('text') text: string,
+    @Body('sectionKey') sectionKey: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.passportService.createBuyerNote(passportId, req.user.id, text, sectionKey);
+  }
+
+  @Get(':id/notes')
+  @UseGuards(JwtAuthGuard)
+  async getBuyerNotes(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getBuyerNotes(passportId, req.user.id);
+  }
+
+  @Delete('notes/:noteId')
+  @UseGuards(JwtAuthGuard)
+  async deleteBuyerNote(@Param('noteId') noteId: string, @Request() req: any) {
+    return this.passportService.deleteBuyerNote(noteId, req.user.id);
+  }
 }

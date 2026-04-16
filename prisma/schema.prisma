@@ -39,6 +39,7 @@ model User {
   savedProperties        UserSavedProperty[]
   reminders              UserReminder[]
   videoProgress          VideoProgress[]
+  buyerNotes             BuyerNote[]
 }
 
 model UserAddress {
@@ -236,6 +237,8 @@ model Passport {
   collaborators   PassportCollaborator[]
   collectionItems PassportCollectionItem[]
   buyerAccesses   BuyerPassportAccess[]
+  sharedLinks     SharedPassportLink[]
+  buyerNotes      BuyerNote[]
 
   @@index([ownerId])
 }
@@ -587,6 +590,31 @@ model HomeScoreResult {
   @@unique([propertyId, userId])
   @@index([propertyId])
   @@index([userId])
+}
+
+model SharedPassportLink {
+  id         String   @id @default(uuid())
+  passportId String
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([passportId])
+}
+
+model BuyerNote {
+  id         String   @id @default(uuid())
+  passportId String
+  userId     String
+  sectionKey String?
+  text       String
+  createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([passportId, userId])
 }
 
 // HM Land Registry Price Paid Data — imported via scripts/import-price-paid.ts
