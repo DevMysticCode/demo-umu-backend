@@ -123,6 +123,7 @@ export class PassportService {
     }
 
     // If propertyId provided, check if a passport already exists for it
+    let propertyTenure: string | null = null;
     if (propertyId) {
       const existing = await this.prisma.passport.findUnique({
         where: { propertyId },
@@ -133,7 +134,15 @@ export class PassportService {
         }
         throw new ForbiddenException('This property already has a passport owned by another user');
       }
+      // Fetch tenure so we can skip the leasehold section for non-leasehold properties
+      const prop = await this.prisma.property.findUnique({
+        where: { id: propertyId },
+        select: { tenure: true },
+      });
+      propertyTenure = prop?.tenure ?? null;
     }
+
+    const isLeasehold = this.isLeaseholdTenure(propertyTenure);
 
     // Create passport
     const passport = await this.prisma.passport.create({
@@ -162,6 +171,9 @@ export class PassportService {
     for (const sectionTemplate of sectionTemplates) {
       const sectionKey = sectionTemplate.key;
       const tasksForSection = groupedBySection.get(sectionKey);
+
+      // Skip the leasehold section for non-leasehold properties
+      if (sectionKey === 'leasehold' && !isLeasehold) continue;
 
       // Determine section status (first by order is ACTIVE, rest are LOCKED)
       const sectionStatus = sectionTemplate.order === 1 ? 'ACTIVE' : 'LOCKED';
@@ -222,6 +234,13 @@ export class PassportService {
     return {
       passportId: passport.id,
     };
+  }
+
+  /** Returns true for any tenure value that indicates leasehold ownership. */
+  private isLeaseholdTenure(tenure: string | null): boolean {
+    if (!tenure) return false;
+    const t = tenure.toLowerCase();
+    return t.includes('leasehold') || t === 'l';
   }
 
   private formatTaskKey(key: string): string {
@@ -493,14 +512,22 @@ export class PassportService {
       sectionTemplates.map((st) => [st.key, st]),
     );
 
+    const propertyTenure = (passport.property as any)?.tenure ?? null;
+    const isLeasehold = this.isLeaseholdTenure(propertyTenure);
+
+    // Filter out leasehold section for non-leasehold properties
+    const visibleSections = passport.sections.filter(
+      (s) => s.key !== 'leasehold' || isLeasehold,
+    );
+
     return {
       passport: {
         id: passport.id,
         addressLine1: passport.addressLine1,
         postcode: passport.postcode,
       },
-      property: passport.property,
-      sections: passport.sections.map((s) => {
+      property: { ...(passport.property as any), isLeasehold },
+      sections: visibleSections.map((s) => {
         const template = sectionTemplateMap.get(s.key);
         return {
           id: s.id,
