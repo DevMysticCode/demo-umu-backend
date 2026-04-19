@@ -503,6 +503,7 @@ export class PassportService {
       where: { id: passportId },
       include: {
         property: true,
+        owner: { select: { id: true, firstName: true, lastName: true, email: true } },
         collaborators: { where: { userId } },
         buyerAccesses: { where: { userId } },
         sections: {
@@ -553,11 +554,15 @@ export class PassportService {
       (s) => s.key !== 'leasehold' || isLeasehold,
     );
 
+    const owner = (passport as any).owner;
+    const ownerName = [owner?.firstName, owner?.lastName].filter(Boolean).join(' ') || owner?.email || '';
+
     return {
       passport: {
         id: passport.id,
         addressLine1: passport.addressLine1,
         postcode: passport.postcode,
+        ownerName,
       },
       property: { ...(passport.property as any), isLeasehold },
       sections: visibleSections.map((s) => {

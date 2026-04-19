@@ -123,6 +123,16 @@ export class PropertyController {
     return this.propertyService.getNeighbourhoodStats(id);
   }
 
+  @Get(':id/street')
+  async getStreetProperties(@Param('id') id: string) {
+    return this.propertyService.getStreetProperties(id);
+  }
+
+  @Get(':id/matched-buyers')
+  async getMatchedBuyers(@Param('id') id: string) {
+    return this.propertyService.getMatchedBuyers(id);
+  }
+
   @Get(':id')
   async getProperty(@Param('id') id: string) {
     const property = await this.propertyService.getPropertyById(id);
