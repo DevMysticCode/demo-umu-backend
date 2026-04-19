@@ -80,7 +80,12 @@
       "Bash(python -c ' *)",
       "Bash(python prisma/extract_help.py)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(ls d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/use*Pdf* d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/use*pdf* ls d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/)"
+      "Bash(ls d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/use*Pdf* d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/use*pdf* ls d:/ReactProjects/op_nuxt/umu-mobile-webapp/composables/)",
+      "Bash(awk 'NR>=1600 && NR<=1800')",
+      "Bash(sed -i 's/definePageMeta\\({ title: .Calendar - UmovingU. }\\)/definePageMeta\\({ title: '\\\\''Calendar - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\)/' calendar.vue)",
+      "Bash(sed -i 's/definePageMeta\\({ title: .Your Documents - UmovingU. }\\)/definePageMeta\\({ title: '\\\\''Your Documents - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\)/' document.vue)",
+      "Bash(sed -i 's/definePageMeta\\({ title: .Collaborators - UmovingU. }\\);/definePageMeta\\({ title: '\\\\''Collaborators - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\);/' property-information.vue)",
+      "Bash(npx vue-tsc *)"
     ]
   }
 }

@@ -3169,6 +3169,138 @@ export class PropertyService {
     return { items: top, total: top.length };
   }
 
+  // ── Street properties ─────────────────────────────────────────────────────
+
+  async getStreetProperties(propertyId: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { postcode: true, addressLine1: true },
+    });
+    if (!property) return { properties: [], postcode: null, stats: null };
+
+    const properties = await this.prisma.property.findMany({
+      where: { postcode: property.postcode, id: { not: propertyId } },
+      take: 10,
+      select: {
+        id: true,
+        addressLine1: true,
+        postcode: true,
+        propertyType: true,
+        bedrooms: true,
+        epcRating: true,
+        estimatedPrice: true,
+        passport: { select: { id: true, status: true } },
+      },
+    });
+
+    const mapped = properties.map(p => ({
+      id: p.id,
+      addressLine1: p.addressLine1,
+      propertyType: p.propertyType,
+      bedrooms: p.bedrooms,
+      epcRating: p.epcRating,
+      price: p.estimatedPrice,
+      hasPassport: !!p.passport,
+      isPublished: p.passport?.status === 'PUBLISHED',
+      passportStatus: p.passport?.status ?? null,
+    }));
+
+    const published = mapped.filter(p => p.isPublished).length;
+    const started = mapped.filter(p => p.hasPassport).length;
+    const notStarted = mapped.filter(p => !p.hasPassport).length;
+
+    const epcRatings = mapped.map(p => p.epcRating).filter(Boolean) as string[];
+    const avgEpc = epcRatings.length
+      ? epcRatings.sort()[Math.floor(epcRatings.length / 2)]
+      : null;
+
+    const prices = mapped.map(p => p.price).filter(Boolean) as number[];
+    const avgPrice = prices.length
+      ? Math.round(prices.reduce((s, p) => s + p, 0) / prices.length)
+      : null;
+
+    return {
+      postcode: property.postcode,
+      properties: mapped,
+      stats: { published, started, notStarted, avgEpc, avgPrice },
+    };
+  }
+
+  // ── Matched buyers ─────────────────────────────────────────────────────────
+
+  async getMatchedBuyers(propertyId: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { estimatedPrice: true, propertyType: true, bedrooms: true, postcode: true },
+    });
+    if (!property) return { buyers: [], total: 0 };
+
+    const prefs = await this.prisma.userPreference.findMany({
+      where: { budgetMax: { not: null } },
+      take: 30,
+      select: {
+        budgetMin: true,
+        budgetMax: true,
+        propertyTypes: true,
+        buyingTimeline: true,
+        importantFeatures: true,
+        user: { select: { firstName: true, lastName: true, postcode: true } },
+      },
+    });
+
+    const price = property.estimatedPrice ?? 250000;
+
+    const scored = prefs
+      .filter(p => p.user.firstName)
+      .map(p => {
+        const bMax = p.budgetMax ?? 0;
+        const bMin = p.budgetMin ?? 0;
+        const budgetScore =
+          price <= bMax * 1.05 && price >= bMin * 0.9 ? 95 :
+          price <= bMax * 1.15 ? 70 : 30;
+
+        const types = (p.propertyTypes as string[] | null) ?? [];
+        const typeScore =
+          types.length === 0 || types.includes(property.propertyType ?? '') ? 85 : 45;
+
+        const matchScore = Math.round(budgetScore * 0.6 + typeScore * 0.4);
+
+        const firstName = p.user.firstName ?? 'Buyer';
+        const lastInit = p.user.lastName ? p.user.lastName[0] + '.' : '';
+        const area = p.user.postcode?.split(' ')[0] ?? 'Local area';
+
+        const tlMap: Record<string, string> = {
+          asap: 'Ready to buy now',
+          '3months': 'Buying within 3 months',
+          '6months': 'Buying within 6 months',
+          '12months': 'Planning ahead',
+        };
+
+        const tags: string[] = [
+          matchScore >= 75 ? 'Strong match' : matchScore >= 55 ? 'Good match' : 'Possible match',
+        ];
+        if (p.buyingTimeline === 'asap' || p.buyingTimeline === '3months') {
+          tags.push('Active buyer');
+        }
+        if (types.length > 0 && types.includes(property.propertyType ?? '')) {
+          tags.push('Type match');
+        }
+
+        return {
+          name: `${firstName} ${lastInit}`.trim(),
+          area,
+          budget: bMax ? `Up to £${Math.round(bMax / 1000)}k` : 'Flexible',
+          timeline: tlMap[p.buyingTimeline ?? ''] ?? 'Flexible timeline',
+          matchScore,
+          tags,
+        };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 8);
+
+    return { buyers: scored, total: prefs.length };
+  }
+
   // ── EPC Download proxy ───────────────────────────────────────────────────────
 
   async getEpcDownloadInfo(propertyId: string): Promise<{ certUrl: string; lmkKey: string } | null> {
