@@ -91,3 +91,15 @@ export class AddCollaboratorDto {
   clientAccess?: string;
   allowComms?: boolean;
 }
+
+export class UpsertPreferencesDto {
+  purpose?: any;
+  buyingTimeline?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  propertyTypes?: string[];
+  propertyStyles?: string[];
+  importantFeatures?: string[];
+  sellingTimeline?: string;
+  propertyValue?: number;
+}
