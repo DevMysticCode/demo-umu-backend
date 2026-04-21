@@ -2627,6 +2627,24 @@ export class PropertyService {
     });
   }
 
+  // Returns the best available homescore for a property (owner's first, then any) — no auth needed
+  async getPublicHomeScore(propertyId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { propertyId },
+      select: { ownerId: true },
+    });
+    if (passport?.ownerId) {
+      const ownerScore = await this.prisma.homeScoreResult.findUnique({
+        where: { propertyId_userId: { propertyId, userId: passport.ownerId } },
+      });
+      if (ownerScore) return ownerScore;
+    }
+    return this.prisma.homeScoreResult.findFirst({
+      where: { propertyId },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
   // ── Passport status ────────────────────────────────────────────────────────
 
   async getPassportStatus(propertyId: string, userId: string) {
