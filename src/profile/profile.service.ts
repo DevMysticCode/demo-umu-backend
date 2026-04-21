@@ -383,4 +383,26 @@ export class ProfileService {
     await this.prisma.userCollaborator.delete({ where: { id: collaboratorRowId } });
     return { message: 'Collaborator removed' };
   }
+
+  // ─── Preferences ──────────────────────────────────────────────────────────
+
+  async getPreferences(userId: string) {
+    const pref = await this.prisma.userPreference.findUnique({ where: { userId } });
+    return pref ?? null;
+  }
+
+  async upsertPreferences(userId: string, dto: any) {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId, ...dto },
+      update: dto,
+    });
+  }
+
+  async deleteAccount(userId: string) {
+    // Deleting the User cascades all related data: passports, sections, tasks,
+    // questions, answers, collaborators, documents, preferences, addresses, etc.
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { message: 'Account deleted' };
+  }
 }

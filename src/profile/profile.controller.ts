@@ -11,6 +11,8 @@ import {
   UseInterceptors,
   UploadedFile,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -27,6 +29,7 @@ import {
   CreateSolicitorDto,
   UpdateSolicitorDto,
   AddCollaboratorDto,
+  UpsertPreferencesDto,
 } from './dto/update-profile.dto';
 
 @Controller('profile')
@@ -146,5 +149,23 @@ export class ProfileController {
   @Delete('collaborators/:id')
   removeCollaborator(@Req() req: any, @Param('id') id: string) {
     return this.profileService.removeCollaborator(req.user.id, id);
+  }
+
+  // ─── Preferences ─────────────────────────────────────────────────────────
+
+  @Get('preferences')
+  getPreferences(@Req() req: any) {
+    return this.profileService.getPreferences(req.user.id);
+  }
+
+  @Post('preferences')
+  upsertPreferences(@Req() req: any, @Body() dto: UpsertPreferencesDto) {
+    return this.profileService.upsertPreferences(req.user.id, dto);
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  deleteAccount(@Req() req: any) {
+    return this.profileService.deleteAccount(req.user.id);
   }
 }
