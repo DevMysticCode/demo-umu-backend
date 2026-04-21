@@ -112,6 +112,11 @@ export class PropertyController {
     return this.propertyService.saveHomeScore(id, req.user.id, body);
   }
 
+  @Get(':id/homescore/public')
+  async getPublicHomeScore(@Param('id') id: string) {
+    return this.propertyService.getPublicHomeScore(id);
+  }
+
   @Get(':id/homescore')
   @UseGuards(JwtAuthGuard)
   async getHomeScore(@Param('id') id: string, @Request() req: any) {
