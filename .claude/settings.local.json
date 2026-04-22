@@ -85,7 +85,10 @@
       "Bash(sed -i 's/definePageMeta\\({ title: .Calendar - UmovingU. }\\)/definePageMeta\\({ title: '\\\\''Calendar - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\)/' calendar.vue)",
       "Bash(sed -i 's/definePageMeta\\({ title: .Your Documents - UmovingU. }\\)/definePageMeta\\({ title: '\\\\''Your Documents - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\)/' document.vue)",
       "Bash(sed -i 's/definePageMeta\\({ title: .Collaborators - UmovingU. }\\);/definePageMeta\\({ title: '\\\\''Collaborators - UmovingU'\\\\'', middleware: '\\\\''auth'\\\\'' }\\);/' property-information.vue)",
-      "Bash(npx vue-tsc *)"
+      "Bash(npx vue-tsc *)",
+      "Bash(mkdir -p \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id]\")",
+      "Bash(mv \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id]-v1.vue\" \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id]/full.vue\")",
+      "Bash(node_modules/.bin/vue-tsc --noEmit)"
     ]
   }
 }
