@@ -23,13 +23,22 @@ export class PropertyController {
     @Query('q') query: string,
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
+    @Query('radius') radius?: string,
   ) {
     if (!query || query.trim().length < 2) {
       return { items: [], total: 0 };
     }
     const off = parseInt(offset ?? '0') || 0;
     const lim = Math.min(parseInt(limit ?? '10') || 10, 50);
-    return this.propertyService.searchProperties(query.trim(), off, lim);
+    const r = radius ? parseFloat(radius) : undefined;
+    const radiusMiles =
+      r && !isNaN(r) && r > 0 && r <= 25 ? r : undefined;
+    return this.propertyService.searchProperties(
+      query.trim(),
+      off,
+      lim,
+      radiusMiles,
+    );
   }
 
   @Get(':id/passport-status')
@@ -74,6 +83,16 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   async getForYou(@Request() req: any) {
     return this.propertyService.getForYou(req.user.id);
+  }
+
+  @Get('verified-passports')
+  async getVerifiedPassports(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const lim = Math.min(parseInt(limit ?? '12') || 12, 50);
+    const off = parseInt(offset ?? '0') || 0;
+    return this.propertyService.getVerifiedPassportProperties(off, lim);
   }
 
   @Get(':id/actions')

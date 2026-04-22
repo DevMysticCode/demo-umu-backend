@@ -840,8 +840,26 @@ export class PropertyService {
     query: string,
     offset = 0,
     limit = 10,
+    radiusMiles?: number,
   ): Promise<{ items: Property[]; total: number }> {
     const q = query.trim();
+
+    // ── Radius-based search (bounding-box + haversine) ──────────────────────
+    if (radiusMiles && radiusMiles > 0) {
+      const centre = await this.resolveQueryLatLon(q);
+      if (centre) {
+        // Ensure DB has something for the postcode by priming it via the
+        // normal search path (populates real data from OS Places / EPC).
+        // Fire-and-wait first page only.
+        try {
+          await this.searchProperties(q, 0, limit);
+        } catch {
+          /* non-critical */
+        }
+        return this.searchWithinRadius(centre, radiusMiles, offset, limit);
+      }
+      // Could not resolve centre → fall back to text search below
+    }
 
     const searchCondition = {
       OR: [
@@ -3109,7 +3127,9 @@ export class PropertyService {
 
   // ── For You ──────────────────────────────────────────────────────────────────
 
-  async getForYou(userId: string): Promise<{ items: any[]; total: number }> {
+  async getForYou(
+    userId: string,
+  ): Promise<{ items: any[]; total: number; needsPostcode?: boolean }> {
     const [user, preference] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },
@@ -3118,7 +3138,10 @@ export class PropertyService {
       this.prisma.userPreference.findUnique({ where: { userId } }),
     ]);
 
-    const postcode = user?.postcode?.trim() || 'TW18';
+    const postcode = user?.postcode?.trim();
+    if (!postcode) {
+      return { items: [], total: 0, needsPostcode: true };
+    }
     const { items } = await this.searchProperties(postcode, 0, 20);
 
     const budgetMin = preference?.budgetMin ?? null;
@@ -3185,6 +3208,236 @@ export class PropertyService {
     scored.sort((a, b) => b.matchScore - a.matchScore);
     const top = scored.slice(0, 5);
     return { items: top, total: top.length };
+  }
+
+  // ── Radius search helpers ─────────────────────────────────────────────────
+  private async resolveQueryLatLon(
+    query: string,
+  ): Promise<{ lat: number; lon: number } | null> {
+    const cleaned = query.replace(/\s/g, '').toUpperCase();
+    // 1. Try exact postcode first
+    try {
+      const res = await fetch(
+        `https://api.postcodes.io/postcodes/${cleaned}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const r = data?.result;
+        if (r?.latitude && r?.longitude) {
+          return { lat: r.latitude, lon: r.longitude };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    // 2. Try postcode autocomplete
+    try {
+      const res = await fetch(
+        `https://api.postcodes.io/postcodes?q=${encodeURIComponent(query)}&limit=1`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const r = data?.result?.[0];
+        if (r?.latitude && r?.longitude) {
+          return { lat: r.latitude, lon: r.longitude };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    // 3. Try place outcode/city lookup via outcodes endpoint
+    try {
+      const res = await fetch(
+        `https://api.postcodes.io/outcodes/${cleaned}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const r = data?.result;
+        if (r?.latitude && r?.longitude) {
+          return { lat: r.latitude, lon: r.longitude };
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
+  private async searchWithinRadius(
+    centre: { lat: number; lon: number },
+    radiusMiles: number,
+    offset: number,
+    limit: number,
+  ): Promise<{ items: Property[]; total: number }> {
+    // Convert radius to deg (approximation): 1° lat ≈ 69 mi
+    const latDelta = radiusMiles / 69;
+    const lonDelta = radiusMiles / (69 * Math.cos((centre.lat * Math.PI) / 180));
+
+    const where = {
+      AND: [
+        {
+          OR: [
+            { udprn: { startsWith: 'EPC-' } },
+            { udprn: { startsWith: 'OS-' } },
+          ],
+        },
+        { latitude: { gte: centre.lat - latDelta, lte: centre.lat + latDelta } },
+        {
+          longitude: {
+            gte: centre.lon - lonDelta,
+            lte: centre.lon + lonDelta,
+          },
+        },
+      ],
+    };
+
+    // Fetch generously then haversine-filter for exact radius
+    const raw = await this.prisma.property.findMany({
+      where,
+      include: {
+        passport: {
+          select: {
+            id: true,
+            status: true,
+            sections: {
+              select: {
+                tasks: {
+                  select: {
+                    passportQuestions: {
+                      select: { id: true, answer: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const R_MI = 3958.8;
+    const distMi = (lat2: number, lon2: number): number => {
+      const dLat = ((lat2 - centre.lat) * Math.PI) / 180;
+      const dLon = ((lon2 - centre.lon) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((centre.lat * Math.PI) / 180) *
+          Math.cos((lat2 * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+      return R_MI * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    const withinRadius = raw
+      .filter((p) => p.latitude != null && p.longitude != null)
+      .map((p) => ({ p, d: distMi(p.latitude!, p.longitude!) }))
+      .filter(({ d }) => d <= radiusMiles)
+      .sort((a, b) => a.d - b.d);
+
+    const total = withinRadius.length;
+    const page = withinRadius.slice(offset, offset + limit);
+
+    const items = page.map(({ p, d }) => {
+      const { passport, ...rest } = p as any;
+      const isPublished = passport?.status === 'PUBLISHED';
+      let passportCompletion: number | null = null;
+      if (passport && isPublished) {
+        const allTasks = passport.sections.flatMap((s: any) => s.tasks);
+        const doneTasks = allTasks.filter((t: any) => {
+          const totalQ = t.passportQuestions.length;
+          const answered = t.passportQuestions.filter(
+            (q: any) => q.answer !== null,
+          ).length;
+          return totalQ > 0 && answered === totalQ;
+        }).length;
+        passportCompletion =
+          allTasks.length > 0
+            ? Math.round((doneTasks / allTasks.length) * 100)
+            : 0;
+      }
+      return {
+        ...rest,
+        addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
+        addressLine2: rest.addressLine2
+          ? titleCase(rest.addressLine2)
+          : rest.addressLine2,
+        city: rest.city ? titleCase(rest.city) : rest.city,
+        county: rest.county ? titleCase(rest.county) : rest.county,
+        hasPassport: !!passport,
+        passportPublished: isPublished,
+        passportCompletion,
+        distanceMiles: +d.toFixed(2),
+      };
+    });
+
+    return { items, total };
+  }
+
+  // ── Verified passport properties (sellers browse examples) ────────────────
+  async getVerifiedPassportProperties(
+    offset = 0,
+    limit = 12,
+  ): Promise<{ items: any[]; total: number }> {
+    const where = {
+      passport: {
+        is: { status: 'PUBLISHED' as const },
+      },
+    };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.property.count({ where }),
+      this.prisma.property.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit,
+        include: {
+          passport: {
+            select: {
+              id: true,
+              status: true,
+              sections: {
+                select: {
+                  tasks: {
+                    select: {
+                      passportQuestions: {
+                        select: { id: true, answer: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const items = rows.map(({ passport, ...p }) => {
+      let passportCompletion: number | null = null;
+      if (passport) {
+        const allTasks = passport.sections.flatMap((s) => s.tasks);
+        const doneTasks = allTasks.filter((t) => {
+          const total = t.passportQuestions.length;
+          const answered = t.passportQuestions.filter(
+            (q: any) => q.answer !== null,
+          ).length;
+          return total > 0 && answered === total;
+        }).length;
+        passportCompletion =
+          allTasks.length > 0
+            ? Math.round((doneTasks / allTasks.length) * 100)
+            : 0;
+      }
+      return {
+        ...p,
+        hasPassport: true,
+        passportPublished: true,
+        passportId: passport?.id ?? null,
+        passportCompletion,
+      };
+    });
+
+    return { items, total };
   }
 
   // ── Street properties ─────────────────────────────────────────────────────

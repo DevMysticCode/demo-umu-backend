@@ -13,7 +13,7 @@ export class PaymentService {
 
   async createPassportPaymentIntent(): Promise<{ clientSecret: string }> {
     const intent = await this.stripe.paymentIntents.create({
-      amount: 4900, // £49.00 in pence
+      amount: 9900, // £99.00 in pence
       currency: 'gbp',
       description: 'Property Passport unlock — UMovingU',
       automatic_payment_methods: { enabled: true },

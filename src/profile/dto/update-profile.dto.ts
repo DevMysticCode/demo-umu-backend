@@ -1,4 +1,10 @@
-import { IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -93,13 +99,38 @@ export class AddCollaboratorDto {
 }
 
 export class UpsertPreferencesDto {
+  @IsOptional()
   purpose?: any;
+
+  @IsOptional()
+  @IsString()
   buyingTimeline?: string;
+
+  @IsOptional()
+  @IsNumber()
   budgetMin?: number;
+
+  @IsOptional()
+  @IsNumber()
   budgetMax?: number;
+
+  @IsOptional()
+  @IsArray()
   propertyTypes?: string[];
+
+  @IsOptional()
+  @IsArray()
   propertyStyles?: string[];
+
+  @IsOptional()
+  @IsArray()
   importantFeatures?: string[];
+
+  @IsOptional()
+  @IsString()
   sellingTimeline?: string;
+
+  @IsOptional()
+  @IsNumber()
   propertyValue?: number;
 }
