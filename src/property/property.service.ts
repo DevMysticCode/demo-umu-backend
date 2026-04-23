@@ -1844,26 +1844,37 @@ export class PropertyService {
       way["heritage"](around:800,${lat},${lon});
     );out center body;`;
 
-    // Retry up to 2 times with 3s delay — Overpass rate-limits to 2 concurrent slots
-    const fetchOverpass = async (attempt = 0): Promise<{ elements: any[] }> => {
-      try {
-        const res = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-          signal: AbortSignal.timeout(30000),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!Array.isArray(data.elements)) throw new Error('bad response');
-        return data;
-      } catch (err) {
-        if (attempt < 2) {
-          await new Promise((r) => setTimeout(r, 3000 + attempt * 2000));
-          return fetchOverpass(attempt + 1);
+    // Try several Overpass mirrors — the main one (overpass-api.de) is
+    // frequently overloaded and returns HTML errors. Iterate through
+    // mirrors, each with a short timeout, and return the first valid JSON.
+    const OVERPASS_MIRRORS = [
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.private.coffee/api/interpreter',
+      'https://overpass.osm.jp/api/interpreter',
+    ];
+
+    const fetchOverpass = async (): Promise<{ elements: any[] }> => {
+      for (const url of OVERPASS_MIRRORS) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `data=${encodeURIComponent(overpassQuery)}`,
+            signal: AbortSignal.timeout(20000),
+          });
+          if (!res.ok) continue;
+          // Overloaded mirrors sometimes return HTML error pages with 200 status
+          const contentType = res.headers.get('content-type') ?? '';
+          if (!contentType.includes('application/json')) continue;
+          const data = await res.json();
+          if (!Array.isArray(data.elements)) continue;
+          return data;
+        } catch {
+          /* try next mirror */
         }
-        return { elements: [] };
       }
+      return { elements: [] };
     };
     const overpassPromise = fetchOverpass();
 
