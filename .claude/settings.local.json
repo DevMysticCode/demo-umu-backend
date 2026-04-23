@@ -92,7 +92,10 @@
       "Bash(mv \"/d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id]/full.vue\" \"/d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property-full/[id].vue\")",
       "Bash(rmdir \"/d/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id]\")",
       "Bash(curl -s -m 45 \"http://localhost:3002/property/1a5cacaa-dd1b-4cf9-aa98-1a2e3e7c3711/enrichment\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(grep -l \"canvas-confetti\" package.json)",
+      "Bash(ls pages/claim)",
+      "Bash(ls pages/verify-ownership)"
     ]
   }
 }
