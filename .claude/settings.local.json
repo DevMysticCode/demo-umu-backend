@@ -95,7 +95,8 @@
       "Read(//tmp/**)",
       "Bash(grep -l \"canvas-confetti\" package.json)",
       "Bash(ls pages/claim)",
-      "Bash(ls pages/verify-ownership)"
+      "Bash(ls pages/verify-ownership)",
+      "Bash(echo \"EXIT=$?\")"
     ]
   }
 }
