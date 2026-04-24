@@ -17,6 +17,7 @@ import { SupportModule } from './support/support.module';
 import { LearnModule } from './learn/learn.module';
 import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { BuyerPassportModule } from './buyer-passport/buyer-passport.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     LearnModule,
     PaymentModule,
     MaintenanceModule,
+    BuyerPassportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -40,6 +40,7 @@ model User {
   reminders              UserReminder[]
   videoProgress          VideoProgress[]
   buyerNotes             BuyerNote[]
+  buyerPassport          BuyerPassport?
 }
 
 model UserAddress {
@@ -615,6 +616,36 @@ model BuyerNote {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([passportId, userId])
+}
+
+// Buyer Passport — a BUYER's own verified profile (ID, funds, chain, etc.)
+// shared with sellers / agents / solicitors. Distinct from Passport (seller/owner
+// document) and BuyerPassportAccess (buyer's purchased access to a seller's passport).
+model BuyerPassport {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Step 1: ID
+  idDocumentType   String?  // "passport" | "drivingLicence" | "nationalId"
+  idDocumentUrl    String?
+  idVerified       Boolean  @default(false)
+  // Step 2: Funds
+  fundsType        String?  // "mortgage" | "cash" | "help"
+  fundsAmount      Int?     // max budget in GBP
+  fundsDocumentUrl String?
+  fundsVerified    Boolean  @default(false)
+  // Step 3: Chain
+  chainPosition   String?   // "ftb" | "selling" | "sold" | "renting"
+  // Step 4: Solicitor + timeline
+  solicitorStatus String?   // "yes" | "looking" | "notsure"
+  timeline        String?   // "asap" | "3m" | "6m" | "flex"
+  // Step 5: Statement
+  statement       String?
+  // Meta
+  completedSteps  Int       @default(0) // 1-5
+  published       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // HM Land Registry Price Paid Data — imported via scripts/import-price-paid.ts
