@@ -49,6 +49,14 @@ export class PassportController {
     return this.passportService.getUserPassports(req.user.id);
   }
 
+  // Buyer's purchased "watching" list — published passports they've unlocked.
+  // Returns array of records the Passport tab uses to render the Watching section.
+  @Get('buyer-access')
+  @UseGuards(JwtAuthGuard)
+  async getMyBuyerAccess(@Request() req: any) {
+    return this.passportService.getBuyerAccessList(req.user.id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {

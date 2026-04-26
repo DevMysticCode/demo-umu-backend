@@ -331,6 +331,47 @@ export class PassportService {
     return result;
   }
 
+  // Get all the user's purchased buyer-access records (the "Watching" list)
+  async getBuyerAccessList(userId: string) {
+    const rows = await this.prisma.buyerPassportAccess.findMany({
+      where: { userId },
+      include: {
+        passport: {
+          select: {
+            id: true,
+            addressLine1: true,
+            postcode: true,
+            status: true,
+            propertyId: true,
+            property: {
+              select: {
+                id: true,
+                imageUrl: true,
+                addressLine1: true,
+                postcode: true,
+                bedrooms: true,
+                propertyType: true,
+                epcRating: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { unlockedAt: 'desc' },
+    });
+
+    return rows.map((r) => ({
+      id: r.id,
+      passportId: r.passportId,
+      propertyId: r.passport?.propertyId ?? null,
+      addressLine1: r.passport?.addressLine1 ?? '',
+      postcode: r.passport?.postcode ?? '',
+      status: r.passport?.status ?? null,
+      property: r.passport?.property ?? null,
+      purchasedAt: r.unlockedAt,
+    }));
+  }
+
   // Check if user has access to passport (owner or collaborator)
   async checkUserAccess(passportId: string, userId: string): Promise<boolean> {
     const passport = await this.prisma.passport.findUnique({
