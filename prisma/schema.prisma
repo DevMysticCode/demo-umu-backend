@@ -40,7 +40,7 @@ model User {
   reminders              UserReminder[]
   videoProgress          VideoProgress[]
   buyerNotes             BuyerNote[]
-  buyerPassport          BuyerPassport?
+  buyerProfile           BuyerProfile?
 }
 
 model UserAddress {
@@ -173,9 +173,23 @@ model Property {
   ownershipVerifications OwnershipVerification[]
   wishlistedBy           UserWishlist[]
   savedBy                UserSavedProperty[]
+  searchLogs             PropertySearchLog[]
 
   @@index([postcode])
   @@index([uprn])
+}
+
+// PropertySearchLog — anonymous "interest" / search log for a property.
+// Used to power the "People searched this address this month" card.
+model PropertySearchLog {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  userId     String?  // null for guest visitors
+  sessionId  String?  // localStorage UUID for guest dedup (best-effort)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, createdAt])
 }
 
 model OwnershipVerification {
@@ -618,10 +632,10 @@ model BuyerNote {
   @@index([passportId, userId])
 }
 
-// Buyer Passport — a BUYER's own verified profile (ID, funds, chain, etc.)
+// Buyer Profile — a BUYER's own verified profile (ID, funds, chain, etc.)
 // shared with sellers / agents / solicitors. Distinct from Passport (seller/owner
 // document) and BuyerPassportAccess (buyer's purchased access to a seller's passport).
-model BuyerPassport {
+model BuyerProfile {
   id               String   @id @default(uuid())
   userId           String   @unique
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)

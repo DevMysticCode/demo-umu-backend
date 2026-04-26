@@ -147,6 +147,45 @@ export class PropertyController {
     return this.propertyService.getNeighbourhoodStats(id);
   }
 
+  // Anonymous "I looked at this address" log — used to render the
+  // "People searched this address this month" card. No auth required;
+  // we accept an optional sessionId from the client for guest dedup.
+  @Post(':id/log-search')
+  async logSearch(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { sessionId?: string },
+  ) {
+    // Try to detect an authenticated user from the JWT, but don't require one
+    let userId: string | null = null;
+    try {
+      const auth = req.headers?.authorization as string | undefined;
+      if (auth && auth.startsWith('Bearer ')) {
+        // Lightweight decode: don't fail if invalid — guests are allowed.
+        const token = auth.slice(7);
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const json = JSON.parse(
+            Buffer.from(parts[1], 'base64').toString('utf8'),
+          );
+          if (typeof json?.sub === 'string') userId = json.sub;
+        }
+      }
+    } catch {
+      userId = null;
+    }
+    const sessionId =
+      typeof body?.sessionId === 'string' && body.sessionId.length > 0
+        ? body.sessionId
+        : null;
+    return this.propertyService.logPropertySearch(id, userId, sessionId);
+  }
+
+  @Get(':id/search-stats')
+  async getSearchStats(@Param('id') id: string) {
+    return this.propertyService.getPropertySearchStats(id);
+  }
+
   @Get(':id/street')
   async getStreetProperties(@Param('id') id: string) {
     return this.propertyService.getStreetProperties(id);

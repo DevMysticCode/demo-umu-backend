@@ -1421,21 +1421,29 @@ export class PropertyService {
     return `${postcode}${hash.toString().padStart(6, '0')}`;
   }
 
-  async getPropertyById(id: string): Promise<Property | null> {
-    const property = await this.prisma.property.findUnique({ where: { id } });
+  async getPropertyById(id: string): Promise<any | null> {
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+      include: { passport: { select: { id: true, status: true } } },
+    });
     if (!property) return null;
 
     // Normalise casing for properties already in DB with incorrect casing
+    const { passport, ...rest } = property;
     const normalised = {
-      ...property,
-      addressLine1: titleCase(property.addressLine1) || property.addressLine1,
-      addressLine2: property.addressLine2 ? titleCase(property.addressLine2) : property.addressLine2,
-      city: property.city ? titleCase(property.city) : property.city,
-      county: property.county ? titleCase(property.county) : property.county,
+      ...rest,
+      addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
+      addressLine2: rest.addressLine2 ? titleCase(rest.addressLine2) : rest.addressLine2,
+      city: rest.city ? titleCase(rest.city) : rest.city,
+      county: rest.county ? titleCase(rest.county) : rest.county,
+      // Public passport state — readable by guests for the 3-state homescore UI.
+      hasPassport: !!passport,
+      passportPublished: passport?.status === 'PUBLISHED',
+      passportId: passport?.id ?? null,
     };
 
     // Enrich with EPC data if fields are missing (non-blocking, always returns a property)
-    return this.enrichPropertyWithEpc(normalised);
+    return this.enrichPropertyWithEpc(normalised as unknown as Property);
   }
 
   // ── Enrichment (on-demand, not stored) ────────────────────────────────────
@@ -3581,6 +3589,82 @@ export class PropertyService {
       .slice(0, 8);
 
     return { buyers: scored, total: prefs.length };
+  }
+
+  // ── Property search log (anonymous interest counter) ─────────────────────────
+
+  async logPropertySearch(
+    propertyId: string,
+    userId: string | null,
+    sessionId: string | null,
+  ): Promise<{ logged: boolean }> {
+    // Verify property exists — quietly ignore if not (route may be hit during
+    // navigation flickers).
+    const exists = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true },
+    });
+    if (!exists) return { logged: false };
+
+    // Best-effort dedup: if the same userId or sessionId logged this property
+    // within the past hour, skip another log.
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    if (userId || sessionId) {
+      const recent = await this.prisma.propertySearchLog.findFirst({
+        where: {
+          propertyId,
+          createdAt: { gte: oneHourAgo },
+          ...(userId
+            ? { userId }
+            : sessionId
+              ? { sessionId }
+              : {}),
+        },
+        select: { id: true },
+      });
+      if (recent) return { logged: false };
+    }
+
+    await this.prisma.propertySearchLog.create({
+      data: {
+        propertyId,
+        userId: userId ?? null,
+        sessionId: sessionId ?? null,
+      },
+    });
+    return { logged: true };
+  }
+
+  async getPropertySearchStats(propertyId: string) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [thisMonth, allTime, distinctSessions, distinctUsers] = await Promise.all([
+      this.prisma.propertySearchLog.count({
+        where: { propertyId, createdAt: { gte: startOfMonth } },
+      }),
+      this.prisma.propertySearchLog.count({ where: { propertyId } }),
+      this.prisma.propertySearchLog.findMany({
+        where: { propertyId, sessionId: { not: null } },
+        select: { sessionId: true },
+        distinct: ['sessionId'],
+      }),
+      this.prisma.propertySearchLog.findMany({
+        where: { propertyId, userId: { not: null } },
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+    ]);
+
+    const distinctVisitors =
+      (distinctSessions?.length ?? 0) + (distinctUsers?.length ?? 0);
+
+    return {
+      thisMonth,
+      allTime,
+      distinctVisitors,
+    };
   }
 
   // ── EPC Download proxy ───────────────────────────────────────────────────────
