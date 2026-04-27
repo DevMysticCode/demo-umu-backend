@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Disputes & Complaints — Property Passport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal-50:  #f0fdfa;
+    --teal-100: #ccfbf1;
+    --teal-200: #99f6e4;
+    --teal-500: #14b8a6;
+    --teal-600: #0d9488;
+    --teal-700: #0f766e;
+    --teal-800: #115e59;
+    --navy-900: #0a0f2c;
+    --navy-800: #131a3a;
+    --ink:      #0f172a;
+    --muted:    #64748b;
+    --line:     #e5e7eb;
+    --bg:       #f5f7f8;
+    --card:     #ffffff;
+    --amber:    #f59e0b;
+    --rose:     #f43f5e;
+    --green:    #10b981;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #1c1c1c;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 24px 0;
+  }
+
+  .frame {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg);
+    min-height: 100vh;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    position: relative;
+    padding-bottom: 96px;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg);
+    padding: 16px 20px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 0;
+    color: var(--teal-700);
+    font: 600 15px/1 'Inter', sans-serif;
+    cursor: pointer;
+    padding: 8px 4px;
+  }
+  .back-btn svg { width: 18px; height: 18px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--line);
+    display: grid; place-items: center;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    margin: 8px 16px 16px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, #e6fbf6 0%, #ccfbf1 60%, #b8f2e6 100%);
+    padding: 22px 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: -40% -20% auto auto;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(255,255,255,.7), transparent 65%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(15,118,110,.15);
+    color: var(--teal-700);
+    font: 600 11px/1 'Inter', sans-serif;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 999px;
+  }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  .hero-illustration {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0 8px;
+  }
+  .hero-illustration svg { width: 132px; height: 110px; }
+
+  .hero-title {
+    font: 800 26px/1.15 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+    color: var(--navy-900);
+    margin: 4px 0 4px;
+  }
+  .hero-sub {
+    color: var(--teal-800);
+    font: 500 14px/1.4 'Inter', sans-serif;
+    margin: 0 0 16px;
+  }
+
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+  }
+  .ring {
+    --p: 0;
+    --size: 56px;
+    width: var(--size); height: var(--size);
+    border-radius: 50%;
+    background:
+      conic-gradient(var(--teal-600) calc(var(--p) * 1%), rgba(15,118,110,.15) 0);
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .ring::after {
+    content: "";
+    width: 44px; height: 44px;
+    background: #fff;
+    border-radius: 50%;
+    grid-area: 1/1;
+  }
+  .ring span {
+    grid-area: 1/1;
+    z-index: 1;
+    font: 700 13px/1 'Inter', sans-serif;
+    color: var(--navy-900);
+  }
+  .meta-text small {
+    display: block;
+    text-transform: uppercase;
+    font: 600 10px/1 'Inter', sans-serif;
+    letter-spacing: .08em;
+    color: var(--teal-800);
+    margin-bottom: 4px;
+  }
+  .meta-text strong {
+    font: 700 14px/1.2 'Inter', sans-serif;
+    color: var(--navy-900);
+  }
+  .meta-text strong em {
+    font-style: normal;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* ---------- Section ---------- */
+  .section { padding: 0 16px; margin-bottom: 16px; }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 6px 4px 10px;
+  }
+  .section-head h2 {
+    margin: 0;
+    font: 700 16px/1 'Inter', sans-serif;
+    color: var(--navy-900);
+    letter-spacing: -0.01em;
+  }
+  .section-head a {
+    font: 500 13px/1 'Inter', sans-serif;
+    color: var(--teal-700);
+    text-decoration: none;
+  }
+
+  /* ---------- Action row ---------- */
+  .action-row {
+    display: flex; gap: 10px;
+    margin: 0 16px 16px;
+  }
+  .pill {
+    flex: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 14px;
+    border-radius: 999px;
+    font: 600 14px/1 'Inter', sans-serif;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .pill:active { transform: scale(.98); }
+  .pill.ghost { background: #fff; border-color: var(--line); color: var(--teal-700); }
+  .pill.primary { background: var(--teal-600); color: #fff; box-shadow: 0 8px 20px -8px rgba(13,148,136,.6); }
+  .pill svg { width: 16px; height: 16px; }
+
+  /* ---------- Stats grid (NEW data points) ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0 16px 18px;
+  }
+  .stat {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    border: 1px solid var(--line);
+  }
+  .stat .ico {
+    width: 36px; height: 36px;
+    background: var(--teal-50);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    color: var(--teal-700);
+    margin-bottom: 10px;
+  }
+  .stat .ico svg { width: 18px; height: 18px; }
+  .stat-label {
+    text-transform: uppercase;
+    font: 600 10px/1 'Inter', sans-serif;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font: 700 16px/1.2 'Inter', sans-serif;
+    color: var(--navy-900);
+  }
+  .stat-value .tag {
+    display: inline-block;
+    font: 600 10px/1 'Inter', sans-serif;
+    background: var(--teal-100);
+    color: var(--teal-800);
+    padding: 3px 6px;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-left: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .stat-sub { font: 500 11px/1.3 'Inter', sans-serif; color: var(--muted); margin-top: 2px; }
+
+  /* ---------- Reward card ---------- */
+  .reward {
+    margin: 0 16px 16px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+    color: #fff;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .reward::after {
+    content: "";
+    position: absolute;
+    right: -30px; top: -30px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(20,184,166,.35), transparent 60%);
+    pointer-events: none;
+  }
+  .reward-top {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .reward-lock {
+    width: 28px; height: 28px;
+    background: rgba(255,255,255,.08);
+    border-radius: 8px;
+    display: grid; place-items: center;
+  }
+  .reward-lock svg { width: 14px; height: 14px; color: var(--teal-200); }
+  .reward-pts {
+    font: 800 22px/1 'Inter', sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .reward-pts em { font-style: normal; color: var(--teal-200); font-weight: 600; font-size: 14px; margin-left: 4px; }
+
+  .reward h3 {
+    margin: 8px 0 2px;
+    font: 600 14px/1.3 'Inter', sans-serif;
+    color: var(--teal-200);
+  }
+  .reward p {
+    margin: 0 0 14px;
+    font: 400 12px/1.5 'Inter', sans-serif;
+    color: rgba(255,255,255,.7);
+  }
+  .reward-actions {
+    display: flex; gap: 10px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .reward-link {
+    color: var(--teal-200);
+    font: 600 12px/1 'Inter', sans-serif;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .reward-cta {
+    margin-left: auto;
+    background: var(--teal-500);
+    color: var(--navy-900);
+    border: 0;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font: 700 12px/1 'Inter', sans-serif;
+    cursor: pointer;
+  }
+
+  /* ---------- Expert card ---------- */
+  .expert {
+    margin: 0 16px 18px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .expert .ribbon {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    padding: 5px 10px;
+    border-radius: 999px;
+    font: 600 11px/1 'Inter', sans-serif;
+    margin-bottom: 12px;
+  }
+  .expert .ribbon .pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--teal-500);
+    box-shadow: 0 0 0 0 rgba(20,184,166,.6);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(20,184,166,.6); }
+    70% { box-shadow: 0 0 0 8px rgba(20,184,166,0); }
+    100% { box-shadow: 0 0 0 0 rgba(20,184,166,0); }
+  }
+  .expert-row { display: flex; gap: 14px; align-items: flex-start; }
+  .expert-content { flex: 1; }
+  .expert h3 {
+    margin: 0 0 4px;
+    font: 700 16px/1.2 'Inter', sans-serif;
+    color: var(--navy-900);
+    letter-spacing: -0.01em;
+  }
+  .expert .qcount {
+    font: 500 13px/1.4 'Inter', sans-serif;
+    color: var(--teal-700);
+    margin: 0 0 8px;
+  }
+  .expert .meta {
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    font: 500 12px/1 'Inter', sans-serif;
+    color: var(--muted);
+    background: #f1f5f9;
+    padding: 6px 10px;
+    border-radius: 999px;
+  }
+  .expert .meta svg { width: 12px; height: 12px; }
+  .expert-avatar {
+    width: 64px; height: 64px;
+    background: linear-gradient(145deg, var(--teal-100), var(--teal-200));
+    border-radius: 16px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .expert-avatar svg { width: 30px; height: 30px; color: var(--teal-700); }
+
+  .expert-cta {
+    margin-top: 14px;
+    display: flex; align-items: center;
+    width: 100%;
+    background: var(--teal-600);
+    color: #fff;
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 18px;
+    font: 600 13px/1 'Inter', sans-serif;
+    cursor: pointer;
+    justify-content: center; gap: 8px;
+  }
+  .expert-cta svg { width: 14px; height: 14px; }
+
+  /* ---------- Tasks ---------- */
+  .sort-btn {
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font: 500 12px/1 'Inter', sans-serif;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .sort-btn svg { width: 12px; height: 12px; color: var(--muted); }
+
+  .task {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex; gap: 14px;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: border-color .15s ease, transform .12s ease;
+  }
+  .task:hover { border-color: var(--teal-200); }
+  .task:active { transform: scale(.99); }
+
+  .checkbox {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--line);
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: border-color .15s ease;
+  }
+  .task:hover .checkbox { border-color: var(--teal-500); }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-tags { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--teal-50);
+    color: var(--teal-700);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font: 600 10px/1.2 'Inter', sans-serif;
+  }
+  .tag-chip svg { width: 10px; height: 10px; }
+  .tag-chip.warn { background: #fef3c7; color: #92400e; }
+  .task h4 {
+    margin: 0 0 4px;
+    font: 700 14px/1.3 'Inter', sans-serif;
+    color: var(--navy-900);
+    letter-spacing: -0.01em;
+  }
+  .task p {
+    margin: 0;
+    font: 400 12px/1.5 'Inter', sans-serif;
+    color: var(--muted);
+  }
+  .task-meta {
+    display: flex; gap: 10px; align-items: center;
+    margin-top: 8px;
+    font: 500 11px/1 'Inter', sans-serif;
+    color: var(--muted);
+  }
+  .task-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .task-meta svg { width: 11px; height: 11px; }
+
+  .chev {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    color: var(--muted);
+    align-self: center;
+  }
+  .chev svg { width: 14px; height: 14px; }
+
+  /* ---------- Source strip (NEW) ---------- */
+  .sources {
+    margin: 18px 16px 8px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    display: flex; gap: 10px;
+    align-items: center;
+  }
+  .sources .ico {
+    width: 36px; height: 36px;
+    background: var(--teal-50);
+    border-radius: 10px;
+    display: grid; place-items: center;
+    color: var(--teal-700);
+  }
+  .sources .ico svg { width: 18px; height: 18px; }
+  .sources p {
+    margin: 0;
+    font: 500 12px/1.4 'Inter', sans-serif;
+    color: var(--muted);
+  }
+  .sources p strong { color: var(--navy-900); display: block; font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+
+  /* ---------- Bottom nav ---------- */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: #fff;
+    border-top: 1px solid var(--line);
+    padding: 10px 8px 14px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 4px;
+    color: var(--muted);
+    font: 500 10px/1 'Inter', sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .nav-item svg { width: 20px; height: 20px; }
+  .nav-item.active { color: var(--teal-700); }
+  .nav-item.active svg { stroke-width: 2.4; }
+
+</style>
+</head>
+<body>
+
+<div class="frame">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <button class="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <button class="icon-btn" aria-label="More">
+      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+    </button>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <span class="hero-badge"><span class="dot"></span> Low risk · Verified</span>
+
+    <div class="hero-illustration" aria-hidden="true">
+      <!-- Stack of documents illustration in brand colors -->
+      <svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="paperA" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#e6fbf6"/>
+          </linearGradient>
+          <linearGradient id="paperB" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="#fef9c3"/>
+            <stop offset="1" stop-color="#fde68a"/>
+          </linearGradient>
+        </defs>
+        <!-- shadow -->
+        <ellipse cx="100" cy="142" rx="58" ry="6" fill="#0a0f2c" opacity=".08"/>
+        <!-- bottom paper -->
+        <rect x="42" y="46" width="104" height="80" rx="10" fill="url(#paperA)" stroke="#0d9488" stroke-opacity=".18"/>
+        <line x1="56" y1="68" x2="124" y2="68" stroke="#0d9488" stroke-opacity=".25" stroke-width="3" stroke-linecap="round"/>
+        <line x1="56" y1="80" x2="116" y2="80" stroke="#0d9488" stroke-opacity=".18" stroke-width="3" stroke-linecap="round"/>
+        <line x1="56" y1="92" x2="108" y2="92" stroke="#0d9488" stroke-opacity=".15" stroke-width="3" stroke-linecap="round"/>
+        <!-- middle yellow note -->
+        <rect x="58" y="38" width="84" height="62" rx="6" transform="rotate(-6 100 70)" fill="url(#paperB)" stroke="#92400e" stroke-opacity=".15"/>
+        <!-- pencil -->
+        <g transform="translate(118 36) rotate(28)">
+          <rect x="0" y="0" width="46" height="8" rx="2" fill="#0f766e"/>
+          <polygon points="46,0 56,4 46,8" fill="#fbbf24"/>
+          <rect x="-6" y="0" width="6" height="8" rx="1" fill="#f43f5e"/>
+        </g>
+        <!-- speech tag -->
+        <g transform="translate(126 80)">
+          <rect x="0" y="0" width="34" height="20" rx="4" fill="#f43f5e"/>
+          <text x="17" y="14" text-anchor="middle" fill="#fff" font-family="Inter,sans-serif" font-size="9" font-weight="700">!</text>
+        </g>
+        <!-- dots -->
+        <circle cx="68" cy="118" r="3" fill="#14b8a6"/>
+        <circle cx="80" cy="118" r="3" fill="#f59e0b"/>
+        <circle cx="92" cy="118" r="3" fill="#f43f5e"/>
+      </svg>
+    </div>
+
+    <h1 class="hero-title">Disputes &amp; Complaints</h1>
+    <p class="hero-sub">Problems affecting the property</p>
+
+    <div class="hero-meta">
+      <div class="ring" style="--p: 0">
+        <span>0%</span>
+      </div>
+      <div class="meta-text">
+        <small>Overall Progress</small>
+        <strong>0 of 2 tasks <em>· 0pts earned</em></strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTION ROW -->
+  <div class="action-row">
+    <button class="pill ghost">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Help
+    </button>
+    <button class="pill primary">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+      Play Video
+    </button>
+  </div>
+
+  <!-- STATS / DATA POINTS (added) -->
+  <div class="stats">
+    <div class="stat">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="stat-label">Risk Level</div>
+      <div class="stat-value">Low <span class="tag">Zone A</span></div>
+      <div class="stat-sub">Based on local records</div>
+    </div>
+
+    <div class="stat">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      </div>
+      <div class="stat-label">Active Disputes</div>
+      <div class="stat-value">0</div>
+      <div class="stat-sub">No open cases on file</div>
+    </div>
+
+    <div class="stat">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="stat-label">Past Complaints</div>
+      <div class="stat-value">0</div>
+      <div class="stat-sub">Last 10 years checked</div>
+    </div>
+
+    <div class="stat">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="stat-label">Area Radius</div>
+      <div class="stat-value">250 <span class="tag">m</span></div>
+      <div class="stat-sub">Surrounding properties</div>
+    </div>
+  </div>
+
+  <!-- REWARDS -->
+  <div class="reward">
+    <div class="reward-top">
+      <span class="reward-lock">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </span>
+      <div class="reward-pts">0 pts <em>locked</em></div>
+    </div>
+    <h3>Next: Notices &amp; Proposals</h3>
+    <p>A total of 0 points are available in this section. Complete tasks to unlock rewards and move to the next section.</p>
+    <div class="reward-actions">
+      <a href="#" class="reward-link">See rewards you can claim
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+      <button class="reward-cta">Go to Next Task</button>
+    </div>
+  </div>
+
+  <!-- EXPERT GUIDANCE -->
+  <div class="expert">
+    <span class="ribbon"><span class="pulse"></span> Under Review</span>
+    <div class="expert-row">
+      <div class="expert-content">
+        <h3>Your Expert Guidance</h3>
+        <p class="qcount">You have 3 questions under review by an expert.</p>
+        <span class="meta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Minimum time: 3 days
+        </span>
+      </div>
+      <div class="expert-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-3V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM9 5h6v2H9V5z"/></svg>
+      </div>
+    </div>
+    <button class="expert-cta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      View Expert Profile
+    </button>
+  </div>
+
+  <!-- TASKS -->
+  <section class="section">
+    <div class="section-head">
+      <h2>Your Tasks</h2>
+      <button class="sort-btn">
+        Sort
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </div>
+
+    <article class="task">
+      <div class="checkbox" aria-hidden="true"></div>
+      <div class="task-body">
+        <div class="task-tags">
+          <span class="tag-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.5 17 14.5 18.5 21.5 12 18 5.5 21.5 7 14.5 2 9.5 9 8.5 12 2"/></svg>
+            +0pts
+          </span>
+          <span class="tag-chip warn">Historical</span>
+        </div>
+        <h4>Past Disputes or Complaints</h4>
+        <p>Determine whether there have been any disputes or complaints regarding this property or nearby properties.</p>
+        <div class="task-meta">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ~5 min</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 4 questions</span>
+        </div>
+      </div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </article>
+
+    <article class="task">
+      <div class="checkbox" aria-hidden="true"></div>
+      <div class="task-body">
+        <div class="task-tags">
+          <span class="tag-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.5 17 14.5 18.5 21.5 12 18 5.5 21.5 7 14.5 2 9.5 9 8.5 12 2"/></svg>
+            +0pts
+          </span>
+          <span class="tag-chip warn">Forward-looking</span>
+        </div>
+        <h4>Prospective Disputes or Complaints</h4>
+        <p>Understanding if there is likely to be a future dispute about this property or nearby properties.</p>
+        <div class="task-meta">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ~4 min</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 3 questions</span>
+        </div>
+      </div>
+      <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </article>
+  </section>
+
+  <!-- SOURCES strip (new) -->
+  <div class="sources">
+    <div class="ico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <p>
+      <strong>Verified against 4 public registers</strong>
+      Land Registry · Local Authority · Court Records · Ombudsman
+    </p>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <a class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Explore
+    </a>
+    <a class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Passport
+    </a>
+    <a class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/></svg>
+      Marketplace
+    </a>
+    <a class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Calendar
+    </a>
+    <a class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l1.5 4L11 8.5 6.5 10 5 14l-1.5-4L-1 8.5 3.5 7z" transform="translate(7 1)"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></svg>
+      AI
+    </a>
+  </nav>
+
+</div>
+
+<script>
+  // animate the progress ring on load (purely cosmetic; data still says 0%)
+  // kept at 0 to match real data
+  document.querySelectorAll('.task').forEach(t => {
+    t.addEventListener('click', () => {
+      // placeholder — would route to task detail
+    });
+  });
+</script>
+</body>
+</html>
