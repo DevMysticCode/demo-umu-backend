@@ -914,11 +914,25 @@ export class PropertyService {
           },
         },
       });
+
+      // Bulk-fetch saved HomeScore totals so dropdown rows can show HS™ N
+      // alongside the EPC grade and passport pill. Falls back to epcScore
+      // when no saved score exists.
+      const ids = rows.map((r) => r.id);
+      const scoreRows = ids.length
+        ? await this.prisma.homeScoreResult.findMany({
+            where: { propertyId: { in: ids } },
+            select: { propertyId: true, total: true, updatedAt: true },
+          })
+        : [];
+      const scoreByProp = new Map<string, number>();
+      for (const s of scoreRows) {
+        const existing = scoreByProp.get(s.propertyId);
+        if (existing == null) scoreByProp.set(s.propertyId, s.total);
+      }
+
       const items = rows.map(({ passport, ...p }) => {
         const isPublished = passport?.status === 'PUBLISHED';
-        // Compute completion % the same way the passport view does:
-        // a task is "done" when every one of its questions is answered;
-        // overall % = done tasks / total tasks (task-level, matching usePassportRuntime).
         let passportCompletion: number | null = null;
         if (passport && isPublished) {
           const allTasks = passport.sections.flatMap((s) => s.tasks);
@@ -934,9 +948,10 @@ export class PropertyService {
               ? Math.round((doneTasks / allTasks.length) * 100)
               : 0;
         }
+        const savedHs = scoreByProp.get(p.id);
+        const homeScore = savedHs ?? p.epcScore ?? null;
         return {
           ...p,
-          // Normalise casing for properties already in DB with incorrect casing
           addressLine1: titleCase(p.addressLine1) || p.addressLine1,
           addressLine2: p.addressLine2 ? titleCase(p.addressLine2) : p.addressLine2,
           city: p.city ? titleCase(p.city) : p.city,
@@ -944,6 +959,7 @@ export class PropertyService {
           hasPassport: !!passport,
           passportPublished: isPublished,
           passportCompletion,
+          homeScore,
         };
       });
       return { items, total: cachedTotal };
