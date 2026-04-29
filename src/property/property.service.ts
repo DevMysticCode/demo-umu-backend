@@ -3656,27 +3656,35 @@ export class PropertyService {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const [thisMonth, allTime, distinctSessions, distinctUsers] = await Promise.all([
-      this.prisma.propertySearchLog.count({
-        where: { propertyId, createdAt: { gte: startOfMonth } },
-      }),
-      this.prisma.propertySearchLog.count({ where: { propertyId } }),
-      this.prisma.propertySearchLog.findMany({
-        where: { propertyId, sessionId: { not: null } },
-        select: { sessionId: true },
-        distinct: ['sessionId'],
-      }),
-      this.prisma.propertySearchLog.findMany({
-        where: { propertyId, userId: { not: null } },
-        select: { userId: true },
-        distinct: ['userId'],
-      }),
-    ]);
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const [today, thisMonth, allTime, distinctSessions, distinctUsers] =
+      await Promise.all([
+        this.prisma.propertySearchLog.count({
+          where: { propertyId, createdAt: { gte: startOfDay } },
+        }),
+        this.prisma.propertySearchLog.count({
+          where: { propertyId, createdAt: { gte: startOfMonth } },
+        }),
+        this.prisma.propertySearchLog.count({ where: { propertyId } }),
+        this.prisma.propertySearchLog.findMany({
+          where: { propertyId, sessionId: { not: null } },
+          select: { sessionId: true },
+          distinct: ['sessionId'],
+        }),
+        this.prisma.propertySearchLog.findMany({
+          where: { propertyId, userId: { not: null } },
+          select: { userId: true },
+          distinct: ['userId'],
+        }),
+      ]);
 
     const distinctVisitors =
       (distinctSessions?.length ?? 0) + (distinctUsers?.length ?? 0);
 
     return {
+      today,
       thisMonth,
       allTime,
       distinctVisitors,
