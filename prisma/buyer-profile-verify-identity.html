@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>umovingu — Build your Buyer Profile · Verify identity</title>
+<style>
+:root {
+  --bg:#ffffff; --card:#ffffff; --ink:#231d45; --ink-soft:#4a5568;
+  --ink-faint:#94a3b8; --line:#eef0f6; --brand:#00A19A; --brand-dark:#008c86;
+  --brand-mid:#00b5ad; --brand-soft:#b2e8e6; --brand-pale:#eafaf9;
+  --navy:#231d45; --good:#059669; --warn:#d97706; --bad:#dc2626;
+  --shadow-sm:0 1px 3px rgba(35,29,69,0.06),0 2px 8px rgba(35,29,69,0.04);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#e8e6f0;color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+.stage{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px 80px;}
+.phone{
+  width:390px;max-width:100%;background:#fff;border-radius:44px;
+  box-shadow:0 32px 80px rgba(0,0,0,0.35),0 0 0 10px #111,0 0 0 11px #2a2a2a;
+  overflow:hidden;position:relative;display:flex;flex-direction:column;height:820px;
+}
+.notch{height:30px;background:#111;border-bottom-left-radius:20px;border-bottom-right-radius:20px;width:126px;margin:0 auto;flex-shrink:0;}
+
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 20px 8px;flex-shrink:0;background:#fff;}
+.topbar .back{
+  width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;cursor:pointer;
+  font-size:18px;font-weight:600;color:var(--ink);
+}
+.topbar-titles{flex:1;}
+.topbar-titles .title{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;}
+.topbar-titles .step{font-size:12px;color:var(--ink-faint);margin-top:2px;font-weight:500;}
+
+/* Progress */
+.progress{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:8px 20px 12px;flex-shrink:0;}
+.progress-seg{height:4px;background:var(--line);border-radius:999px;}
+.progress-seg.done{background:var(--brand);}
+.progress-seg.active{background:linear-gradient(90deg,var(--brand),var(--brand-mid));}
+
+.screen{flex:1;overflow-y:auto;padding:18px 20px 24px;position:relative;}
+
+.page-icon{
+  width:62px;height:62px;border-radius:14px;
+  background:var(--brand-pale);border:1px solid var(--brand-soft);
+  display:grid;place-items:center;font-size:30px;
+  margin:8px auto 18px;
+}
+.page-title{font-size:24px;font-weight:800;letter-spacing:-0.02em;text-align:center;margin-bottom:8px;color:var(--ink);}
+.page-sub{font-size:13.5px;color:var(--ink-soft);text-align:center;line-height:1.5;max-width:300px;margin:0 auto 22px;}
+
+/* Trust strip */
+.trust-strip{
+  display:flex;align-items:center;gap:9px;
+  background:linear-gradient(135deg,#f4fbfa,#fff);
+  border:1px solid var(--brand-soft);border-radius:11px;
+  padding:9px 12px;margin-bottom:18px;font-size:11.5px;color:var(--ink-soft);line-height:1.4;
+}
+.trust-strip .lock-icon{
+  width:24px;height:24px;border-radius:7px;background:var(--brand);color:#fff;
+  display:grid;place-items:center;flex-shrink:0;
+}
+.trust-strip .lock-icon svg{width:12px;height:12px;}
+.trust-strip strong{color:var(--ink);font-weight:700;}
+
+/* Step card (the three verification tasks) */
+.task{
+  background:#fff;border:1.5px solid var(--line);border-radius:14px;
+  padding:14px;margin-bottom:10px;cursor:pointer;
+  transition:border-color 0.18s,background 0.18s,box-shadow 0.18s;
+}
+.task.active{
+  border-color:var(--brand);background:var(--brand-pale);
+  box-shadow:0 4px 14px rgba(0,161,154,0.12);
+}
+.task.done{background:#fff;border-color:var(--brand-soft);}
+.task-row{display:flex;align-items:center;gap:12px;}
+.task-icon{
+  width:40px;height:40px;border-radius:11px;
+  background:var(--brand-pale);border:1px solid var(--brand-soft);
+  display:grid;place-items:center;flex-shrink:0;color:var(--brand-dark);
+  transition:all 0.18s;
+}
+.task.done .task-icon{background:var(--brand);border-color:var(--brand-dark);color:#fff;}
+.task-icon svg{width:20px;height:20px;}
+.task-body{flex:1;min-width:0;}
+.task-title{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;}
+.task-meta{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.task-status{
+  font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;flex-shrink:0;
+  letter-spacing:0.02em;
+}
+.task-status.required{background:#f1f5f9;color:var(--ink-soft);}
+.task-status.progress{background:#fef3c7;color:#92400e;}
+.task-status.done{background:#d1fae5;color:#065f46;}
+.task-status.running{background:var(--brand-pale);color:var(--brand-dark);border:1px solid var(--brand-soft);}
+
+/* Expanded content area inside task card */
+.task-extras{margin-top:12px;}
+
+/* ID upload — front/back tiles */
+.id-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.id-tile{
+  background:rgba(255,255,255,0.7);
+  border:2px dashed var(--brand-soft);border-radius:11px;
+  padding:14px 8px;text-align:center;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s;
+}
+.id-tile:hover{background:#fff;border-color:var(--brand);}
+.id-tile.captured{
+  border-style:solid;border-color:var(--brand-soft);background:#fff;
+  display:flex;align-items:center;gap:8px;text-align:left;padding:10px 11px;
+}
+.id-side{font-size:9.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--brand-dark);margin-bottom:6px;}
+.id-icon-big{
+  width:32px;height:32px;border-radius:8px;background:var(--brand);color:#fff;
+  display:grid;place-items:center;margin:0 auto 6px;
+}
+.id-icon-big svg{width:14px;height:14px;}
+.id-prompt{font-size:11px;font-weight:700;color:var(--ink);}
+.id-tile.captured .id-icon-big{margin:0;width:28px;height:28px;}
+.id-tile.captured .id-text{flex:1;min-width:0;}
+.id-tile.captured .id-name{font-size:11.5px;font-weight:700;color:var(--ink);}
+.id-tile.captured .id-status{font-size:10px;color:var(--good);font-weight:700;margin-top:1px;}
+
+.id-doc-types{
+  margin-top:10px;display:flex;gap:5px;flex-wrap:wrap;justify-content:center;
+}
+.id-doc-pill{
+  font-size:10px;font-weight:700;background:#fff;color:var(--ink-soft);
+  border:1px solid var(--line);padding:3px 8px;border-radius:999px;
+}
+
+/* Selfie capture box */
+.selfie-box{
+  background:rgba(255,255,255,0.7);
+  border:2px dashed var(--brand-soft);border-radius:12px;
+  padding:18px 14px;text-align:center;cursor:pointer;
+  transition:background 0.15s,border-color 0.15s;
+}
+.selfie-box:hover{background:#fff;border-color:var(--brand);}
+.selfie-icon-big{
+  width:54px;height:54px;border-radius:50%;background:var(--brand-pale);
+  border:2px solid var(--brand);
+  display:grid;place-items:center;margin:0 auto 10px;font-size:26px;
+}
+.selfie-prompt{font-size:13px;font-weight:700;color:var(--ink);}
+.selfie-meta{font-size:11px;color:var(--ink-faint);margin-top:3px;}
+
+/* Liveness check overlay */
+.liveness-overlay{
+  position:absolute;inset:0;z-index:80;
+  background:linear-gradient(135deg,#0d0b1e,#1a1640,#231d45);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 24px;text-align:center;color:#fff;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.35s;
+}
+.liveness-overlay.show{opacity:1;pointer-events:all;}
+.liveness-circle{
+  position:relative;width:160px;height:160px;margin-bottom:20px;
+}
+.liveness-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:3px solid rgba(94,234,212,0.2);
+}
+.liveness-progress-ring{
+  position:absolute;inset:0;
+}
+.liveness-progress-ring svg{width:100%;height:100%;transform:rotate(-90deg);}
+.liveness-face{
+  position:absolute;inset:14px;border-radius:50%;
+  background:rgba(255,255,255,0.06);
+  display:grid;place-items:center;font-size:54px;
+}
+.liveness-h1{font-size:18px;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;}
+.liveness-sub{font-size:12.5px;color:rgba(255,255,255,0.65);max-width:240px;line-height:1.5;}
+.liveness-step-text{
+  font-size:10.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;
+  color:#5eead4;margin-top:18px;
+  animation:fadeStep 0.6s ease;
+}
+@keyframes fadeStep{from{opacity:0;}to{opacity:1;}}
+
+/* AML status sequence */
+.aml-list{
+  background:rgba(255,255,255,0.7);
+  border:1.5px solid var(--brand-soft);border-radius:12px;
+  padding:12px 14px;
+}
+.aml-row{
+  display:flex;align-items:center;gap:9px;padding:6px 0;
+  font-size:12px;color:var(--ink-soft);
+  border-bottom:1px solid var(--line);
+}
+.aml-row:last-child{border-bottom:none;}
+.aml-dot{
+  width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;flex-shrink:0;
+  background:var(--line);color:var(--ink-faint);
+  font-size:10px;font-weight:800;
+  transition:all 0.4s;
+}
+.aml-row.checking .aml-dot{
+  border:2px solid var(--brand);background:rgba(0,161,154,0.1);
+  animation:amlPulse 1.2s ease-in-out infinite;
+}
+@keyframes amlPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(0,161,154,0.4);}
+  50%{box-shadow:0 0 0 6px rgba(0,161,154,0);}
+}
+.aml-row.clear .aml-dot{
+  background:var(--good);color:#fff;
+}
+.aml-row.clear .aml-dot::after{content:'✓';}
+.aml-row.clear{color:var(--ink);}
+.aml-row strong{font-weight:600;}
+.aml-row.clear strong{font-weight:700;}
+
+/* Continue */
+.continue-btn{
+  width:100%;border:none;border-radius:13px;padding:14px;
+  font-family:inherit;font-size:14.5px;font-weight:700;
+  cursor:pointer;margin-top:18px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  background:#e2e8f0;color:#94a3b8;
+  transition:all 0.18s;
+}
+.continue-btn.ready{
+  background:var(--brand);color:#fff;
+  box-shadow:0 6px 18px rgba(0,161,154,0.28);
+}
+.continue-btn.ready:hover{transform:translateY(-1px);}
+
+/* ─── Sheet ─── */
+.sheet-overlay{position:absolute;inset:0;background:rgba(35,29,69,0.5);opacity:0;pointer-events:none;transition:opacity 0.3s;z-index:50;}
+.app[data-sheet="open"] .sheet-overlay{opacity:1;pointer-events:all;}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:60;
+  background:#fff;border-radius:24px 24px 0 0;
+  padding:14px 20px 20px;
+  transform:translateY(100%);
+  transition:transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  max-height:75%;overflow-y:auto;
+  box-shadow:0 -8px 32px rgba(35,29,69,0.2);
+}
+.app[data-sheet="open"] .sheet{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--line);border-radius:999px;margin:0 auto 14px;}
+.sheet h2{font-size:17px;font-weight:800;letter-spacing:-0.01em;margin-bottom:4px;}
+.sheet-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:16px;line-height:1.45;}
+
+.method{
+  display:flex;align-items:center;gap:13px;
+  background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:13px 14px;margin-bottom:8px;cursor:pointer;
+  transition:border-color 0.15s,background 0.15s;
+  font-family:inherit;width:100%;text-align:left;
+}
+.method:hover{border-color:var(--brand-soft);background:var(--brand-pale);}
+.method-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:var(--brand-pale);border:1px solid var(--brand-soft);
+  display:grid;place-items:center;flex-shrink:0;color:var(--brand-dark);
+}
+.method-icon svg{width:18px;height:18px;}
+.method-body{flex:1;min-width:0;}
+.method-title{font-size:13.5px;font-weight:700;color:var(--ink);letter-spacing:-0.01em;}
+.method-sub{font-size:11px;color:var(--ink-faint);margin-top:1px;}
+.method-chev{color:var(--ink-faint);font-size:14px;font-weight:600;}
+.cancel-btn{width:100%;background:transparent;border:none;padding:14px;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-soft);cursor:pointer;margin-top:6px;}
+
+/* Toast */
+.toast{
+  position:absolute;top:50px;left:20px;right:20px;z-index:70;
+  background:linear-gradient(135deg,#005751,#008c86);color:#fff;
+  border-radius:13px;padding:11px 14px;
+  display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;
+  box-shadow:0 12px 32px rgba(0,140,134,0.4);
+  opacity:0;transform:translateY(-12px);
+  transition:opacity 0.4s ease,transform 0.4s ease;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast-check{width:24px;height:24px;border-radius:50%;background:#5eead4;color:#042f2e;display:grid;place-items:center;font-size:12px;font-weight:800;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="topbar">
+      <div class="back">‹</div>
+      <div class="topbar-titles">
+        <div class="title">Build your Buyer Profile</div>
+        <div class="step">Step 3 of 5</div>
+      </div>
+    </div>
+
+    <div class="progress">
+      <div class="progress-seg done"></div>
+      <div class="progress-seg done"></div>
+      <div class="progress-seg active"></div>
+      <div class="progress-seg"></div>
+      <div class="progress-seg"></div>
+    </div>
+
+    <div class="screen">
+      <div class="app" id="app">
+
+        <div class="page-icon">🪪</div>
+        <div class="page-title">Verify your identity</div>
+        <div class="page-sub">Show sellers we've checked who you are. Takes about 2 minutes — done once only.</div>
+
+        <!-- Trust strip -->
+        <div class="trust-strip">
+          <div class="lock-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div>Encrypted &amp; secure · powered by <strong>Onfido</strong> · used by major UK banks</div>
+        </div>
+
+        <!-- Task 1: Photo ID -->
+        <div class="task active" id="task-id">
+          <div class="task-row" onclick="setActive('id')">
+            <div class="task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8" cy="11" r="2.5"/><line x1="13" y1="9" x2="18" y2="9"/><line x1="13" y1="13" x2="18" y2="13"/></svg>
+            </div>
+            <div class="task-body">
+              <div class="task-title">Photo ID</div>
+              <div class="task-meta" id="id-meta">Passport or driving licence — front &amp; back</div>
+            </div>
+            <span class="task-status required" id="id-status">Required</span>
+          </div>
+          <div class="task-extras" id="id-extras">
+            <div class="id-grid">
+              <div class="id-tile" id="id-front" onclick="event.stopPropagation();openSheet('id-front')">
+                <div class="id-side">Front</div>
+                <div class="id-icon-big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                <div class="id-prompt">Tap to capture front</div>
+              </div>
+              <div class="id-tile" id="id-back" onclick="event.stopPropagation();openSheet('id-back')">
+                <div class="id-side">Back</div>
+                <div class="id-icon-big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+                <div class="id-prompt">Tap to capture back</div>
+              </div>
+            </div>
+            <div class="id-doc-types">
+              <span class="id-doc-pill">🇬🇧 UK Passport</span>
+              <span class="id-doc-pill">🪪 Driving Licence</span>
+              <span class="id-doc-pill">🌍 EU Passport</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Task 2: Liveness check -->
+        <div class="task" id="task-selfie">
+          <div class="task-row" onclick="setActive('selfie')">
+            <div class="task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="4"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/></svg>
+            </div>
+            <div class="task-body">
+              <div class="task-title">Selfie · liveness check</div>
+              <div class="task-meta" id="selfie-meta">20-second face scan to confirm it's you</div>
+            </div>
+            <span class="task-status required" id="selfie-status">Required</span>
+          </div>
+          <div class="task-extras" id="selfie-extras"></div>
+        </div>
+
+        <!-- Task 3: AML screening -->
+        <div class="task" id="task-aml">
+          <div class="task-row" onclick="setActive('aml')">
+            <div class="task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            </div>
+            <div class="task-body">
+              <div class="task-title">AML screening</div>
+              <div class="task-meta" id="aml-meta">Sanctions, PEP &amp; adverse media — runs automatically</div>
+            </div>
+            <span class="task-status required" id="aml-status">Auto</span>
+          </div>
+          <div class="task-extras" id="aml-extras"></div>
+        </div>
+
+        <button class="continue-btn" id="continue-btn" onclick="goNext()">Continue →</button>
+        <div style="height:14px;"></div>
+
+        <!-- Sheet -->
+        <div class="sheet-overlay" onclick="closeSheet()"></div>
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <h2>Capture your ID</h2>
+          <div class="sheet-sub" id="sheet-sub">Choose how you'd like to capture this side of your ID.</div>
+          <button class="method" onclick="simulateCapture('camera')">
+            <div class="method-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+            <div class="method-body"><div class="method-title">Take a photo</div><div class="method-sub">Use your camera now</div></div>
+            <div class="method-chev">›</div>
+          </button>
+          <button class="method" onclick="simulateCapture('photos')">
+            <div class="method-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+            <div class="method-body"><div class="method-title">Choose from photos</div><div class="method-sub">Pick an existing image</div></div>
+            <div class="method-chev">›</div>
+          </button>
+          <button class="method" onclick="simulateCapture('files')">
+            <div class="method-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div class="method-body"><div class="method-title">Choose a file</div><div class="method-sub">PDF, JPG or PNG · max 10MB</div></div>
+            <div class="method-chev">›</div>
+          </button>
+          <button class="cancel-btn" onclick="closeSheet()">Cancel</button>
+        </div>
+
+        <!-- Liveness overlay -->
+        <div class="liveness-overlay" id="liveness-overlay">
+          <div class="liveness-circle">
+            <div class="liveness-ring"></div>
+            <div class="liveness-progress-ring">
+              <svg viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="76" fill="none" stroke="#5eead4" stroke-width="3"
+                  stroke-linecap="round" stroke-dasharray="478" stroke-dashoffset="478" id="liveness-prog"
+                  style="transition:stroke-dashoffset 3s linear;"/>
+              </svg>
+            </div>
+            <div class="liveness-face">🤳</div>
+          </div>
+          <div class="liveness-h1" id="liveness-h1">Look at the camera</div>
+          <div class="liveness-sub" id="liveness-sub">Hold still — we'll capture automatically.</div>
+          <div class="liveness-step-text" id="liveness-step">Detecting face…</div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast" id="toast">
+          <div class="toast-check">✓</div>
+          <div id="toast-text">Done</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const app = document.getElementById('app');
+
+let state = {
+  active: 'id',
+  idFront: false,
+  idBack: false,
+  selfie: false,
+  amlStarted: false,
+  amlDone: false,
+  uploadingFor: null,
+};
+
+function renderActive() {
+  ['id','selfie','aml'].forEach(t => {
+    document.getElementById('task-'+t).classList.toggle('active', state.active === t && !isTaskDone(t));
+    document.getElementById('task-'+t).classList.toggle('done', isTaskDone(t));
+  });
+  ['id','selfie','aml'].forEach(t => {
+    const el = document.getElementById(t+'-extras');
+    if (state.active === t && !isTaskDone(t)) {
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+function isTaskDone(t) {
+  if (t === 'id') return state.idFront && state.idBack;
+  if (t === 'selfie') return state.selfie;
+  if (t === 'aml') return state.amlDone;
+  return false;
+}
+
+function setActive(t) {
+  if (isTaskDone(t)) return;
+  state.active = t;
+  renderActive();
+  if (t === 'aml') startAML();
+  if (t === 'selfie') startLivenessPrompt();
+}
+
+function updateStatuses() {
+  // ID status
+  const idStatus = document.getElementById('id-status');
+  if (state.idFront && state.idBack) {
+    idStatus.className = 'task-status done'; idStatus.textContent = '✓ Verified';
+    document.getElementById('id-meta').textContent = 'ID matched · ready';
+  } else if (state.idFront || state.idBack) {
+    idStatus.className = 'task-status progress'; idStatus.textContent = (state.idFront ? '1' : '0') + (state.idBack && !state.idFront ? '/2' : '/2');
+  } else {
+    idStatus.className = 'task-status required'; idStatus.textContent = 'Required';
+  }
+  // Selfie
+  const sStatus = document.getElementById('selfie-status');
+  if (state.selfie) {
+    sStatus.className = 'task-status done'; sStatus.textContent = '✓ Passed';
+    document.getElementById('selfie-meta').textContent = 'Liveness confirmed';
+  }
+  // AML
+  const aStatus = document.getElementById('aml-status');
+  if (state.amlDone) {
+    aStatus.className = 'task-status done'; aStatus.textContent = '✓ Clear';
+    document.getElementById('aml-meta').textContent = 'Sanctions · PEP · adverse media — all clear';
+  } else if (state.amlStarted) {
+    aStatus.className = 'task-status running'; aStatus.textContent = 'Running…';
+  } else {
+    aStatus.className = 'task-status required'; aStatus.textContent = 'Auto';
+  }
+  // Continue
+  const ready = state.idFront && state.idBack && state.selfie && state.amlDone;
+  document.getElementById('continue-btn').classList.toggle('ready', ready);
+}
+
+function renderID() {
+  const front = document.getElementById('id-front');
+  const back = document.getElementById('id-back');
+  if (state.idFront) {
+    front.className = 'id-tile captured';
+    front.innerHTML = `<div class="id-icon-big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="id-text"><div class="id-name">Front captured</div><div class="id-status">✓ Clear &amp; readable</div></div>`;
+  }
+  if (state.idBack) {
+    back.className = 'id-tile captured';
+    back.innerHTML = `<div class="id-icon-big"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><div class="id-text"><div class="id-name">Back captured</div><div class="id-status">✓ Clear &amp; readable</div></div>`;
+  }
+}
+
+function openSheet(target) {
+  state.uploadingFor = target;
+  app.dataset.sheet = 'open';
+  const which = target === 'id-front' ? 'front' : 'back';
+  document.getElementById('sheet-sub').textContent =
+    `Capture the ${which} of your ID — make sure all four corners are visible.`;
+}
+
+function closeSheet() { app.dataset.sheet = ''; }
+
+function simulateCapture(method) {
+  const target = state.uploadingFor;
+  closeSheet();
+  setTimeout(() => {
+    if (target === 'id-front') state.idFront = true;
+    if (target === 'id-back') state.idBack = true;
+    renderID();
+    updateStatuses();
+    showToast('ID side captured');
+
+    // Auto-advance: when both ID sides captured, jump to selfie
+    if (state.idFront && state.idBack) {
+      setTimeout(() => { state.active = 'selfie'; renderActive(); startLivenessPrompt(); }, 600);
+    }
+  }, 400);
+}
+
+function startLivenessPrompt() {
+  const slot = document.getElementById('selfie-extras');
+  slot.innerHTML = `
+    <div class="selfie-box" onclick="event.stopPropagation();runLiveness()">
+      <div class="selfie-icon-big">🤳</div>
+      <div class="selfie-prompt">Tap to start face scan</div>
+      <div class="selfie-meta">Look at the camera and follow the on-screen prompts</div>
+    </div>
+  `;
+}
+
+function runLiveness() {
+  const overlay = document.getElementById('liveness-overlay');
+  overlay.classList.add('show');
+  const prog = document.getElementById('liveness-prog');
+  const h1 = document.getElementById('liveness-h1');
+  const sub = document.getElementById('liveness-sub');
+  const step = document.getElementById('liveness-step');
+  prog.setAttribute('stroke-dashoffset','478');
+  setTimeout(() => prog.setAttribute('stroke-dashoffset','0'), 100);
+
+  setTimeout(() => { h1.textContent = 'Turn slightly left'; step.textContent = 'Step 2 of 3'; }, 1000);
+  setTimeout(() => { h1.textContent = 'Turn slightly right'; step.textContent = 'Step 3 of 3'; }, 2000);
+  setTimeout(() => {
+    h1.textContent = 'Liveness confirmed';
+    sub.textContent = 'You\'re all set.';
+    step.textContent = '✓ Passed';
+    step.style.color = '#5eead4';
+  }, 3100);
+  setTimeout(() => {
+    overlay.classList.remove('show');
+    state.selfie = true;
+    updateStatuses();
+    showToast('Liveness confirmed');
+    // Auto-advance: after selfie, kick off AML
+    setTimeout(() => { state.active = 'aml'; renderActive(); startAML(); }, 500);
+  }, 3900);
+}
+
+function startAML() {
+  if (state.amlStarted) return;
+  state.amlStarted = true;
+  updateStatuses();
+  const slot = document.getElementById('aml-extras');
+  slot.innerHTML = `
+    <div class="aml-list">
+      <div class="aml-row checking" id="aml-1"><div class="aml-dot">1</div><strong>Sanctions list</strong></div>
+      <div class="aml-row" id="aml-2"><div class="aml-dot">2</div><strong>PEP register</strong></div>
+      <div class="aml-row" id="aml-3"><div class="aml-dot">3</div><strong>Adverse media</strong></div>
+    </div>
+  `;
+  setTimeout(() => {
+    document.getElementById('aml-1').classList.remove('checking');
+    document.getElementById('aml-1').classList.add('clear');
+    document.getElementById('aml-2').classList.add('checking');
+  }, 900);
+  setTimeout(() => {
+    document.getElementById('aml-2').classList.remove('checking');
+    document.getElementById('aml-2').classList.add('clear');
+    document.getElementById('aml-3').classList.add('checking');
+  }, 1800);
+  setTimeout(() => {
+    document.getElementById('aml-3').classList.remove('checking');
+    document.getElementById('aml-3').classList.add('clear');
+    state.amlDone = true;
+    updateStatuses();
+    renderActive();
+    showToast('All checks clear · identity verified');
+  }, 2700);
+}
+
+function goNext() {
+  const btn = document.getElementById('continue-btn');
+  if (!btn.classList.contains('ready')) return;
+  showToast('Identity verified · moving to step 4 →');
+}
+
+function showToast(text) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// init
+renderActive();
+updateStatuses();
+</script>
+
+</body>
+</html>
