@@ -246,6 +246,10 @@ model Passport {
   propertyId    String?                @unique
   status        PassportStatus         @default(IN_PROGRESS)
   createdAt     DateTime               @default(now())
+  // Resume tracking — last task the owner / collaborator visited so the
+  // "Pick up where you left off" button can route them straight back.
+  lastVisitedTaskId  String?
+  lastVisitedAt      DateTime?
   owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   property      Property?              @relation(fields: [propertyId], references: [id])
   sections      PassportSection[]

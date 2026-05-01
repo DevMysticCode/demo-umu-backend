@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>umovingu — Property Passport (interactive prototype)</title>
+<style>
+:root {
+  --bg:#ffffff; --card:#ffffff; --ink:#231d45; --ink-soft:#4a5568;
+  --ink-faint:#94a3b8; --line:#eef0f6; --brand:#00A19A; --brand-dark:#008c86;
+  --brand-mid:#00b5ad; --brand-soft:#b2e8e6; --brand-pale:#eafaf9;
+  --navy:#231d45; --navy-mid:#2d2560; --good:#059669; --warn:#d97706; --bad:#dc2626;
+  --shadow-sm:0 1px 3px rgba(35,29,69,0.06),0 2px 8px rgba(35,29,69,0.04);
+  --shadow-md:0 4px 20px rgba(35,29,69,0.10); --r:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#e8e6f0;color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh;}
+.stage{min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px 80px;}
+.phone{width:390px;max-width:100%;background:var(--bg);border-radius:44px;box-shadow:0 32px 80px rgba(0,0,0,0.35),0 0 0 10px #111,0 0 0 11px #2a2a2a;overflow:hidden;position:relative;display:flex;flex-direction:column;height:820px;}
+.notch{height:30px;background:#111;border-bottom-left-radius:20px;border-bottom-right-radius:20px;width:126px;margin:0 auto;z-index:2;flex-shrink:0;}
+.screen{flex:1;overflow-y:auto;padding:8px 20px 24px;scroll-behavior:smooth;}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 8px;flex-shrink:0;background:var(--bg);}
+.topbar .back{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:var(--brand-dark);cursor:pointer;}
+.topbar .title{font-size:15px;font-weight:700;color:var(--ink);}
+.topbar .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--navy-mid),var(--navy));color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;}
+
+/* Buyer/Seller toggle */
+.role-toggle{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--brand-pale);border:1px solid var(--brand-soft);border-radius:12px;padding:4px;margin-bottom:14px;}
+.role-toggle button{border:none;background:transparent;padding:9px 12px;border-radius:9px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s,color 0.15s;}
+.role-toggle button.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(35,29,69,0.06);}
+
+/* Premium Passport hero — book + dashboard */
+.pp-hero{
+  background:
+    radial-gradient(circle at 18% 30%,rgba(0,161,154,0.08),transparent 50%),
+    radial-gradient(circle at 90% 90%,rgba(35,29,69,0.04),transparent 50%),
+    linear-gradient(180deg,#f4fbfa 0%,#fff 100%);
+  border:1px solid var(--brand-soft);border-radius:18px;
+  padding:18px 16px 16px;margin-bottom:14px;
+  display:flex;align-items:stretch;gap:14px;
+  position:relative;overflow:hidden;
+}
+.pp-hero::after{
+  content:'';position:absolute;top:12px;right:12px;
+  width:40px;height:40px;
+  background:radial-gradient(circle,rgba(0,161,154,0.18),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.pp-book{
+  width:104px;height:140px;flex-shrink:0;position:relative;
+  perspective:600px;
+}
+.pp-book .book-tilt{
+  width:100%;height:100%;
+  transform:rotateY(-6deg) rotateX(2deg);
+  transform-origin:left center;
+  transition:transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
+  filter:drop-shadow(0 8px 18px rgba(0,140,134,0.28));
+}
+.pp-book:hover .book-tilt{transform:rotateY(-2deg) rotateX(0deg);}
+.pp-book svg{width:100%;height:100%;display:block;}
+.pp-book .verified-stamp{
+  position:absolute;top:-6px;right:-6px;
+  width:30px;height:30px;border-radius:50%;
+  background:#fff;border:1.5px solid var(--brand-soft);
+  display:grid;place-items:center;
+  font-size:13px;
+  box-shadow:0 2px 6px rgba(35,29,69,0.12);
+  z-index:2;
+  transform:rotate(8deg);
+}
+
+.pp-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;}
+.pp-info-top{}
+.pp-eyebrow{
+  font-size:9.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--brand);margin-bottom:4px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.pp-eyebrow .view-pill{background:#fef3c7;color:#92400e;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:999px;letter-spacing:0.04em;}
+.pp-addr-l1{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;line-height:1.2;}
+.pp-addr-l2{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+
+/* Live dashboard footer in the side */
+.pp-dash{margin-top:12px;}
+.pp-dash-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.pp-dash-label{font-size:9.5px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);}
+.pp-dash-pct{color:var(--brand);font-weight:800;font-size:13px;letter-spacing:-0.01em;}
+.pp-progress-bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden;}
+.pp-progress-fill{height:100%;background:linear-gradient(90deg,var(--brand-dark),var(--brand-mid));border-radius:999px;}
+.pp-issued{
+  display:flex;align-items:center;gap:5px;
+  font-size:9.5px;color:var(--ink-faint);font-weight:600;
+  margin-top:7px;letter-spacing:0.02em;
+}
+.pp-issued .dot{width:5px;height:5px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 2.5px var(--brand-pale);}
+.pp-issued strong{color:var(--ink-soft);font-weight:700;}
+
+/* Action buttons */
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.act-btn{border:none;border-radius:12px;padding:11px 12px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform 0.1s,box-shadow 0.15s;}
+.act-btn:active{transform:scale(0.98);}
+.act-btn.outline{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+.act-btn.outline:hover{border-color:var(--brand-soft);}
+.act-btn.primary{background:var(--brand);color:#fff;box-shadow:0 4px 14px rgba(0,161,154,0.28);}
+
+/* Buyer score card */
+.score-card{background:linear-gradient(135deg,#231d45,#2d2560);border-radius:14px;padding:14px 16px;margin-bottom:12px;color:#fff;position:relative;overflow:hidden;}
+.score-card::after{content:'';position:absolute;right:-30px;bottom:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(0,161,154,0.3),transparent 70%);border-radius:50%;}
+.score-card .label{font-size:9.5px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:#5eead4;margin-bottom:4px;position:relative;z-index:1;}
+.score-card .row{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+.score-card .num{font-size:36px;font-weight:800;letter-spacing:-0.03em;line-height:1;}
+.score-card .meta{font-size:10.5px;color:rgba(255,255,255,0.65);margin-top:3px;}
+.score-card .pill-good{background:rgba(94,234,212,0.2);border:1px solid rgba(94,234,212,0.4);color:#5eead4;font-size:10px;font-weight:700;padding:4px 9px;border-radius:999px;}
+
+/* Buyer action row */
+.buyer-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+
+/* Collaborators */
+.collab-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;}
+.collab-add{width:28px;height:28px;border-radius:50%;background:var(--brand-pale);border:1px solid var(--brand-soft);display:grid;place-items:center;color:var(--brand-dark);font-size:16px;font-weight:600;flex-shrink:0;cursor:pointer;}
+.collab-text{font-size:12.5px;color:var(--ink-soft);font-weight:600;flex:1;}
+.collab-chev{color:var(--ink-faint);font-size:18px;font-weight:600;}
+
+/* Sub-tabs */
+.subtabs{display:flex;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;}
+.subtabs button{flex:1;border:none;background:transparent;padding:9px 8px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;gap:6px;transition:background 0.15s,color 0.15s;}
+.subtabs button.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(0,161,154,0.28);}
+
+/* List/Map toggle */
+.view-toggle{display:flex;background:#f8f7fc;border-radius:10px;padding:3px;margin-bottom:12px;}
+.view-toggle button{flex:1;border:none;background:transparent;padding:8px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink-faint);display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s,color 0.15s;}
+.view-toggle button.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(35,29,69,0.05);}
+
+/* Section row */
+.section-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 14px;margin-bottom:8px;box-shadow:var(--shadow-sm);transition:border-color 0.15s,transform 0.1s;cursor:pointer;}
+.section-card:hover{border-color:var(--brand-soft);}
+.section-card:active{transform:scale(0.99);}
+.section-row{display:flex;align-items:center;gap:12px;padding:13px 0;}
+.section-icon{width:42px;height:42px;border-radius:12px;background:linear-gradient(140deg,#f3fbfa 0%,var(--brand-pale) 100%);border:1px solid var(--brand-soft);display:grid;place-items:center;flex-shrink:0;color:var(--brand-dark);box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);}
+.section-icon svg{width:22px;height:22px;}
+.section-icon .fill-soft{fill:var(--brand);opacity:0.18;}
+.section-icon .fill-mid{fill:var(--brand);opacity:0.35;}
+.section-icon .stroke{fill:none;stroke:var(--brand-dark);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.section-body{flex:1;min-width:0;}
+.section-name{font-size:14px;font-weight:700;color:var(--ink);}
+.section-meta{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+.section-progress{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.section-pct{font-size:11px;font-weight:800;background:var(--brand-pale);color:var(--brand-dark);border:1px solid var(--brand-soft);padding:3px 9px;border-radius:999px;}
+.section-pct.zero{background:#f1f5f9;color:var(--ink-faint);border-color:var(--line);}
+.section-pct.locked{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+.section-pct.visible{background:#d1fae5;color:#065f46;border-color:#a7f3d0;}
+.section-chev{color:var(--ink-faint);font-size:18px;font-weight:600;flex-shrink:0;}
+
+/* Map view (in any tab) */
+.map-card{background:linear-gradient(135deg,#eafaf9,#f0fdfc);border:1px solid var(--brand-soft);border-radius:16px;padding:0;overflow:hidden;margin-bottom:12px;height:200px;position:relative;}
+.map-card svg{width:100%;height:100%;display:block;}
+.map-card .legend{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,0.92);border-radius:10px;padding:7px 10px;font-size:10.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.map-card .legend-dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);}
+
+/* Street properties */
+.street-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:0 14px;margin-bottom:8px;box-shadow:var(--shadow-sm);cursor:pointer;}
+.street-card.you{border-color:var(--brand-soft);background:linear-gradient(180deg,#f4fbfa,#fff);}
+.street-row{display:flex;align-items:center;gap:12px;padding:13px 0;}
+.street-icon{width:42px;height:42px;border-radius:12px;background:var(--brand-pale);border:1px solid var(--brand-soft);display:grid;place-items:center;flex-shrink:0;color:var(--brand-dark);}
+.street-icon svg{width:22px;height:22px;}
+.street-body{flex:1;min-width:0;}
+.street-addr{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;}
+.street-addr .you-pill{font-size:9px;font-weight:800;background:var(--brand);color:#fff;padding:2px 7px;border-radius:999px;letter-spacing:0.04em;}
+.street-meta{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+.street-score{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+.score-pill{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;}
+.score-pill.good{background:#d1fae5;color:#065f46;}
+.score-pill.fair{background:#fef3c7;color:#92400e;}
+.score-pill.poor{background:#fee2e2;color:#991b1b;}
+.score-pill.none{background:#f1f5f9;color:var(--ink-faint);}
+.score-cat{font-size:9.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;}
+
+/* Buyer matches */
+.buyer-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.buyer-stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center;}
+.buyer-stat-num{font-size:20px;font-weight:800;color:var(--brand);letter-spacing:-0.02em;line-height:1;}
+.buyer-stat-lbl{font-size:9.5px;color:var(--ink-faint);margin-top:4px;text-transform:uppercase;letter-spacing:0.04em;font-weight:700;}
+.buyer-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow-sm);}
+.buyer-row{display:flex;align-items:center;gap:12px;}
+.buyer-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--brand-mid),var(--brand-dark));color:#fff;display:grid;place-items:center;font-size:13px;font-weight:800;flex-shrink:0;}
+.buyer-body{flex:1;min-width:0;}
+.buyer-name{font-size:13.5px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;}
+.verified-mini{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;color:var(--good);background:#d1fae5;padding:2px 6px;border-radius:999px;}
+.buyer-meta{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+.buyer-match{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
+.match-num{font-size:14px;font-weight:800;color:var(--brand);letter-spacing:-0.01em;line-height:1;}
+.match-lbl{font-size:9px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.04em;font-weight:700;}
+.buyer-pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px;}
+.bp{font-size:10px;font-weight:700;background:var(--brand-pale);color:var(--brand-dark);border:1px solid var(--brand-soft);padding:3px 8px;border-radius:999px;}
+.buyer-cta-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
+.buyer-cta{border:none;border-radius:9px;padding:8px;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;}
+.buyer-cta.primary{background:var(--brand);color:#fff;}
+.buyer-cta.outline{background:#fff;color:var(--ink-soft);border:1px solid var(--line);}
+
+/* Conditional visibility */
+.app[data-role="buyer"] .seller-only{display:none;}
+.app[data-role="seller"] .buyer-only{display:none;}
+.app[data-tab="sections"] .panel-street,.app[data-tab="sections"] .panel-buyers{display:none;}
+.app[data-tab="street"] .panel-sections,.app[data-tab="street"] .panel-buyers{display:none;}
+.app[data-tab="buyers"] .panel-sections,.app[data-tab="buyers"] .panel-street{display:none;}
+.app[data-view="list"] .view-map{display:none;}
+.app[data-view="map"] .view-list{display:none;}
+.app[data-tab="buyers"] .view-toggle,.app[data-tab="buyers"] .map-card,.app[data-tab="buyers"] .view-list{display:none;}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="phone">
+    <div class="notch"></div>
+
+    <div class="topbar">
+      <div class="back">‹ Back</div>
+      <div class="title">Passport</div>
+      <div class="avatar">PY</div>
+    </div>
+
+    <div class="screen">
+      <div class="app" data-role="seller" data-tab="sections" data-view="list">
+
+        <!-- Buyer/Seller toggle -->
+        <div class="role-toggle">
+          <button data-role="buyer" onclick="setRole('buyer')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Buyer
+          </button>
+          <button data-role="seller" class="active" onclick="setRole('seller')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Seller
+          </button>
+        </div>
+
+        <!-- Premium Passport hero — book = identity, side = live dashboard -->
+        <div class="pp-hero">
+          <div class="pp-book">
+            <div class="verified-stamp" title="Verified by Land Registry">🏛️</div>
+            <div class="book-tilt">
+              <svg viewBox="0 0 104 140">
+                <!-- Spine shadow -->
+                <rect x="3" y="7" width="99" height="128" rx="7" fill="#005751" opacity="0.45"/>
+                <!-- Book body -->
+                <rect x="0" y="3" width="97" height="128" rx="7" fill="url(#bookGrad)"/>
+                <!-- Foil sheen overlay -->
+                <rect x="0" y="3" width="97" height="128" rx="7" fill="url(#shineGrad)" opacity="0.35"/>
+                <!-- Inner border (refined) -->
+                <rect x="6" y="9" width="85" height="116" rx="4" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="0.6"/>
+                <!-- Spine highlight -->
+                <rect x="0" y="3" width="6" height="128" rx="3" fill="rgba(0,0,0,0.18)"/>
+                <!-- Top corner ornaments -->
+                <path d="M10 13 L14 13 M10 13 L10 17" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" stroke-linecap="round"/>
+                <path d="M87 13 L83 13 M87 13 L87 17" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" stroke-linecap="round"/>
+                <path d="M10 121 L14 121 M10 121 L10 117" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" stroke-linecap="round"/>
+                <path d="M87 121 L83 121 M87 121 L87 117" stroke="rgba(255,255,255,0.4)" stroke-width="0.6" stroke-linecap="round"/>
+
+                <!-- Header -->
+                <text x="48.5" y="26" text-anchor="middle" fill="#fff" font-family="Georgia,'Times New Roman',serif" font-size="6.5" font-weight="700" letter-spacing="0.22em">PROPERTY</text>
+                <text x="48.5" y="35" text-anchor="middle" fill="#fff" font-family="Georgia,'Times New Roman',serif" font-size="6.5" font-weight="700" letter-spacing="0.22em">PASSPORT</text>
+                <line x1="36" y1="40" x2="61" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="0.4"/>
+
+                <!-- House crest -->
+                <g transform="translate(33,46)" stroke="#fff" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+                  <path d="M2 18 L17 4 L32 18 L32 32 L2 32 Z"/>
+                  <path d="M13 32 L13 22 L21 22 L21 32"/>
+                </g>
+
+                <!-- Address card on cover -->
+                <line x1="20" y1="86" x2="77" y2="86" stroke="rgba(255,255,255,0.35)" stroke-width="0.4"/>
+                <text x="48.5" y="95" text-anchor="middle" fill="#fff" font-family="Georgia,'Times New Roman',serif" font-size="7" font-weight="700" letter-spacing="0.04em">39 Woodfield Rd</text>
+                <text x="48.5" y="103" text-anchor="middle" fill="rgba(255,255,255,0.78)" font-family="Georgia,'Times New Roman',serif" font-size="5.5" font-weight="600" letter-spacing="0.14em">CV5 6AJ</text>
+                <line x1="20" y1="108" x2="77" y2="108" stroke="rgba(255,255,255,0.35)" stroke-width="0.4"/>
+
+                <!-- Passport number -->
+                <text x="48.5" y="116" text-anchor="middle" fill="rgba(255,255,255,0.62)" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="4.2" font-weight="700" letter-spacing="0.18em">No. PP·39WR·CV5</text>
+                <!-- Issued -->
+                <text x="48.5" y="123" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="-apple-system,Inter,sans-serif" font-size="3.6" font-weight="600" letter-spacing="0.16em">ISSUED 27·04·26</text>
+
+                <defs>
+                  <linearGradient id="bookGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#00b5ad"/><stop offset="100%" stop-color="#007a74"/>
+                  </linearGradient>
+                  <linearGradient id="shineGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#fff" stop-opacity="0"/>
+                    <stop offset="42%" stop-color="#fff" stop-opacity="0.18"/>
+                    <stop offset="50%" stop-color="#fff" stop-opacity="0.32"/>
+                    <stop offset="58%" stop-color="#fff" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+
+          <div class="pp-info">
+            <div class="pp-info-top">
+              <div class="pp-eyebrow">
+                <span class="eyebrow-text">Property Passport</span>
+                <span class="view-pill buyer-only">Viewing as buyer</span>
+              </div>
+              <div class="pp-addr-l1">39, Woodfield Road</div>
+              <div class="pp-addr-l2">CV5 6AJ · Semi-detached · 3 bed</div>
+              <div class="buyer-only" style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;">
+                <span style="font-size:10px;font-weight:700;background:var(--brand-pale);color:var(--brand-dark);padding:3px 8px;border-radius:999px;border:1px solid var(--brand-soft);">📘 In progress</span>
+                <span style="font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:999px;">EPC D</span>
+              </div>
+            </div>
+
+            <div class="pp-dash seller-only">
+              <div class="pp-dash-row">
+                <span class="pp-dash-label">0 of 18 sections</span>
+                <span class="pp-dash-pct">0%</span>
+              </div>
+              <div class="pp-progress-bar"><div class="pp-progress-fill" style="width:0%;"></div></div>
+              <div class="pp-issued"><span class="dot"></span><span>Issued to <strong>PY</strong> · 27 Apr 2026</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seller: Match/Publish actions -->
+        <div class="action-row seller-only">
+          <button class="act-btn outline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Match to Buyers
+          </button>
+          <button class="act-btn primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Publish
+          </button>
+        </div>
+
+        <!-- Buyer: HealthScore card + buyer actions -->
+        <div class="score-card buyer-only">
+          <div class="label">HealthScore™ · Public</div>
+          <div class="row">
+            <div>
+              <div class="num">37</div>
+              <div class="meta">EPC default · real score hidden until owner publishes</div>
+            </div>
+            <span class="pill-good">⚡ EPC D</span>
+          </div>
+        </div>
+        <div class="buyer-actions buyer-only">
+          <button class="act-btn outline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Save
+          </button>
+          <button class="act-btn primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Ask seller
+          </button>
+        </div>
+
+        <!-- Collaborators -->
+        <div class="collab-row seller-only">
+          <div class="collab-add">+</div>
+          <div class="collab-text">0 Collaborators</div>
+          <div class="collab-chev">›</div>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="subtabs">
+          <button data-tab="sections" class="active" onclick="setTab('sections')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Sections
+          </button>
+          <button data-tab="street" onclick="setTab('street')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 9 2 15 6 23 2 23 18 15 22 9 18 1 22 1 6"/><line x1="9" y1="2" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="22"/></svg>
+            Street
+          </button>
+          <button data-tab="buyers" onclick="setTab('buyers')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Buyers
+          </button>
+        </div>
+
+        <!-- List/Map toggle -->
+        <div class="view-toggle">
+          <button data-view="list" class="active" onclick="setView('list')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            List
+          </button>
+          <button data-view="map" onclick="setView('map')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 9 2 15 6 23 2 23 18 15 22 9 18 1 22 1 6"/></svg>
+            Map
+          </button>
+        </div>
+
+        <!-- ── MAP VIEW (shared across tabs) ── -->
+        <div class="map-card view-map">
+          <svg viewBox="0 0 360 200" preserveAspectRatio="xMidYMid slice">
+            <rect width="360" height="200" fill="#dff5f3"/>
+            <!-- Streets -->
+            <path d="M 0 130 L 360 100" stroke="#fff" stroke-width="14"/>
+            <path d="M 80 0 L 110 200" stroke="#fff" stroke-width="10"/>
+            <path d="M 220 0 L 250 200" stroke="#fff" stroke-width="10"/>
+            <!-- Block shading -->
+            <rect x="115" y="20" width="100" height="80" fill="#c9eae7" opacity="0.6" rx="2"/>
+            <rect x="115" y="115" width="100" height="80" fill="#c9eae7" opacity="0.6" rx="2"/>
+            <!-- Street label -->
+            <text x="180" y="125" text-anchor="middle" fill="#008c86" font-size="9" font-weight="700" font-family="-apple-system,Inter,sans-serif" transform="rotate(-4 180 125)">WOODFIELD ROAD</text>
+            <!-- Property pins -->
+            <!-- 35 -->
+            <circle cx="135" cy="115" r="9" fill="#94a3b8"/>
+            <text x="135" y="118" text-anchor="middle" fill="#fff" font-size="9" font-weight="800" font-family="-apple-system,Inter,sans-serif">35</text>
+            <!-- 37 -->
+            <circle cx="160" cy="118" r="9" fill="#f59e0b"/>
+            <text x="160" y="121" text-anchor="middle" fill="#fff" font-size="9" font-weight="800" font-family="-apple-system,Inter,sans-serif">37</text>
+            <!-- 39 (you) — larger pulsing -->
+            <circle cx="190" cy="118" r="14" fill="#00A19A" stroke="#fff" stroke-width="3"/>
+            <text x="190" y="122" text-anchor="middle" fill="#fff" font-size="10" font-weight="800" font-family="-apple-system,Inter,sans-serif">39</text>
+            <circle cx="190" cy="118" r="20" fill="none" stroke="#00A19A" stroke-width="2" opacity="0.4">
+              <animate attributeName="r" values="14;28;14" dur="2.4s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite"/>
+            </circle>
+            <!-- 41 -->
+            <circle cx="218" cy="121" r="9" fill="#16a34a"/>
+            <text x="218" y="124" text-anchor="middle" fill="#fff" font-size="9" font-weight="800" font-family="-apple-system,Inter,sans-serif">41</text>
+            <!-- 43 -->
+            <circle cx="245" cy="124" r="9" fill="#16a34a"/>
+            <text x="245" y="127" text-anchor="middle" fill="#fff" font-size="9" font-weight="800" font-family="-apple-system,Inter,sans-serif">43</text>
+          </svg>
+          <div class="legend"><div class="legend-dot"></div>You · 39 Woodfield Road</div>
+        </div>
+
+        <!-- ══════════════════ SECTIONS PANEL ══════════════════ -->
+        <div class="panel-sections view-list">
+
+          <!-- 1 Ownership Profile -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" class="fill-mid"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" class="fill-soft"/><circle cx="12" cy="8" r="4" class="stroke"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Ownership Profile</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 2 Boundaries -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="1" class="fill-soft"/><rect x="4" y="6" width="16" height="14" rx="1" class="stroke"/><line x1="4" y1="11" x2="20" y2="11" class="stroke"/><line x1="12" y1="6" x2="12" y2="20" class="stroke"/><circle cx="4" cy="6" r="1.6" class="fill-mid"/><circle cx="20" cy="6" r="1.6" class="fill-mid"/><circle cx="4" cy="20" r="1.6" class="fill-mid"/><circle cx="20" cy="20" r="1.6" class="fill-mid"/></svg>
+          </div><div class="section-body"><div class="section-name">Boundaries</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 3 Disputes & Complaints -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" class="fill-soft"/><circle cx="12" cy="12" r="9.5" class="stroke"/><line x1="12" y1="7" x2="12" y2="13" class="stroke" stroke-width="2.2"/><circle cx="12" cy="17" r="1.1" fill="var(--brand-dark)"/></svg>
+          </div><div class="section-body"><div class="section-name">Disputes &amp; Complaints</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 4 Notices & Proposals -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M18 16V11a6 6 0 0 0-12 0v5l-2 2v1h16v-1z" class="fill-soft"/><path d="M18 16V11a6 6 0 0 0-12 0v5l-2 2v1h16v-1z" class="stroke"/><path d="M10 22a2 2 0 0 0 4 0" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Notices &amp; Proposals</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 5 Alterations & Planning -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5" class="fill-soft"/><rect x="3" y="5" width="18" height="14" rx="1.5" class="stroke"/><path d="M7 9h10M7 12h6M7 15h8" class="stroke"/><circle cx="15" cy="15" r="2" class="fill-mid"/><circle cx="15" cy="15" r="2" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Alterations &amp; Planning</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 6 Guarantees & Warranties -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z" class="fill-soft"/><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z" class="stroke"/><path d="M8.5 12l2.4 2.4L15.5 9.8" class="stroke" stroke-width="2"/></svg>
+          </div><div class="section-body"><div class="section-name">Guarantees &amp; Warranties</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 7 Insurance -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4 3 7 7 8 4-1 7-4 7-8V6l-7-3z" class="fill-soft"/><path d="M12 3 5 6v6c0 4 3 7 7 8 4-1 7-4 7-8V6l-7-3z" class="stroke"/><path d="M9 12c1 1.5 3 1.5 3 1.5s2 0 3-1.5" class="stroke"/><circle cx="12" cy="10" r="1.4" fill="var(--brand-dark)"/></svg>
+          </div><div class="section-body"><div class="section-name">Insurance</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 8 Environmental -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 19c0-7 5-13 14-13 0 9-6 14-14 14z" class="fill-soft"/><path d="M5 19c0-7 5-13 14-13 0 9-6 14-14 14z" class="stroke"/><path d="M5 19c4-4 8-7 11-9" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Environmental</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 9 Rights & Informal Arrangements -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 11l4-4 3 1 4-3 4 3 3-1v6l-4 6h-3l-2-2-3 2H5z" class="fill-soft"/><path d="M14 14l-2 2-2-2 1-2 1-1 1 1z" class="fill-mid"/><path d="M3 11l4-4 3 1 4-3 4 3 3-1v6l-4 6h-3l-2-2-3 2H5z" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Rights &amp; Informal Arrangements</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 10 Parking -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 17v-5l2-5h10l2 5v5h-2v2h-2v-2H9v2H7v-2H5z" class="fill-soft"/><path d="M5 17v-5l2-5h10l2 5v5h-2v2h-2v-2H9v2H7v-2H5z" class="stroke"/><circle cx="8.5" cy="14.5" r="1.4" fill="var(--brand-dark)"/><circle cx="15.5" cy="14.5" r="1.4" fill="var(--brand-dark)"/><line x1="6" y1="12" x2="18" y2="12" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Parking</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 11 Other Charges -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5" class="fill-mid"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6" class="fill-soft"/><ellipse cx="12" cy="6" rx="7" ry="2.5" class="stroke"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6" class="stroke"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Other Charges</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 12 Occupiers -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.2" class="fill-mid"/><circle cx="16.5" cy="9.5" r="2.6" class="fill-soft"/><path d="M2.5 19c0-3 2.9-5.2 6.5-5.2s6.5 2.2 6.5 5.2" class="fill-soft"/><circle cx="9" cy="9" r="3.2" class="stroke"/><circle cx="16.5" cy="9.5" r="2.6" class="stroke"/><path d="M2.5 19c0-3 2.9-5.2 6.5-5.2s6.5 2.2 6.5 5.2" class="stroke"/><path d="M15 14.2c3 .2 5.5 2.3 5.5 4.8" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Occupiers</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 13 Services -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 7l-3 3-3-3 3-3a4 4 0 0 0-5 5l-7 7 3 3 7-7a4 4 0 0 0 5-5z" class="fill-soft"/><path d="M20 7l-3 3-3-3 3-3a4 4 0 0 0-5 5l-7 7 3 3 7-7a4 4 0 0 0 5-5z" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Services</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 14 Transaction Information -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 8h13l-3-3M21 16H8l3 3" class="stroke" stroke-width="2"/></svg>
+          </div><div class="section-body"><div class="section-name">Transaction Information</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 15 Fixtures & Fittings -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M9 21h6v-1a3 3 0 0 0-6 0v1z" class="fill-mid"/><path d="M12 3a5 5 0 0 0-3 9c1 1 1 2 1 3h4c0-1 0-2 1-3a5 5 0 0 0-3-9z" class="fill-soft"/><path d="M12 3a5 5 0 0 0-3 9c1 1 1 2 1 3h4c0-1 0-2 1-3a5 5 0 0 0-3-9z" class="stroke"/><line x1="10" y1="18" x2="14" y2="18" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Fixtures &amp; Fittings</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 16 Leasehold -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><circle cx="8" cy="14" r="4" class="fill-soft"/><circle cx="8" cy="14" r="4" class="stroke"/><path d="M11 14h10v3M16 14v3" class="stroke" stroke-width="2"/><circle cx="8" cy="14" r="1.4" fill="var(--brand-dark)"/></svg>
+          </div><div class="section-body"><div class="section-name">Leasehold</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 17 Title Deeds & Plan -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" class="fill-soft"/><path d="M14 2v6h6" class="fill-mid"/><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" class="stroke"/><path d="M14 2v6h6" class="stroke"/><line x1="8" y1="13" x2="15" y2="13" class="stroke"/><line x1="8" y1="16.5" x2="13" y2="16.5" class="stroke"/></svg>
+          </div><div class="section-body"><div class="section-name">Title Deeds &amp; Plan</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+          <!-- 18 Searches -->
+          <div class="section-card"><div class="section-row"><div class="section-icon">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6" class="fill-soft"/><circle cx="11" cy="11" r="6" class="stroke"/><line x1="20" y1="20" x2="15.5" y2="15.5" class="stroke" stroke-width="2.2"/></svg>
+          </div><div class="section-body"><div class="section-name">Searches</div><div class="section-meta seller-only">0 points earned so far</div><div class="section-meta buyer-only">Not yet shared</div></div><div class="section-progress seller-only"><span class="section-pct zero">0%</span></div><div class="section-progress buyer-only"><span class="section-pct locked">🔒 Locked</span></div><div class="section-chev">›</div></div></div>
+
+        </div>
+
+        <!-- ══════════════════ STREET PANEL ══════════════════ -->
+        <div class="panel-street view-list">
+
+          <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;padding:4px 4px 12px;">
+            Properties on the same street often share build era, construction type and flood profile.
+            See how 39 Woodfield compares to its neighbours.
+          </div>
+
+          <!-- 35 -->
+          <div class="street-card">
+            <div class="street-row">
+              <div class="street-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="fill-soft"/><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="stroke"/></svg>
+              </div>
+              <div class="street-body">
+                <div class="street-addr">35 Woodfield Road</div>
+                <div class="street-meta">3 bed · Semi-detached · No passport</div>
+              </div>
+              <div class="street-score"><span class="score-pill none">—</span><span class="score-cat">no data</span></div>
+              <div class="section-chev">›</div>
+            </div>
+          </div>
+
+          <!-- 37 -->
+          <div class="street-card">
+            <div class="street-row">
+              <div class="street-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="fill-soft"/><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="stroke"/></svg>
+              </div>
+              <div class="street-body">
+                <div class="street-addr">37 Woodfield Road</div>
+                <div class="street-meta">3 bed · Semi-detached · 📘 In progress</div>
+              </div>
+              <div class="street-score"><span class="score-pill fair">65</span><span class="score-cat">fair</span></div>
+              <div class="section-chev">›</div>
+            </div>
+          </div>
+
+          <!-- 39 (you) -->
+          <div class="street-card you">
+            <div class="street-row">
+              <div class="street-icon" style="background:var(--brand);border-color:var(--brand-dark);color:#fff;">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><polyline points="9 21 9 12 15 12 15 21"/></svg>
+              </div>
+              <div class="street-body">
+                <div class="street-addr">39 Woodfield Road <span class="you-pill">YOU</span></div>
+                <div class="street-meta">3 bed · Semi-detached · 0% complete</div>
+              </div>
+              <div class="street-score"><span class="score-pill none">37</span><span class="score-cat">starter</span></div>
+              <div class="section-chev">›</div>
+            </div>
+          </div>
+
+          <!-- 41 -->
+          <div class="street-card">
+            <div class="street-row">
+              <div class="street-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="fill-soft"/><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="stroke"/></svg>
+              </div>
+              <div class="street-body">
+                <div class="street-addr">41 Woodfield Road</div>
+                <div class="street-meta">3 bed · Semi-detached · 📘 Published</div>
+              </div>
+              <div class="street-score"><span class="score-pill good">71</span><span class="score-cat">good</span></div>
+              <div class="section-chev">›</div>
+            </div>
+          </div>
+
+          <!-- 43 -->
+          <div class="street-card">
+            <div class="street-row">
+              <div class="street-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="fill-soft"/><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" class="stroke"/></svg>
+              </div>
+              <div class="street-body">
+                <div class="street-addr">43 Woodfield Road</div>
+                <div class="street-meta">4 bed · Semi-detached · 📘 Published</div>
+              </div>
+              <div class="street-score"><span class="score-pill good">78</span><span class="score-cat">good</span></div>
+              <div class="section-chev">›</div>
+            </div>
+          </div>
+
+          <div style="text-align:center;font-size:11.5px;color:var(--brand);font-weight:700;padding:14px 0 4px;cursor:pointer;">View all 14 properties on Woodfield Road →</div>
+        </div>
+
+        <!-- ══════════════════ BUYERS PANEL ══════════════════ -->
+        <div class="panel-buyers">
+
+          <div style="font-size:12.5px;color:var(--ink-soft);line-height:1.55;padding:4px 4px 12px;">
+            Verified buyers searching in your area whose criteria match this property.
+          </div>
+
+          <!-- Stats -->
+          <div class="buyer-stats-row">
+            <div class="buyer-stat"><div class="buyer-stat-num">3</div><div class="buyer-stat-lbl">Matched</div></div>
+            <div class="buyer-stat"><div class="buyer-stat-num">2</div><div class="buyer-stat-lbl">Verified</div></div>
+            <div class="buyer-stat"><div class="buyer-stat-num">1</div><div class="buyer-stat-lbl">Active</div></div>
+          </div>
+
+          <!-- Buyer A -->
+          <div class="buyer-card">
+            <div class="buyer-row">
+              <div class="buyer-avatar">AB</div>
+              <div class="buyer-body">
+                <div class="buyer-name">Buyer A · Stockport <span class="verified-mini">✓ Verified</span></div>
+                <div class="buyer-meta">Last active 2h ago · viewing 6 properties</div>
+              </div>
+              <div class="buyer-match"><div class="match-num">92%</div><div class="match-lbl">match</div></div>
+            </div>
+            <div class="buyer-pills">
+              <span class="bp">Chain free</span><span class="bp">MIP £350k</span><span class="bp">Family · 3-4 bed</span>
+            </div>
+            <div class="buyer-cta-row">
+              <button class="buyer-cta outline">Hide</button>
+              <button class="buyer-cta primary">Send Passport →</button>
+            </div>
+          </div>
+
+          <!-- Buyer B -->
+          <div class="buyer-card">
+            <div class="buyer-row">
+              <div class="buyer-avatar" style="background:linear-gradient(135deg,#5eead4,var(--brand));">CK</div>
+              <div class="buyer-body">
+                <div class="buyer-name">Buyer B · Cheadle <span class="verified-mini">✓ Verified</span></div>
+                <div class="buyer-meta">Last active yesterday · pre-approved mortgage</div>
+              </div>
+              <div class="buyer-match"><div class="match-num">87%</div><div class="match-lbl">match</div></div>
+            </div>
+            <div class="buyer-pills">
+              <span class="bp">First-time buyer</span><span class="bp">MIP £320k</span><span class="bp">Looking 6+ mo</span>
+            </div>
+            <div class="buyer-cta-row">
+              <button class="buyer-cta outline">Hide</button>
+              <button class="buyer-cta primary">Send Passport →</button>
+            </div>
+          </div>
+
+          <!-- Buyer C -->
+          <div class="buyer-card">
+            <div class="buyer-row">
+              <div class="buyer-avatar" style="background:linear-gradient(135deg,#94a3b8,#64748b);">JL</div>
+              <div class="buyer-body">
+                <div class="buyer-name">Buyer C · Bramhall <span style="font-size:9.5px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 6px;border-radius:999px;">Pending</span></div>
+                <div class="buyer-meta">ID check in progress · cash buyer</div>
+              </div>
+              <div class="buyer-match"><div class="match-num">78%</div><div class="match-lbl">match</div></div>
+            </div>
+            <div class="buyer-pills">
+              <span class="bp">Cash buyer</span><span class="bp">Investor</span><span class="bp">Any condition</span>
+            </div>
+            <div class="buyer-cta-row">
+              <button class="buyer-cta outline">Hide</button>
+              <button class="buyer-cta outline" style="opacity:0.5;cursor:not-allowed;">Send when verified</button>
+            </div>
+          </div>
+
+          <div style="text-align:center;font-size:11.5px;color:var(--ink-faint);padding:14px 0 4px;">Match more buyers by completing your Passport</div>
+        </div>
+
+        <div style="height:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const app = document.querySelector('.app');
+
+function setRole(role) {
+  app.dataset.role = role;
+  document.querySelectorAll('.role-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.role === role);
+  });
+}
+
+function setTab(tab) {
+  app.dataset.tab = tab;
+  document.querySelectorAll('.subtabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  // when switching to Buyers tab, keep view as list (it has no map)
+  if (tab === 'buyers') setView('list');
+}
+
+function setView(view) {
+  app.dataset.view = view;
+  document.querySelectorAll('.view-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+}
+</script>
+
+</body>
+</html>
