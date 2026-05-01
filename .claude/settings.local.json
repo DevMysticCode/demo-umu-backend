@@ -96,7 +96,8 @@
       "Bash(grep -l \"canvas-confetti\" package.json)",
       "Bash(ls pages/claim)",
       "Bash(ls pages/verify-ownership)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(awk 'NR>700 && /^<\\\\/template>$/ {print NR; exit}' \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/buyer-passport/[id].vue\")"
     ]
   }
 }
