@@ -154,6 +154,34 @@ export class PassportController {
     return this.passportService.deletePassport(passportId, req.user.id);
   }
 
+  // ── Resume tracking ──────────────────────────────────────────
+  // Frontend pings this whenever the user opens or answers a task, so we
+  // know where to drop them on next visit.
+  @Put(':id/last-visited')
+  @UseGuards(JwtAuthGuard)
+  async setLastVisited(
+    @Param('id') passportId: string,
+    @Body() body: { taskId: string },
+    @Request() req: any,
+  ) {
+    return this.passportService.setLastVisited(
+      passportId,
+      req.user.id,
+      body?.taskId,
+    );
+  }
+
+  // Resolves to the smartest "pick up where you left off" target. Returns
+  // null when nothing remains incomplete.
+  @Get(':id/resume')
+  @UseGuards(JwtAuthGuard)
+  async getResumeTarget(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getResumeTarget(passportId, req.user.id);
+  }
+
   @Post(':id/upload-image')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(

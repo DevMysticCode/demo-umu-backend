@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>umovingu — Passport in-progress modal (Option C)</title>
+<style>
+:root {
+  --bg:#ffffff; --card:#ffffff; --ink:#231d45; --ink-soft:#4a5568;
+  --ink-faint:#94a3b8; --line:#eef0f6; --brand:#00A19A; --brand-dark:#008c86;
+  --brand-soft:#b2e8e6; --brand-pale:#eafaf9; --navy:#231d45;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;background:#e8e6f0;color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+.stage{
+  min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:40px 20px;
+  background:linear-gradient(135deg,#e8e6f0 0%,#f0eef5 100%);
+}
+
+.frame{display:flex;flex-direction:column;align-items:center;gap:18px;max-width:560px;width:100%;}
+
+.label{
+  font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;
+  color:var(--brand);
+}
+
+/* Modal — designed for desktop/tablet width, ~520-560px */
+.modal{
+  width:100%;background:#fff;border-radius:18px;
+  box-shadow:0 24px 60px rgba(35,29,69,0.22),0 4px 14px rgba(35,29,69,0.08);
+  position:relative;overflow:hidden;
+  padding:28px 32px 26px;
+}
+
+/* Close button top right */
+.modal-close{
+  position:absolute;top:16px;right:16px;
+  width:36px;height:36px;border-radius:50%;
+  background:#f8f7fc;border:none;cursor:pointer;
+  display:grid;place-items:center;color:var(--ink-soft);
+  transition:background 0.15s,color 0.15s;
+}
+.modal-close:hover{background:var(--line);color:var(--ink);}
+.modal-close svg{width:16px;height:16px;}
+
+/* Icon top-left — passport book mark */
+.modal-icon{
+  width:60px;height:60px;border-radius:14px;
+  background:var(--brand-pale);border:1px solid var(--brand-soft);
+  display:grid;place-items:center;
+  margin-bottom:20px;
+  font-size:30px;
+}
+
+/* Eyebrow */
+.modal-eyebrow{
+  font-size:10.5px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--brand);margin-bottom:8px;
+}
+
+/* Headline */
+.modal-headline{
+  font-size:22px;font-weight:800;letter-spacing:-0.02em;line-height:1.25;
+  color:var(--ink);margin-bottom:12px;
+}
+
+/* Body */
+.modal-body{
+  font-size:14px;color:var(--ink-soft);line-height:1.6;margin-bottom:22px;
+  max-width:480px;
+}
+.modal-body strong{color:var(--ink);}
+
+/* Primary CTA */
+.modal-cta{
+  width:100%;border:none;background:var(--brand);color:#fff;
+  padding:14px 18px;border-radius:13px;font-family:inherit;
+  font-size:14.5px;font-weight:800;letter-spacing:-0.01em;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 6px 18px rgba(0,161,154,0.28);
+  transition:transform 0.12s,box-shadow 0.15s;
+}
+.modal-cta:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,161,154,0.34);}
+
+/* Tiny owner sign-in option */
+.modal-foot{
+  margin-top:12px;text-align:center;font-size:12px;color:var(--ink-faint);
+}
+.modal-foot a{color:var(--brand);font-weight:700;cursor:pointer;text-decoration:none;}
+
+.notes{
+  background:#fff;border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;font-size:12.5px;color:var(--ink-soft);line-height:1.6;
+  width:100%;
+}
+.notes strong{color:var(--ink);}
+.notes code{background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:11.5px;color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <div class="frame">
+
+    <div class="label">Option C · spec</div>
+
+    <div class="modal">
+      <button class="modal-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <div class="modal-icon">📘</div>
+
+      <div class="modal-eyebrow">📘 Property Passport — In Progress</div>
+      <div class="modal-headline">This home's Passport is being built</div>
+      <div class="modal-body">You're seeing public EPC data for now — we'll alert you when the full record is published.</div>
+
+      <button class="modal-cta">🔔 Notify me when it's published</button>
+
+      <div class="modal-foot">Are you the owner? <a>Sign in to continue →</a></div>
+    </div>
+
+    <div class="notes">
+      <strong>Designer notes.</strong>
+      Icon tile uses <code>--brand-pale</code> background with <code>--brand-soft</code> border, 60×60px, 14px radius. Eyebrow is teal <code>--brand</code> at 10.5px / 0.12em letter-spacing / uppercase. Headline is 22px / 800 weight. Body is 14px / <code>--ink-soft</code>. CTA is full-width, filled <code>--brand</code> with shadow <code>0 6px 18px rgba(0,161,154,0.28)</code>. Close button top-right at 16px from edges.
+      <br><br>
+      <strong>Sign-in line</strong> at the bottom is optional but recommended — same logic as the HealthScore banner, catches a logged-out seller who lands on this modal for their own property.
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

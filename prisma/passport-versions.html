@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Property Passport — Version Comparison</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+:root {
+  --brand:#00A19A; --brand-dark:#008c86; --brand-pale:#eafaf9; --brand-soft:#99f6e4;
+  --navy:#231d45; --ink:#1e293b; --ink-soft:#64748b; --ink-faint:#94a3b8;
+  --line:#e8e6f0; --good:#059669; --warn:#d97706; --bad:#dc2626;
+  --bg:#f8f7fc;
+}
+body { background:#e8e6f0; min-height:100vh; }
+
+/* Top nav */
+.top-nav { background:#231d45; padding:16px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; position:sticky; top:0; z-index:100; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
+.top-nav h1 { font-size:15px; font-weight:800; color:#fff; flex:1; }
+.version-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.vtab { border:none; padding:7px 14px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); transition:all 0.2s; }
+.vtab.active { background:#fff; color:#231d45; }
+
+/* Phone grid */
+.phone-grid { display:flex; gap:24px; padding:24px; flex-wrap:wrap; justify-content:center; }
+.phone-wrap { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.phone-label { font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.08em; }
+.phone { width:320px; height:680px; background:var(--bg); border-radius:36px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3), 0 0 0 7px #111; display:flex; flex-direction:column; position:relative; }
+
+/* Shared header styles */
+.pp-header { padding:14px 16px 0; flex-shrink:0; position:relative; overflow:hidden; }
+.pp-header.seller { background:linear-gradient(150deg,#1a1640,#231d45,#2a2158); }
+.pp-header.buyer { background:linear-gradient(150deg,#0c4a6e,#0369a1,#0284c7); }
+.pp-header.landlord { background:linear-gradient(150deg,#451a03,#92400e,#b45309); }
+
+.h-toprow { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.h-back { width:30px; height:30px; background:rgba(255,255,255,0.12); border-radius:50%; display:grid; place-items:center; cursor:pointer; border:none; }
+.h-menu { color:rgba(255,255,255,0.5); font-size:18px; letter-spacing:2px; }
+
+/* Book */
+.book-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.book { position:relative; width:72px; height:96px; flex-shrink:0; }
+.book-spine { position:absolute; left:0; top:2px; width:8px; height:94px; border-radius:2px 0 0 2px; box-shadow:-2px 2px 5px rgba(0,0,0,0.3); }
+.book-cover { position:absolute; left:6px; top:0; width:66px; height:96px; border-radius:2px 5px 5px 2px; box-shadow:3px 3px 8px rgba(0,0,0,0.3); display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:8px 6px 7px; overflow:hidden; }
+.book-cover::after { content:''; position:absolute; inset:4px; border:0.7px solid rgba(255,255,255,0.18); border-radius:2px; pointer-events:none; }
+.book-title { font-size:6px; font-weight:800; color:rgba(255,255,255,0.9); text-align:center; line-height:1.3; position:relative; z-index:1; }
+.book-addr { font-size:5px; font-weight:700; color:rgba(255,255,255,0.8); text-align:center; line-height:1.4; position:relative; z-index:1; }
+
+/* Stats grid */
+.stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+.stat-cell { text-align:center; padding:0 4px; }
+.stat-cell + .stat-cell { border-left:1px solid rgba(255,255,255,0.12); }
+.stat-val { font-size:16px; font-weight:800; color:#fff; line-height:1; }
+.stat-lbl { font-size:7px; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px; }
+
+/* Walking lady SVG */
+.lady-wrap { margin-bottom:10px; }
+
+/* Action buttons */
+.action-row { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+.action-btn { border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:7px 4px; text-align:center; cursor:pointer; background:rgba(255,255,255,0.1); }
+.action-btn.primary { background:var(--brand); border-color:var(--brand); }
+.action-btn span { font-size:9px; font-weight:700; color:#fff; display:block; margin-top:2px; }
+
+/* L1 Tabs */
+.tabs-l1 { display:flex; background:rgba(255,255,255,0.08); border-radius:9px; padding:3px; }
+.tab-l1 { flex:1; padding:6px 0; text-align:center; font-size:10px; font-weight:600; color:rgba(255,255,255,0.45); border-radius:6px; cursor:pointer; border:none; background:transparent; font-family:inherit; }
+.tab-l1.active { background:#fff; color:#231d45; font-weight:700; }
+
+/* Body */
+.pp-body { flex:1; overflow-y:auto; background:var(--bg); padding:12px 14px 20px; }
+
+/* L2 Tabs */
+.tabs-l2 { display:flex; border-bottom:1.5px solid var(--line); margin-bottom:10px; }
+.tab-l2 { flex:1; padding:7px 0; text-align:center; font-size:10.5px; font-weight:600; color:var(--ink-faint); border-bottom:2px solid transparent; cursor:pointer; border-top:none; border-left:none; border-right:none; background:transparent; font-family:inherit; margin-bottom:-1.5px; }
+.tab-l2.active { color:var(--brand); border-bottom-color:var(--brand); }
+
+/* Nudges */
+.nudge { display:flex; align-items:flex-start; gap:8px; border-radius:11px; padding:9px 11px; margin-bottom:8px; }
+.nudge.green { background:#eafaf9; border:1.5px solid #99f6e4; }
+.nudge.amber { background:#fef3c7; border:1.5px solid #fde68a; }
+.nudge.blue { background:#eff6ff; border:1.5px solid #bfdbfe; }
+.nudge-title { font-size:11.5px; font-weight:700; }
+.nudge.green .nudge-title { color:#0d9488; }
+.nudge.amber .nudge-title { color:#92400e; }
+.nudge.blue .nudge-title { color:#1d4ed8; }
+.nudge-sub { font-size:10.5px; margin-top:1px; line-height:1.4; }
+.nudge.green .nudge-sub { color:#0d9488; opacity:0.8; }
+.nudge.amber .nudge-sub { color:#78350f; }
+.nudge.blue .nudge-sub { color:#1e40af; opacity:0.8; }
+
+/* Section rows */
+.section-row { background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:9px 11px; margin-bottom:6px; display:flex; align-items:center; gap:9px; cursor:pointer; }
+.sec-icon { width:34px; height:34px; border-radius:9px; display:grid; place-items:center; font-size:17px; flex-shrink:0; }
+.sec-info { flex:1; min-width:0; }
+.sec-name { font-size:11.5px; font-weight:700; color:var(--ink); }
+.sec-desc { font-size:10px; color:var(--ink-faint); margin-top:1px; }
+.sec-bar { height:3px; background:var(--line); border-radius:999px; overflow:hidden; margin-top:5px; }
+.sec-bar-fill { height:3px; border-radius:999px; }
+.sec-meta { font-size:9px; color:var(--ink-faint); margin-top:2px; }
+.sec-meta b { color:var(--brand); }
+.sec-arr { color:var(--ink-faint); font-size:13px; flex-shrink:0; }
+
+/* Doc rows */
+.doc-row { display:flex; align-items:center; gap:9px; padding:9px 11px; background:#fff; border:1.5px solid var(--line); border-radius:11px; margin-bottom:6px; }
+.doc-icon { width:30px; height:30px; border-radius:8px; display:grid; place-items:center; font-size:15px; flex-shrink:0; }
+.doc-name { font-size:11.5px; font-weight:700; color:var(--ink); }
+.doc-meta { font-size:10px; color:var(--ink-faint); margin-top:1px; }
+.doc-status { font-size:9px; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+.doc-status.ok { background:#dcfce7; color:#15803d; }
+.doc-status.pend { background:#f1f5f9; color:var(--ink-faint); }
+.doc-status.warn { background:#fef3c7; color:#92400e; }
+
+/* Timeline */
+.tl-item { display:flex; gap:10px; }
+.tl-dot { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; flex-shrink:0; font-size:10px; }
+.tl-dot.done { background:var(--brand); color:#fff; }
+.tl-dot.now { background:#fef3c7; border:2px solid #f59e0b; color:#f59e0b; font-weight:800; }
+.tl-dot.pend { background:#f1f5f9; border:2px solid var(--line); color:var(--ink-faint); font-weight:700; }
+.tl-line { width:2px; flex:1; margin:3px 0; min-height:12px; }
+.tl-line.done { background:var(--brand); }
+.tl-line.pend { background:var(--line); }
+.tl-content { padding-bottom:12px; flex:1; }
+.tl-title { font-size:11.5px; font-weight:700; color:var(--ink); }
+.tl-sub { font-size:10px; color:var(--ink-faint); margin-top:1px; }
+.tl-badge { display:inline-block; margin-top:3px; font-size:9px; font-weight:700; padding:2px 7px; border-radius:999px; }
+.tl-badge.done { background:#dcfce7; color:#15803d; }
+.tl-badge.now { background:#fef3c7; color:#92400e; }
+.tl-badge.pend { background:#f1f5f9; color:var(--ink-faint); }
+
+/* Buyer TA forms */
+.ta-section { background:#fff; border:1.5px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:10px; }
+.ta-header { padding:12px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; }
+.ta-title { font-size:13px; font-weight:800; color:var(--navy); }
+.ta-badge { font-size:9px; font-weight:700; background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:999px; }
+.ta-row { padding:10px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+.ta-row:last-child { border-bottom:none; }
+.ta-icon { width:30px; height:30px; background:var(--brand-pale); border-radius:8px; display:grid; place-items:center; font-size:14px; flex-shrink:0; }
+.ta-info { flex:1; }
+.ta-name { font-size:11.5px; font-weight:700; color:var(--ink); }
+.ta-sub { font-size:10px; color:var(--ink-faint); margin-top:1px; }
+.ta-dl { border:none; background:var(--brand); color:#fff; font-size:9px; font-weight:700; padding:5px 10px; border-radius:8px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+
+/* Share section */
+.share-row { display:flex; align-items:center; gap:10px; padding:11px 13px; background:#fff; border:1.5px solid var(--line); border-radius:12px; margin-bottom:7px; cursor:pointer; }
+.share-icon { width:36px; height:36px; border-radius:10px; display:grid; place-items:center; font-size:17px; flex-shrink:0; }
+.share-name { font-size:12px; font-weight:700; color:var(--ink); }
+.share-sub { font-size:10px; color:var(--ink-faint); margin-top:1px; }
+
+/* Landlord compliance */
+.comp-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:#fff; border:1.5px solid var(--line); border-radius:11px; margin-bottom:6px; }
+.comp-icon { width:32px; height:32px; border-radius:9px; display:grid; place-items:center; font-size:16px; flex-shrink:0; }
+.comp-name { font-size:11.5px; font-weight:700; color:var(--ink); flex:1; }
+.comp-status { font-size:9px; font-weight:700; padding:2px 8px; border-radius:999px; }
+.comp-status.ok { background:#dcfce7; color:#15803d; }
+.comp-status.due { background:#fef3c7; color:#92400e; }
+.comp-status.miss { background:#fee2e2; color:#991b1b; }
+
+.section-hdr { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--ink-faint); margin-bottom:7px; margin-top:4px; }
+
+.pill-badge { display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:3px 10px; font-size:9.5px; font-weight:700; }
+
+/* Toast */
+.toast { display:none; position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:#231d45; color:#fff; border-radius:12px; padding:10px 18px; font-size:12px; font-weight:700; z-index:9999; white-space:nowrap; box-shadow:0 4px 20px rgba(0,0,0,0.3); }
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <h1>📘 Property Passport — Version Comparison</h1>
+  <div class="version-tabs">
+    <button class="vtab active" onclick="showVersion('all')">All 4</button>
+    <button class="vtab" onclick="showVersion('seller')">Seller</button>
+    <button class="vtab" onclick="showVersion('buyer')">Buyer</button>
+    <button class="vtab" onclick="showVersion('landlord-let')">Landlord Letting</button>
+    <button class="vtab" onclick="showVersion('landlord-sell')">Landlord Selling</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="phone-grid" id="phone-grid">
+
+  <!-- ══ SELLER VERSION ══ -->
+  <div class="phone-wrap" id="wrap-seller">
+    <div class="phone-label">🏠 Seller — building</div>
+    <div class="phone">
+      <div class="pp-header seller">
+        <div class="h-toprow">
+          <button class="h-back"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div style="font-size:12px;font-weight:700;color:#fff;">Property Passport</div>
+          <div class="h-menu">···</div>
+        </div>
+        <!-- Book + stats -->
+        <div class="book-row">
+          <div class="book">
+            <div class="book-spine" style="background:linear-gradient(180deg,#007a74,#005f5a);"></div>
+            <div class="book-cover" style="background:linear-gradient(155deg,#00A19A,#008c86,#006b66);">
+              <div class="book-title">Property<br>Passport</div>
+              <svg width="32" height="32" viewBox="0 0 100 100" style="position:relative;z-index:1;">
+                <polygon points="10,48 50,12 90,48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M22,70 Q28,58 34,70 Q40,82 46,70 Q52,58 58,70 Q64,82 70,70 Q76,58 82,70" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="4.5" stroke-linecap="round"/>
+              </svg>
+              <!-- Ring -->
+              <div style="position:relative;">
+                <svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg);">
+                  <circle fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" cx="14" cy="14" r="11"/>
+                  <circle fill="none" stroke="#5eead4" stroke-width="3" stroke-linecap="round" stroke-dasharray="69.1" stroke-dashoffset="48" cx="14" cy="14" r="11"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#5eead4;">30%</div>
+              </div>
+              <div class="book-addr">14 Hazel Grove<br>SK7 4BL</div>
+            </div>
+          </div>
+          <!-- Stats -->
+          <div style="flex:1;">
+            <div style="display:inline-flex;background:rgba(0,161,154,0.25);border:1px solid rgba(0,161,154,0.4);border-radius:999px;padding:2px 9px;margin-bottom:6px;"><span style="font-size:9px;font-weight:700;color:#5eead4;">● Selling</span></div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:6px;">
+              <div class="stat-cell"><div class="stat-val">74</div><div class="stat-lbl">HS™</div></div>
+              <div class="stat-cell"><div class="stat-val">3</div><div class="stat-lbl">Docs</div></div>
+              <div class="stat-cell"><div class="stat-val">2/7</div><div class="stat-lbl">Sections</div></div>
+              <div class="stat-cell"><div class="stat-val" style="color:#5eead4;">30%</div><div class="stat-lbl">Ready</div></div>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.12);border-radius:999px;overflow:hidden;">
+              <div style="height:4px;width:30%;background:linear-gradient(90deg,#00A19A,#5eead4);border-radius:999px;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Walking lady -->
+        <div class="lady-wrap">
+          <svg viewBox="0 0 308 34" width="100%" style="display:block;">
+            <rect width="308" height="22" fill="rgba(30,40,90,0.35)" rx="3"/>
+            <rect y="22" width="308" height="12" fill="#475569"/>
+            <line x1="0" y1="28" x2="308" y2="28" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,6" opacity="0.5"/>
+            <g opacity="0.3"><rect x="160" y="12" width="16" height="10" rx="1" fill="#94a3b8"/><polygon points="158,12 168,5 178,12" fill="#64748b"/></g>
+            <g opacity="0.3"><rect x="210" y="10" width="20" height="12" rx="1" fill="#94a3b8"/><polygon points="208,10 220,3 232,10" fill="#64748b"/></g>
+            <g><rect x="278" y="8" width="22" height="14" rx="1.5" fill="#ccfbf1"/><polygon points="276,8 289,2 302,8" fill="#0d9488"/><text x="289" y="1" text-anchor="middle" font-size="4.5" fill="#5eead4" font-weight="700">SOLD</text></g>
+            <rect y="22" width="96" height="12" fill="#00A19A" opacity="0.4"/>
+            <g transform="translate(90,22)">
+              <line x1="0" y1="-2" x2="0" y2="-11" stroke="#5eead4" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="0" cy="-13.5" r="3" fill="#5eead4"/>
+              <line x1="0" y1="-9" x2="-4" y2="-6" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/>
+              <line x1="0" y1="-9" x2="4" y2="-7" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/>
+              <line x1="0" y1="-2" x2="2.5" y2="2" stroke="#5eead4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="0" y1="-2" x2="-2" y2="2" stroke="#5eead4" stroke-width="2" stroke-linecap="round"/>
+              <rect x="-9" y="-22" width="18" height="8" rx="4" fill="#00A19A"/>
+              <text x="0" y="-16" text-anchor="middle" font-size="5" font-weight="700" fill="#fff" font-family="system-ui">30%</text>
+            </g>
+          </svg>
+        </div>
+        <!-- Actions -->
+        <div class="action-row">
+          <div class="action-btn primary" onclick="showToast('Sharing...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Share</span></div>
+          <div class="action-btn" onclick="showToast('Match Buyers coming soon')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span>Match</span></div>
+          <div class="action-btn" onclick="showToast('Publishing...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg><span>Publish</span></div>
+        </div>
+        <!-- L1 Tabs -->
+        <div class="tabs-l1" id="s-l1">
+          <button class="tab-l1 active" onclick="sL1('overview')">Overview</button>
+          <button class="tab-l1" onclick="sL1('vault')">Vault</button>
+          <button class="tab-l1" onclick="sL1('timeline')">Timeline</button>
+        </div>
+      </div>
+      <!-- Body -->
+      <div class="pp-body">
+        <!-- Overview -->
+        <div id="s-overview">
+          <div class="tabs-l2" id="s-l2">
+            <button class="tab-l2 active" onclick="sL2('sections')">📋 Sections</button>
+            <button class="tab-l2" onclick="sL2('street')">🗺 Street</button>
+            <button class="tab-l2" onclick="sL2('viewers')">👁 Viewers</button>
+          </div>
+          <div id="s-sections">
+            <div class="nudge green"><span style="font-size:13px;">⚡</span><div><div class="nudge-title">Pre-filled from HealthScore™</div><div class="nudge-sub">2 docs auto-populated from your quiz</div></div></div>
+            <div class="nudge amber"><span style="font-size:13px;">⚠️</span><div><div class="nudge-title">Gas Safety expiring in 55 days</div><div class="nudge-sub">Book a renewal to stay compliant</div></div></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="font-size:12px;font-weight:700;color:var(--navy);">Selling — sections</div><div style="font-size:11px;font-weight:600;color:var(--brand);">2 of 7 started</div></div>
+            <div style="display:flex;background:#e8e6f0;border-radius:999px;padding:3px;margin-bottom:8px;"><div style="flex:1;padding:4px 0;text-align:center;font-size:10px;font-weight:700;border-radius:999px;background:#231d45;color:#fff;cursor:pointer;">≡ List</div><div style="flex:1;padding:4px 0;text-align:center;font-size:10px;font-weight:700;border-radius:999px;color:#64748b;cursor:pointer;">🗺 Map</div></div>
+            <div class="section-row"><div class="sec-icon" style="background:var(--brand-pale);">📖</div><div class="sec-info"><div class="sec-name">Ownership Profile</div><div class="sec-desc">Title, ownership, legal identity</div><div class="sec-bar"><div class="sec-bar-fill" style="width:33%;background:var(--brand);"></div></div><div class="sec-meta">1/3 docs · <b>33%</b></div></div><div class="sec-arr">›</div></div>
+            <div class="section-row"><div class="sec-icon" style="background:#f0fdf4;">🏡</div><div class="sec-info"><div class="sec-name">Boundaries</div><div class="sec-desc">Physical extent, shared structures</div><div class="sec-bar"><div class="sec-bar-fill" style="width:0%;background:var(--brand);"></div></div><div class="sec-meta">3 docs required · <b style="color:var(--ink-faint);">0%</b></div></div><div class="sec-arr">›</div></div>
+            <div class="section-row"><div class="sec-icon" style="background:#fef3c7;">⚡</div><div class="sec-info"><div class="sec-name">Energy &amp; Environment</div><div class="sec-desc">EPC, flood risk, searches</div><div class="sec-bar"><div class="sec-bar-fill" style="width:50%;background:var(--warn);"></div></div><div class="sec-meta">1/2 docs · <b style="color:var(--warn);">50%</b></div></div><div class="sec-arr">›</div></div>
+            <div class="section-row"><div class="sec-icon" style="background:#eff6ff;">🔌</div><div class="sec-info"><div class="sec-name">Services &amp; Safety</div><div class="sec-desc">Gas, electric, water certs</div><div class="sec-bar"><div class="sec-bar-fill" style="width:0%;"></div></div><div class="sec-meta">4 docs required · <b style="color:var(--ink-faint);">0%</b></div></div><div class="sec-arr">›</div></div>
+            <div style="text-align:center;font-size:10px;color:var(--ink-faint);padding:6px 0;font-weight:600;">+ 3 more sections</div>
+          </div>
+          <div id="s-street" style="display:none;"><div style="background:#f0f9ff;border-radius:12px;padding:20px;text-align:center;color:var(--ink-faint);font-size:11px;border:1.5px dashed #bae6fd;"><div style="font-size:28px;margin-bottom:8px;">🗺</div><div style="font-weight:700;color:#475569;margin-bottom:4px;">Street Passport Map</div>Tap any house to see who's started their Passport</div></div>
+          <div id="s-viewers" style="display:none;"><div style="background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;text-align:center;margin-bottom:8px;"><div style="font-size:36px;font-weight:800;color:var(--brand);">3</div><div style="font-size:11px;color:var(--ink-faint);margin-top:2px;">buyers viewed this week</div></div></div>
+        </div>
+        <!-- Vault -->
+        <div id="s-vault" style="display:none;">
+          <div class="section-hdr">Legal &amp; Ownership</div>
+          <div class="doc-row"><div class="doc-icon" style="background:var(--brand-pale);">📋</div><div class="doc-info"><div class="doc-name">Title Deed</div><div class="doc-meta">Land Registry · CH45721</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#f1f5f9;">📄</div><div class="doc-info"><div class="doc-name">Local Authority Search</div><div class="doc-meta">Not uploaded</div></div><div class="doc-status pend">Pending</div></div>
+          <div class="section-hdr">Energy &amp; Safety</div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fef3c7;">⚡</div><div class="doc-info"><div class="doc-name">EPC Certificate</div><div class="doc-meta">Rating D · Valid to 2029</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fff0f0;">🔥</div><div class="doc-info"><div class="doc-name">Gas Safety (CP12)</div><div class="doc-meta">Expires in 55 days</div></div><div class="doc-status warn">⚠</div></div>
+        </div>
+        <!-- Timeline -->
+        <div id="s-timeline" style="display:none;">
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot done">✓</div><div class="tl-line done"></div></div><div class="tl-content"><div class="tl-title">Identity &amp; ownership verified</div><div class="tl-sub">KYC + Land Registry · 1 Apr</div><div class="tl-badge done">Done</div></div></div>
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot done">✓</div><div class="tl-line done"></div></div><div class="tl-content"><div class="tl-title">HealthScore™ generated</div><div class="tl-sub">Score: 74 · Low risk</div><div class="tl-badge done">Done</div></div></div>
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot now">→</div><div class="tl-line pend"></div></div><div class="tl-content"><div class="tl-title">Documents upload</div><div class="tl-sub">3 of 7 sections started</div><div class="tl-badge now">In progress</div></div></div>
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot pend">4</div><div class="tl-line pend"></div></div><div class="tl-content"><div class="tl-title">Publish Passport</div><div class="tl-sub">Share with agent &amp; solicitor</div><div class="tl-badge pend">Not started</div></div></div>
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot pend">5</div><div class="tl-line pend"></div></div><div class="tl-content"><div class="tl-title">Matched to buyers</div><div class="tl-sub">Verified buyers request viewings</div><div class="tl-badge pend">Not started</div></div></div>
+          <div class="tl-item"><div style="display:flex;flex-direction:column;align-items:center;"><div class="tl-dot pend" style="font-size:14px;">🏡</div></div><div class="tl-content"><div class="tl-title">Completion</div><div class="tl-sub">Keys handed over · 14 days</div><div class="tl-badge pend">Not started</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BUYER VERSION ══ -->
+  <div class="phone-wrap" id="wrap-buyer">
+    <div class="phone-label">🔍 Buyer — reading</div>
+    <div class="phone">
+      <div class="pp-header buyer">
+        <div class="h-toprow">
+          <button class="h-back"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div style="font-size:12px;font-weight:700;color:#fff;">Property Passport</div>
+          <div class="h-menu">···</div>
+        </div>
+        <div class="book-row">
+          <div class="book">
+            <div class="book-spine" style="background:linear-gradient(180deg,#075985,#0369a1);"></div>
+            <div class="book-cover" style="background:linear-gradient(155deg,#0284c7,#0369a1,#075985);">
+              <div class="book-title">Property<br>Passport</div>
+              <svg width="32" height="32" viewBox="0 0 100 100" style="position:relative;z-index:1;">
+                <polygon points="10,48 50,12 90,48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M22,70 Q28,58 34,70 Q40,82 46,70 Q52,58 58,70 Q64,82 70,70 Q76,58 82,70" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="4.5" stroke-linecap="round"/>
+              </svg>
+              <!-- Verified stamp -->
+              <div style="background:rgba(16,185,129,0.25);border:1px solid rgba(16,185,129,0.5);border-radius:999px;padding:2px 7px;position:relative;z-index:1;">
+                <span style="font-size:6px;font-weight:800;color:#6ee7b7;">✓ VERIFIED</span>
+              </div>
+              <div class="book-addr">14 Hazel Grove<br>SK7 4BL</div>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="display:inline-flex;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:999px;padding:2px 9px;margin-bottom:6px;"><span style="font-size:9px;font-weight:700;color:#6ee7b7;">✓ Passport purchased</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:6px;">
+              <div class="stat-cell"><div class="stat-val">74</div><div class="stat-lbl">HS™</div></div>
+              <div class="stat-cell"><div class="stat-val">6</div><div class="stat-lbl">Docs</div></div>
+              <div class="stat-cell"><div class="stat-val" style="color:#6ee7b7;">85%</div><div class="stat-lbl">Complete</div></div>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.12);border-radius:999px;overflow:hidden;">
+              <div style="height:4px;width:85%;background:linear-gradient(90deg,#6ee7b7,#34d399);border-radius:999px;"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Share actions -->
+        <div class="action-row">
+          <div class="action-btn primary" onclick="showToast('Link copied!')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/></svg><span>Share</span></div>
+          <div class="action-btn" onclick="showToast('Downloading PDF...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg><span>PDF</span></div>
+          <div class="action-btn" onclick="showToast('Sent to solicitor')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>Solicitor</span></div>
+        </div>
+        <div class="tabs-l1" id="b-l1">
+          <button class="tab-l1 active" onclick="bL1('summary')">Summary</button>
+          <button class="tab-l1" onclick="bL1('ta-forms')">TA Forms</button>
+          <button class="tab-l1" onclick="bL1('docs')">Documents</button>
+        </div>
+      </div>
+      <div class="pp-body">
+        <!-- Summary -->
+        <div id="b-summary">
+          <div class="nudge blue"><span style="font-size:13px;">ℹ️</span><div><div class="nudge-title">Seller identity verified</div><div class="nudge-sub">KYC + Land Registry ownership confirmed</div></div></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-faint);margin-bottom:8px;">Risk Summary</div>
+          <div class="section-row"><div class="sec-icon" style="background:#dcfce7;">✅</div><div class="sec-info"><div class="sec-name">Ownership &amp; Title</div><div class="sec-desc">Land Registry confirmed · No disputes</div></div><div style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;">Clear</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#dcfce7;">✅</div><div class="sec-info"><div class="sec-name">Planning &amp; Building</div><div class="sec-desc">No enforcement notices found</div></div><div style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;">Clear</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#fef3c7;">⚠️</div><div class="sec-info"><div class="sec-name">Environmental</div><div class="sec-desc">Flood zone 1 · low risk</div></div><div style="font-size:9px;font-weight:700;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;">Note</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#dcfce7;">✅</div><div class="sec-info"><div class="sec-name">Services &amp; Safety</div><div class="sec-desc">Gas · EICR · EPC B</div></div><div style="font-size:9px;font-weight:700;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:999px;">Clear</div></div>
+        </div>
+        <!-- TA Forms -->
+        <div id="b-ta-forms" style="display:none;">
+          <div class="nudge blue"><span style="font-size:13px;">📋</span><div><div class="nudge-title">Pre-populated from Passport data</div><div class="nudge-sub">Seller verified — ready for your solicitor</div></div></div>
+          <div class="ta-section">
+            <div class="ta-header"><div class="ta-title">TA6 — Property info</div><div class="ta-badge">✓ Complete</div></div>
+            <div class="ta-row"><div class="ta-icon">📋</div><div class="ta-info"><div class="ta-name">TA6 Form</div><div class="ta-sub">Boundaries, disputes, notices</div></div><button class="ta-dl" onclick="showToast('Downloading TA6...')">↓ PDF</button></div>
+          </div>
+          <div class="ta-section">
+            <div class="ta-header"><div class="ta-title">TA7 — Leasehold</div><div style="font-size:9px;font-weight:700;background:#f1f5f9;color:var(--ink-faint);padding:3px 8px;border-radius:999px;">N/A — Freehold</div></div>
+            <div class="ta-row"><div class="ta-icon">📄</div><div class="ta-info"><div class="ta-name">TA7 Form</div><div class="ta-sub">Not applicable — freehold property</div></div></div>
+          </div>
+          <div class="ta-section">
+            <div class="ta-header"><div class="ta-title">TA10 — Fixtures &amp; fittings</div><div class="ta-badge">✓ Complete</div></div>
+            <div class="ta-row"><div class="ta-icon">🏠</div><div class="ta-info"><div class="ta-name">TA10 Form</div><div class="ta-sub">What's included in the sale</div></div><button class="ta-dl" onclick="showToast('Downloading TA10...')">↓ PDF</button></div>
+          </div>
+        </div>
+        <!-- Documents -->
+        <div id="b-docs" style="display:none;">
+          <div class="section-hdr">Verified documents</div>
+          <div class="doc-row"><div class="doc-icon" style="background:var(--brand-pale);">📋</div><div class="doc-info"><div class="doc-name">Title Deed</div><div class="doc-meta">Freehold · CH45721</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fef3c7;">⚡</div><div class="doc-info"><div class="doc-name">EPC Certificate</div><div class="doc-meta">Rating B · Score 78</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fff0f0;">🔥</div><div class="doc-info"><div class="doc-name">Gas Safety</div><div class="doc-meta">Serviced Apr 2024</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#eff6ff;">🔌</div><div class="doc-info"><div class="doc-name">EICR Report</div><div class="doc-meta">Satisfactory · Jun 2023</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fdf4ff;">🪟</div><div class="doc-info"><div class="doc-name">FENSA Certificate</div><div class="doc-meta">Windows 2019</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#f1f5f9;">📄</div><div class="doc-info"><div class="doc-name">Drainage Search</div><div class="doc-meta">Not yet uploaded</div></div><div class="doc-status pend">Pending</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LANDLORD LETTING ══ -->
+  <div class="phone-wrap" id="wrap-landlord-let">
+    <div class="phone-label">🏢 Landlord — Letting</div>
+    <div class="phone">
+      <div class="pp-header landlord">
+        <div class="h-toprow">
+          <button class="h-back"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div style="font-size:12px;font-weight:700;color:#fff;">Landlord Passport</div>
+          <div class="h-menu">···</div>
+        </div>
+        <div class="book-row">
+          <div class="book">
+            <div class="book-spine" style="background:linear-gradient(180deg,#78350f,#92400e);"></div>
+            <div class="book-cover" style="background:linear-gradient(155deg,#b45309,#92400e,#78350f);">
+              <div class="book-title">Landlord<br>Passport</div>
+              <svg width="32" height="32" viewBox="0 0 100 100" style="position:relative;z-index:1;">
+                <rect x="15" y="40" width="70" height="48" rx="4" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5"/>
+                <path d="M32 40V28a18 18 0 0 1 36 0v12" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="50" cy="65" r="8" fill="rgba(255,255,255,0.6)"/>
+              </svg>
+              <div style="position:relative;">
+                <svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg);">
+                  <circle fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" cx="14" cy="14" r="11"/>
+                  <circle fill="none" stroke="#fcd34d" stroke-width="3" stroke-linecap="round" stroke-dasharray="69.1" stroke-dashoffset="21" cx="14" cy="14" r="11"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#fcd34d;">70%</div>
+              </div>
+              <div class="book-addr">14 Hazel Grove<br>SK7 4BL · Rental</div>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="display:inline-flex;background:rgba(251,191,36,0.2);border:1px solid rgba(251,191,36,0.4);border-radius:999px;padding:2px 9px;margin-bottom:6px;"><span style="font-size:9px;font-weight:700;color:#fcd34d;">🔑 Letting</span></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-bottom:6px;">
+              <div class="stat-cell"><div class="stat-val" style="color:#fcd34d;">5/6</div><div class="stat-lbl">Compliant</div></div>
+              <div class="stat-cell"><div class="stat-val">12</div><div class="stat-lbl">Months</div></div>
+              <div class="stat-cell"><div class="stat-val" style="color:#fcd34d;">70%</div><div class="stat-lbl">Complete</div></div>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.12);border-radius:999px;overflow:hidden;">
+              <div style="height:4px;width:70%;background:linear-gradient(90deg,#fcd34d,#f59e0b);border-radius:999px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="action-row">
+          <div class="action-btn primary" onclick="showToast('Sharing with tenant...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/></svg><span>Share</span></div>
+          <div class="action-btn" onclick="showToast('Renewing cert...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.43"/></svg><span>Renew</span></div>
+          <div class="action-btn" onclick="showToast('Downloading...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg><span>PDF</span></div>
+        </div>
+        <div class="tabs-l1">
+          <button class="tab-l1 active" onclick="llL1('compliance','ll')">Compliance</button>
+          <button class="tab-l1" onclick="llL1('vault','ll')">Vault</button>
+          <button class="tab-l1" onclick="llL1('tenancy','ll')">Tenancy</button>
+        </div>
+      </div>
+      <div class="pp-body">
+        <div id="ll-compliance">
+          <div class="nudge amber"><span style="font-size:13px;">⚠️</span><div><div class="nudge-title">Gas Safety renewal due in 30 days</div><div class="nudge-sub">Book now to remain legally compliant</div></div></div>
+          <div class="section-hdr">Legal Compliance — Letting</div>
+          <div class="comp-item"><div class="comp-icon" style="background:#dcfce7;">🔥</div><div class="comp-name">Gas Safety (CP12)</div><div class="comp-status due">Renew soon</div></div>
+          <div class="comp-item"><div class="comp-icon" style="background:#dcfce7;">🔌</div><div class="comp-name">EICR Report</div><div class="comp-status ok">✓ Valid to 2028</div></div>
+          <div class="comp-item"><div class="comp-icon" style="background:#dcfce7;">⚡</div><div class="comp-name">EPC Certificate</div><div class="comp-status ok">✓ Rating C</div></div>
+          <div class="comp-item"><div class="comp-icon" style="background:#dcfce7;">🛡️</div><div class="comp-name">Smoke &amp; CO Alarms</div><div class="comp-status ok">✓ Tested</div></div>
+          <div class="comp-item"><div class="comp-icon" style="background:#dcfce7;">💧</div><div class="comp-name">Legionella Risk</div><div class="comp-status ok">✓ Assessed</div></div>
+          <div class="comp-item"><div class="comp-icon" style="background:#fee2e2;">📋</div><div class="comp-name">HMO Licence</div><div class="comp-status miss">Not required</div></div>
+        </div>
+        <div id="ll-vault" style="display:none;">
+          <div class="section-hdr">Tenancy Documents</div>
+          <div class="doc-row"><div class="doc-icon" style="background:var(--brand-pale);">📋</div><div class="doc-info"><div class="doc-name">Tenancy Agreement</div><div class="doc-meta">AST · 12 months · Jan 2025</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fef3c7;">🏦</div><div class="doc-info"><div class="doc-name">Deposit Protection</div><div class="doc-meta">DPS · £1,200 protected</div></div><div class="doc-status ok">✓</div></div>
+          <div class="section-hdr">Property Certificates</div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fff0f0;">🔥</div><div class="doc-info"><div class="doc-name">Gas Safety (CP12)</div><div class="doc-meta">Due renewal in 30 days</div></div><div class="doc-status warn">⚠</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#eff6ff;">🔌</div><div class="doc-info"><div class="doc-name">EICR Report</div><div class="doc-meta">Satisfactory · 2023</div></div><div class="doc-status ok">✓</div></div>
+        </div>
+        <div id="ll-tenancy" style="display:none;">
+          <div class="section-hdr">Current Tenancy</div>
+          <div style="background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:8px;">
+            <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;">Tenant Details</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--ink-faint);">Name</span><span style="font-weight:600;color:var(--ink);">J. Smith</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--ink-faint);">Start date</span><span style="font-weight:600;color:var(--ink);">1 Jan 2025</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--ink-faint);">End date</span><span style="font-weight:600;color:var(--ink);">31 Dec 2025</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--ink-faint);">Rent</span><span style="font-weight:600;color:var(--ink);">£1,200/month</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--ink-faint);">Right to Rent</span><span style="font-weight:600;color:var(--good);">✓ Verified</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ LANDLORD SELLING ══ -->
+  <div class="phone-wrap" id="wrap-landlord-sell">
+    <div class="phone-label">🏢→🏠 Landlord — Selling</div>
+    <div class="phone">
+      <div class="pp-header" style="background:linear-gradient(150deg,#1e1b4b,#312e81,#4338ca);">
+        <div class="h-toprow">
+          <button class="h-back"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+          <div style="font-size:12px;font-weight:700;color:#fff;">Landlord Selling</div>
+          <div class="h-menu">···</div>
+        </div>
+        <div class="book-row">
+          <div class="book">
+            <div class="book-spine" style="background:linear-gradient(180deg,#1e1b4b,#312e81);"></div>
+            <div class="book-cover" style="background:linear-gradient(155deg,#4338ca,#312e81,#1e1b4b);">
+              <div class="book-title">Landlord<br>Passport</div>
+              <svg width="32" height="32" viewBox="0 0 100 100" style="position:relative;z-index:1;">
+                <polygon points="10,48 50,12 90,48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M22,70 Q28,58 34,70 Q40,82 46,70 Q52,58 58,70 Q64,82 70,70 Q76,58 82,70" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="4.5" stroke-linecap="round"/>
+                <line x1="70" y1="15" x2="80" y2="5" stroke="rgba(255,255,255,0.7)" stroke-width="4" stroke-linecap="round"/>
+                <polyline points="80,5 80,15 70,15" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+              <div style="position:relative;">
+                <svg width="28" height="28" viewBox="0 0 28 28" style="transform:rotate(-90deg);">
+                  <circle fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" cx="14" cy="14" r="11"/>
+                  <circle fill="none" stroke="#a5b4fc" stroke-width="3" stroke-linecap="round" stroke-dasharray="69.1" stroke-dashoffset="35" cx="14" cy="14" r="11"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:800;color:#a5b4fc;">50%</div>
+              </div>
+              <div class="book-addr">14 Hazel Grove<br>Tenanted · Selling</div>
+            </div>
+          </div>
+          <div style="flex:1;">
+            <div style="display:inline-flex;background:rgba(165,180,252,0.2);border:1px solid rgba(165,180,252,0.4);border-radius:999px;padding:2px 9px;margin-bottom:6px;"><span style="font-size:9px;font-weight:700;color:#a5b4fc;">🏠→ Selling tenanted</span></div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:6px;">
+              <div class="stat-cell"><div class="stat-val">72</div><div class="stat-lbl">HS™</div></div>
+              <div class="stat-cell"><div class="stat-val">4</div><div class="stat-lbl">Docs</div></div>
+              <div class="stat-cell"><div class="stat-val">3/8</div><div class="stat-lbl">Sections</div></div>
+              <div class="stat-cell"><div class="stat-val" style="color:#a5b4fc;">50%</div><div class="stat-lbl">Ready</div></div>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.12);border-radius:999px;overflow:hidden;">
+              <div style="height:4px;width:50%;background:linear-gradient(90deg,#a5b4fc,#818cf8);border-radius:999px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="action-row">
+          <div class="action-btn primary" onclick="showToast('Sharing...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg><span>Share</span></div>
+          <div class="action-btn" onclick="showToast('Matching buyers...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/></svg><span>Match</span></div>
+          <div class="action-btn" onclick="showToast('Publishing...')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" style="display:block;margin:0 auto;"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg><span>Publish</span></div>
+        </div>
+        <div class="tabs-l1">
+          <button class="tab-l1 active" onclick="llL1('overview','ls')">Overview</button>
+          <button class="tab-l1" onclick="llL1('vault','ls')">Vault</button>
+          <button class="tab-l1" onclick="llL1('notice','ls')">Notice</button>
+        </div>
+      </div>
+      <div class="pp-body">
+        <div id="ls-overview">
+          <div class="nudge amber"><span style="font-size:13px;">⚠️</span><div><div class="nudge-title">Notice planning required</div><div class="nudge-sub">Section 21 or 8 needed before sale. 2 months notice.</div></div></div>
+          <div class="nudge blue"><span style="font-size:13px;">💡</span><div><div class="nudge-title">Tenanted sale — disclosure required</div><div class="nudge-sub">Buyers must be told property is tenanted. Tenancy transfers on completion.</div></div></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--ink-faint);margin-bottom:8px;">Selling sections — 3 of 8 started</div>
+          <div class="section-row"><div class="sec-icon" style="background:var(--brand-pale);">📖</div><div class="sec-info"><div class="sec-name">Ownership Profile</div><div class="sec-desc">Title, ownership, landlord identity</div><div class="sec-bar"><div class="sec-bar-fill" style="width:100%;background:var(--brand);"></div></div><div class="sec-meta">3/3 docs · <b>100%</b></div></div><div class="sec-arr">›</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#fef3c7;">📋</div><div class="sec-info"><div class="sec-name">Tenancy Details</div><div class="sec-desc">AST, deposit, tenant disclosures</div><div class="sec-bar"><div class="sec-bar-fill" style="width:67%;background:var(--warn);"></div></div><div class="sec-meta">2/3 docs · <b style="color:var(--warn);">67%</b></div></div><div class="sec-arr">›</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#eff6ff;">⚡</div><div class="sec-info"><div class="sec-name">Energy &amp; Compliance</div><div class="sec-desc">EPC, gas, EICR</div><div class="sec-bar"><div class="sec-bar-fill" style="width:33%;background:var(--warn);"></div></div><div class="sec-meta">1/3 docs · <b style="color:var(--warn);">33%</b></div></div><div class="sec-arr">›</div></div>
+          <div class="section-row"><div class="sec-icon" style="background:#f1f5f9;">⚖️</div><div class="sec-info"><div class="sec-name">Legal &amp; Notice</div><div class="sec-desc">Section 21/8, notice dates</div><div class="sec-bar"><div class="sec-bar-fill" style="width:0%;"></div></div><div class="sec-meta">Not started · <b style="color:var(--ink-faint);">0%</b></div></div><div class="sec-arr">›</div></div>
+        </div>
+        <div id="ls-vault" style="display:none;">
+          <div class="section-hdr">Ownership</div>
+          <div class="doc-row"><div class="doc-icon" style="background:var(--brand-pale);">📋</div><div class="doc-info"><div class="doc-name">Title Deed</div><div class="doc-meta">Freehold · CH45721</div></div><div class="doc-status ok">✓</div></div>
+          <div class="section-hdr">Tenancy</div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fef3c7;">📄</div><div class="doc-info"><div class="doc-name">Tenancy Agreement</div><div class="doc-meta">AST · J. Smith · Jan 2025</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#fef3c7;">🏦</div><div class="doc-info"><div class="doc-name">Deposit Certificate</div><div class="doc-meta">DPS · £1,200</div></div><div class="doc-status ok">✓</div></div>
+          <div class="doc-row"><div class="doc-icon" style="background:#f1f5f9;">📋</div><div class="doc-info"><div class="doc-name">Section 21 Notice</div><div class="doc-meta">Not yet served</div></div><div class="doc-status pend">Pending</div></div>
+        </div>
+        <div id="ls-notice" style="display:none;">
+          <div style="background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;">Notice planning</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:8px;background:#f8f7fc;border-radius:8px;"><span style="color:var(--ink-soft);">Tenancy end date</span><span style="font-weight:700;color:var(--ink);">31 Dec 2025</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:8px;background:#fef3c7;border-radius:8px;"><span style="color:#92400e;">S.21 notice required by</span><span style="font-weight:700;color:#92400e;">31 Oct 2025</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;padding:8px;background:#f8f7fc;border-radius:8px;"><span style="color:var(--ink-soft);">Earliest vacant possession</span><span style="font-weight:700;color:var(--ink);">31 Dec 2025</span></div>
+            </div>
+            <button onclick="showToast('S.21 guide downloading...')" style="margin-top:12px;width:100%;border:none;padding:10px;border-radius:10px;background:var(--navy);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">Download S.21 guidance →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(function() { t.style.display = 'none'; }, 2000);
+}
+
+function showVersion(v) {
+  document.querySelectorAll('.vtab').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+  var all = ['seller','buyer','landlord-let','landlord-sell'];
+  all.forEach(function(id) {
+    var el = document.getElementById('wrap-' + id);
+    if (el) el.style.display = (v === 'all' || v === id) ? 'flex' : 'none';
+  });
+}
+
+// Seller tabs
+function sL1(tab) {
+  ['overview','vault','timeline'].forEach(function(t) {
+    var el = document.getElementById('s-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#s-l1 .tab-l1').forEach(function(b,i) {
+    b.classList.toggle('active', ['overview','vault','timeline'][i] === tab);
+  });
+}
+function sL2(tab) {
+  ['sections','street','viewers'].forEach(function(t) {
+    var el = document.getElementById('s-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#s-l2 .tab-l2').forEach(function(b,i) {
+    b.classList.toggle('active', ['sections','street','viewers'][i] === tab);
+  });
+}
+
+// Buyer tabs
+function bL1(tab) {
+  ['summary','ta-forms','docs'].forEach(function(t) {
+    var el = document.getElementById('b-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  document.querySelectorAll('#b-l1 .tab-l1').forEach(function(b,i) {
+    b.classList.toggle('active', ['summary','ta-forms','docs'][i] === tab);
+  });
+}
+
+// Landlord tabs
+function llL1(tab, prefix) {
+  var tabs = prefix === 'll' ? ['compliance','vault','tenancy'] : ['overview','vault','notice'];
+  tabs.forEach(function(t) {
+    var el = document.getElementById(prefix + '-' + t);
+    if (el) el.style.display = t === tab ? 'block' : 'none';
+  });
+  // Update active button — find parent phone and update tabs
+  event.target.closest('.tabs-l1').querySelectorAll('.tab-l1').forEach(function(b,i) {
+    b.classList.toggle('active', tabs[i] === tab);
+  });
+}
+</script>
+</body>
+</html>

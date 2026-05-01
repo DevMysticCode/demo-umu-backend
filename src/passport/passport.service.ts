@@ -516,6 +516,127 @@ export class PassportService {
     return { message: 'Passport deleted successfully' };
   }
 
+  // ── Resume tracking ─────────────────────────────────────────────────
+  // Records the most recently visited task on the passport so the
+  // "Pick up where you left off" CTA can route the user back. Owner or
+  // any collaborator may update it; we simply require they have access.
+  async setLastVisited(passportId: string, userId: string, taskId: string) {
+    if (!taskId) throw new BadRequestException('taskId is required');
+
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { id: true, ownerId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    if (passport.ownerId !== userId) {
+      const collab = await this.prisma.passportCollaborator.findFirst({
+        where: { passportId, userId },
+        select: { id: true },
+      });
+      if (!collab) throw new ForbiddenException('No access to this passport');
+    }
+
+    await (this.prisma.passport as any).update({
+      where: { id: passportId },
+      data: {
+        lastVisitedTaskId: taskId,
+        lastVisitedAt: new Date(),
+      },
+    });
+    return { ok: true };
+  }
+
+  // Resolves where to send the user next:
+  //  1. If the recorded last-visited task is still incomplete → that task.
+  //  2. If complete → the next incomplete task in the same section.
+  //  3. If the section is finished → the first incomplete task in any
+  //     remaining section (in section order).
+  //  4. If everything is complete → null.
+  async getResumeTarget(passportId: string, userId: string) {
+    const passport = await (this.prisma.passport as any).findUnique({
+      where: { id: passportId },
+      select: { id: true, ownerId: true, lastVisitedTaskId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      const collab = await this.prisma.passportCollaborator.findFirst({
+        where: { passportId, userId },
+        select: { id: true },
+      });
+      if (!collab) throw new ForbiddenException('No access to this passport');
+    }
+
+    const sections = await this.prisma.passportSection.findMany({
+      where: { passportId },
+      orderBy: { order: 'asc' },
+      include: {
+        tasks: {
+          orderBy: { order: 'asc' },
+          select: { id: true, status: true, passportSectionId: true },
+        },
+      },
+    });
+
+    if (!sections.length) return { target: null };
+
+    const isIncomplete = (t: { status: string }) => t.status !== 'COMPLETED';
+
+    const findTaskWithSection = (taskId: string) => {
+      for (const s of sections) {
+        const t = s.tasks.find((x) => x.id === taskId);
+        if (t) return { section: s, task: t };
+      }
+      return null;
+    };
+
+    const lastTaskId = (passport as any).lastVisitedTaskId as string | null;
+
+    // 1. Recorded task still incomplete?
+    if (lastTaskId) {
+      const found = findTaskWithSection(lastTaskId);
+      if (found && isIncomplete(found.task)) {
+        return {
+          target: {
+            sectionId: found.section.id,
+            taskId: found.task.id,
+            reason: 'last-visited',
+          },
+        };
+      }
+      // 2. Same section, next incomplete task
+      if (found) {
+        const next = found.section.tasks.find(isIncomplete);
+        if (next) {
+          return {
+            target: {
+              sectionId: found.section.id,
+              taskId: next.id,
+              reason: 'next-in-section',
+            },
+          };
+        }
+      }
+    }
+
+    // 3. First incomplete task across all remaining sections
+    for (const s of sections) {
+      const next = s.tasks.find(isIncomplete);
+      if (next) {
+        return {
+          target: {
+            sectionId: s.id,
+            taskId: next.id,
+            reason: lastTaskId ? 'next-section' : 'first-task',
+          },
+        };
+      }
+    }
+
+    // 4. Everything complete
+    return { target: null };
+  }
+
   // Create buyer access (simulated payment unlock)
   async createBuyerAccess(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
