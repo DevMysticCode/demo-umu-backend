@@ -895,7 +895,8 @@ export class PropertyService {
         skip: offset,
         take: limit,
         include: {
-          passport: {
+          passports: {
+            where: { type: 'SELLER' },
             select: {
               id: true,
               status: true,
@@ -931,12 +932,13 @@ export class PropertyService {
         if (existing == null) scoreByProp.set(s.propertyId, s.total);
       }
 
-      const items = rows.map(({ passport, ...p }) => {
+      const items = rows.map(({ passports, ...p }) => {
+        const passport = (passports as any[])?.[0] ?? null;
         const isPublished = passport?.status === 'PUBLISHED';
         let passportCompletion: number | null = null;
         if (passport && isPublished) {
-          const allTasks = passport.sections.flatMap((s) => s.tasks);
-          const doneTasks = allTasks.filter((t) => {
+          const allTasks = passport.sections.flatMap((s: any) => s.tasks);
+          const doneTasks = allTasks.filter((t: any) => {
             const total = t.passportQuestions.length;
             const answered = t.passportQuestions.filter(
               (q: any) => q.answer !== null,
@@ -1440,12 +1442,21 @@ export class PropertyService {
   async getPropertyById(id: string): Promise<any | null> {
     const property = await this.prisma.property.findUnique({
       where: { id },
-      include: { passport: { select: { id: true, status: true } } },
+      include: {
+        passports: {
+          select: { id: true, status: true, type: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
     if (!property) return null;
 
-    // Normalise casing for properties already in DB with incorrect casing
-    const { passport, ...rest } = property;
+    // Normalise casing for properties already in DB with incorrect casing.
+    // We surface the seller passport as "the" passport because the public
+    // property view is buyer-facing — landlord passports are private to the
+    // landlord and should never be exposed here.
+    const { passports, ...rest } = property as any;
+    const sellerPassport = (passports as any[])?.find((p) => p.type === 'SELLER') ?? null;
     const normalised = {
       ...rest,
       addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
@@ -1453,9 +1464,9 @@ export class PropertyService {
       city: rest.city ? titleCase(rest.city) : rest.city,
       county: rest.county ? titleCase(rest.county) : rest.county,
       // Public passport state — readable by guests for the 3-state homescore UI.
-      hasPassport: !!passport,
-      passportPublished: passport?.status === 'PUBLISHED',
-      passportId: passport?.id ?? null,
+      hasPassport: !!sellerPassport,
+      passportPublished: sellerPassport?.status === 'PUBLISHED',
+      passportId: sellerPassport?.id ?? null,
     };
 
     // Enrich with EPC data if fields are missing (non-blocking, always returns a property)
@@ -2680,10 +2691,11 @@ export class PropertyService {
     });
   }
 
-  // Returns the best available homescore for a property (owner's first, then any) — no auth needed
+  // Returns the best available homescore for a property (owner's first, then any) — no auth needed.
+  // Uses the SELLER passport's owner since landlord passports are private.
   async getPublicHomeScore(propertyId: string) {
-    const passport = await this.prisma.passport.findUnique({
-      where: { propertyId },
+    const passport = await this.prisma.passport.findFirst({
+      where: { propertyId, type: 'SELLER' },
       select: { ownerId: true },
     });
     if (passport?.ownerId) {
@@ -2704,14 +2716,16 @@ export class PropertyService {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
       include: {
-        passport: {
+        passports: {
           select: {
             id: true,
             ownerId: true,
             status: true,
+            type: true,
             collaborators: { where: { userId }, select: { id: true } },
             buyerAccesses: { where: { userId }, select: { id: true } },
           },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -2726,7 +2740,13 @@ export class PropertyService {
         verificationStatus: null,
       };
 
-    if (!property.passport) {
+    // Buyer-facing endpoint — only seller passports are public. Landlord
+    // passports stay invisible to anyone but the landlord (and collaborators
+    // attached to that specific passport).
+    const sellerPassport =
+      ((property as any).passports as any[])?.find((p) => p.type === 'SELLER') ?? null;
+
+    if (!sellerPassport) {
       const verification = await this.prisma.ownershipVerification.findUnique({
         where: { propertyId_userId: { propertyId, userId } },
       });
@@ -2740,7 +2760,7 @@ export class PropertyService {
       };
     }
 
-    const passport = property.passport;
+    const passport = sellerPassport;
     const isOwner = passport.ownerId === userId;
     const isCollaborator = passport.collaborators.length > 0;
     const isBuyer =
@@ -3330,7 +3350,8 @@ export class PropertyService {
     const raw = await this.prisma.property.findMany({
       where,
       include: {
-        passport: {
+        passports: {
+          where: { type: 'SELLER' },
           select: {
             id: true,
             status: true,
@@ -3412,9 +3433,10 @@ export class PropertyService {
     offset = 0,
     limit = 12,
   ): Promise<{ items: any[]; total: number }> {
+    // Only published seller passports are public — landlord passports never show here.
     const where = {
-      passport: {
-        is: { status: 'PUBLISHED' as const },
+      passports: {
+        some: { status: 'PUBLISHED' as const, type: 'SELLER' as const },
       },
     };
 
@@ -3426,7 +3448,8 @@ export class PropertyService {
         skip: offset,
         take: limit,
         include: {
-          passport: {
+          passports: {
+            where: { type: 'SELLER' },
             select: {
               id: true,
               status: true,
@@ -3447,11 +3470,12 @@ export class PropertyService {
       }),
     ]);
 
-    const items = rows.map(({ passport, ...p }) => {
+    const items = rows.map(({ passports, ...p }) => {
+      const passport = (passports as any[])?.[0] ?? null;
       let passportCompletion: number | null = null;
       if (passport) {
-        const allTasks = passport.sections.flatMap((s) => s.tasks);
-        const doneTasks = allTasks.filter((t) => {
+        const allTasks = passport.sections.flatMap((s: any) => s.tasks);
+        const doneTasks = allTasks.filter((t: any) => {
           const total = t.passportQuestions.length;
           const answered = t.passportQuestions.filter(
             (q: any) => q.answer !== null,
@@ -3495,21 +3519,27 @@ export class PropertyService {
         bedrooms: true,
         epcRating: true,
         estimatedPrice: true,
-        passport: { select: { id: true, status: true } },
+        passports: {
+          where: { type: 'SELLER' },
+          select: { id: true, status: true },
+        },
       },
     });
 
-    const mapped = properties.map(p => ({
-      id: p.id,
-      addressLine1: p.addressLine1,
-      propertyType: p.propertyType,
-      bedrooms: p.bedrooms,
-      epcRating: p.epcRating,
-      price: p.estimatedPrice,
-      hasPassport: !!p.passport,
-      isPublished: p.passport?.status === 'PUBLISHED',
-      passportStatus: p.passport?.status ?? null,
-    }));
+    const mapped = properties.map((p) => {
+      const passport = (p as any).passports?.[0] ?? null;
+      return {
+        id: p.id,
+        addressLine1: p.addressLine1,
+        propertyType: p.propertyType,
+        bedrooms: p.bedrooms,
+        epcRating: p.epcRating,
+        price: p.estimatedPrice,
+        hasPassport: !!passport,
+        isPublished: passport?.status === 'PUBLISHED',
+        passportStatus: passport?.status ?? null,
+      };
+    });
 
     const published = mapped.filter(p => p.isPublished).length;
     const started = mapped.filter(p => p.hasPassport).length;

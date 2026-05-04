@@ -161,6 +161,131 @@ const SECTION_TEMPLATES = [
     icon: 'searches',
     order: 18,
   },
+  // ─── Landlord passport templates ─────────────────────────────────────
+  // Compliance group (mandatory across all landlord passports)
+  {
+    type: 'LANDLORD',
+    key: 'landlord_gas_safety',
+    title: 'Gas Safety Certificate (CP12)',
+    subtitle: 'Annual gas-appliance check',
+    description:
+      'Renewed every 12 months by a Gas Safe engineer. Must be given to the tenant within 28 days, and to a new tenant before move-in.',
+    icon: 'environmental',
+    order: 1,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_eicr',
+    title: 'Electrical Safety (EICR)',
+    subtitle: 'Five-yearly fixed-wiring inspection',
+    description:
+      'Required under the Electrical Safety Standards Regulations 2020. Copy to the tenant within 28 days; local authority can request within 7 days.',
+    icon: 'environmental',
+    order: 2,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_epc',
+    title: 'Energy Performance (EPC)',
+    subtitle: 'Minimum E rating to let',
+    description:
+      "Valid 10 years. Required to market the property and to comply with the MEES Regulations 2015 (minimum E rating; proposed C from 2030).",
+    icon: 'environmental',
+    order: 3,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_alarms',
+    title: 'Smoke & CO Alarms',
+    subtitle: 'Tested at the start of every tenancy',
+    description:
+      'Smoke alarm on every storey; CO alarm in any room with a fixed combustion appliance. Tested on the day a new tenancy starts.',
+    icon: 'guaranteesAndWarranties',
+    order: 4,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_legionella',
+    title: 'Legionella Risk Assessment',
+    subtitle: 'Water-system risk review',
+    description:
+      'HSE Approved Code of Practice L8 — assess and manage Legionella risk in rental properties.',
+    icon: 'environmental',
+    order: 5,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_insurance',
+    title: 'Landlord Insurance',
+    subtitle: 'Buildings + landlord liability',
+    description:
+      'Buildings, landlord liability and (optional) loss-of-rent cover. Recommended best practice — required by most mortgage lenders for buy-to-let.',
+    icon: 'insurance',
+    order: 6,
+  },
+  // Tenancy group
+  {
+    type: 'LANDLORD',
+    key: 'landlord_ast',
+    title: 'Tenancy Agreement (AST)',
+    subtitle: 'The signed assured shorthold tenancy',
+    description:
+      'The signed AST setting out the tenant, term, rent and deposit.',
+    icon: 'occupiers',
+    order: 7,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_deposit',
+    title: 'Deposit Protection',
+    subtitle: 'DPS / mydeposits / TDS certificate',
+    description:
+      'Deposits must be protected within 30 days under the Housing Act 2004. Failure blocks Section 21 and triggers a 1–3× penalty.',
+    icon: 'otherCharges',
+    order: 8,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_right_to_rent',
+    title: 'Right to Rent',
+    subtitle: 'Adult occupier ID checks',
+    description:
+      'Immigration Act 2014. Adult occupier ID checks before tenancy starts. Re-checks required for time-limited statuses.',
+    icon: 'ownershipProfile',
+    order: 9,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_how_to_rent',
+    title: 'How to Rent Guide',
+    subtitle: 'Latest gov.uk version served to tenant',
+    description:
+      'Failure to serve the latest version blocks Section 21. Updated regularly — check gov.uk before each new tenancy.',
+    icon: 'noticesAndProposals',
+    order: 10,
+  },
+  {
+    type: 'LANDLORD',
+    key: 'landlord_inventory',
+    title: 'Inventory & Schedule of Condition',
+    subtitle: 'Move-in baseline (for deposit disputes)',
+    description:
+      'Best-practice baseline — essential evidence in deposit disputes at end of tenancy.',
+    icon: 'guaranteesAndWarranties',
+    order: 11,
+  },
+  // HMO-only — gated by the isHmo flag set at passport creation
+  {
+    type: 'LANDLORD',
+    key: 'landlord_pat_testing',
+    title: 'PAT Testing',
+    subtitle: 'Portable appliance testing (HMO best practice)',
+    description:
+      'Tests appliances supplied with the property. Expected for HMOs and recommended best practice under HSE guidance.',
+    icon: 'environmental',
+    conditionalKey: 'isHmo',
+    order: 12,
+  },
 ];
 
 // ============================================
@@ -12655,6 +12780,42 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 75,
     order: 1,
   },
+  // ─── Landlord passport questions ─────────────────────────────────────
+  // Each compliance/tenancy section has one upload + an expiry-date question.
+  ...(([
+    ['landlord_gas_safety',     'gas_safety_upload',     'CP12 certificate (PDF or photo)',                'Annual cert from your Gas Safe engineer.'],
+    ['landlord_eicr',           'eicr_upload',           'EICR report (PDF)',                              'Five-yearly fixed-wiring inspection report.'],
+    ['landlord_epc',            'epc_upload',            'EPC certificate (PDF)',                          'Energy Performance Certificate from gov.uk.'],
+    ['landlord_alarms',         'alarms_check',          'Smoke & CO test record (PDF or photo)',          'Test record signed at the start of the tenancy.'],
+    ['landlord_legionella',     'legionella_upload',     'Legionella risk assessment (PDF)',               'Most recent assessment.'],
+    ['landlord_insurance',      'insurance_upload',      'Landlord insurance schedule (PDF)',              'Schedule of cover from your insurer.'],
+    ['landlord_ast',            'ast_upload',            'Signed AST (PDF)',                               'The signed assured shorthold tenancy agreement.'],
+    ['landlord_deposit',        'deposit_upload',        'Deposit-protection certificate (PDF)',           'DPS / mydeposits / TDS certificate.'],
+    ['landlord_right_to_rent',  'rtr_upload',            'Right-to-Rent check evidence (PDF or photo)',    "Tenant ID + your check record."],
+    ['landlord_how_to_rent',    'how_to_rent_upload',    'How-to-Rent guide served (PDF)',                 'The version you sent to the tenant — keep proof of service.'],
+    ['landlord_inventory',      'inventory_upload',      'Move-in inventory & schedule of condition (PDF)','Baseline document for end-of-tenancy comparisons.'],
+    ['landlord_pat_testing',    'pat_upload',            'PAT testing report (PDF)',                       'Portable appliance test report (HMOs).'],
+  ] as const).flatMap(([sectionKey, taskKey, title, description]) => [
+    {
+      sectionKey,
+      taskKey,
+      title,
+      description,
+      type: 'UPLOAD' as QuestionType,
+      uploadInstruction: 'Drag and drop or tap to browse — PDF, JPG up to 25MB.',
+      points: 100,
+      order: 1,
+    },
+    {
+      sectionKey,
+      taskKey,
+      title: 'Expiry / next-renewal date',
+      description: 'Optional — we use this to remind you before it lapses.',
+      type: 'DATE' as QuestionType,
+      points: 25,
+      order: 2,
+    },
+  ])),
 ];
 
 // ============================================
@@ -12689,11 +12850,13 @@ async function main() {
 
   // 3. Create SectionTemplates
   console.log('Creating section templates...');
-  for (const st of SECTION_TEMPLATES) {
+  for (const st of SECTION_TEMPLATES as any[]) {
     const sectionHelp = SECTION_HELP_CONTENT[st.key];
     await prisma.sectionTemplate.create({
       data: {
         ...st,
+        // Default seller for any legacy entry that omits `type`.
+        type: (st.type as any) ?? 'SELLER',
         helpContent: sectionHelp
           ? {
               sellerGuidance: sectionHelp.sellerGuidance,
@@ -12784,8 +12947,13 @@ async function main() {
   for (const passport of passports) {
     console.log(`  Passport: ${passport.addressLine1} (${passport.id})`);
 
-    // Use SECTION_TEMPLATES ordering (not alphabetical from grouped map)
-    for (const stDef of SECTION_TEMPLATES) {
+    // Use SECTION_TEMPLATES ordering (not alphabetical from grouped map).
+    // Filter to the passport's type so a SELLER passport doesn't get
+    // landlord sections (and vice-versa) when seed runs against existing
+    // passports.
+    for (const stDef of (SECTION_TEMPLATES as any[]).filter(
+      (st) => ((st.type as any) ?? 'SELLER') === (passport as any).type,
+    )) {
       const sectionKey = stDef.key;
       const tasksForSection = grouped.get(sectionKey);
 

@@ -169,7 +169,7 @@ model Property {
   constructionAgeBand    String?  // e.g. "1930-1949"
   builtForm              String?  // "Detached" | "Semi-Detached" | "Mid-Terrace" | etc.
 
-  passport               Passport?
+  passports              Passport[]
   ownershipVerifications OwnershipVerification[]
   wishlistedBy           UserWishlist[]
   savedBy                UserSavedProperty[]
@@ -227,6 +227,7 @@ model UserPreference {
 model SectionTemplate {
   id                String             @id @default(uuid())
   key               String             @unique
+  type              PassportType       @default(SELLER)
   title             String
   subtitle          String?
   description       String?
@@ -234,16 +235,33 @@ model SectionTemplate {
   helpContent       Json?
   helpVideoUrl      String?
   order             Int
+  // Optional condition for inclusion when seeding a passport (e.g. "isHmo").
+  // When null the section is always created.
+  conditionalKey    String?
   createdAt         DateTime           @default(now())
   questionTemplates QuestionTemplate[]
+
+  @@index([type])
 }
 
 model Passport {
   id            String                 @id @default(uuid())
-  addressLine1  String                 @unique
+  // Address is no longer globally unique — the same property can host both a
+  // SELLER and a LANDLORD passport when one was converted from the other.
+  addressLine1  String
   postcode      String
   ownerId       String
-  propertyId    String?                @unique
+  propertyId    String?
+  type          PassportType           @default(SELLER)
+  // True when the property is a House in Multiple Occupation (landlord only).
+  // Drives whether PAT-testing and HMO-licence sections are seeded.
+  isHmo         Boolean                @default(false)
+  // Filled when this passport was created via the landlord → seller convert
+  // flow. Lets us show "transferred from your letting passport" badges and
+  // keep both passports linked.
+  convertedFromId   String?
+  convertedFrom     Passport?          @relation("PassportConverted", fields: [convertedFromId], references: [id])
+  convertedTo       Passport[]         @relation("PassportConverted")
   status        PassportStatus         @default(IN_PROGRESS)
   createdAt     DateTime               @default(now())
   // Resume tracking — last task the owner / collaborator visited so the
@@ -259,7 +277,13 @@ model Passport {
   sharedLinks     SharedPassportLink[]
   buyerNotes      BuyerNote[]
 
+  // One passport per (owner, property, type) — prevents the same user
+  // accidentally creating two seller passports on the same property, while
+  // still allowing a landlord + seller pair to coexist.
+  @@unique([ownerId, propertyId, type])
   @@index([ownerId])
+  @@index([propertyId])
+  @@index([type])
 }
 
 model PassportCollection {
@@ -489,6 +513,11 @@ enum PassportStatus {
   PUBLISHED
 }
 
+enum PassportType {
+  SELLER
+  LANDLORD
+}
+
 enum OwnershipVerificationStatus {
   SUBMITTED
   IN_PROGRESS
@@ -612,12 +641,15 @@ model HomeScoreResult {
 }
 
 model SharedPassportLink {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   passportId String
-  token      String   @unique
+  token      String          @unique
+  // "buyer" (default — seller passport sharing) or "tenant" (landlord
+  // passport sharing — exposes only the tenant-relevant document subset).
+  scope      String          @default("buyer")
   expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+  passport   Passport        @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([passportId])
