@@ -126,7 +126,11 @@ export class PassportService {
     addressLine1: string,
     postcode: string,
     propertyId?: string,
+    opts: { type?: 'SELLER' | 'LANDLORD'; isHmo?: boolean; convertedFromId?: string } = {},
   ): Promise<{ passportId: string }> {
+    const passportType = opts.type ?? 'SELLER';
+    const isHmo = !!opts.isHmo;
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User does not exist: ' + userId);
 
@@ -137,18 +141,20 @@ export class PassportService {
       );
     }
 
-    // If propertyId provided, check if a passport already exists for it
+    // Manual claim: at most one passport per (owner, property, type). Convert
+    // flow bypasses this naturally — its target type is SELLER and the source
+    // landlord passport sits on the same property unchanged.
     let propertyTenure: string | null = null;
     if (propertyId) {
-      const existing = await this.prisma.passport.findUnique({
-        where: { propertyId },
+      const existingSameType = await this.prisma.passport.findFirst({
+        where: { propertyId, type: passportType as any },
       });
-      if (existing) {
-        if (existing.ownerId === userId) {
-          return { passportId: existing.id };
+      if (existingSameType) {
+        if (existingSameType.ownerId === userId) {
+          return { passportId: existingSameType.id };
         }
         throw new ForbiddenException(
-          'This property already has a passport owned by another user',
+          'This property already has a passport of this type owned by another user',
         );
       }
       // Fetch tenure so we can skip the leasehold section for non-leasehold properties
@@ -167,20 +173,26 @@ export class PassportService {
         addressLine1,
         postcode,
         ownerId: userId,
+        type: passportType as any,
+        isHmo,
+        ...(opts.convertedFromId ? { convertedFromId: opts.convertedFromId } : {}),
         ...(propertyId ? { propertyId } : {}),
       },
     });
 
-    // Load all question templates
+    // Load question templates for this passport type only — we still join on
+    // sectionTemplate so we can filter sections and questions consistently.
     const templates = await this.prisma.questionTemplate.findMany({
+      where: { sectionTemplate: { type: passportType as any } },
       orderBy: [{ sectionKey: 'asc' }, { taskKey: 'asc' }, { order: 'asc' }],
     });
 
     // Group templates by section and task
     const groupedBySection = this.groupTemplatesBySection(templates);
 
-    // Fetch section templates ordered by their defined order
+    // Fetch section templates for this passport type, in display order.
     const sectionTemplates = await this.prisma.sectionTemplate.findMany({
+      where: { type: passportType as any },
       orderBy: { order: 'asc' },
     });
 
@@ -189,8 +201,12 @@ export class PassportService {
       const sectionKey = sectionTemplate.key;
       const tasksForSection = groupedBySection.get(sectionKey);
 
-      // Skip the leasehold section for non-leasehold properties
+      // Skip the leasehold section for non-leasehold properties (seller only)
       if (sectionKey === 'leasehold' && !isLeasehold) continue;
+
+      // Skip conditional sections that don't match this passport's flags.
+      // Currently only "isHmo" is wired (PAT testing, HMO licence).
+      if (sectionTemplate.conditionalKey === 'isHmo' && !isHmo) continue;
 
       // Determine section status (first by order is ACTIVE, rest are LOCKED)
       const sectionStatus = sectionTemplate.order === 1 ? 'ACTIVE' : 'LOCKED';
@@ -250,6 +266,86 @@ export class PassportService {
 
     return {
       passportId: passport.id,
+    };
+  }
+
+  /**
+   * Landlord → Seller conversion. Creates a SELLER passport on the same
+   * property (the unique constraint allows it because type differs), links
+   * it back to the source landlord passport via convertedFromId, and pre-
+   * marks the seller passport's "transferable" sections as ACTIVE so the UI
+   * can badge them with "transferred from your letting passport".
+   *
+   * The two passports remain independent — editing one does not change the
+   * other. Either can be deleted later without affecting its sibling.
+   */
+  async convertLandlordToSeller(
+    landlordPassportId: string,
+    userId: string,
+  ): Promise<{ passportId: string; transferredSectionKeys: string[] }> {
+    const source = await this.prisma.passport.findUnique({
+      where: { id: landlordPassportId },
+    });
+    if (!source) throw new NotFoundException('Landlord passport not found');
+    if (source.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this passport');
+    }
+    if (source.type !== 'LANDLORD') {
+      throw new BadRequestException(
+        'Only landlord passports can be converted to seller passports',
+      );
+    }
+
+    // Refuse if a seller passport already exists for this property + owner.
+    if (source.propertyId) {
+      const existingSeller = await this.prisma.passport.findFirst({
+        where: {
+          ownerId: userId,
+          propertyId: source.propertyId,
+          type: 'SELLER',
+        },
+      });
+      if (existingSeller) {
+        return {
+          passportId: existingSeller.id,
+          transferredSectionKeys: [],
+        };
+      }
+    }
+
+    // Create the new seller passport in the standard way.
+    const created = await this.createPassport(
+      userId,
+      source.addressLine1,
+      source.postcode,
+      source.propertyId ?? undefined,
+      { type: 'SELLER', convertedFromId: source.id },
+    );
+
+    // Section keys that carry compliance/insurance data over from letting
+    // into the seller passport's "transferable" sections. These match the
+    // transfer map in the prototype landlord-passport1.html.
+    const transferableSourceKeys = ['gas', 'eicr', 'epc', 'alarms', 'insurance', 'rtr'];
+    const transferableTargetKeys = [
+      'services',
+      'environmental',
+      'insurance', // seller-side insurance section key
+      'occupiers',
+    ];
+
+    // Mark target sections as ACTIVE so they're highlighted in the seller
+    // passport view as "transferred — review and confirm".
+    await this.prisma.passportSection.updateMany({
+      where: {
+        passportId: created.passportId,
+        key: { in: transferableTargetKeys },
+      },
+      data: { status: 'ACTIVE' as any },
+    });
+
+    return {
+      passportId: created.passportId,
+      transferredSectionKeys: transferableSourceKeys.filter(Boolean),
     };
   }
 

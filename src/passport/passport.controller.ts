@@ -25,6 +25,14 @@ interface CreatePassportDto {
   addressLine1: string;
   postcode: string;
   propertyId?: string;
+  type?: 'seller' | 'landlord';
+  isHmo?: boolean;
+}
+
+interface ConvertToSellerDto {
+  // No body fields needed — all info comes from the source passport
+  // referenced in the URL.
+  acknowledged?: boolean;
 }
 
 @Controller('passport')
@@ -35,12 +43,24 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
     const userId = req.user.id;
+    const type = dto.type === 'landlord' ? 'LANDLORD' : 'SELLER';
     return this.passportService.createPassport(
       userId,
       dto.addressLine1,
       dto.postcode,
       dto.propertyId,
+      { type, isHmo: !!dto.isHmo },
     );
+  }
+
+  @Post(':id/convert-to-seller')
+  @UseGuards(JwtAuthGuard)
+  async convertToSeller(
+    @Param('id') passportId: string,
+    @Body() _dto: ConvertToSellerDto,
+    @Request() req: any,
+  ) {
+    return this.passportService.convertLandlordToSeller(passportId, req.user.id);
   }
 
   @Get('my')

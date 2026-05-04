@@ -1,0 +1,2373 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Landlord Passport — Letting & Selling (UK)</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+:root {
+  --teal: #3DBDA3;
+  --teal-dark: #2A9484;
+  --teal-darker: #1F7A66;
+  --teal-pale: #E2F1EA;
+  --teal-paler: #F1F9F4;
+  --teal-tint: #DCEEE6;
+  --navy: #0E2840;
+  --navy-soft: #5A6C7A;
+  --ink: #1B2A3A;
+  --muted: #8A9BA8;
+  --line: #E6ECEA;
+  --line-soft: #F0F4F2;
+  --good: #16A34A;
+  --good-pale: #DCFCE7;
+  --warn: #F59E0B;
+  --warn-pale: #FEF3C7;
+  --bad: #DC2626;
+  --bad-pale: #FEE2E2;
+  --pink-pale: #FFE9E9;
+  --pink: #E55353;
+  --gold: #F5C44C;
+}
+html, body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+body {
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 10%, rgba(61,189,163,0.07), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 90% 90%, rgba(245,196,76,0.05), transparent 60%),
+    #1A1F2A;
+  min-height: 100vh;
+  padding: 28px 16px 60px;
+  color: white;
+}
+
+/* Top header */
+.page-head-bar {
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(14px);
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-radius: 14px;
+  margin-bottom: 22px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.page-head-bar h1 {
+  font-size: 16px;
+  font-weight: 800;
+  flex: 1;
+  letter-spacing: -0.3px;
+}
+.page-head-bar h1 .pill {
+  background: rgba(61,189,163,0.22);
+  color: #80E0C5;
+  padding: 4px 11px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  margin-left: 10px;
+  vertical-align: middle;
+  font-weight: 700;
+}
+.page-head-bar .sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Scenario card */
+.scenario-card {
+  max-width: 800px;
+  margin: 0 auto 28px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.scenario-card .scen-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(61,189,163,0.22), rgba(245,196,76,0.18));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.scenario-card .scen-text { flex: 1; }
+.scenario-card .scen-title { font-size: 13.5px; font-weight: 800; }
+.scenario-card .scen-body { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 2px; line-height: 1.5; }
+
+/* Phone grid */
+.phone-grid {
+  display: flex;
+  gap: 36px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+}
+.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; position: relative; }
+.phone-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.phone-label .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 8px rgba(61,189,163,0.7);
+}
+.phone-label.selling .dot { background: var(--gold); box-shadow: 0 0 8px rgba(245,196,76,0.7); }
+
+.phone {
+  width: 360px;
+  height: 740px;
+  background: #fff;
+  border-radius: 40px;
+  overflow: hidden;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.5), 0 0 0 8px #0a0d12, 0 0 0 9px rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  flex-shrink: 0;
+}
+.status-bar .right { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+/* Page header */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 18px 12px;
+  flex-shrink: 0;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--teal);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+.page-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+.avatar-circle {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(155deg, #143F58, #0E2840);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+/* Persona toggle */
+.persona-toggle {
+  display: flex;
+  margin: 0 16px 14px;
+  background: var(--teal-paler);
+  border-radius: 100px;
+  padding: 5px;
+  border: 1.5px solid var(--teal-pale);
+  flex-shrink: 0;
+}
+.persona-btn {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.persona-btn.active {
+  background: var(--teal);
+  color: white;
+  box-shadow: 0 2px 8px rgba(61,189,163,0.35);
+}
+.persona-btn svg { width: 14px; height: 14px; }
+
+/* Body scroll */
+.pp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 100px;
+  scroll-behavior: smooth;
+}
+.pp-body::-webkit-scrollbar { width: 0; }
+
+/* Property card */
+.prop-card {
+  background: linear-gradient(150deg, #ECF8F2, #DCEEE6);
+  border-radius: 18px;
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid rgba(61,189,163,0.18);
+}
+.prop-card.selling-tenanted {
+  background: linear-gradient(150deg, #FDF5E8, #F8E6C2);
+  border-color: rgba(245,196,76,0.3);
+}
+.book {
+  width: 78px;
+  height: 104px;
+  flex-shrink: 0;
+  position: relative;
+  border-radius: 5px;
+  background: linear-gradient(155deg, var(--teal), var(--teal-dark) 60%, var(--teal-darker));
+  box-shadow: 4px 5px 12px rgba(14,40,64,0.22), inset 0 0 0 1px rgba(255,255,255,0.1);
+  padding: 8px 6px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  overflow: hidden;
+}
+.prop-card.selling-tenanted .book {
+  background: linear-gradient(155deg, #D4A03C, #B07A1F 60%, #8C5F18);
+  box-shadow: 4px 5px 12px rgba(140,95,24,0.3), inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+.book::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--teal-darker), #134B40);
+  border-radius: 5px 0 0 5px;
+}
+.prop-card.selling-tenanted .book::before {
+  background: linear-gradient(180deg, #8C5F18, #6B470F);
+}
+.book::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 0.6px solid rgba(255,255,255,0.18);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.book-title {
+  font-size: 6.5px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+.book-house { width: 38px; height: 38px; }
+.book-addr {
+  font-size: 7px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.92);
+  line-height: 1.3;
+}
+.prop-info { flex: 1; min-width: 0; }
+.prop-tagline {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--teal-dark);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.prop-card.selling-tenanted .prop-tagline { color: #8C5F18; }
+.prop-addr-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+.prop-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+}
+.prop-postcode {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 1px;
+}
+.expand-btn {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--teal-dark);
+  font-size: 11px;
+}
+.prop-card.selling-tenanted .expand-btn { border-color: #B07A1F; color: #8C5F18; }
+.prop-stats {
+  display: flex;
+  gap: 0;
+  margin-top: 10px;
+  font-size: 11px;
+}
+.prop-stats .stat { font-weight: 700; color: var(--navy); }
+.prop-stats .stat span { font-weight: 800; }
+.prop-stats .sep { color: var(--muted); margin: 0 6px; }
+.prop-stats .right-pct {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--teal-darker);
+  font-size: 13px;
+}
+.prop-card.selling-tenanted .prop-stats .right-pct { color: #8C5F18; }
+.prop-progress-track {
+  height: 5px;
+  background: rgba(14,40,64,0.08);
+  border-radius: 100px;
+  margin-top: 8px;
+  overflow: hidden;
+  position: relative;
+}
+.prop-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--teal), var(--teal-darker));
+  border-radius: 100px;
+  position: relative;
+  transition: width 1.2s cubic-bezier(.2,.8,.2,1);
+}
+.prop-card.selling-tenanted .prop-progress-fill {
+  background: linear-gradient(90deg, var(--gold), #B07A1F);
+}
+.prop-progress-fill::after {
+  content: '';
+  position: absolute;
+  right: -3px; top: -3px;
+  width: 11px; height: 11px;
+  background: var(--teal-darker);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+.prop-card.selling-tenanted .prop-progress-fill::after { background: #8C5F18; }
+.prop-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--navy-soft);
+  font-weight: 600;
+}
+.prop-status .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+
+/* Action buttons */
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.btn-action {
+  border: 1.5px solid var(--line);
+  background: white;
+  border-radius: 12px;
+  padding: 13px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-action:hover { border-color: var(--teal); }
+.btn-action.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+  box-shadow: 0 3px 10px rgba(61,189,163,0.25);
+}
+.btn-action.primary:hover { background: var(--teal-dark); }
+.btn-action svg { width: 14px; height: 14px; }
+
+/* Convert button — distinctive treatment */
+.convert-btn {
+  width: 100%;
+  border: 1.5px dashed var(--navy);
+  background: linear-gradient(95deg, rgba(245,196,76,0.06), rgba(61,189,163,0.06));
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  cursor: pointer;
+  font-family: inherit;
+  margin-bottom: 14px;
+  transition: all 0.18s;
+  text-align: left;
+}
+.convert-btn:hover {
+  border-style: solid;
+  background: linear-gradient(95deg, rgba(245,196,76,0.12), rgba(61,189,163,0.12));
+  transform: translateY(-1px);
+}
+.convert-btn .conv-icon {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), var(--gold));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.convert-btn .conv-text { flex: 1; line-height: 1.2; }
+.convert-btn .conv-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.convert-btn .conv-arr {
+  color: var(--navy);
+  font-size: 16px;
+  margin-left: auto;
+}
+
+/* Collaborators row */
+.collab-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.15s;
+}
+.collab-row:hover { border-color: var(--teal-pale); }
+.collab-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--teal);
+  border: 1.5px solid var(--teal);
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.collab-name { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--navy); }
+.collab-arrow { color: var(--muted); font-size: 18px; }
+
+/* Tab rows */
+.tabs-l1 {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 4px;
+  background: white;
+}
+.tab-l1 {
+  flex: 1;
+  padding: 9px 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.tab-l1.active {
+  background: var(--teal);
+  color: white;
+  box-shadow: 0 2px 6px rgba(61,189,163,0.25);
+}
+.tab-l1 svg { width: 13px; height: 13px; }
+
+.tabs-l2 {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  background: var(--teal-paler);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1.5px solid var(--teal-pale);
+}
+.tab-l2 {
+  flex: 1;
+  padding: 11px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.tab-l2.active {
+  background: var(--teal);
+  color: white;
+  box-shadow: 0 2px 6px rgba(61,189,163,0.3);
+}
+.tab-l2 svg { width: 13px; height: 13px; }
+
+/* Section card */
+.sec-card {
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.sec-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.05); }
+.sec-card.transferred {
+  background: linear-gradient(95deg, white 60%, rgba(61,189,163,0.06));
+  border-color: rgba(61,189,163,0.3);
+}
+.sec-card.transferred::before {
+  content: '✓ Transferred';
+  position: absolute;
+  top: -7px;
+  right: 10px;
+  background: var(--teal);
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 6px rgba(61,189,163,0.3);
+}
+.sec-illust {
+  width: 54px; height: 54px;
+  border-radius: 11px;
+  background: linear-gradient(150deg, var(--teal-paler), var(--teal-pale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(14,40,64,0.08));
+}
+.sec-info { flex: 1; min-width: 0; }
+.sec-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.1px;
+  line-height: 1.2;
+}
+.sec-points {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--teal-darker);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.sec-pills {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 100px;
+  font-size: 9.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pill.docs { background: var(--teal-paler); color: var(--teal-dark); }
+.pill.q { background: var(--pink-pale); color: var(--pink); }
+.pill.q .pill-icon {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--pink);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px;
+  font-weight: 800;
+}
+.pill.done { background: var(--good-pale); color: #15803D; }
+.pill.warn { background: var(--warn-pale); color: #92400E; }
+.pill.bad { background: var(--bad-pale); color: #991B1B; }
+.pill.legal { background: #EFF6FF; color: #1D4ED8; }
+.sec-bar {
+  height: 3px;
+  background: var(--line-soft);
+  border-radius: 100px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.sec-bar-fill {
+  height: 100%;
+  background: var(--teal);
+  border-radius: 100px;
+  transition: width 0.4s;
+}
+.sec-pct {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  margin-top: 4px;
+  text-align: right;
+}
+.sec-arr {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--teal-paler);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-dark);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sec-group-hdr {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 14px 0 8px 4px;
+}
+.sec-group-hdr:first-child { margin-top: 0; }
+
+.empty-msg {
+  text-align: center;
+  padding: 30px 20px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--navy);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 9999;
+  white-space: nowrap;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  transition: bottom 0.3s cubic-bezier(.2,.8,.2,1);
+}
+.toast.visible { bottom: 30px; }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8,12,20,0.7);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.visible { display: flex; }
+.modal {
+  background: white;
+  border-radius: 22px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  position: relative;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  animation: modalRise 0.35s cubic-bezier(.2,.9,.3,1.1);
+}
+@keyframes modalRise {
+  0% { opacity: 0; transform: translateY(20px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--navy-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.modal-close:hover { background: var(--line); color: var(--navy); }
+.modal-icon {
+  width: 56px; height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--teal), var(--gold));
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin-bottom: 14px;
+}
+.modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.modal-sub {
+  font-size: 13px;
+  color: var(--navy-soft);
+  font-weight: 500;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.modal-section-hdr {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 14px 0 8px;
+}
+.modal-doc-list {
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.modal-doc-list.warn-list {
+  background: var(--warn-pale);
+  border-color: rgba(245,196,76,0.4);
+}
+.modal-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 1px solid rgba(14,40,64,0.06);
+}
+.modal-doc-item:last-child { border-bottom: none; }
+.modal-doc-item .check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.modal-doc-list.warn-list .modal-doc-item .check {
+  background: var(--warn);
+}
+.modal-doc-item .doc-name { flex: 1; }
+.modal-doc-item .doc-meta {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.modal-legal-card {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+}
+.modal-legal-card .legal-icon { font-size: 16px; flex-shrink: 0; }
+.modal-legal-card .legal-text { font-size: 11.5px; color: #1E3A8A; line-height: 1.5; font-weight: 600; }
+.modal-legal-card .legal-text b { color: #1D4ED8; }
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.modal-btn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 11px;
+  border: 1.5px solid var(--line);
+  background: white;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+  cursor: pointer;
+  font-family: inherit;
+}
+.modal-btn:hover { border-color: var(--teal); }
+.modal-btn.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+  box-shadow: 0 3px 10px rgba(61,189,163,0.3);
+}
+.modal-btn.primary:hover { background: var(--teal-dark); }
+
+/* Section detail sheet */
+.detail-sheet-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(8,12,20,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 900;
+  display: none;
+}
+.detail-sheet-bg.visible { display: block; }
+.detail-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(110%);
+  width: 100%;
+  max-width: 460px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  z-index: 901;
+  padding: 8px 22px 30px;
+  overflow-y: auto;
+  transition: transform 0.4s cubic-bezier(.2,.85,.25,1);
+  box-shadow: 0 -20px 60px rgba(0,0,0,0.4);
+}
+.detail-sheet.visible { transform: translateX(-50%) translateY(0); }
+.sheet-grabber {
+  width: 38px;
+  height: 4px;
+  background: var(--line);
+  border-radius: 100px;
+  margin: 6px auto 16px;
+}
+.sheet-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.sheet-illust {
+  width: 56px; height: 56px;
+  border-radius: 13px;
+  background: linear-gradient(150deg, var(--teal-paler), var(--teal-pale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.sheet-title-block { flex: 1; }
+.sheet-title { font-size: 17px; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; }
+.sheet-sub { font-size: 12px; font-weight: 600; color: var(--navy-soft); margin-top: 1px; }
+
+.sheet-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.sheet-status.good { background: var(--good-pale); color: #15803D; }
+.sheet-status.warn { background: var(--warn-pale); color: #92400E; }
+.sheet-status.bad { background: var(--bad-pale); color: #991B1B; }
+.sheet-status.neutral { background: var(--line-soft); color: var(--navy-soft); }
+
+.sheet-legal {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 11px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.sheet-legal-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #1D4ED8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 3px;
+}
+.sheet-legal-body { font-size: 11.5px; color: #1E3A8A; line-height: 1.5; font-weight: 600; }
+.sheet-legal-body b { color: #1D4ED8; }
+
+.sheet-doc {
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.sheet-doc-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: var(--teal-paler);
+  color: var(--teal-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.sheet-doc-info { flex: 1; min-width: 0; }
+.sheet-doc-name { font-size: 12.5px; font-weight: 800; color: var(--navy); }
+.sheet-doc-meta { font-size: 10.5px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+.sheet-doc-action {
+  border: none;
+  background: var(--teal);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.sheet-doc-action:hover { background: var(--teal-dark); }
+
+.sheet-transfer-badge {
+  background: linear-gradient(95deg, rgba(61,189,163,0.15), rgba(61,189,163,0.05));
+  border: 1px solid rgba(61,189,163,0.3);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--teal-darker);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sheet-transfer-badge .tb-icon {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.sheet-action-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: white;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  cursor: pointer;
+  font-family: inherit;
+}
+.sheet-action-btn.primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+.sheet-action-btn:hover { border-color: var(--teal); }
+
+/* Flying doc animation */
+.fly-doc {
+  position: fixed;
+  width: 38px; height: 46px;
+  z-index: 1100;
+  pointer-events: none;
+  background: white;
+  border-radius: 6px;
+  border: 1.5px solid var(--teal);
+  box-shadow: 0 4px 20px rgba(61,189,163,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: transform 1.2s cubic-bezier(.4,.1,.3,1.1), opacity 0.3s;
+}
+.fly-doc::before {
+  content: '';
+  position: absolute;
+  top: -3px; right: -3px;
+  width: 12px; height: 12px;
+  background: var(--teal);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* Mobile responsive */
+@media (max-width: 800px) {
+  .phone-grid { gap: 24px; }
+  .phone { width: 340px; }
+  body { padding: 18px 8px 40px; }
+  .scenario-card { padding: 14px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-head-bar">
+  <div style="flex:1; min-width:200px;">
+    <h1>Landlord Passport <span class="pill">UK · Letting & Selling</span></h1>
+    <div class="sub">Compliance · document transfer · Letting → Selling conversion</div>
+  </div>
+</div>
+
+<div class="scenario-card">
+  <div class="scen-icon">🏘️</div>
+  <div class="scen-text">
+    <div class="scen-title">Roma Brown — landlord at 14 Hazel Grove, Hazel Grove SK7 4BL</div>
+    <div class="scen-body">Currently letting to J. Smith on a 12-month AST. Considering selling tenanted. Tap any compliance section to see UK legal requirements, or use <b>"Convert to Selling Passport"</b> to transfer documents over.</div>
+  </div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="house" viewBox="0 0 100 100">
+      <polygon points="10,48 50,12 90,48" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M22,72 Q28,60 34,72 Q40,84 46,72 Q52,60 58,72 Q64,84 70,72 Q76,60 82,72" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="phone-grid">
+
+<!-- ════════════════════ LANDLORD — LETTING ════════════════════ -->
+<div class="phone-wrap" id="wrap-letting">
+  <div class="phone-label"><span class="dot"></span>Landlord — Letting</div>
+  <div class="phone" id="phone-letting">
+    <div class="status-bar">
+      <span>12:51</span>
+      <span class="right">●●●● 5G ▮</span>
+    </div>
+
+    <div class="page-head">
+      <button class="back-btn" onclick="showToast('Going back')">‹ Back</button>
+      <div class="page-title">Passport</div>
+      <div class="avatar-circle">RB</div>
+    </div>
+
+    <div class="persona-toggle" data-phone="letting">
+      <button class="persona-btn active" data-side="landlord" onclick="togglePersona(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+        Landlord
+      </button>
+      <button class="persona-btn" data-side="tenant" onclick="togglePersona(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+        Tenant
+      </button>
+    </div>
+
+    <div class="pp-body">
+      <div class="prop-card">
+        <div class="book">
+          <div class="book-title">Landlord<br>Passport</div>
+          <svg class="book-house" viewBox="0 0 100 100"><use href="#house"/></svg>
+          <div class="book-addr">14 Hazel Grove<br>SK7 4BL</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-tagline">Landlord Passport · Active</div>
+          <div class="prop-addr-row">
+            <div>
+              <div class="prop-name">14 Hazel Grove</div>
+              <div class="prop-postcode">SK7 4BL · Let to J. Smith</div>
+            </div>
+            <button class="expand-btn">▾</button>
+          </div>
+          <div class="prop-stats">
+            <span class="stat"><span>10/12</span> COMPLIANT</span>
+            <span class="sep">·</span>
+            <span class="stat"><span>9</span> DOCS</span>
+            <span class="right-pct">83%</span>
+          </div>
+          <div class="prop-progress-track">
+            <div class="prop-progress-fill" style="width:83%"></div>
+          </div>
+          <div class="prop-status">
+            <span class="dot" style="background: var(--warn)"></span> Gas Safety renewal in 30 days
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action" onclick="showToast('Sharing with J. Smith…')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share with Tenant
+        </button>
+        <button class="btn-action primary" onclick="openSection('gas')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.08-4.43"/></svg>
+          Renew Gas Cert
+        </button>
+      </div>
+
+      <button class="convert-btn" onclick="openConvertModal()">
+        <div class="conv-icon">🔄</div>
+        <div class="conv-text">
+          Convert to Selling Passport
+          <div class="conv-sub">Transfer 6 documents · keep tenant or serve notice</div>
+        </div>
+        <div class="conv-arr">→</div>
+      </button>
+
+      <div class="collab-row" onclick="showToast('Manage collaborators')">
+        <div class="collab-icon">2</div>
+        <div class="collab-name">Letting agent &amp; tenant</div>
+        <div class="collab-arrow">›</div>
+      </div>
+
+      <div class="tabs-l1">
+        <button class="tab-l1 active" data-tab="compliance" data-phone="letting" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Compliance
+        </button>
+        <button class="tab-l1" data-tab="vault" data-phone="letting" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Vault
+        </button>
+        <button class="tab-l1" data-tab="tenancy" data-phone="letting" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>
+          Tenancy
+        </button>
+      </div>
+
+      <div class="tabs-l2">
+        <button class="tab-l2 active" onclick="switchView(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          List
+        </button>
+        <button class="tab-l2" onclick="switchView(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          Map
+        </button>
+      </div>
+
+      <!-- COMPLIANCE TAB -->
+      <div data-tab-content="compliance" data-phone="letting">
+
+        <div class="sec-group-hdr">Statutory — annual / 5-yearly</div>
+
+        <div class="sec-card" data-section="gas" onclick="openSection('gas')">
+          <div class="sec-illust">🔥</div>
+          <div class="sec-info">
+            <div class="sec-name">Gas Safety Certificate (CP12)</div>
+            <div class="sec-points">Annual · renewal due in 30 days</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill warn">⚠ Renew soon</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%; background: var(--warn)"></div></div>
+            <div class="sec-pct" style="color: var(--warn)">Action by 30 May</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="eicr" onclick="openSection('eicr')">
+          <div class="sec-illust">🔌</div>
+          <div class="sec-info">
+            <div class="sec-name">Electrical Safety (EICR)</div>
+            <div class="sec-points">5-yearly · valid to Apr 2028</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Satisfactory</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="epc" onclick="openSection('epc')">
+          <div class="sec-illust">⚡</div>
+          <div class="sec-info">
+            <div class="sec-name">Energy Performance (EPC)</div>
+            <div class="sec-points">Rating C · valid to 2031 · MEES compliant</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Rating C</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="alarms" onclick="openSection('alarms')">
+          <div class="sec-illust">🛡️</div>
+          <div class="sec-info">
+            <div class="sec-name">Smoke &amp; CO Alarms</div>
+            <div class="sec-points">Tested at tenancy start · all working</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Compliant</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-group-hdr">Tenancy &amp; deposit</div>
+
+        <div class="sec-card" data-section="deposit" onclick="openSection('deposit')">
+          <div class="sec-illust">🏦</div>
+          <div class="sec-info">
+            <div class="sec-name">Deposit Protection</div>
+            <div class="sec-points">£1,200 protected with DPS · within 30 days</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 2/2 docs</span>
+              <span class="pill done">✓ Protected</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="ast" onclick="openSection('ast')">
+          <div class="sec-illust">📋</div>
+          <div class="sec-info">
+            <div class="sec-name">Tenancy Agreement (AST)</div>
+            <div class="sec-points">12-month AST · signed 1 Jan 2025</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ In force</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="rtr" onclick="openSection('rtr')">
+          <div class="sec-illust">🪪</div>
+          <div class="sec-info">
+            <div class="sec-name">Right to Rent</div>
+            <div class="sec-points">Tenant ID verified · British citizen</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Verified</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="how-to-rent" onclick="openSection('how-to-rent')">
+          <div class="sec-illust">📘</div>
+          <div class="sec-info">
+            <div class="sec-name">How to Rent Guide</div>
+            <div class="sec-points">Latest version served to tenant · Jan 2025</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Served</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="inventory" onclick="openSection('inventory')">
+          <div class="sec-illust">📝</div>
+          <div class="sec-info">
+            <div class="sec-name">Inventory &amp; Schedule of Condition</div>
+            <div class="sec-points">Signed at move-in by both parties</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Complete</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-group-hdr">Best practice</div>
+
+        <div class="sec-card" data-section="legionella" onclick="openSection('legionella')">
+          <div class="sec-illust">💧</div>
+          <div class="sec-info">
+            <div class="sec-name">Legionella Risk Assessment</div>
+            <div class="sec-points">Last assessed Mar 2024 · low risk</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Assessed</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="insurance" onclick="openSection('insurance')">
+          <div class="sec-illust">🛡️</div>
+          <div class="sec-info">
+            <div class="sec-name">Landlord Insurance</div>
+            <div class="sec-points">Buildings &amp; landlord liability · valid to Dec 2025</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 1/1 doc</span>
+              <span class="pill done">✓ Active</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:100%"></div></div>
+            <div class="sec-pct">100%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="pat" onclick="openSection('pat')">
+          <div class="sec-illust">🔧</div>
+          <div class="sec-info">
+            <div class="sec-name">PAT Testing</div>
+            <div class="sec-points">Last tested 2023 · no current cert</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/1 doc</span>
+              <span class="pill warn">⚠ Recommended</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+      </div>
+
+      <!-- VAULT TAB -->
+      <div data-tab-content="vault" data-phone="letting" style="display:none;">
+        <div class="sec-group-hdr">All documents · 9 files</div>
+        <div class="sec-card" onclick="showToast('Opening Gas Safety Certificate…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">Gas_Safety_2024.pdf</div>
+            <div class="sec-points">Issued 2 May 2024 · 412 KB</div>
+            <div class="sec-pills"><span class="pill warn">⚠ Expires 30 days</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="sec-card" onclick="showToast('Opening EICR…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">EICR_Report_2023.pdf</div>
+            <div class="sec-points">Issued 14 Apr 2023 · 1.2 MB</div>
+            <div class="sec-pills"><span class="pill done">✓ Valid to 2028</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="sec-card" onclick="showToast('Opening EPC…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">EPC_Certificate.pdf</div>
+            <div class="sec-points">Rating C · Issued 2021 · 256 KB</div>
+            <div class="sec-pills"><span class="pill done">✓ Valid to 2031</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="sec-card" onclick="showToast('Opening AST…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">AST_J_Smith_2025.pdf</div>
+            <div class="sec-points">Signed 1 Jan 2025 · 89 KB</div>
+            <div class="sec-pills"><span class="pill done">✓ In force</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="sec-card" onclick="showToast('Opening Deposit Certificate…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">DPS_Deposit_Certificate.pdf</div>
+            <div class="sec-points">£1,200 · 4 Jan 2025 · 145 KB</div>
+            <div class="sec-pills"><span class="pill done">✓ Protected</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="sec-card" onclick="showToast('Opening Inventory…')">
+          <div class="sec-illust" style="font-size:22px">📄</div>
+          <div class="sec-info">
+            <div class="sec-name">Inventory_Move_In.pdf</div>
+            <div class="sec-points">7 Jan 2025 · 2.4 MB · signed</div>
+            <div class="sec-pills"><span class="pill done">✓ Signed</span></div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+        <div class="empty-msg">+ 3 more documents</div>
+      </div>
+
+      <!-- TENANCY TAB -->
+      <div data-tab-content="tenancy" data-phone="letting" style="display:none;">
+        <div class="sec-group-hdr">Current tenancy</div>
+        <div style="background:white; border:1.5px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px;">
+          <div style="display:grid; gap:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Tenant</span><span style="font-weight:800; color:var(--navy);">J. Smith</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Type</span><span style="font-weight:800; color:var(--navy);">AST · 12 months</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Start date</span><span style="font-weight:800; color:var(--navy);">1 Jan 2025</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">End date</span><span style="font-weight:800; color:var(--navy);">31 Dec 2025</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Rent</span><span style="font-weight:800; color:var(--navy);">£1,200 / month</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Deposit</span><span style="font-weight:800; color:var(--good);">£1,200 protected</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:12.5px;"><span style="color:var(--muted); font-weight:600;">Right to Rent</span><span style="font-weight:800; color:var(--good);">✓ Verified</span></div>
+          </div>
+        </div>
+        <button class="btn-action" style="width:100%; margin-top:6px;" onclick="showToast('Opening Section 21 / Section 8 wizard…')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Plan possession notice
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ LANDLORD — SELLING ════════════════════ -->
+<div class="phone-wrap" id="wrap-selling">
+  <div class="phone-label selling"><span class="dot"></span>Landlord — Selling</div>
+  <div class="phone" id="phone-selling">
+    <div class="status-bar">
+      <span>12:51</span>
+      <span class="right">●●●● 5G ▮</span>
+    </div>
+
+    <div class="page-head">
+      <button class="back-btn">‹ Back</button>
+      <div class="page-title">Passport</div>
+      <div class="avatar-circle">RB</div>
+    </div>
+
+    <div class="persona-toggle" data-phone="selling">
+      <button class="persona-btn" data-side="buyer" onclick="togglePersona(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        Buyer
+      </button>
+      <button class="persona-btn active" data-side="seller" onclick="togglePersona(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Seller
+      </button>
+    </div>
+
+    <div class="pp-body">
+      <div class="prop-card selling-tenanted">
+        <div class="book">
+          <div class="book-title">Property<br>Passport</div>
+          <svg class="book-house" viewBox="0 0 100 100"><use href="#house"/></svg>
+          <div class="book-addr">14 Hazel Grove<br>SK7 4BL</div>
+        </div>
+        <div class="prop-info">
+          <div class="prop-tagline">Tenanted Sale · Draft</div>
+          <div class="prop-addr-row">
+            <div>
+              <div class="prop-name">14 Hazel Grove</div>
+              <div class="prop-postcode">SK7 4BL · Selling tenanted</div>
+            </div>
+            <button class="expand-btn">▾</button>
+          </div>
+          <div class="prop-stats">
+            <span class="stat"><span id="sell-sec-progress">0/19</span> SECTIONS</span>
+            <span class="sep">·</span>
+            <span class="stat"><span id="sell-doc-count">0</span> DOCS</span>
+            <span class="right-pct" id="sell-pct">0%</span>
+          </div>
+          <div class="prop-progress-track">
+            <div class="prop-progress-fill" id="sell-progress" style="width:0%"></div>
+          </div>
+          <div class="prop-status">
+            <span class="dot" style="background: var(--muted)"></span>
+            <span id="sell-status">Awaiting conversion from Letting</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action" onclick="showToast('Match Buyers requires conversion first')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          Match to Buyers
+        </button>
+        <button class="btn-action primary" onclick="showToast('Publish requires all sections complete')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          Publish
+        </button>
+      </div>
+
+      <div class="collab-row" onclick="showToast('Add estate agent &amp; conveyancer')">
+        <div class="collab-icon" style="background: var(--teal-paler); color: var(--teal-dark); border-color: var(--teal-pale); font-weight:800;">+</div>
+        <div class="collab-name">Add estate agent &amp; conveyancer</div>
+        <div class="collab-arrow">›</div>
+      </div>
+
+      <div class="tabs-l1">
+        <button class="tab-l1 active" data-tab="sections" data-phone="selling" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Sections
+        </button>
+        <button class="tab-l1" data-tab="street" data-phone="selling" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          Street
+        </button>
+        <button class="tab-l1" data-tab="buyers" data-phone="selling" onclick="switchTab(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Buyers
+        </button>
+      </div>
+
+      <div class="tabs-l2">
+        <button class="tab-l2 active" onclick="switchView(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          List
+        </button>
+        <button class="tab-l2" onclick="switchView(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          Map
+        </button>
+      </div>
+
+      <!-- SECTIONS TAB -->
+      <div data-tab-content="sections" data-phone="selling">
+
+        <div class="sec-group-hdr">Tenanted sale specifics</div>
+
+        <div class="sec-card" data-section="tenancy-disclosure" data-transferable="true" onclick="openSection('tenancy-disclosure')">
+          <div class="sec-illust">📋</div>
+          <div class="sec-info">
+            <div class="sec-name">Tenancy Disclosure</div>
+            <div class="sec-points">Required: tenant terms, rent, deposit, notice plan</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/3 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/6 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="notice" onclick="openSection('notice')">
+          <div class="sec-illust">⚖️</div>
+          <div class="sec-info">
+            <div class="sec-name">Notice &amp; Possession</div>
+            <div class="sec-points">Section 21 / Section 8 — needed for vacant sale</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/2 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/4 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-group-hdr">Standard seller sections — 17</div>
+
+        <div class="sec-card" data-section="ownership" onclick="openSection('ownership')">
+          <div class="sec-illust">📖</div>
+          <div class="sec-info">
+            <div class="sec-name">Ownership Profile</div>
+            <div class="sec-points">0 points earned so far</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/2 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/4 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="boundaries" onclick="openSection('boundaries')">
+          <div class="sec-illust">🏡</div>
+          <div class="sec-info">
+            <div class="sec-name">Boundaries</div>
+            <div class="sec-points">0 points earned so far</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/0 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/3 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="disputes" onclick="openSection('disputes')">
+          <div class="sec-illust">⚖️</div>
+          <div class="sec-info">
+            <div class="sec-name">Disputes &amp; Complaints</div>
+            <div class="sec-points">0 points earned so far</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/0 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/2 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="services" data-transferable="true" onclick="openSection('services')">
+          <div class="sec-illust">🔌</div>
+          <div class="sec-info">
+            <div class="sec-name">Services &amp; Safety</div>
+            <div class="sec-points">Gas, EICR, EPC, smoke/CO — transferable from Letting</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/4 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/3 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="environmental" data-transferable="true" onclick="openSection('environmental')">
+          <div class="sec-illust">🌍</div>
+          <div class="sec-info">
+            <div class="sec-name">Environmental</div>
+            <div class="sec-points">EPC transferable from Letting</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/2 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/5 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="insurance-sell" data-transferable="true" onclick="openSection('insurance-sell')">
+          <div class="sec-illust">🛡️</div>
+          <div class="sec-info">
+            <div class="sec-name">Insurance</div>
+            <div class="sec-points">Buildings policy — transferable from Letting</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/1 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/2 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="occupiers" data-transferable="true" onclick="openSection('occupiers')">
+          <div class="sec-illust">👥</div>
+          <div class="sec-info">
+            <div class="sec-name">Occupiers</div>
+            <div class="sec-points">Tenant disclosure — transferable from Letting</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/1 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/3 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="alterations" onclick="openSection('alterations')">
+          <div class="sec-illust">🔨</div>
+          <div class="sec-info">
+            <div class="sec-name">Alterations &amp; Planning</div>
+            <div class="sec-points">0 points earned so far</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/0 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/11 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="title" onclick="openSection('title')">
+          <div class="sec-illust">📜</div>
+          <div class="sec-info">
+            <div class="sec-name">Title Deeds &amp; Plan</div>
+            <div class="sec-points">0 points earned so far</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/2 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/1 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="searches" onclick="openSection('searches')">
+          <div class="sec-illust">🔍</div>
+          <div class="sec-info">
+            <div class="sec-name">Searches</div>
+            <div class="sec-points">Local authority, drainage, environmental</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/3 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/1 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="sec-card" data-section="ta-forms" onclick="openSection('ta-forms')">
+          <div class="sec-illust">📑</div>
+          <div class="sec-info">
+            <div class="sec-name">TA6 / TA10 Forms</div>
+            <div class="sec-points">Property info &amp; fixtures &amp; fittings</div>
+            <div class="sec-pills">
+              <span class="pill docs">📄 0/2 docs</span>
+              <span class="pill q"><span class="pill-icon">?</span> 0/8 questions</span>
+            </div>
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:0%"></div></div>
+            <div class="sec-pct" style="color: var(--muted)">0%</div>
+          </div>
+          <div class="sec-arr">›</div>
+        </div>
+
+        <div class="empty-msg">+ 6 more standard sections</div>
+      </div>
+
+      <!-- STREET TAB -->
+      <div data-tab-content="street" data-phone="selling" style="display:none;">
+        <div class="empty-msg" style="padding: 60px 20px;">
+          <div style="font-size: 40px; margin-bottom: 10px;">🗺</div>
+          <div style="font-weight: 800; color: var(--navy); font-size: 14px; margin-bottom: 4px;">Street Passport Map</div>
+          <div>See passports of nearby homes and recent sales.</div>
+        </div>
+      </div>
+
+      <!-- BUYERS TAB -->
+      <div data-tab-content="buyers" data-phone="selling" style="display:none;">
+        <div class="empty-msg" style="padding: 60px 20px;">
+          <div style="font-size: 40px; margin-bottom: 10px;">👁</div>
+          <div style="font-weight: 800; color: var(--navy); font-size: 14px; margin-bottom: 4px;">No buyers yet</div>
+          <div>Match with verified buyers once your passport is published.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Convert modal -->
+<div class="modal-overlay" id="convertModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeConvertModal()">✕</button>
+    <div class="modal-icon">🔄</div>
+    <div class="modal-title">Convert to Selling Passport</div>
+    <div class="modal-sub">Selling 14 Hazel Grove tenanted? Your compliance documents will transfer automatically. You'll add seller-specific information separately.</div>
+
+    <div class="modal-section-hdr">✓ Will transfer automatically (6 documents)</div>
+    <div class="modal-doc-list">
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">Energy Performance Certificate</div><div class="doc-meta">Rating C</div></div>
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">Gas Safety Certificate (CP12)</div><div class="doc-meta">Renewing</div></div>
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">EICR Report</div><div class="doc-meta">Valid 2028</div></div>
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">Smoke &amp; CO Alarm certificate</div><div class="doc-meta">In place</div></div>
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">Buildings Insurance</div><div class="doc-meta">Active</div></div>
+      <div class="modal-doc-item"><div class="check">✓</div><div class="doc-name">Tenant disclosure data</div><div class="doc-meta">From AST</div></div>
+    </div>
+
+    <div class="modal-section-hdr">⚠ You'll need to add</div>
+    <div class="modal-doc-list warn-list">
+      <div class="modal-doc-item"><div class="check">!</div><div class="doc-name">Title Deeds &amp; Plan</div></div>
+      <div class="modal-doc-item"><div class="check">!</div><div class="doc-name">TA6 &amp; TA10 forms</div></div>
+      <div class="modal-doc-item"><div class="check">!</div><div class="doc-name">Local authority &amp; drainage searches</div></div>
+      <div class="modal-doc-item"><div class="check">!</div><div class="doc-name">Notice plan (S.21 or S.8) — if vacant sale</div></div>
+    </div>
+
+    <div class="modal-legal-card">
+      <div class="legal-icon">⚖️</div>
+      <div class="legal-text">Tenanted sales must disclose tenancy to buyers under <b>Consumer Protection from Unfair Trading Regulations 2008</b>. The AST transfers to the new owner unless vacant possession is obtained via Section 21 (no fault) or Section 8 (with grounds). The Renters' Rights Act 2024 phases out Section 21 — check current possession routes before listing.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeConvertModal()">Cancel</button>
+      <button class="modal-btn primary" onclick="runConversion()">Continue conversion</button>
+    </div>
+  </div>
+</div>
+
+<!-- Section detail sheet -->
+<div class="detail-sheet-bg" id="detailSheetBg" onclick="closeSection()"></div>
+<div class="detail-sheet" id="detailSheet">
+  <div class="sheet-grabber"></div>
+  <div id="detailSheetContent"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// Section data — UK legislation references and live state
+// ═══════════════════════════════════════════════════════════════════
+
+const SECTIONS = {
+  // ─── LETTING ───
+  'gas': {
+    icon: '🔥',
+    title: 'Gas Safety Certificate (CP12)',
+    sub: 'Annual gas appliance check by a Gas Safe engineer',
+    status: { type: 'warn', text: '⚠ Expires 30 May 2026 — book renewal' },
+    legal: '<b>Gas Safety (Installation and Use) Regulations 1998, reg 36.</b> Annual safety check on all gas appliances and flues. Copy must be given to existing tenant within 28 days, and to a new tenant before move-in. Records kept for 2 years.',
+    doc: { name: 'Gas_Safety_2024.pdf', meta: 'Issued 2 May 2024 · Gas Safe ID 543921', icon: '📄' },
+    actions: ['Book renewal', 'Download cert']
+  },
+  'eicr': {
+    icon: '🔌',
+    title: 'Electrical Installation Condition Report',
+    sub: 'Five-yearly fixed wiring inspection',
+    status: { type: 'good', text: '✓ Satisfactory · valid to 14 Apr 2028' },
+    legal: '<b>Electrical Safety Standards in the Private Rented Sector (England) Regulations 2020.</b> Inspection at least every 5 years. Copy to existing tenant within 28 days and new tenant before occupation. Local authority can request within 7 days.',
+    doc: { name: 'EICR_Report_2023.pdf', meta: 'Issued 14 Apr 2023 · NICEIC inspector', icon: '📄' },
+    actions: ['View certificate', 'Share with tenant']
+  },
+  'epc': {
+    icon: '⚡',
+    title: 'Energy Performance Certificate',
+    sub: 'Energy efficiency rating · MEES compliance',
+    status: { type: 'good', text: '✓ Rating C · valid to 8 Sep 2031' },
+    legal: '<b>Energy Performance of Buildings (England and Wales) Regulations 2012</b> require an EPC for marketing. <b>Minimum Energy Efficiency Standards (MEES) Regulations 2015</b> set a minimum E rating to let — proposed C from 2030 for new tenancies under upcoming legislation.',
+    doc: { name: 'EPC_Certificate.pdf', meta: 'Rating C · 71/100 · Issued Sep 2021', icon: '📄' },
+    actions: ['View certificate', 'Improve rating']
+  },
+  'alarms': {
+    icon: '🛡️',
+    title: 'Smoke &amp; Carbon Monoxide Alarms',
+    sub: 'Fitted on every storey · CO in fuel-burning rooms',
+    status: { type: 'good', text: '✓ Tested at tenancy start' },
+    legal: '<b>Smoke and Carbon Monoxide Alarm (England) Regulations 2015 (amended 2022).</b> Smoke alarm on every storey. Carbon monoxide alarm in any room with a fixed combustion appliance (excluding gas cookers). Tested on the day a new tenancy starts. Repair or replace promptly when reported faulty.',
+    doc: { name: 'Alarm_Test_Record.pdf', meta: 'Tested 1 Jan 2025 · 4 alarms', icon: '📄' },
+    actions: ['Schedule retest', 'Add CO alarm']
+  },
+  'deposit': {
+    icon: '🏦',
+    title: 'Tenancy Deposit Protection',
+    sub: '£1,200 protected with DPS',
+    status: { type: 'good', text: '✓ Protected within 30 days · Prescribed Information served' },
+    legal: '<b>Housing Act 2004, ss.213–215.</b> Deposit must be protected in an authorised scheme (DPS, MyDeposits or TDS) within 30 days of receipt. Prescribed Information must be served on the tenant in the same period. Penalty: 1–3× deposit, and Section 21 cannot be served until protected.',
+    doc: { name: 'DPS_Deposit_Certificate.pdf', meta: '£1,200 · 4 Jan 2025 · ID 7BFE-2901', icon: '📄' },
+    actions: ['View certificate', 'Manage deposit']
+  },
+  'ast': {
+    icon: '📋',
+    title: 'Assured Shorthold Tenancy',
+    sub: '12-month AST · J. Smith',
+    status: { type: 'good', text: '✓ In force · ends 31 Dec 2025' },
+    legal: '<b>Housing Act 1988</b> as amended. Standard AST with statutory and contractual terms. From the <b>Renters\' Rights Act 2024</b>, ASTs are being replaced by periodic assured tenancies — check the commencement date for the move from fixed-term ASTs.',
+    doc: { name: 'AST_J_Smith_2025.pdf', meta: 'Signed 1 Jan 2025 · 14 pages', icon: '📄' },
+    actions: ['View AST', 'Renew tenancy']
+  },
+  'rtr': {
+    icon: '🪪',
+    title: 'Right to Rent',
+    sub: 'Tenant immigration status check',
+    status: { type: 'good', text: '✓ Verified · British citizen' },
+    legal: '<b>Immigration Act 2014.</b> Adult occupier ID checks before tenancy starts. Re-checks required for time-limited statuses. Civil penalty up to £20,000 per tenant for non-compliance (since 2024 increase).',
+    doc: { name: 'RTR_Check_J_Smith.pdf', meta: 'Verified 28 Dec 2024 · UK passport', icon: '📄' },
+    actions: ['View record', 'Re-check tenant']
+  },
+  'how-to-rent': {
+    icon: '📘',
+    title: 'How to Rent Guide',
+    sub: 'Government guide given to tenant',
+    status: { type: 'good', text: '✓ Latest version served Jan 2025' },
+    legal: '<b>Deregulation Act 2015, s.39</b> and the <b>AST Notices and Prescribed Requirements (England) Regulations 2015.</b> Failure to serve the latest version blocks Section 21. Updated regularly — check gov.uk for current edition before each new tenancy.',
+    doc: { name: 'How_to_Rent_Jan2025.pdf', meta: 'Served 1 Jan 2025 · email + copy', icon: '📄' },
+    actions: ['Re-send to tenant', 'Check latest version']
+  },
+  'inventory': {
+    icon: '📝',
+    title: 'Inventory &amp; Schedule of Condition',
+    sub: 'Move-in record · signed by both parties',
+    status: { type: 'good', text: '✓ Completed at move-in' },
+    legal: 'Best practice rather than statutory, but essential evidence in deposit disputes. The <b>Tenancy Deposit Schemes</b> require a clear baseline before deductions can be made at end of tenancy.',
+    doc: { name: 'Inventory_Move_In.pdf', meta: 'Signed 7 Jan 2025 · 24 pages with photos', icon: '📄' },
+    actions: ['View inventory', 'Schedule mid-term inspection']
+  },
+  'legionella': {
+    icon: '💧',
+    title: 'Legionella Risk Assessment',
+    sub: 'Water system risk check',
+    status: { type: 'good', text: '✓ Last assessed Mar 2024 — low risk' },
+    legal: '<b>Health and Safety at Work etc. Act 1974</b> · <b>Control of Substances Hazardous to Health Regulations 2002.</b> HSE Approved Code of Practice <b>L8</b> sets a duty to assess and manage Legionella risk in rental properties.',
+    doc: { name: 'Legionella_RA_2024.pdf', meta: 'Assessed 12 Mar 2024 · low risk', icon: '📄' },
+    actions: ['View assessment', 'Schedule re-assessment']
+  },
+  'insurance': {
+    icon: '🛡️',
+    title: 'Landlord Insurance',
+    sub: 'Buildings &amp; landlord liability',
+    status: { type: 'good', text: '✓ Active · renews 31 Dec 2025' },
+    legal: 'Not statutory but typically required by mortgage lenders. Should cover buildings reinstatement, public &amp; landlord liability (£2m+), unoccupied periods, and rent guarantee if desired.',
+    doc: { name: 'Landlord_Insurance_2025.pdf', meta: 'Direct Line · policy £342/yr · cover £350k', icon: '📄' },
+    actions: ['View policy', 'Update cover']
+  },
+  'pat': {
+    icon: '🔧',
+    title: 'PAT Testing',
+    sub: 'Portable appliance testing',
+    status: { type: 'warn', text: '⚠ Last tested 2023 — recommended every 2 years' },
+    legal: 'Not strictly required for single-household ASTs, but expected for HMOs and recommended best practice under <b>HSE guidance on electrical equipment.</b> Tests appliances supplied with the property (lamps, kettles, white goods).',
+    doc: null,
+    actions: ['Book PAT test', 'Skip — no supplied appliances']
+  },
+
+  // ─── SELLING ───
+  'tenancy-disclosure': {
+    icon: '📋',
+    title: 'Tenancy Disclosure',
+    sub: 'Tell buyers about the AST and tenant',
+    status: { type: 'neutral', text: 'Not started · 6 questions to answer' },
+    legal: '<b>Consumer Protection from Unfair Trading Regulations 2008.</b> Material information about tenancy must be disclosed to prospective buyers. Includes tenant identity (with consent), AST end date, rent, deposit and any disputes. Failure can void the sale and trigger penalties.',
+    doc: null,
+    actions: ['Start questions', 'Auto-fill from Letting']
+  },
+  'notice': {
+    icon: '⚖️',
+    title: 'Notice &amp; Possession',
+    sub: 'Section 21 / Section 8 plan',
+    status: { type: 'neutral', text: 'Not started' },
+    legal: '<b>Housing Act 1988, ss.21 &amp; 8.</b> Section 21 (no-fault) requires 2 months\' notice and only after deposit protected and How to Rent served. Section 8 requires statutory grounds. The <b>Renters\' Rights Act 2024</b> phases out Section 21 for new tenancies — check current rules. Selling tenanted (sitting tenant) does not require notice; the AST transfers to the new owner.',
+    doc: null,
+    actions: ['Plan vacant sale', 'Sell with sitting tenant']
+  },
+  'ownership': {
+    icon: '📖',
+    title: 'Ownership Profile',
+    sub: 'Title, ownership and legal identity',
+    status: { type: 'neutral', text: 'Not started · 4 questions' },
+    legal: 'Required for the <b>Property Information Form (TA6).</b> Includes Land Registry title number, type of ownership (freehold/leasehold) and any restrictions. Must match the title register exactly.',
+    doc: null,
+    actions: ['Start questions', 'Pull from Land Registry']
+  },
+  'boundaries': {
+    icon: '🏡',
+    title: 'Boundaries',
+    sub: 'Physical extent &amp; shared structures',
+    status: { type: 'neutral', text: 'Not started · 3 questions' },
+    legal: 'Disclosed under <b>TA6, Section 1.</b> Identify boundary ownership, recent changes, and any disputes. Buyers\' solicitors will compare to the title plan.',
+    doc: null,
+    actions: ['Start questions']
+  },
+  'disputes': {
+    icon: '⚖️',
+    title: 'Disputes &amp; Complaints',
+    sub: 'With neighbours, council or others',
+    status: { type: 'neutral', text: 'Not started · 2 questions' },
+    legal: 'Disclosed under <b>TA6, Section 2.</b> Failure to disclose can be misrepresentation under the <b>Misrepresentation Act 1967</b> and grounds for damages or rescission post-completion.',
+    doc: null,
+    actions: ['Start questions']
+  },
+  'services': {
+    icon: '🔌',
+    title: 'Services &amp; Safety',
+    sub: 'Gas, electric, EPC, smoke &amp; CO',
+    status: { type: 'neutral', text: 'Not started · transferable from Letting' },
+    legal: 'Disclosed under <b>TA6, Section 11.</b> EPC, Gas Safety, EICR and alarm records all transfer from your Letting Passport. Buyers\' surveyors will reference these.',
+    doc: null,
+    actions: ['Transfer from Letting', 'Start questions'],
+    transferable: true
+  },
+  'environmental': {
+    icon: '🌍',
+    title: 'Environmental',
+    sub: 'EPC, flood risk, contamination',
+    status: { type: 'neutral', text: 'Not started · transferable from Letting' },
+    legal: 'Disclosed under <b>TA6, Section 6.</b> Includes flood history, any recorded contamination, and energy efficiency. EPC transfers from Letting.',
+    doc: null,
+    actions: ['Transfer EPC', 'Start questions'],
+    transferable: true
+  },
+  'insurance-sell': {
+    icon: '🛡️',
+    title: 'Insurance',
+    sub: 'Buildings cover &amp; claims history',
+    status: { type: 'neutral', text: 'Not started · transferable from Letting' },
+    legal: 'Disclosed under <b>TA6, Section 4.</b> Five-year claims history must be declared. Existing buildings policy can typically be transferred to a new owner or cancelled at completion.',
+    doc: null,
+    actions: ['Transfer from Letting', 'Start questions'],
+    transferable: true
+  },
+  'occupiers': {
+    icon: '👥',
+    title: 'Occupiers',
+    sub: 'Tenant disclosure for tenanted sale',
+    status: { type: 'neutral', text: 'Not started · transferable from Letting' },
+    legal: 'Disclosed under <b>TA6, Section 9.</b> Adult occupiers and any with overriding interests must be declared. The tenant must consent to release of personal details — without consent, only the AST and rent can be disclosed.',
+    doc: null,
+    actions: ['Transfer tenant data', 'Request tenant consent'],
+    transferable: true
+  },
+  'alterations': {
+    icon: '🔨',
+    title: 'Alterations &amp; Planning',
+    sub: 'Building work, extensions, change of use',
+    status: { type: 'neutral', text: 'Not started · 11 questions' },
+    legal: 'Disclosed under <b>TA6, Section 4.</b> Includes planning permissions, building regulations sign-offs, FENSA/CERTASS for windows, Gas Safe Installer certificates, and Party Wall agreements. Missing certificates can hold up exchange.',
+    doc: null,
+    actions: ['Start questions', 'Search planning portal']
+  },
+  'title': {
+    icon: '📜',
+    title: 'Title Deeds &amp; Plan',
+    sub: 'Land Registry documents',
+    status: { type: 'neutral', text: 'Not started · 1 question' },
+    legal: 'Required for exchange. Order Official Copies (title register and plan) from <b>Land Registry</b> via gov.uk. If leasehold, the lease itself plus management pack is required.',
+    doc: null,
+    actions: ['Order from Land Registry', 'Upload existing']
+  },
+  'searches': {
+    icon: '🔍',
+    title: 'Searches',
+    sub: 'Local authority, drainage, environmental',
+    status: { type: 'neutral', text: 'Not started · usually buyer\'s side' },
+    legal: 'The <b>LLC1</b> and <b>CON29</b> local authority searches and the <b>CON29DW</b> drainage and water search are typically commissioned by the buyer\'s solicitor at offer stage. A seller can pre-order to speed up the chain.',
+    doc: null,
+    actions: ['Pre-order searches', 'Skip — buyer will order']
+  },
+  'ta-forms': {
+    icon: '📑',
+    title: 'TA6 / TA10 Forms',
+    sub: 'Property Information &amp; Fixtures &amp; Fittings',
+    status: { type: 'neutral', text: 'Not started · 8 questions' },
+    legal: 'The <b>TA6 (Property Information Form)</b> and <b>TA10 (Fixtures &amp; Fittings)</b> are Law Society standard forms used in UK conveyancing. Most answers auto-populate from your section answers.',
+    doc: null,
+    actions: ['Auto-populate from sections', 'Start manually']
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// UI helpers
+// ═══════════════════════════════════════════════════════════════════
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(function() { t.classList.remove('visible'); }, 1800);
+}
+
+function togglePersona(btn) {
+  var toggle = btn.closest('.persona-toggle');
+  toggle.querySelectorAll('.persona-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  showToast('Switched to ' + btn.dataset.side + ' view');
+}
+
+function switchTab(btn) {
+  var tab = btn.dataset.tab;
+  var phone = btn.dataset.phone;
+  document.querySelectorAll('.tab-l1[data-phone="' + phone + '"]').forEach(function(b) {
+    b.classList.toggle('active', b === btn);
+  });
+  document.querySelectorAll('[data-tab-content][data-phone="' + phone + '"]').forEach(function(c) {
+    c.style.display = c.dataset.tabContent === tab ? 'block' : 'none';
+  });
+}
+
+function switchView(btn) {
+  var parent = btn.closest('.tabs-l2');
+  parent.querySelectorAll('.tab-l2').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  var label = btn.textContent.trim();
+  if (label.includes('Map')) showToast('Map view (mock)');
+}
+
+// ─── Section detail sheet ───
+
+function openSection(id) {
+  var sec = SECTIONS[id];
+  if (!sec) { showToast('Section not yet wired: ' + id); return; }
+
+  var transferred = document.querySelector('.sec-card[data-section="' + id + '"]')?.classList.contains('transferred');
+
+  var html = '';
+  html += '<div class="sheet-head">';
+  html += '<div class="sheet-illust">' + sec.icon + '</div>';
+  html += '<div class="sheet-title-block">';
+  html += '<div class="sheet-title">' + sec.title + '</div>';
+  html += '<div class="sheet-sub">' + sec.sub + '</div>';
+  html += '</div></div>';
+
+  if (transferred) {
+    html += '<div class="sheet-transfer-badge"><div class="tb-icon">✓</div>Transferred from your Letting Passport</div>';
+  }
+
+  html += '<div class="sheet-status ' + sec.status.type + '">' + sec.status.text + '</div>';
+
+  html += '<div class="sheet-legal">';
+  html += '<div class="sheet-legal-label">⚖ UK Legislation</div>';
+  html += '<div class="sheet-legal-body">' + sec.legal + '</div>';
+  html += '</div>';
+
+  if (sec.doc) {
+    html += '<div class="sheet-doc">';
+    html += '<div class="sheet-doc-icon">' + sec.doc.icon + '</div>';
+    html += '<div class="sheet-doc-info">';
+    html += '<div class="sheet-doc-name">' + sec.doc.name + '</div>';
+    html += '<div class="sheet-doc-meta">' + sec.doc.meta + '</div>';
+    html += '</div>';
+    html += '<button class="sheet-doc-action" onclick="showToast(\'Opening ' + sec.doc.name + '\')">View</button>';
+    html += '</div>';
+  } else {
+    html += '<div class="sheet-doc" style="background: var(--line-soft); border-style: dashed;">';
+    html += '<div class="sheet-doc-icon" style="background: var(--line); color: var(--muted);">📤</div>';
+    html += '<div class="sheet-doc-info">';
+    html += '<div class="sheet-doc-name" style="color: var(--muted);">No document yet</div>';
+    html += '<div class="sheet-doc-meta">Upload or generate via questions</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  html += '<div class="sheet-actions">';
+  sec.actions.forEach(function(a, i) {
+    var cls = i === 0 ? 'sheet-action-btn primary' : 'sheet-action-btn';
+    html += '<button class="' + cls + '" onclick="actionClicked(\'' + id + '\', \'' + a.replace(/'/g, "\\'") + '\')">' + a + '</button>';
+  });
+  html += '</div>';
+
+  document.getElementById('detailSheetContent').innerHTML = html;
+  document.getElementById('detailSheetBg').classList.add('visible');
+  document.getElementById('detailSheet').classList.add('visible');
+}
+
+function closeSection() {
+  document.getElementById('detailSheetBg').classList.remove('visible');
+  document.getElementById('detailSheet').classList.remove('visible');
+}
+
+function actionClicked(id, action) {
+  // Special: "Transfer from Letting" / "Auto-fill from Letting" / "Transfer EPC" / "Transfer tenant data"
+  if (/^(Transfer|Auto-fill)/.test(action)) {
+    closeSection();
+    showToast('Pulled latest from your Letting Passport ✓');
+    setTimeout(() => completeTransfer(id), 300);
+    return;
+  }
+  showToast(action + ' (demo)');
+  closeSection();
+}
+
+// ─── Convert flow ───
+
+function openConvertModal() {
+  document.getElementById('convertModal').classList.add('visible');
+}
+function closeConvertModal() {
+  document.getElementById('convertModal').classList.remove('visible');
+}
+
+function runConversion() {
+  closeConvertModal();
+  showToast('Converting…');
+
+  // Source documents on the Letting phone (in Vault tab — but the cards are in the Compliance tab)
+  // Find the source positions of these specific section cards on the Letting phone:
+  const sources = ['gas','eicr','epc','alarms','insurance','rtr'];
+  // Map them to selling sections that should receive the badge
+  const transferTargets = ['services','services','services','services','insurance-sell','occupiers'];
+  // (We actually trigger 4 visible selling sections to show transferred state: services, environmental, insurance-sell, occupiers)
+  const visibleTargets = ['services', 'environmental', 'insurance-sell', 'occupiers'];
+
+  // Get viewport positions of source elements
+  const lettingPhone = document.getElementById('phone-letting');
+  const sellingPhone = document.getElementById('phone-selling');
+
+  // Pick visible source elements (use compliance tab cards on letting)
+  const srcEls = sources.map(s => document.querySelector('#phone-letting .sec-card[data-section="' + s + '"]')).filter(Boolean);
+  const dstEls = visibleTargets.map(s => document.querySelector('#phone-selling .sec-card[data-section="' + s + '"]')).filter(Boolean);
+
+  // Make sure source compliance tab is visible
+  switchTab(document.querySelector('.tab-l1[data-phone="letting"][data-tab="compliance"]'));
+
+  // Animate flying docs
+  srcEls.slice(0, 6).forEach((src, idx) => {
+    const dst = dstEls[idx % dstEls.length];
+    setTimeout(() => flyDoc(src, dst, idx), idx * 180);
+  });
+
+  // After all animations, mark the targets as transferred and update progress
+  setTimeout(() => {
+    visibleTargets.forEach(t => {
+      const card = document.querySelector('#phone-selling .sec-card[data-section="' + t + '"]');
+      if (card) {
+        card.classList.add('transferred');
+        // Update its status visually
+        const bar = card.querySelector('.sec-bar-fill');
+        const pct = card.querySelector('.sec-pct');
+        const points = card.querySelector('.sec-points');
+        if (bar) bar.style.width = '70%';
+        if (pct) { pct.textContent = '70%'; pct.style.color = ''; }
+        if (points) {
+          if (t === 'services') points.textContent = 'Gas, EICR, EPC, alarms transferred';
+          if (t === 'environmental') points.textContent = 'EPC transferred · low flood risk';
+          if (t === 'insurance-sell') points.textContent = 'Buildings policy transferred';
+          if (t === 'occupiers') points.textContent = 'Tenant disclosure transferred';
+        }
+      }
+    });
+
+    // Update selling phone progress card
+    document.getElementById('sell-progress').style.width = '32%';
+    document.getElementById('sell-pct').textContent = '32%';
+    document.getElementById('sell-doc-count').textContent = '6';
+    document.getElementById('sell-sec-progress').textContent = '4/19';
+    const statusEl = document.getElementById('sell-status');
+    statusEl.textContent = '6 docs transferred · 13 sections to complete';
+    const dot = statusEl.previousElementSibling;
+    if (dot) dot.style.background = 'var(--gold)';
+
+    showToast('Conversion complete · 6 documents transferred ✓');
+  }, 6 * 180 + 1300);
+}
+
+function flyDoc(srcEl, dstEl, idx) {
+  if (!srcEl || !dstEl) return;
+  const sr = srcEl.getBoundingClientRect();
+  const dr = dstEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly-doc';
+  fly.textContent = '📄';
+  fly.style.left = (sr.left + sr.width/2 - 19) + 'px';
+  fly.style.top = (sr.top + sr.height/2 - 23) + 'px';
+  document.body.appendChild(fly);
+
+  // Force layout
+  fly.getBoundingClientRect();
+
+  // Animate
+  const dx = (dr.left + dr.width/2) - (sr.left + sr.width/2);
+  const dy = (dr.top + dr.height/2) - (sr.top + sr.height/2);
+  fly.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) scale(0.5) rotate(15deg)';
+  fly.style.opacity = '0';
+
+  setTimeout(() => fly.remove(), 1300);
+}
+
+function completeTransfer(id) {
+  const card = document.querySelector('#phone-selling .sec-card[data-section="' + id + '"]');
+  if (!card) return;
+  if (card.classList.contains('transferred')) return;
+
+  // Find a source on the letting phone, animate one doc
+  const src = document.querySelector('#phone-letting .sec-card');
+  if (src) flyDoc(src, card, 0);
+
+  setTimeout(() => {
+    card.classList.add('transferred');
+    const bar = card.querySelector('.sec-bar-fill');
+    const pct = card.querySelector('.sec-pct');
+    if (bar) bar.style.width = '70%';
+    if (pct) { pct.textContent = '70%'; pct.style.color = ''; }
+  }, 900);
+}
+
+// Esc to close modal/sheet
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeSection();
+    closeConvertModal();
+  }
+});
+</script>
+</body>
+</html>
