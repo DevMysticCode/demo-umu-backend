@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UMU · Account &amp; Help — full builds</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+:root {
+  --teal: #3DBDA3;
+  --teal-dark: #2A9484;
+  --teal-darker: #1F7A66;
+  --teal-deep: #0F4A3E;
+  --teal-pale: #E2F1EA;
+  --teal-paler: #F1F9F4;
+  --navy: #0E2840;
+  --navy-soft: #4A5868;
+  --ink: #1B2A3A;
+  --muted: #8A95A0;
+  --muted-soft: #B5BDC4;
+  --line: #E8ECEA;
+  --line-soft: #F0F2F1;
+  --canvas: #FAFAF8;
+  --canvas-warm: #F5F4F0;
+  --gold: #D4A659;
+  --gold-bright: #F5C44C;
+  --gold-soft: #E8C886;
+  --coral: #FF8B5A;
+  --coral-pale: #FFE9DD;
+  --coral-deep: #B85B36;
+  --bad: #DC2626;
+  --bad-pale: #FEE2E2;
+  --paper: #efe6cd;
+  --purple: #9D7BFF;
+  --purple-pale: #EDE5FF;
+}
+html, body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(61,189,163,0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(157,123,255,0.06), transparent 60%),
+    #131820;
+  min-height: 100vh;
+  padding: 60px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+
+.stage-caption { text-align: center; color: rgba(255,255,255,0.6); max-width: 720px; font-size: 13.5px; font-weight: 500; line-height: 1.6; }
+.stage-caption .label { font-family: 'Instrument Serif', serif; font-size: 13px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); font-weight: 400; margin-bottom: 8px; display: block; }
+.stage-caption .head { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 32px; color: white; font-weight: 400; line-height: 1.1; margin-bottom: 10px; }
+
+.section-divider { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 28px; color: rgba(255,255,255,0.85); font-weight: 400; letter-spacing: 0.2px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.section-divider .sd-tag { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10.5px; font-style: normal; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+
+.phones-row { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.phone-label { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; max-width: 360px; }
+.phone-label .pl-tag { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+.phone-label .pl-name { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; font-size: 22px; color: white; letter-spacing: 0.2px; }
+.phone-label .pl-desc { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.55); line-height: 1.4; margin-top: 2px; }
+
+.phone {
+  width: 380px;
+  height: 800px;
+  background: var(--canvas);
+  border-radius: 42px;
+  overflow: hidden;
+  box-shadow: 0 35px 90px rgba(0,0,0,0.55), 0 0 0 8px #0a0d12, 0 0 0 9px rgba(255,255,255,0.06), inset 0 0 0 1px rgba(255,255,255,0.6);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.phone::before { content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 105px; height: 27px; background: #0a0d12; border-radius: 100px; z-index: 30; }
+
+.status-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px 8px; font-size: 14px; font-weight: 700; color: var(--navy); position: relative; z-index: 11; }
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.signal-bars { display: flex; gap: 2px; align-items: flex-end; }
+.signal-bars i { width: 3px; background: var(--navy); border-radius: 1px; display: block; }
+.signal-bars i:nth-child(1) { height: 4px; }
+.signal-bars i:nth-child(2) { height: 6px; }
+.signal-bars i:nth-child(3) { height: 8px; }
+.signal-bars i:nth-child(4) { height: 10px; }
+.battery { width: 24px; height: 11px; border: 1px solid var(--navy); border-radius: 3px; position: relative; padding: 1.5px; }
+.battery::after { content: ''; position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 1.5px; height: 5px; background: var(--navy); border-radius: 0 1px 1px 0; }
+.battery i { height: 100%; width: 75%; background: var(--navy); border-radius: 1px; display: block; }
+
+.nav-bar { display: flex; align-items: center; padding: 10px 22px 8px; gap: 8px; }
+.nav-icon-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); transition: background 0.2s; flex-shrink: 0; }
+.nav-icon-btn:hover { background: var(--line-soft); }
+.nav-icon-btn svg { width: 18px; height: 18px; }
+.nav-title { font-size: 16px; font-weight: 800; color: var(--navy); letter-spacing: -0.4px; flex: 1; text-align: center; }
+.nav-action { font-size: 13px; font-weight: 800; padding: 8px 14px; border-radius: 100px; border: none; background: transparent; cursor: pointer; font-family: inherit; transition: all 0.18s; letter-spacing: -0.1px; color: var(--teal-darker); flex-shrink: 0; }
+.nav-action:hover { background: var(--teal-paler); }
+
+.pp-body { flex: 1; overflow-y: auto; padding-bottom: 50px; position: relative; }
+.pp-body::-webkit-scrollbar { width: 0; }
+
+.atm-bg { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 280px; pointer-events: none; z-index: 0; }
+.atm-bg.warm { background: radial-gradient(ellipse 70% 100% at 30% 30%, rgba(245,196,76,0.10), transparent 70%), radial-gradient(ellipse 70% 80% at 90% 0%, rgba(61,189,163,0.10), transparent 60%); }
+.atm-bg.teal { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(61,189,163,0.14), transparent 65%); }
+.atm-bg.coral { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255,139,90,0.10), transparent 65%); }
+.atm-bg.purple { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(157,123,255,0.14), transparent 65%); }
+.atm-bg.purple-deep { background: radial-gradient(ellipse 90% 100% at 50% 0%, rgba(157,123,255,0.18), transparent 70%), radial-gradient(ellipse 70% 80% at 90% 30%, rgba(61,189,163,0.10), transparent 60%); }
+
+.hero-greeting { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 15px; color: var(--teal-darker); letter-spacing: 0.2px; margin-bottom: 4px; }
+.h1 { font-size: 32px; font-weight: 800; color: var(--navy); letter-spacing: -1.2px; line-height: 1; margin-bottom: 10px; }
+.h1 .h1-count { display: inline-block; font-family: 'Instrument Serif', serif; font-style: italic; font-size: 22px; font-weight: 400; color: var(--teal); vertical-align: 8px; margin-left: 6px; letter-spacing: -0.5px; }
+
+.hero-stats { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--navy-soft); letter-spacing: -0.2px; flex-wrap: wrap; }
+.hero-stats .stat-num { color: var(--navy); font-weight: 800; font-feature-settings: 'tnum'; }
+.hero-stats .stat-num.gold { color: #B07A1F; }
+.hero-stats .stat-num.coral { color: var(--coral-deep); }
+.hero-stats .stat-num.teal { color: var(--teal-darker); }
+.hero-stats .stat-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-soft); margin: 0 6px; }
+
+.section-heading { font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); padding: 22px 22px 8px; position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; }
+.section-heading .sh-action { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--teal-darker); cursor: pointer; letter-spacing: -0.1px; text-transform: none; }
+
+.btn-primary { width: 100%; background: var(--teal); color: white; border: none; font-family: inherit; font-size: 14px; font-weight: 800; padding: 14px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 5px 14px rgba(31,122,102,0.32); letter-spacing: -0.2px; transition: all 0.18s; }
+.btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
+.btn-primary svg { width: 14px; height: 14px; }
+
+.btn-secondary { background: white; color: var(--navy); border: 1.5px solid var(--line); font-family: inherit; font-size: 13px; font-weight: 700; padding: 11px 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: -0.1px; transition: all 0.18s; }
+.btn-secondary:hover { border-color: var(--teal); color: var(--teal-darker); }
+.btn-secondary svg { width: 13px; height: 13px; }
+
+/* Walking lady */
+@keyframes walkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.lady-walk { animation: walkBob 1.4s ease-in-out infinite; }
+
+/* Group/list pattern (used throughout) */
+.list-group { background: white; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; margin: 0 22px 14px; }
+.list-row { padding: 13px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line-soft); cursor: pointer; transition: background 0.15s; }
+.list-row:last-child { border-bottom: none; }
+.list-row:hover { background: var(--canvas-warm); }
+.list-row .lr-icon { width: 32px; height: 32px; border-radius: 9px; background: var(--teal-paler); color: var(--teal-darker); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.list-row .lr-icon svg { width: 14px; height: 14px; }
+.list-row .lr-icon.warm { background: #FDF4DC; color: #B07A1F; }
+.list-row .lr-icon.coral { background: var(--coral-pale); color: var(--coral-deep); }
+.list-row .lr-icon.purple { background: var(--purple-pale); color: #6B4E9F; }
+.list-row .lr-icon.muted { background: var(--line-soft); color: var(--navy-soft); }
+.list-row .lr-icon.bad { background: var(--bad-pale); color: var(--bad); }
+.list-row .lr-content { flex: 1; min-width: 0; }
+.list-row .lr-title { font-size: 13.5px; font-weight: 800; color: var(--navy); letter-spacing: -0.2px; line-height: 1.2; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.list-row .lr-sub { font-size: 11.5px; font-weight: 600; color: var(--navy-soft); margin-top: 2px; line-height: 1.35; }
+.list-row .lr-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+.list-row .lr-toggle { width: 38px; height: 22px; background: var(--line); border-radius: 100px; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+.list-row .lr-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+.list-row .lr-toggle.on { background: var(--teal); }
+.list-row .lr-toggle.on::after { transform: translateX(16px); }
+.list-row .lr-value { font-size: 12px; font-weight: 700; color: var(--navy-soft); letter-spacing: -0.1px; flex-shrink: 0; }
+
+.pill-tag { font-size: 9.5px; font-weight: 800; padding: 2px 7px; border-radius: 100px; letter-spacing: 0.2px; }
+.pill-tag.teal { background: var(--teal-paler); color: var(--teal-darker); }
+.pill-tag.gold { background: #FEF3C7; color: #92400E; }
+.pill-tag.coral { background: var(--coral-pale); color: var(--coral-deep); }
+.pill-tag.bad { background: var(--bad-pale); color: var(--bad); }
+.pill-tag.live { background: var(--teal); color: white; display: inline-flex; align-items: center; gap: 4px; }
+.pill-tag.live .live-dot { width: 5px; height: 5px; border-radius: 50%; background: white; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. BILLING & PAYMENT
+   ═══════════════════════════════════════════════════════════════════ */
+
+.billing-hero { padding: 8px 22px 14px; position: relative; z-index: 1; }
+
+/* Plan card — premium */
+.plan-card {
+  margin: 4px 22px 0;
+  background: linear-gradient(155deg, #1F4B43 0%, #0F2E29 100%);
+  border-radius: 20px;
+  padding: 18px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(15,46,41,0.32), inset 0 0 0 1px rgba(245,196,76,0.32);
+}
+.plan-card::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 0.5px solid rgba(245,196,76,0.18);
+  border-radius: 16px;
+  pointer-events: none;
+}
+.plan-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #FFFAEB 0%, var(--gold-soft) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 2;
+}
+.plan-name {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 24px;
+  font-weight: 400;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 2;
+  letter-spacing: 0.2px;
+}
+.plan-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold-soft);
+  position: relative;
+  z-index: 2;
+  letter-spacing: -0.2px;
+}
+.plan-price strong { font-size: 17px; color: white; font-weight: 800; }
+.plan-divider {
+  margin: 14px 0 12px;
+  border-top: 1px dashed rgba(245,196,76,0.28);
+  position: relative;
+  z-index: 2;
+}
+.plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.85);
+  padding: 4px 0;
+  position: relative;
+  z-index: 2;
+}
+.plan-row .pr-label { color: var(--gold-soft); }
+.plan-row .pr-val { font-weight: 800; }
+
+/* Payment method card */
+.payment-card {
+  margin: 0 22px 14px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.payment-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+.payment-card .visa-block {
+  width: 56px;
+  height: 38px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #1A1F71, #0E144D);
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.payment-card .visa-block::before {
+  content: 'VISA';
+  position: absolute;
+  bottom: 5px;
+  right: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  font-style: italic;
+  color: white;
+  letter-spacing: 0.5px;
+}
+.payment-card .visa-block::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 12px;
+  height: 9px;
+  background: linear-gradient(135deg, #FEDB68, #BC8B30);
+  border-radius: 1.5px;
+}
+.payment-card .pc-info { flex: 1; min-width: 0; }
+.payment-card .pc-num {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: 0.5px;
+  font-feature-settings: 'tnum';
+}
+.payment-card .pc-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 1px;
+}
+.payment-card .pc-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+
+/* Invoice row */
+.inv-row {
+  margin: 0 22px 6px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.inv-row:hover { border-color: var(--teal-pale); transform: translateY(-1px); }
+.inv-row .inv-icon {
+  width: 30px;
+  height: 36px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #FDF4DC, #F8E6C2);
+  color: #6F4D14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  position: relative;
+}
+.inv-row .inv-icon::after {
+  content: '';
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 5px; height: 5px;
+  border-style: solid;
+  border-width: 0 0 4px 4px;
+  border-color: transparent transparent rgba(0,0,0,0.15) transparent;
+}
+.inv-row .inv-info { flex: 1; min-width: 0; }
+.inv-row .inv-title { font-size: 12.5px; font-weight: 800; color: var(--navy); letter-spacing: -0.2px; }
+.inv-row .inv-meta { font-size: 10.5px; font-weight: 600; color: var(--muted); margin-top: 1px; }
+.inv-row .inv-amount {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy);
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.2px;
+  flex-shrink: 0;
+}
+.inv-row .inv-paid {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: var(--teal-paler);
+  padding: 2px 6px;
+  border-radius: 100px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. SETTINGS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.settings-hero { padding: 8px 22px 12px; position: relative; z-index: 1; }
+
+/* Setting row variants */
+.list-row .lr-segments {
+  display: flex;
+  background: var(--line-soft);
+  border-radius: 100px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+.list-row .lr-segments button {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 100px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+}
+.list-row .lr-segments button.active {
+  background: white;
+  color: var(--navy);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.security-strength {
+  margin: 0 22px 14px;
+  background: linear-gradient(135deg, #F1F9F4, #E2F1EA);
+  border: 1px solid rgba(61,189,163,0.25);
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.security-strength .ss-shield {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.security-strength .ss-shield svg { width: 16px; height: 16px; }
+.security-strength .ss-shield::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  opacity: 0.3;
+  animation: ringPulse 2.4s ease-in-out infinite;
+}
+@keyframes ringPulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.1; transform: scale(1.15); }
+}
+.security-strength .ss-info { flex: 1; min-width: 0; }
+.security-strength .ss-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+.security-strength .ss-headline {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-top: 1px;
+}
+.security-strength .ss-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. LEARN & ASK AI
+   ═══════════════════════════════════════════════════════════════════ */
+
+.ai-hero { padding: 16px 22px 18px; position: relative; z-index: 1; text-align: center; }
+
+/* AI orb avatar */
+.ai-orb {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.4), transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(245,196,76,0.5), transparent 60%),
+    linear-gradient(135deg, #9D7BFF 0%, #6B4E9F 50%, #3DBDA3 100%);
+  margin: 0 auto 12px;
+  position: relative;
+  box-shadow: 0 8px 28px rgba(157,123,255,0.45), inset 0 0 0 2px rgba(255,255,255,0.2);
+  animation: orbBreathe 4s ease-in-out infinite;
+}
+@keyframes orbBreathe {
+  0%, 100% { box-shadow: 0 8px 28px rgba(157,123,255,0.45), inset 0 0 0 2px rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 8px 36px rgba(157,123,255,0.6), 0 0 50px rgba(61,189,163,0.18), inset 0 0 0 2px rgba(255,255,255,0.25); }
+}
+.ai-orb::before {
+  content: '✨';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  font-size: 14px;
+  filter: drop-shadow(0 2px 4px rgba(157,123,255,0.4));
+}
+
+.ai-greeting {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: #6B4E9F;
+  margin-bottom: 4px;
+}
+.ai-headline {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.8px;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.ai-headline-italic {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  color: #6B4E9F;
+}
+.ai-sub {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  line-height: 1.45;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* AI input */
+.ai-input-wrap {
+  margin: 16px 22px 0;
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 18px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 8px 24px rgba(157,123,255,0.12);
+  transition: all 0.18s;
+  position: relative;
+}
+.ai-input-wrap:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(157,123,255,0.18), 0 8px 24px rgba(157,123,255,0.18);
+}
+.ai-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.ai-input-wrap input::placeholder { color: var(--muted); font-weight: 500; }
+.ai-input-wrap .ai-send {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple), #6B4E9F);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 3px 10px rgba(107,78,159,0.42);
+  transition: all 0.15s;
+}
+.ai-send:hover { transform: translateX(1px); }
+.ai-send svg { width: 14px; height: 14px; }
+
+/* Suggested prompts */
+.ai-prompts {
+  padding: 14px 22px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-prompt {
+  background: var(--purple-pale);
+  border: 1px solid rgba(157,123,255,0.22);
+  border-radius: 12px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+.ai-prompt:hover { background: #DCC8FF; transform: translateX(2px); border-color: rgba(157,123,255,0.4); }
+.ai-prompt-icon {
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: white;
+  color: #6B4E9F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(107,78,159,0.18);
+}
+.ai-prompt-icon svg { width: 13px; height: 13px; }
+.ai-prompt-text {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.1px;
+  line-height: 1.3;
+  flex: 1;
+}
+.ai-prompt-arrow { color: #6B4E9F; font-size: 14px; flex-shrink: 0; }
+
+/* Article card with "coming soon" */
+.article-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 0 22px 8px;
+  position: relative;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-items: center;
+}
+.article-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); }
+.article-card.coming-soon { opacity: 0.7; cursor: default; }
+.article-card.coming-soon:hover { transform: none; border-color: var(--line); }
+.article-icon {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--purple-pale), #DCC8FF);
+  color: #6B4E9F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.article-icon svg { width: 16px; height: 16px; }
+.article-info { flex: 1; min-width: 0; }
+.article-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.article-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. HELP & SUPPORT
+   ═══════════════════════════════════════════════════════════════════ */
+
+.hs-hero { padding: 8px 22px 14px; position: relative; z-index: 1; }
+
+/* Live status card */
+.support-status {
+  margin: 0 22px 14px;
+  background: linear-gradient(135deg, #F1F9F4, #E2F1EA);
+  border: 1px solid rgba(61,189,163,0.25);
+  border-radius: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.support-status .ss-icon-wrap {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.support-status .ss-icon-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 11px; height: 11px;
+  background: var(--teal);
+  border: 2px solid var(--canvas);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+.support-status .ss-icon-wrap svg { width: 16px; height: 16px; color: var(--teal-darker); }
+.support-status .ss-info { flex: 1; min-width: 0; }
+.support-status .ss-headline {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+.support-status .ss-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 1px;
+}
+
+/* Contact options grid */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 22px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+.contact-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: left;
+}
+.contact-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+.contact-card.primary {
+  background: linear-gradient(135deg, var(--purple-pale), #DCC8FF);
+  border-color: rgba(157,123,255,0.32);
+}
+.contact-card-icon {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.contact-card.primary .contact-card-icon {
+  background: linear-gradient(135deg, var(--purple), #6B4E9F);
+  color: white;
+}
+.contact-card-icon svg { width: 15px; height: 15px; }
+.contact-card-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-bottom: 1px;
+}
+.contact-card-meta {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  line-height: 1.3;
+}
+
+/* FAQ accordion item */
+.faq-item {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 0 22px 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.faq-item:hover { border-color: var(--teal-pale); }
+.faq-item.open { border-color: var(--teal-pale); background: var(--teal-paler); }
+.faq-q {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.faq-q .faq-num {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--teal-darker);
+  font-weight: 400;
+  flex-shrink: 0;
+  width: 18px;
+}
+.faq-q .faq-text { flex: 1; }
+.faq-q .faq-chev {
+  color: var(--muted);
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.faq-item.open .faq-chev { transform: rotate(90deg); color: var(--teal-darker); }
+.faq-a {
+  padding: 0 14px 12px 36px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  line-height: 1.5;
+}
+.faq-a a {
+  color: var(--teal-darker);
+  font-weight: 700;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--teal-darker);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODAL — same as before
+   ═══════════════════════════════════════════════════════════════════ */
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(14,24,32,0.65);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  opacity: 1;
+}
+.modal {
+  width: 100%;
+  background: var(--canvas);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90%;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.modal-handle { width: 36px; height: 4px; background: var(--line); border-radius: 100px; margin: 8px auto 0; flex-shrink: 0; }
+.modal-header { padding: 14px 18px 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.modal-title { font-size: 16px; font-weight: 800; color: var(--navy); letter-spacing: -0.3px; flex: 1; }
+.modal-close { width: 30px; height: 30px; border-radius: 50%; background: var(--line-soft); color: var(--navy-soft); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+.modal-body { padding: 0 18px 16px; overflow-y: auto; flex: 1; }
+.modal-body::-webkit-scrollbar { width: 0; }
+.modal-footer { padding: 12px 18px 18px; border-top: 1px solid var(--line); display: flex; gap: 8px; flex-shrink: 0; }
+
+.mform-section { margin-bottom: 14px; }
+.mform-label { font-size: 10px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.mform-input { width: 100%; background: white; border: 1.5px solid var(--line); border-radius: 11px; padding: 11px 13px; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--navy); outline: none; transition: all 0.18s; }
+.mform-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(61,189,163,0.18); }
+.mform-input::placeholder { color: var(--muted); font-weight: 500; }
+.mform-input-card { letter-spacing: 2px; font-size: 14px; }
+
+/* AI conversation modal */
+.ai-msg {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.ai-msg.user { justify-content: flex-end; }
+.ai-msg .ai-msg-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.4), transparent 50%),
+    radial-gradient(circle at 70% 70%, rgba(245,196,76,0.5), transparent 60%),
+    linear-gradient(135deg, #9D7BFF 0%, #6B4E9F 50%, #3DBDA3 100%);
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.18);
+}
+.ai-msg.user .ai-msg-avatar {
+  background: linear-gradient(155deg, #143F58, #0E2840);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.3px;
+}
+.ai-msg-bubble {
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  max-width: 220px;
+  letter-spacing: -0.1px;
+}
+.ai-msg.ai .ai-msg-bubble {
+  background: white;
+  color: var(--navy);
+  border-top-left-radius: 4px;
+  border: 1px solid var(--line);
+}
+.ai-msg.user .ai-msg-bubble {
+  background: linear-gradient(135deg, #143F58, #0E2840);
+  color: white;
+  border-top-right-radius: 4px;
+}
+.ai-msg-bubble strong { color: var(--teal-darker); font-weight: 800; }
+.ai-typing {
+  display: flex;
+  gap: 3px;
+  padding: 9px 13px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  width: fit-content;
+}
+.ai-typing span {
+  width: 6px; height: 6px;
+  background: var(--purple);
+  border-radius: 50%;
+  animation: typingDot 1.4s ease-in-out infinite;
+}
+.ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingDot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+/* Decision panel */
+.decision-panel { max-width: 760px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 28px 32px; color: rgba(255,255,255,0.72); }
+.decision-panel h3 { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; font-size: 26px; color: white; margin-bottom: 18px; }
+.decision-panel .opt-block { margin-bottom: 18px; padding-left: 22px; position: relative; }
+.decision-panel .opt-block::before { content: ''; position: absolute; left: 0; top: 9px; width: 12px; height: 1px; background: var(--teal); }
+.decision-panel .opt-block .opt-name { font-size: 14.5px; font-weight: 800; color: white; letter-spacing: -0.2px; margin-bottom: 4px; }
+.decision-panel .opt-block .opt-text { font-size: 13px; font-weight: 500; line-height: 1.65; }
+.decision-panel .opt-block .opt-text b { color: white; font-weight: 700; }
+
+@media (max-width: 460px) {
+  .phone { width: 100%; max-width: 380px; height: 760px; }
+  body { padding: 28px 12px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage-caption">
+  <span class="label">UMU · Account &amp; Help — full builds</span>
+  <div class="head">Four screens. Same family.</div>
+  <div>The remaining categories: Billing &amp; Payment, Settings, Learn &amp; Ask AI, Help &amp; Support. Plus the modals where they earn a place — adding a payment method, talking to the AI.</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="5,12 10,17 19,7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-pound" viewBox="0 0 24 24"><path d="M18 7c0-2.5-2-4-5-4s-5 2-5 4.5c0 3 1.5 4.5 1.5 7.5 0 1.5-1 2.5-2 3h11M7 12h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="9,12 11,14 15,10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-fingerprint" viewBox="0 0 24 24"><path d="M12 11c0 5-2 8-2 8M12 11c0 5 2 8 2 8M16 18c.5-2 .5-4 .5-6a4.5 4.5 0 0 0-9 0c0 1 0 2-.5 4M21 11a9 9 0 0 0-18 0M16 21l1-3M8 21l-1-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="2,7 12,13 22,7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="7 10 12 15 17 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="8" r="0.6" fill="currentColor" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="currentColor"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><polyline points="5,11 12,4 19,11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-balance" viewBox="0 0 24 24"><path d="M12 3v18M5 9l7-3 7 3M3 9l4 9h-8zM21 9l-4 9h8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 12l9-9m-3 3 3 3m-6 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="12,6 12,12 16,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><polygon points="23,7 16,12 23,17 23,7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="1" y="5" width="15" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 19.5V22h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 18v-6a9 9 0 0 1 18 0v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ════════════════════════════════════════════════════
+     ROW 1 — BILLING & SETTINGS
+     ════════════════════════════════════════════════════ -->
+
+<div class="phones-row">
+
+  <!-- ══════════════ 1. BILLING & PAYMENT ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Billing &amp; Payment</div>
+        <button class="nav-action">Help</button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg warm"></div>
+
+        <div class="billing-hero">
+          <div class="hero-greeting">Your subscription</div>
+          <div class="h1">Billing</div>
+          <div class="hero-stats">
+            <span class="stat-num gold">£14.99</span>&nbsp;monthly
+            <span class="stat-sep"></span>
+            <span class="stat-num">3</span>&nbsp;invoices
+            <span class="stat-sep"></span>
+            <span class="stat-num teal">Active</span>
+          </div>
+        </div>
+
+        <!-- Plan card -->
+        <div class="plan-card">
+          <div class="plan-label">Current plan</div>
+          <div class="plan-name">UMU Standard</div>
+          <div class="plan-price"><strong>£14.99</strong> / month · billed 12th</div>
+          <div class="plan-divider"></div>
+          <div class="plan-row">
+            <span class="pr-label">Next charge</span>
+            <span class="pr-val">12 June 2026</span>
+          </div>
+          <div class="plan-row">
+            <span class="pr-label">Renews</span>
+            <span class="pr-val">Auto-renewing</span>
+          </div>
+        </div>
+
+        <div class="section-heading">Payment method <span class="sh-action">+ Add</span></div>
+
+        <div class="payment-card">
+          <div class="visa-block"></div>
+          <div class="pc-info">
+            <div class="pc-num">•••• 4521</div>
+            <div class="pc-meta">Default · expires 11/27 · J. Paul</div>
+          </div>
+          <div class="pc-arrow">›</div>
+        </div>
+
+        <div class="section-heading">Invoices &amp; receipts <span class="sh-action">View all</span></div>
+
+        <div class="inv-row">
+          <div class="inv-icon">PDF</div>
+          <div class="inv-info">
+            <div class="inv-title">May 2026</div>
+            <div class="inv-meta">Issued 12 May · paid by Visa •• 4521</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="inv-amount">£14.99</div>
+            <div class="inv-paid">Paid</div>
+          </div>
+        </div>
+
+        <div class="inv-row">
+          <div class="inv-icon">PDF</div>
+          <div class="inv-info">
+            <div class="inv-title">April 2026</div>
+            <div class="inv-meta">Issued 12 Apr · paid by Visa •• 4521</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="inv-amount">£14.99</div>
+            <div class="inv-paid">Paid</div>
+          </div>
+        </div>
+
+        <div class="inv-row">
+          <div class="inv-icon">PDF</div>
+          <div class="inv-info">
+            <div class="inv-title">March 2026</div>
+            <div class="inv-meta">Issued 12 Mar · paid by Visa •• 4521</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="inv-amount">£14.99</div>
+            <div class="inv-paid">Paid</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Plan options</div>
+
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-arrow-up"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Compare plans</div>
+              <div class="lr-sub">See what other tiers offer</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon coral"><svg><use href="#i-trash"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Cancel subscription</div>
+              <div class="lr-sub">Effective at the end of your current cycle</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 1 of 4</span>
+      <span class="pl-name">Billing &amp; Payment</span>
+      <span class="pl-desc">Plan card with the deep-teal &amp; gold gilt treatment. Realistic Visa block. Three invoices listed with paid status, downloadable as PDFs. Plan options at the bottom.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ 2. SETTINGS ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Settings</div>
+        <button class="nav-icon-btn" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg teal"></div>
+
+        <div class="settings-hero">
+          <div class="hero-greeting">Make UMU yours</div>
+          <div class="h1">Settings</div>
+        </div>
+
+        <!-- Security strength reassurance -->
+        <div class="security-strength">
+          <div class="ss-shield"><svg><use href="#i-shield"/></svg></div>
+          <div class="ss-info">
+            <div class="ss-label">Security</div>
+            <div class="ss-headline">Your account is well protected</div>
+            <div class="ss-sub">Strong password · Face ID · 2FA enabled</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Account &amp; security</div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-lock"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Password</div>
+              <div class="lr-sub">Last changed 2 months ago</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-shield"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Two-factor authentication <span class="pill-tag teal">On</span></div>
+              <div class="lr-sub">SMS to •• 9372</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-fingerprint"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Biometric sign-in</div>
+              <div class="lr-sub">Use Face ID to open the app</div>
+            </div>
+            <div class="lr-toggle on"></div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-eye"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Login activity</div>
+              <div class="lr-sub">3 active devices</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Notifications</div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-bell"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">In-app push</div>
+              <div class="lr-sub">Viewings, messages, updates</div>
+            </div>
+            <div class="lr-toggle on"></div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-mail"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Email</div>
+              <div class="lr-sub">Newsletter &amp; saved property updates</div>
+            </div>
+            <div class="lr-toggle on"></div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-msg"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">SMS</div>
+              <div class="lr-sub">Time-sensitive alerts only</div>
+            </div>
+            <div class="lr-toggle"></div>
+          </div>
+        </div>
+
+        <div class="section-heading">Appearance &amp; language</div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon purple"><svg><use href="#i-moon"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Theme</div>
+              <div class="lr-sub">Choose how UMU looks</div>
+            </div>
+            <div class="lr-segments">
+              <button class="active">Light</button>
+              <button>Dark</button>
+              <button>Auto</button>
+            </div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-globe"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Language</div>
+              <div class="lr-sub">English (UK)</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Privacy &amp; data</div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-eye"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Profile visibility</div>
+              <div class="lr-sub">Who can see your buyer profile</div>
+            </div>
+            <div class="lr-value">Sellers only ›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-download"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Download my data</div>
+              <div class="lr-sub">Export everything we hold (GDPR)</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Legal</div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon muted"><svg><use href="#i-doc"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Terms of Service</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon muted"><svg><use href="#i-doc"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">Privacy Policy</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+          <div class="list-row">
+            <div class="lr-icon muted"><svg><use href="#i-info"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">About UMU</div>
+              <div class="lr-sub">v2.4.1 · build 2026.05</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 2 of 4</span>
+      <span class="pl-name">Settings</span>
+      <span class="pl-desc">Reassuring security strength card up top. Then five sections — Account &amp; security, Notifications, Appearance &amp; language, Privacy &amp; data, Legal. Inline segmented control for theme.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     ROW 2 — LEARN & ASK AI / HELP & SUPPORT
+     ════════════════════════════════════════════════════ -->
+
+<div class="phones-row">
+
+  <!-- ══════════════ 3. LEARN & ASK AI ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Learn &amp; Ask AI</div>
+        <button class="nav-icon-btn" aria-label="History"><svg><use href="#i-clock"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg purple-deep"></div>
+
+        <div class="ai-hero">
+          <div class="ai-orb"></div>
+          <div class="ai-greeting">Hi Jon</div>
+          <div class="ai-headline">Ask me <span class="ai-headline-italic">anything</span> about your property journey.</div>
+          <div class="ai-sub">From legal jargon to chain timelines. I know UMU and the UK property market inside out.</div>
+        </div>
+
+        <div class="ai-input-wrap">
+          <input type="text" placeholder="Ask a question…" />
+          <button class="nav-icon-btn" style="width:38px; height:38px;" aria-label="Voice"><svg><use href="#i-mic"/></svg></button>
+          <button class="ai-send" aria-label="Send"><svg><use href="#i-arrow-up"/></svg></button>
+        </div>
+
+        <div class="section-heading">Try asking</div>
+
+        <div class="ai-prompts">
+          <button class="ai-prompt">
+            <div class="ai-prompt-icon"><svg><use href="#i-balance"/></svg></div>
+            <div class="ai-prompt-text">What's an EICR and do I need one?</div>
+            <div class="ai-prompt-arrow">›</div>
+          </button>
+          <button class="ai-prompt">
+            <div class="ai-prompt-icon"><svg><use href="#i-key"/></svg></div>
+            <div class="ai-prompt-text">How long does conveyancing usually take?</div>
+            <div class="ai-prompt-arrow">›</div>
+          </button>
+          <button class="ai-prompt">
+            <div class="ai-prompt-icon"><svg><use href="#i-pound"/></svg></div>
+            <div class="ai-prompt-text">What stamp duty will I pay on a £450k home?</div>
+            <div class="ai-prompt-arrow">›</div>
+          </button>
+          <button class="ai-prompt">
+            <div class="ai-prompt-icon"><svg><use href="#i-house"/></svg></div>
+            <div class="ai-prompt-text">Should I get a homebuyer survey?</div>
+            <div class="ai-prompt-arrow">›</div>
+          </button>
+        </div>
+
+        <div class="section-heading">Library <span class="sh-action">Coming soon</span></div>
+
+        <div class="article-card coming-soon">
+          <div class="article-icon"><svg><use href="#i-book"/></svg></div>
+          <div class="article-info">
+            <div class="article-title">Articles <span class="pill-tag gold">Soon</span></div>
+            <div class="article-meta">In-depth guides on every step</div>
+          </div>
+        </div>
+
+        <div class="article-card coming-soon">
+          <div class="article-icon"><svg><use href="#i-video"/></svg></div>
+          <div class="article-info">
+            <div class="article-title">Video walk-throughs <span class="pill-tag gold">Soon</span></div>
+            <div class="article-meta">5-min explainers on each topic</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 3 of 4</span>
+      <span class="pl-name">Learn &amp; Ask AI</span>
+      <span class="pl-desc">Breathing AI orb hero with editorial italic headline. Chat input with voice and send. Four suggested prompts. Library section reserved with "Coming soon" pills for articles and videos.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ 4. HELP & SUPPORT ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Help &amp; Support</div>
+        <button class="nav-icon-btn" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg coral"></div>
+
+        <div class="hs-hero">
+          <div class="hero-greeting">We're here for you</div>
+          <div class="h1">How can we help?</div>
+        </div>
+
+        <div class="support-status">
+          <div class="ss-icon-wrap"><svg><use href="#i-headphones"/></svg></div>
+          <div class="ss-info">
+            <div class="ss-headline">Support team is online</div>
+            <div class="ss-sub">Average reply time · under 4 hours</div>
+          </div>
+        </div>
+
+        <div class="section-heading">Get in touch</div>
+
+        <div class="contact-grid">
+          <button class="contact-card primary">
+            <div class="contact-card-icon"><svg><use href="#i-spark"/></svg></div>
+            <div class="contact-card-name">Ask AI first</div>
+            <div class="contact-card-meta">Instant answers · 24/7</div>
+          </button>
+          <button class="contact-card">
+            <div class="contact-card-icon"><svg><use href="#i-msg"/></svg></div>
+            <div class="contact-card-name">Live chat</div>
+            <div class="contact-card-meta">Mon–Fri · 9am–6pm</div>
+          </button>
+          <button class="contact-card">
+            <div class="contact-card-icon"><svg><use href="#i-mail"/></svg></div>
+            <div class="contact-card-name">Email us</div>
+            <div class="contact-card-meta">help@umu.co.uk</div>
+          </button>
+          <button class="contact-card">
+            <div class="contact-card-icon"><svg><use href="#i-phone"/></svg></div>
+            <div class="contact-card-name">Call us</div>
+            <div class="contact-card-meta">020 7946 0123</div>
+          </button>
+        </div>
+
+        <div class="section-heading">Frequently asked <span class="sh-action">Browse all</span></div>
+
+        <div class="faq-item open">
+          <div class="faq-q">
+            <span class="faq-num">01</span>
+            <span class="faq-text">What is a Property Passport and why do I need one?</span>
+            <span class="faq-chev">›</span>
+          </div>
+          <div class="faq-a">
+            A Property Passport is a verified, legally-backed dossier of every important detail about a property — title deeds, EPC, floor plan, surveys, certificates. It speeds up sales and lettings dramatically by giving buyers and tenants everything they need upfront. <a href="#">Read more</a>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="faq-num">02</span>
+            <span class="faq-text">How does identity verification work?</span>
+            <span class="faq-chev">›</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="faq-num">03</span>
+            <span class="faq-text">Can I share my Buyer Profile with someone outside UMU?</span>
+            <span class="faq-chev">›</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="faq-num">04</span>
+            <span class="faq-text">What happens if a seller doesn't have a passport yet?</span>
+            <span class="faq-chev">›</span>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">
+            <span class="faq-num">05</span>
+            <span class="faq-text">How is my data protected?</span>
+            <span class="faq-chev">›</span>
+          </div>
+        </div>
+
+        <div class="section-heading">Status <span class="sh-action">All systems</span></div>
+        <div class="list-group">
+          <div class="list-row">
+            <div class="lr-icon"><svg><use href="#i-zap"/></svg></div>
+            <div class="lr-content">
+              <div class="lr-title">UMU systems <span class="pill-tag live"><span class="live-dot"></span>All operational</span></div>
+              <div class="lr-sub">No issues reported in the last 30 days</div>
+            </div>
+            <div class="lr-arrow">›</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 4 of 4</span>
+      <span class="pl-name">Help &amp; Support</span>
+      <span class="pl-desc">Live status reassurance up top. Four contact options as a 2x2 grid (AI is the warm-tinted primary). Numbered FAQ accordion with editorial italic numerals. Status check at the bottom.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MODAL FLOWS
+     ════════════════════════════════════════════════════ -->
+
+<div class="section-divider">
+  <span class="sd-tag">Modal flows</span>
+  Two more interactions.
+</div>
+
+<div class="phones-row">
+
+  <!-- ══════════════ MODAL 1 — Add Payment Method ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div style="opacity: 0.3; pointer-events: none; filter: blur(0.5px);">
+        <div class="nav-bar">
+          <button class="nav-icon-btn"><svg><use href="#i-back"/></svg></button>
+          <div class="nav-title">Billing &amp; Payment</div>
+          <button class="nav-action">Help</button>
+        </div>
+        <div class="billing-hero">
+          <div class="hero-greeting">Your subscription</div>
+          <div class="h1">Billing</div>
+        </div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="modal-header">
+            <div class="modal-title">Add a payment method</div>
+            <button class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
+
+            <!-- Visual card preview -->
+            <div style="margin-bottom: 16px;">
+              <div style="width: 100%; aspect-ratio: 1.6; border-radius: 16px; background: linear-gradient(135deg, #1A1F71 0%, #0E144D 100%); padding: 16px; color: white; position: relative; overflow: hidden; box-shadow: 0 12px 30px rgba(26,31,113,0.32);">
+                <div style="position: absolute; top: 16px; left: 16px; width: 40px; height: 28px; background: linear-gradient(135deg, #FEDB68, #BC8B30); border-radius: 5px;"></div>
+                <div style="position: absolute; top: 16px; right: 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; font-style: italic; letter-spacing: 1px;">VISA</div>
+                <div style="position: absolute; bottom: 32px; left: 16px; right: 16px; font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; letter-spacing: 3px;">•••• •••• •••• ____</div>
+                <div style="position: absolute; bottom: 12px; left: 16px; font-size: 9px; font-weight: 600; opacity: 0.7; letter-spacing: 0.5px; text-transform: uppercase;">CARDHOLDER NAME</div>
+                <div style="position: absolute; bottom: 12px; right: 16px; font-size: 9px; font-weight: 600; opacity: 0.7; letter-spacing: 0.5px; text-transform: uppercase;">EXPIRES MM/YY</div>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Card number</div>
+              <input class="mform-input mform-input-card" type="text" placeholder="1234 5678 9012 3456" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div class="mform-section">
+                <div class="mform-label">Expiry</div>
+                <input class="mform-input" type="text" placeholder="MM / YY" />
+              </div>
+              <div class="mform-section">
+                <div class="mform-label">CVC</div>
+                <input class="mform-input" type="text" placeholder="•••" />
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Cardholder name</div>
+              <input class="mform-input" type="text" placeholder="Name on card" />
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Billing address</div>
+              <input class="mform-input" type="text" value="42 Hawthorne Avenue, Coventry, CV4 9JT" readonly style="cursor:pointer; background: var(--canvas-warm);" />
+              <div style="font-size: 10.5px; color: var(--muted); margin-top: 6px; padding: 0 4px; line-height: 1.4;">
+                Same as your registered address · <span style="color: var(--teal-darker); font-weight: 800; cursor: pointer;">Use a different one</span>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--teal-paler); border-radius: 10px; border: 1px solid rgba(61,189,163,0.2);">
+              <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--teal); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="12" height="12"><use href="#i-lock"/></svg>
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: var(--teal-darker); letter-spacing: -0.1px;">Secured by Stripe · we never store your full card number</div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" style="flex:1;">Cancel</button>
+            <button class="btn-primary" style="flex:2;"><svg><use href="#i-lock"/></svg>Save card</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Modal · Billing</span>
+      <span class="pl-name">Add a payment method</span>
+      <span class="pl-desc">Live card preview at the top fills in as the user types. Standard fields below. Reuses billing address with one tap to override. Trust pill at the bottom calling out Stripe.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODAL 2 — AI Chat in progress ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar" style="background: white; border-bottom: 1px solid var(--line);">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; justify-content: center;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.4), transparent 50%), radial-gradient(circle at 70% 70%, rgba(245,196,76,0.5), transparent 60%), linear-gradient(135deg, #9D7BFF 0%, #6B4E9F 50%, #3DBDA3 100%); box-shadow: 0 2px 6px rgba(157,123,255,0.4);"></div>
+          <div class="nav-title" style="font-size: 14px; flex: 0;">UMU AI</div>
+        </div>
+        <button class="nav-icon-btn" aria-label="More"><svg><use href="#i-info"/></svg></button>
+      </div>
+
+      <div class="pp-body" style="padding: 16px 18px 0;">
+        <!-- AI says hello -->
+        <div class="ai-msg ai">
+          <div class="ai-msg-avatar"></div>
+          <div class="ai-msg-bubble">Hi Jon! Ask me anything about UK property — buying, selling, renting, legal stuff. I'll keep my answers short and clear.</div>
+        </div>
+
+        <!-- User asks -->
+        <div class="ai-msg user">
+          <div class="ai-msg-bubble">What stamp duty will I pay on a £450k home in Coventry as a first-time buyer?</div>
+          <div class="ai-msg-avatar">JP</div>
+        </div>
+
+        <!-- AI replies -->
+        <div class="ai-msg ai">
+          <div class="ai-msg-avatar"></div>
+          <div class="ai-msg-bubble">As a first-time buyer in England, you pay <strong>£0 on the first £425,000</strong>, then 5% on the remaining £25,000 — so <strong>£1,250 total</strong>. The threshold drops back to £300,000 in April 2027, so timing matters if you're close to that date.</div>
+        </div>
+
+        <!-- AI follow-up -->
+        <div class="ai-msg ai">
+          <div class="ai-msg-avatar"></div>
+          <div class="ai-msg-bubble">Want me to walk you through the full cost-of-buying breakdown for £450k?</div>
+        </div>
+
+        <!-- User typing -->
+        <div class="ai-msg ai">
+          <div class="ai-msg-avatar"></div>
+          <div class="ai-typing"><span></span><span></span><span></span></div>
+        </div>
+
+        <div style="text-align: center; padding: 12px 0; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.3px;">
+          UMU AI gives general guidance, not legal or financial advice.
+        </div>
+      </div>
+
+      <!-- Input docked at bottom -->
+      <div style="padding: 10px 14px 24px; background: var(--canvas); border-top: 1px solid var(--line);">
+        <div style="background: white; border: 1.5px solid var(--line); border-radius: 16px; padding: 4px; display: flex; align-items: center; gap: 4px;">
+          <button style="width:34px; height:34px; border-radius: 10px; background: transparent; border: none; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center;">
+            <svg width="14" height="14"><use href="#i-paperclip"/></svg>
+          </button>
+          <input type="text" placeholder="Ask a follow-up…" style="flex:1; border: none; outline: none; padding: 8px 4px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--navy); background: transparent;" />
+          <button style="width:34px; height:34px; border-radius: 10px; background: linear-gradient(135deg, #9D7BFF, #6B4E9F); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(107,78,159,0.42);">
+            <svg width="13" height="13"><use href="#i-arrow-up"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Modal · Learn &amp; Ask AI</span>
+      <span class="pl-name">A conversation</span>
+      <span class="pl-desc">Chat interface — AI bubbles on the left with the orb avatar, user bubbles on the right with JP avatar. Bold for key numbers in answers. Typing dots while it's thinking. Disclaimer at the bottom.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="decision-panel">
+  <h3>Four screens · two flows · same family</h3>
+
+  <div class="opt-block">
+    <div class="opt-name">Billing &amp; Payment · the gilt plan card</div>
+    <div class="opt-text">The current plan gets the <b>same deep-teal-and-gold treatment</b> as the passport books and the buyer profile share card — the user sees their subscription as something premium they have access to, not a line item. Realistic Visa block built with pure CSS (chip, embossed numbers, italic VISA logo). Three months of invoices listed as PDF tiles with a small green "Paid" pill. The bottom action area has both an upgrade path (Compare plans) and a graceful exit (Cancel subscription, in coral so it's findable but not loud).</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Settings · reassurance first, then organised</div>
+    <div class="opt-text">Opens with a <b>security strength card</b> — teal pulsing shield, "Your account is well protected", listing the three things that protect them (strong password, Face ID, 2FA). Sets the tone before any control list. Below, five clearly labelled sections: Account &amp; security, Notifications, Appearance &amp; language, Privacy &amp; data, Legal. Each row has its own appropriate control — toggle, segmented selector for theme, value pill for current selection. The 2FA row gets a teal "On" pill in its title. Login activity surfaces "3 active devices" so users can audit their own access.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Learn &amp; Ask AI · the breathing orb</div>
+    <div class="opt-text">A purple-teal-gold AI orb that <b>gently breathes</b> as the focal point — radial-gradient layers create a sense of energy without anthropomorphising. The headline mixes sans and italic serif: "Ask me <i>anything</i> about your property journey." Input field has a <b>purple gradient send button</b> and a microphone for voice. Four suggested prompts in tinted purple cards — covering the most common UK-property anxieties: EICR, conveyancing, stamp duty, surveys. Library section is reserved with two "Soon" cards (articles, video walk-throughs) so users know what's coming.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Help &amp; Support · live, useful, contained</div>
+    <div class="opt-text">Live status card up top: green pulsing dot, "Support team is online · average reply under 4 hours" — turns a static page into something that feels responsive. Four contact options as a 2x2 grid: <b>Ask AI is the warm purple-tinted primary</b> (instant, 24/7), then Live chat (with hours), Email, and Phone. FAQ accordion uses <b>editorial italic numerals</b> (01, 02, 03…) for a touch of personality, with the first one expanded showing the answer with an embedded "Read more" link. System status at the bottom — "All systems operational" with a teal pulsing live pill — same trust-by-transparency thread.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Add Payment Method modal · live card preview</div>
+    <div class="opt-text">As the user types, a <b>realistic card preview at the top fills in</b> — cardholder name, last 4 digits, expiry. It's a small thing but it makes a tedious form feel like an interaction. Reuses the registered billing address with a one-tap override link. <b>Trust pill at the bottom</b> ("Secured by Stripe · we never store your full card number") is the kind of reassurance 35-65 users particularly appreciate when typing financial details.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">AI Chat modal · a real conversation</div>
+    <div class="opt-text">Full-screen chat interface (not a small modal — chat needs the room). AI bubbles on the left with the small orb avatar; user bubbles on the right with the JP initials avatar. Key numbers in AI answers appear in <b>bold teal</b>. Typing dots animate while it's thinking. Bottom-docked input with paperclip for attachments and a purple gradient send button. Disclaimer line at the bottom: "UMU AI gives general guidance, not legal or financial advice" — protects the product without spoiling the friendly tone.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">What ties this file to File 1</div>
+    <div class="opt-text">Same nav bar pattern. Same italic serif greeting + bold sans headline. Same hero stats line. Same section headings. Same card depth and corner radii. Same colour vocabulary (teal action, gold value, coral urgency, purple personal/social). Same modal pattern with handle, header, scrollable body, sticky footer. The user moving between any of these ten screens shouldn't feel like they've left the app — only the content changes.</div>
+  </div>
+
+</div>
+
+</body>
+</html>

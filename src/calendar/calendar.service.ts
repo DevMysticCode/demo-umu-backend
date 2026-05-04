@@ -1,20 +1,50 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { IsOptional, IsString } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class CreateReminderDto {
+  @IsString()
   title: string;
+
+  @IsString()
   date: string;   // ISO date string e.g. "2025-09-14"
+
+  @IsOptional()
+  @IsString()
   time?: string;  // "14:00"
+
+  @IsOptional()
+  @IsString()
   repeats?: string;
+
+  @IsOptional()
+  @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
   type?: string;
 }
 
 export class UpdateReminderDto {
+  @IsOptional()
+  @IsString()
   title?: string;
+
+  @IsOptional()
+  @IsString()
   date?: string;
+
+  @IsOptional()
+  @IsString()
   time?: string;
+
+  @IsOptional()
+  @IsString()
   repeats?: string;
+
+  @IsOptional()
+  @IsString()
   notes?: string;
 }
 
@@ -69,13 +99,20 @@ export class CalendarService {
   }
 
   async createReminder(userId: string, dto: CreateReminderDto) {
+    const title = dto.title?.trim();
+    if (!title) throw new BadRequestException('title is required');
+    if (!dto.date) throw new BadRequestException('date is required');
+
     const d = new Date(dto.date);
+    if (isNaN(d.getTime())) {
+      throw new BadRequestException(`Invalid date: "${dto.date}"`);
+    }
     const utcDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
     return this.prisma.userReminder.create({
       data: {
         userId,
-        title: dto.title,
+        title,
         date: utcDate,
         time: dto.time ?? null,
         repeats: dto.repeats ?? 'never',
@@ -91,8 +128,16 @@ export class CalendarService {
     if (reminder.userId !== userId) throw new ForbiddenException();
 
     const data: any = { ...dto };
+    if (dto.title !== undefined) {
+      const title = dto.title?.trim();
+      if (!title) throw new BadRequestException('title cannot be empty');
+      data.title = title;
+    }
     if (dto.date) {
       const d = new Date(dto.date);
+      if (isNaN(d.getTime())) {
+        throw new BadRequestException(`Invalid date: "${dto.date}"`);
+      }
       data.date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     }
 

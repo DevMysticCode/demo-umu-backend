@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+  Logger,
+} from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -136,11 +142,15 @@ const TOOLS: OpenAI.ChatCompletionTool[] = [
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
   private openai: OpenAI;
 
   constructor(private prisma: PrismaService) {
+    if (!process.env.GROQ_API_KEY) {
+      this.logger.warn('GROQ_API_KEY is not set — /chat will fail with 503 until configured.');
+    }
     this.openai = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
+      apiKey: process.env.GROQ_API_KEY ?? 'missing',
       baseURL: 'https://api.groq.com/openai/v1',
     });
   }
@@ -278,6 +288,15 @@ export class ChatService {
   // ─── Main chat handler ────────────────────────────────────────────────────
 
   async chat(userId: string, message: string, history: ChatMessage[] = []) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new ServiceUnavailableException(
+        'Chat is not configured: GROQ_API_KEY is missing on the server.',
+      );
+    }
+    if (!message?.trim()) {
+      throw new InternalServerErrorException('message is required');
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { firstName: true, lastName: true },
@@ -374,14 +393,41 @@ ${PROPERTY_KNOWLEDGE}`;
     const MAX_ROUNDS = 3; // prevent infinite loops
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
-      const completion = await this.openai.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-        max_tokens: 500,
-        temperature: 0.6,
-      });
+      let completion;
+      try {
+        completion = await this.openai.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          tools: TOOLS,
+          tool_choice: 'auto',
+          max_tokens: 500,
+          temperature: 0.6,
+        });
+      } catch (err: any) {
+        const status = err?.status ?? err?.response?.status;
+        const detail =
+          err?.error?.message ??
+          err?.response?.data?.error?.message ??
+          err?.message ??
+          String(err);
+        this.logger.error(
+          `Groq API call failed (status=${status ?? 'n/a'}): ${detail}`,
+          err?.stack,
+        );
+        if (status === 401 || status === 403) {
+          throw new ServiceUnavailableException(
+            'Chat upstream rejected our credentials. Check GROQ_API_KEY.',
+          );
+        }
+        if (status === 429) {
+          throw new ServiceUnavailableException(
+            'Chat is rate-limited right now. Please try again in a moment.',
+          );
+        }
+        throw new ServiceUnavailableException(
+          `Chat upstream error: ${detail}`,
+        );
+      }
 
       const choice = completion.choices[0];
 

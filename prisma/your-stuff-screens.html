@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UMU · Your Stuff — full builds</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+:root {
+  --teal: #3DBDA3;
+  --teal-dark: #2A9484;
+  --teal-darker: #1F7A66;
+  --teal-deep: #0F4A3E;
+  --teal-pale: #E2F1EA;
+  --teal-paler: #F1F9F4;
+  --navy: #0E2840;
+  --navy-soft: #4A5868;
+  --ink: #1B2A3A;
+  --muted: #8A95A0;
+  --muted-soft: #B5BDC4;
+  --line: #E8ECEA;
+  --line-soft: #F0F2F1;
+  --canvas: #FAFAF8;
+  --canvas-warm: #F5F4F0;
+  --gold: #D4A659;
+  --gold-bright: #F5C44C;
+  --gold-soft: #E8C886;
+  --coral: #FF8B5A;
+  --coral-pale: #FFE9DD;
+  --coral-deep: #B85B36;
+  --bad: #DC2626;
+  --bad-pale: #FEE2E2;
+  --paper: #efe6cd;
+  --purple: #9D7BFF;
+  --purple-pale: #EDE5FF;
+}
+html, body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(61,189,163,0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(212,166,89,0.05), transparent 60%),
+    #131820;
+  min-height: 100vh;
+  padding: 60px 16px 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+
+.stage-caption {
+  text-align: center;
+  color: rgba(255,255,255,0.6);
+  max-width: 720px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.stage-caption .label {
+  font-family: 'Instrument Serif', serif;
+  font-size: 13px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  font-weight: 400;
+  margin-bottom: 8px;
+  display: block;
+}
+.stage-caption .head {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 32px;
+  color: white;
+  font-weight: 400;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+.section-divider {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.section-divider .sd-tag {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+}
+
+.phones-row {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.phone-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.phone-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  max-width: 360px;
+}
+.phone-label .pl-tag {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+}
+.phone-label .pl-name {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  color: white;
+  letter-spacing: 0.2px;
+}
+.phone-label .pl-desc {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+/* ═══════════════ Phone Frame ═══════════════ */
+.phone {
+  width: 380px;
+  height: 800px;
+  background: var(--canvas);
+  border-radius: 42px;
+  overflow: hidden;
+  box-shadow: 0 35px 90px rgba(0,0,0,0.55), 0 0 0 8px #0a0d12, 0 0 0 9px rgba(255,255,255,0.06), inset 0 0 0 1px rgba(255,255,255,0.6);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.phone::before { content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 105px; height: 27px; background: #0a0d12; border-radius: 100px; z-index: 30; }
+
+/* Status bar */
+.status-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px 8px; font-size: 14px; font-weight: 700; color: var(--navy); position: relative; z-index: 11; }
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.signal-bars { display: flex; gap: 2px; align-items: flex-end; }
+.signal-bars i { width: 3px; background: var(--navy); border-radius: 1px; display: block; }
+.signal-bars i:nth-child(1) { height: 4px; }
+.signal-bars i:nth-child(2) { height: 6px; }
+.signal-bars i:nth-child(3) { height: 8px; }
+.signal-bars i:nth-child(4) { height: 10px; }
+.battery { width: 24px; height: 11px; border: 1px solid var(--navy); border-radius: 3px; position: relative; padding: 1.5px; }
+.battery::after { content: ''; position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 1.5px; height: 5px; background: var(--navy); border-radius: 0 1px 1px 0; }
+.battery i { height: 100%; width: 75%; background: var(--navy); border-radius: 1px; display: block; }
+
+/* Top nav */
+.nav-bar { display: flex; align-items: center; padding: 10px 22px 8px; gap: 8px; }
+.nav-icon-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--navy); transition: background 0.2s; flex-shrink: 0; }
+.nav-icon-btn:hover { background: var(--line-soft); }
+.nav-icon-btn svg { width: 18px; height: 18px; }
+.nav-title { font-size: 16px; font-weight: 800; color: var(--navy); letter-spacing: -0.4px; flex: 1; text-align: center; }
+.nav-action {
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.18s;
+  letter-spacing: -0.1px;
+  color: var(--teal-darker);
+  flex-shrink: 0;
+}
+.nav-action:hover { background: var(--teal-paler); }
+
+/* Body scroll */
+.pp-body { flex: 1; overflow-y: auto; padding-bottom: 50px; position: relative; }
+.pp-body::-webkit-scrollbar { width: 0; }
+
+/* Hero atmosphere */
+.atm-bg { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 280px; pointer-events: none; z-index: 0; }
+.atm-bg.warm { background: radial-gradient(ellipse 70% 100% at 30% 30%, rgba(245,196,76,0.10), transparent 70%), radial-gradient(ellipse 70% 80% at 90% 0%, rgba(61,189,163,0.10), transparent 60%); }
+.atm-bg.teal { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(61,189,163,0.14), transparent 65%); }
+.atm-bg.coral { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(255,139,90,0.10), transparent 65%); }
+.atm-bg.purple { background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(157,123,255,0.10), transparent 65%); }
+
+/* Hero common */
+.hero-greeting {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--teal-darker);
+  letter-spacing: 0.2px;
+  margin-bottom: 4px;
+}
+.h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -1.2px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.h1 .h1-count {
+  display: inline-block;
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--teal);
+  vertical-align: 8px;
+  margin-left: 6px;
+  letter-spacing: -0.5px;
+}
+.hero-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy-soft);
+  letter-spacing: -0.2px;
+  flex-wrap: wrap;
+}
+.hero-stats .stat-num { color: var(--navy); font-weight: 800; font-feature-settings: 'tnum'; }
+.hero-stats .stat-num.gold { color: #B07A1F; }
+.hero-stats .stat-num.coral { color: var(--coral-deep); }
+.hero-stats .stat-num.teal { color: var(--teal-darker); }
+.hero-stats .stat-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-soft); margin: 0 6px; }
+
+/* Common section heading */
+.section-heading {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 22px 22px 8px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-heading .sh-action {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  text-transform: none;
+}
+
+/* Card base */
+.card-base {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  display: block;
+}
+.card-base:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+
+/* Walking lady */
+.lady-symbol { width: 22px; height: 28px; flex-shrink: 0; }
+@keyframes walkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.lady-walk { animation: walkBob 1.4s ease-in-out infinite; }
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 5px 14px rgba(31,122,102,0.32);
+  letter-spacing: -0.2px;
+  transition: all 0.18s;
+}
+.btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); }
+.btn-primary svg { width: 14px; height: 14px; }
+
+.btn-secondary {
+  background: white;
+  color: var(--navy);
+  border: 1.5px solid var(--line);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 11px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  letter-spacing: -0.1px;
+  transition: all 0.18s;
+}
+.btn-secondary:hover { border-color: var(--teal); color: var(--teal-darker); }
+.btn-secondary svg { width: 13px; height: 13px; }
+
+/* Floating action button */
+.fab {
+  position: absolute;
+  right: 18px;
+  bottom: 22px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 22px rgba(31,122,102,0.45), 0 4px 8px rgba(0,0,0,0.15);
+  z-index: 10;
+  transition: all 0.18s;
+}
+.fab:hover { background: var(--teal-dark); transform: translateY(-2px) scale(1.05); }
+.fab svg { width: 22px; height: 22px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   1. BUYER PROFILE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.bp-hero {
+  padding: 8px 22px 16px;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+.bp-greeting {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--teal-darker);
+  margin-bottom: 4px;
+}
+.bp-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.8px;
+  margin-bottom: 16px;
+}
+
+/* Strength meter — circular gauge */
+.strength-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #F1F9F4, #E2F1EA);
+  border: 1px solid rgba(61,189,163,0.25);
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin: 0 6px;
+}
+.strength-gauge {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+.strength-gauge svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.strength-gauge .gauge-bg { stroke: rgba(255,255,255,0.6); }
+.strength-gauge .gauge-fill { stroke: var(--teal); transition: stroke-dashoffset 1.5s cubic-bezier(.2,.85,.25,1); }
+.strength-gauge .gauge-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.5px;
+}
+.strength-gauge .gauge-num small { font-size: 9px; vertical-align: 4px; font-weight: 700; }
+.strength-info { flex: 1; min-width: 0; text-align: left; }
+.strength-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--teal-darker);
+  margin-bottom: 2px;
+}
+.strength-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  margin-bottom: 2px;
+}
+.strength-tip {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  line-height: 1.35;
+}
+
+/* Trust signals row */
+.signals-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 14px 22px 0;
+}
+.signal-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  position: relative;
+}
+.signal-card .sc-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.signal-card .sc-icon svg { width: 14px; height: 14px; }
+.signal-card.verified .sc-icon { background: var(--teal); color: white; }
+.signal-card .sc-content { flex: 1; min-width: 0; }
+.signal-card .sc-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.signal-card .sc-value {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.signal-card.verified .sc-value::after {
+  content: '✓';
+  font-size: 11px;
+  color: var(--teal);
+  font-weight: 800;
+}
+
+/* Detail card */
+.detail-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  margin: 0 22px 8px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.detail-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+.detail-card .dc-icon {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.detail-card .dc-icon svg { width: 16px; height: 16px; }
+.detail-card.verified .dc-icon { background: var(--teal); color: white; }
+.detail-card.warm .dc-icon { background: #FDF4DC; color: #B07A1F; }
+.detail-card .dc-content { flex: 1; min-width: 0; }
+.detail-card .dc-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.detail-card .dc-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 1px;
+  line-height: 1.35;
+}
+.detail-card .dc-arrow { color: var(--muted); font-size: 16px; flex-shrink: 0; }
+.verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--teal);
+  color: white;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px 2px 5px;
+  border-radius: 100px;
+  letter-spacing: 0.2px;
+}
+.verified-pill svg { width: 9px; height: 9px; }
+.warning-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #FEF3C7;
+  color: #92400E;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.2px;
+}
+
+/* Shareable card preview */
+.share-card {
+  margin: 14px 22px 0;
+  background: linear-gradient(155deg, #1F4B43 0%, #0F2E29 100%);
+  border-radius: 18px;
+  padding: 16px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15,46,41,0.32), inset 0 0 0 1px rgba(245,196,76,0.32);
+  cursor: pointer;
+  transition: transform 0.25s;
+}
+.share-card:hover { transform: translateY(-2px); }
+.share-card::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 0.5px solid rgba(245,196,76,0.18);
+  border-radius: 14px;
+  pointer-events: none;
+}
+.share-card-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #FFFAEB 0%, var(--gold-soft) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.share-card-title {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 6px;
+  line-height: 1.1;
+  position: relative;
+  z-index: 2;
+}
+.share-card-name {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 2;
+}
+.share-card-tags {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
+}
+.share-card-tags .sct {
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(245,196,76,0.18);
+  color: var(--gold-soft);
+  padding: 3px 8px;
+  border-radius: 100px;
+  border: 0.5px solid rgba(245,196,76,0.3);
+  letter-spacing: 0.2px;
+}
+.share-card-cta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(245,196,76,0.28);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+  color: var(--gold-soft);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   2. PERSONAL INFORMATION
+   ═══════════════════════════════════════════════════════════════════ */
+
+.pi-hero { padding: 10px 22px 14px; position: relative; z-index: 1; text-align: center; }
+.pi-avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(155deg, #2A9484 0%, #143F58 60%, #0E2840 100%);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 18px rgba(14,40,64,0.3), inset 0 0 0 3px rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+  position: relative;
+}
+.pi-avatar .avatar-camera-mini {
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  border: 2.5px solid var(--canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.pi-avatar .avatar-camera-mini svg { width: 11px; height: 11px; }
+.pi-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.6px;
+  margin-bottom: 2px;
+}
+.pi-meta {
+  font-size: 12px;
+  color: var(--navy-soft);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Completion meter */
+.pi-completion {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 6px 12px 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy-soft);
+}
+.pi-completion .pic-track {
+  width: 60px;
+  height: 5px;
+  background: var(--line);
+  border-radius: 100px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pi-completion .pic-fill {
+  height: 100%;
+  width: 78%;
+  background: linear-gradient(90deg, var(--teal), var(--teal-darker));
+  border-radius: 100px;
+}
+.pi-completion .pic-pct { color: var(--teal-darker); font-weight: 800; font-feature-settings: 'tnum'; }
+
+/* Field group */
+.pi-section { padding: 0 22px; }
+.pi-group {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.pi-row {
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pi-row:last-child { border-bottom: none; }
+.pi-row:hover { background: var(--canvas-warm); }
+.pi-row .pir-content { flex: 1; min-width: 0; }
+.pi-row .pir-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+  margin-bottom: 1px;
+}
+.pi-row .pir-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.pi-row .pir-value.empty { color: var(--teal-darker); font-weight: 700; }
+.pi-row .pir-edit {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--navy-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pi-row .pir-edit svg { width: 12px; height: 12px; }
+.pi-row .pir-toggle {
+  width: 38px; height: 22px;
+  background: var(--line);
+  border-radius: 100px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pi-row .pir-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.pi-row .pir-toggle.on { background: var(--teal); }
+.pi-row .pir-toggle.on::after { transform: translateX(16px); }
+
+/* Verified row */
+.pi-row.verified-row {
+  background: linear-gradient(135deg, #F1F9F4 0%, #E2F1EA 100%);
+  border-bottom: 1px solid rgba(61,189,163,0.25);
+}
+.pi-row .pir-verified-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pi-row .pir-verified-icon svg { width: 14px; height: 14px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. COLLABORATORS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cl-hero { padding: 8px 22px 14px; position: relative; z-index: 1; }
+
+/* Filter chips */
+.cl-filter-row {
+  display: flex;
+  gap: 6px;
+  padding: 4px 22px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 1;
+}
+.cl-filter-row::-webkit-scrollbar { display: none; }
+.cl-chip {
+  background: white;
+  color: var(--navy-soft);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  letter-spacing: -0.1px;
+}
+.cl-chip.active {
+  background: var(--navy);
+  color: white;
+  border-color: var(--navy);
+}
+.cl-chip .cl-chip-num {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  font-feature-settings: 'tnum';
+}
+.cl-chip.active .cl-chip-num { color: rgba(255,255,255,0.7); }
+
+/* Collaborator card */
+.collaborator-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  margin: 0 22px 10px;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.collaborator-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+.collab-avatar {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08);
+}
+.collab-avatar.solicitor { background: linear-gradient(155deg, #2C5F56, #143F38); }
+.collab-avatar.agent { background: linear-gradient(155deg, #C18A38, #8A5F1F); }
+.collab-avatar.partner { background: linear-gradient(155deg, #C5664A, #8A3F26); }
+.collab-avatar.broker { background: linear-gradient(155deg, #6B4E9F, #3F2870); }
+
+.collab-content { flex: 1; min-width: 0; }
+.collab-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.collab-role {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--teal-darker);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+.collab-org {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.collab-properties {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.collab-prop-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px 3px 6px;
+  border-radius: 100px;
+}
+.collab-prop-tag svg { width: 9px; height: 9px; opacity: 0.7; }
+.collab-prop-tag.global {
+  background: var(--canvas-warm);
+  color: var(--navy-soft);
+}
+.collab-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.collab-action-btn {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--navy-soft);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.collab-action-btn:hover { background: var(--teal-paler); color: var(--teal-darker); }
+.collab-action-btn svg { width: 13px; height: 13px; }
+
+/* Empty state */
+.empty-state {
+  margin: 16px 22px;
+  padding: 24px 18px;
+  background: var(--canvas-warm);
+  border: 1px dashed var(--muted-soft);
+  border-radius: 16px;
+  text-align: center;
+}
+.empty-state-icon {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--teal-darker);
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(14,40,64,0.06);
+}
+.empty-state-icon svg { width: 22px; height: 22px; }
+.empty-state-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 4px;
+  letter-spacing: -0.2px;
+}
+.empty-state-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-bottom: 14px;
+  line-height: 1.4;
+  max-width: 240px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. SAVED PROPERTIES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.sp-hero { padding: 8px 22px 14px; position: relative; z-index: 1; }
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 8px 22px 0;
+}
+.sp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+.sp-photo {
+  position: relative;
+  aspect-ratio: 152 / 130;
+  border-radius: 14px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #C5E4DD, #A8C8B5);
+  box-shadow: 0 4px 12px rgba(14,40,64,0.1);
+}
+.sp-photo svg { width: 100%; height: 100%; display: block; }
+.sp-photo .sp-heart {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--coral);
+  transition: transform 0.15s;
+}
+.sp-photo .sp-heart:hover { transform: scale(1.1); }
+.sp-photo .sp-heart svg { width: 14px; height: 14px; fill: var(--coral); stroke: var(--coral); }
+.sp-photo .sp-status {
+  position: absolute;
+  bottom: 8px; left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(15,46,41,0.85);
+  backdrop-filter: blur(6px);
+  color: var(--gold-soft);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+  border: 0.5px solid rgba(245,196,76,0.3);
+}
+.sp-photo .sp-status.passport-ready {
+  background: linear-gradient(135deg, #1F4B43, #0F2E29);
+}
+.sp-photo .sp-status.no-passport {
+  background: rgba(255,255,255,0.9);
+  color: var(--navy-soft);
+  border-color: var(--line);
+}
+.sp-photo .sp-status svg { width: 8px; height: 8px; }
+.sp-photo .sp-priceflag {
+  position: absolute;
+  top: 8px; left: 8px;
+  background: var(--coral);
+  color: white;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.1px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 2px 6px rgba(255,139,90,0.35);
+}
+.sp-photo .sp-priceflag svg { width: 9px; height: 9px; }
+
+.sp-info { padding: 0 2px; }
+.sp-addr {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  margin-bottom: 2px;
+}
+.sp-locality {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.sp-price {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--teal-darker);
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.3px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   5. CALENDAR
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cal-hero { padding: 8px 22px 10px; position: relative; z-index: 1; }
+.cal-monthnav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.cal-monthnav h2 {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  flex: 1;
+}
+.cal-monthnav .cal-arrow {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--canvas-warm);
+  color: var(--navy);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cal-monthnav .cal-arrow svg { width: 13px; height: 13px; }
+.cal-monthnav .cal-arrow:hover { background: var(--line); }
+
+/* Mini month grid */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 0 22px;
+  position: relative;
+  z-index: 1;
+}
+.cal-dow {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: center;
+  padding: 4px 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.cal-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s;
+}
+.cal-day:hover { background: var(--canvas-warm); }
+.cal-day.muted { color: var(--muted-soft); font-weight: 600; }
+.cal-day.has-event::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--teal);
+}
+.cal-day.has-event-warn::after { background: var(--coral); }
+.cal-day.has-event-gold::after { background: var(--gold); }
+.cal-day.today {
+  background: var(--navy);
+  color: white;
+  font-weight: 800;
+}
+.cal-day.today.has-event::after { background: var(--gold-bright); }
+.cal-day.selected {
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1.5px var(--teal);
+}
+
+/* Agenda */
+.cal-agenda-heading {
+  padding: 0 22px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.cal-agenda-heading .agenda-day {
+  color: var(--teal-darker);
+}
+
+.cal-event {
+  margin: 0 22px 8px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  align-items: center;
+  border-left: 4px solid var(--teal);
+}
+.cal-event.viewing { border-left-color: var(--teal); }
+.cal-event.compliance { border-left-color: var(--coral); }
+.cal-event.deadline { border-left-color: var(--gold-bright); }
+.cal-event.personal { border-left-color: var(--purple); }
+.cal-event:hover { transform: translateX(2px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); border-color: var(--teal-pale); }
+
+.cal-event-time {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.1px;
+  font-feature-settings: 'tnum';
+  flex-shrink: 0;
+  text-align: right;
+  width: 50px;
+}
+.cal-event-time-small {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+.cal-event-content { flex: 1; min-width: 0; }
+.cal-event-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+.cal-event-meta {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.cal-event-tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 100px;
+  margin-top: 4px;
+  display: inline-block;
+}
+.cal-event-tag.viewing { background: var(--teal-paler); color: var(--teal-darker); }
+.cal-event-tag.compliance { background: var(--coral-pale); color: var(--coral-deep); }
+.cal-event-tag.deadline { background: #FEF3C7; color: #92400E; }
+.cal-event-tag.personal { background: var(--purple-pale); color: #6B4E9F; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. YOUR DOCUMENTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dc-hero { padding: 8px 22px 12px; position: relative; z-index: 1; }
+
+/* Search bar */
+.dc-search {
+  margin: 0 22px 16px;
+  position: relative;
+  z-index: 1;
+}
+.dc-search-input {
+  width: 100%;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px 11px 38px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  outline: none;
+  transition: all 0.18s;
+}
+.dc-search-input::placeholder { color: var(--muted); font-weight: 500; }
+.dc-search-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(61,189,163,0.18);
+}
+.dc-search-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+}
+.dc-search-icon svg { width: 14px; height: 14px; }
+
+/* Categories grid */
+.dc-cats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 22px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+.dc-cat {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.dc-cat:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,40,64,0.06); }
+.dc-cat.identity { background: linear-gradient(135deg, #F1F9F4, #E2F1EA); border-color: rgba(61,189,163,0.25); }
+.dc-cat.property { background: linear-gradient(135deg, #FDF4DC, #F8E6C2); border-color: rgba(212,166,89,0.32); }
+.dc-cat.financial { background: linear-gradient(135deg, #FFE9DD, #FFD4BD); border-color: rgba(255,139,90,0.28); }
+.dc-cat.other { background: linear-gradient(135deg, #EDE5FF, #DCC8FF); border-color: rgba(157,123,255,0.28); }
+.dc-cat-icon {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.dc-cat-icon svg { width: 15px; height: 15px; }
+.dc-cat.identity .dc-cat-icon { color: var(--teal-darker); }
+.dc-cat.property .dc-cat-icon { color: #6F4D14; }
+.dc-cat.financial .dc-cat-icon { color: var(--coral-deep); }
+.dc-cat.other .dc-cat-icon { color: #6B4E9F; }
+.dc-cat-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-bottom: 1px;
+}
+.dc-cat-count {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--navy-soft);
+  font-feature-settings: 'tnum';
+}
+
+/* Recent docs list */
+.dc-doc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  margin: 0 22px 6px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dc-doc:hover { border-color: var(--teal-pale); transform: translateY(-1px); }
+.dc-doc-icon {
+  width: 34px; height: 38px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #FDF4DC, #F8E6C2);
+  color: #6F4D14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  position: relative;
+}
+.dc-doc-icon.pdf { background: linear-gradient(135deg, #FFE0DC, #FFC4BD); color: #B85B36; }
+.dc-doc-icon.img { background: linear-gradient(135deg, #DCFCE7, #BBF7D0); color: #047857; }
+.dc-doc-icon::after {
+  content: '';
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 6px; height: 6px;
+  border-style: solid;
+  border-width: 0 0 4px 4px;
+  border-color: transparent transparent rgba(0,0,0,0.15) transparent;
+}
+.dc-doc-info { flex: 1; min-width: 0; }
+.dc-doc-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dc-doc-meta {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.dc-doc-action {
+  color: var(--muted);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODAL (centered, not bottom sheet)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(14,24,32,0.65);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  opacity: 1;
+}
+
+.modal {
+  width: 100%;
+  background: var(--canvas);
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90%;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.modal-handle {
+  width: 36px; height: 4px;
+  background: var(--line);
+  border-radius: 100px;
+  margin: 8px auto 0;
+  flex-shrink: 0;
+}
+
+.modal-header {
+  padding: 14px 18px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+  flex: 1;
+}
+.modal-close {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--navy-soft);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.modal-close:hover { background: var(--line); }
+
+.modal-body {
+  padding: 0 18px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-body::-webkit-scrollbar { width: 0; }
+
+.modal-footer {
+  padding: 12px 18px 18px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Modal form */
+.mform-section {
+  margin-bottom: 14px;
+}
+.mform-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.mform-input {
+  width: 100%;
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  padding: 11px 13px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+  outline: none;
+  transition: all 0.18s;
+}
+.mform-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(61,189,163,0.18);
+}
+.mform-input::placeholder { color: var(--muted); font-weight: 500; }
+
+.mform-radio-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.mform-radio {
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: all 0.15s;
+  text-align: left;
+}
+.mform-radio:hover { border-color: var(--teal-pale); }
+.mform-radio.active {
+  border-color: var(--teal);
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+}
+.mform-radio .mfr-icon {
+  width: 22px; height: 22px;
+  border-radius: 7px;
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mform-radio.active .mfr-icon { background: var(--teal); color: white; }
+.mform-radio .mfr-icon svg { width: 12px; height: 12px; }
+
+/* Existing-collaborator picker row */
+.mform-existing-row {
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 11px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 6px;
+}
+.mform-existing-row:hover { border-color: var(--teal-pale); }
+.mform-existing-row.active {
+  border-color: var(--teal);
+  background: var(--teal-paler);
+}
+.mform-existing-row .mfe-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.mform-existing-row .mfe-info { flex: 1; min-width: 0; }
+.mform-existing-row .mfe-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+.mform-existing-row .mfe-org {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--navy-soft);
+}
+.mform-existing-row .mfe-check {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted-soft);
+  flex-shrink: 0;
+}
+.mform-existing-row.active .mfe-check {
+  background: var(--teal);
+  border-color: var(--teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+.mform-existing-row.active .mfe-check::before {
+  content: '✓';
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Property selector */
+.mform-property-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mform-property {
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  transition: all 0.15s;
+}
+.mform-property:hover { border-color: var(--teal-pale); }
+.mform-property.selected {
+  border-color: var(--teal);
+  background: var(--teal-paler);
+  color: var(--teal-darker);
+}
+.mform-property .mfp-icon {
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  background: var(--canvas-warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mform-property.selected .mfp-icon { background: var(--teal); color: white; }
+.mform-property .mfp-icon svg { width: 11px; height: 11px; }
+.mform-property .mfp-check {
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--muted-soft);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.mform-property.selected .mfp-check {
+  background: var(--teal);
+  border-color: var(--teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+.mform-property.selected .mfp-check::before {
+  content: '✓';
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mform-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 14px 0;
+  position: relative;
+}
+.mform-divider::before {
+  content: 'or';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--canvas);
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+/* Decision panel */
+.decision-panel {
+  max-width: 760px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 28px 32px;
+  color: rgba(255,255,255,0.72);
+}
+.decision-panel h3 {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  color: white;
+  margin-bottom: 18px;
+}
+.decision-panel .opt-block {
+  margin-bottom: 18px;
+  padding-left: 22px;
+  position: relative;
+}
+.decision-panel .opt-block::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 12px;
+  height: 1px;
+  background: var(--teal);
+}
+.decision-panel .opt-block .opt-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.2px;
+  margin-bottom: 4px;
+}
+.decision-panel .opt-block .opt-text {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.65;
+}
+.decision-panel .opt-block .opt-text b { color: white; font-weight: 700; }
+
+@media (max-width: 460px) {
+  .phone { width: 100%; max-width: 380px; height: 760px; }
+  body { padding: 28px 12px 40px; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage-caption">
+  <span class="label">UMU · Your stuff — full builds</span>
+  <div class="head">Six screens. One design language.</div>
+  <div>Each menu category from the profile, fully designed: Buyer Profile, Personal Information, Collaborators, Saved Properties, Calendar, Your Documents. Plus the modal flows for adding to each one — collaborators picker, calendar event composer, document upload.</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="5,12 10,17 19,7" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="9,12 11,14 15,10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pound" viewBox="0 0 24 24"><path d="M18 7c0-2.5-2-4-5-4s-5 2-5 4.5c0 3 1.5 4.5 1.5 7.5 0 1.5-1 2.5-2 3h11M7 12h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="19" r="3" fill="none" stroke="currentColor" stroke-width="2"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="currentColor" stroke-width="2"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="2,7 12,13 22,7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-balance" viewBox="0 0 24 24"><path d="M12 3v18M5 9l7-3 7 3M3 9l4 9h-8zM21 9l-4 9h8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 12l9-9m-3 3 3 3m-6 0 2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 17q3 -3 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="9" x2="19" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="13" x2="18" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-trend-up" viewBox="0 0 24 24"><polyline points="3,17 9,11 13,15 21,7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,7 21,7 21,14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trend-down" viewBox="0 0 24 24"><polyline points="3,7 9,13 13,9 21,17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14,17 21,17 21,10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="3" x2="8" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="12,6 12,12 16,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron-l" viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron-r" viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="17 8 12 3 7 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="3" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-handshake" viewBox="0 0 24 24"><path d="M11 17l4 4 8-8-4-4M3 12l8 8M3 12l4-4M7 8l4 4M11 12l3-3M14 9l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+
+    <!-- Walking lady -->
+    <symbol id="lady" viewBox="0 0 28 42">
+      <ellipse cx="14" cy="40.5" rx="6" ry="1.2" fill="rgba(0,0,0,0.18)"/>
+      <path d="M 5 13 Q 5 22 7 28 L 21 28 Q 23 22 23 13 Q 23 4 14 3 Q 5 4 5 13 Z" fill="#2D1F1A"/>
+      <circle cx="14" cy="13" r="5" fill="#F4C9A0"/>
+      <path d="M 8.5 12 Q 9 7 14 6.5 Q 19 7 19.5 12 Q 18.5 9 14 8.5 Q 9.5 9 8.5 12 Z" fill="#2D1F1A"/>
+      <path d="M 9 18.5 Q 7 19.5 7 21 L 6 31 L 22 31 L 21 21 Q 21 19.5 19 18.5 Z" fill="#FF8B5A"/>
+      <rect x="6.5" y="29" width="15" height="1.5" fill="#E07248"/>
+      <path d="M 6.5 30 L 21.5 30 L 22.5 38 L 5.5 38 Z" fill="#2A4458"/>
+      <rect x="9.5" y="36.5" width="2.5" height="4" fill="#F4C9A0"/>
+      <rect x="16" y="36.5" width="2.5" height="4" fill="#F4C9A0"/>
+    </symbol>
+
+    <!-- House photo for saved properties -->
+    <symbol id="house-1" viewBox="0 0 152 130" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#9DC3D6"/><stop offset="100%" stop-color="#D4E2D8"/></linearGradient>
+      </defs>
+      <rect width="152" height="80" fill="url(#sky1)"/>
+      <rect y="80" width="152" height="50" fill="#A4B89A"/>
+      <rect x="48" y="50" width="56" height="44" fill="#E8DDC8"/>
+      <polygon points="44,50 76,30 108,50" fill="#7B5A3C"/>
+      <rect x="58" y="62" width="10" height="14" fill="#3D2A1A"/>
+      <rect x="84" y="62" width="10" height="14" fill="#3D2A1A"/>
+      <rect x="68" y="76" width="14" height="18" fill="#5C3A1F"/>
+      <ellipse cx="22" cy="80" rx="14" ry="18" fill="#5C7256"/>
+      <rect x="20" y="92" width="3" height="10" fill="#3D2A1A"/>
+      <ellipse cx="130" cy="86" rx="12" ry="14" fill="#6A8264"/>
+    </symbol>
+    <symbol id="house-2" viewBox="0 0 152 130" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFE4B5"/><stop offset="100%" stop-color="#F5D7A0"/></linearGradient>
+      </defs>
+      <rect width="152" height="80" fill="url(#sky2)"/>
+      <rect y="80" width="152" height="50" fill="#9DB892"/>
+      <rect x="40" y="55" width="72" height="38" fill="#B8956A"/>
+      <polygon points="36,55 76,35 116,55" fill="#5A3F26"/>
+      <rect x="48" y="65" width="9" height="12" fill="#2D1F1A"/>
+      <rect x="64" y="65" width="9" height="12" fill="#2D1F1A"/>
+      <rect x="80" y="65" width="9" height="12" fill="#2D1F1A"/>
+      <rect x="96" y="65" width="9" height="12" fill="#2D1F1A"/>
+      <rect x="69" y="78" width="14" height="15" fill="#3D2A1A"/>
+    </symbol>
+    <symbol id="house-3" viewBox="0 0 152 130" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#B8C5D9"/><stop offset="100%" stop-color="#D5DDE5"/></linearGradient>
+      </defs>
+      <rect width="152" height="80" fill="url(#sky3)"/>
+      <rect y="80" width="152" height="50" fill="#8FA88E"/>
+      <rect x="20" y="50" width="116" height="48" fill="#D6BFA0"/>
+      <rect x="20" y="48" width="116" height="6" fill="#3D2A1A"/>
+      <rect x="32" y="58" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="56" y="58" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="80" y="58" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="104" y="58" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="32" y="78" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="80" y="78" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="104" y="78" width="14" height="14" fill="#7DB3A0"/>
+      <rect x="56" y="78" width="14" height="20" fill="#3D2A1A"/>
+    </symbol>
+    <symbol id="house-4" viewBox="0 0 152 130" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#C8E0DA"/><stop offset="100%" stop-color="#DEEBE4"/></linearGradient>
+      </defs>
+      <rect width="152" height="80" fill="url(#sky4)"/>
+      <rect y="80" width="152" height="50" fill="#A8C098"/>
+      <rect x="32" y="40" width="88" height="58" fill="#F4F8F5"/>
+      <polygon points="28,40 76,12 124,40" fill="#1F4B43"/>
+      <rect x="46" y="52" width="14" height="14" fill="#C5E4DD"/>
+      <rect x="68" y="52" width="14" height="14" fill="#C5E4DD"/>
+      <rect x="90" y="52" width="14" height="14" fill="#C5E4DD"/>
+      <rect x="46" y="72" width="14" height="14" fill="#C5E4DD"/>
+      <rect x="90" y="72" width="14" height="14" fill="#C5E4DD"/>
+      <rect x="68" y="72" width="14" height="20" fill="#3DBDA3"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ════════════════════════════════════════════════════
+     ROW 1 — BUYER PROFILE & PERSONAL INFORMATION
+     ════════════════════════════════════════════════════ -->
+
+<div class="phones-row">
+
+  <!-- ══════════════ 1. BUYER PROFILE ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Buyer Profile</div>
+        <button class="nav-action">Share</button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg teal"></div>
+
+        <div class="bp-hero">
+          <div class="bp-greeting">Welcome back, Jon</div>
+          <div class="bp-title">Your buyer's badge</div>
+        </div>
+
+        <div class="strength-block">
+          <div class="strength-gauge">
+            <svg viewBox="0 0 64 64">
+              <circle class="gauge-bg" cx="32" cy="32" r="26" fill="none" stroke-width="6"/>
+              <circle class="gauge-fill" cx="32" cy="32" r="26" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="13.07"/>
+            </svg>
+            <div class="gauge-num">92<small>%</small></div>
+          </div>
+          <div class="strength-info">
+            <div class="strength-label">Profile strength</div>
+            <div class="strength-name">Trusted Buyer</div>
+            <div class="strength-tip">Sellers see you as ready and serious. Great work, Jon.</div>
+          </div>
+        </div>
+
+        <div class="signals-row">
+          <div class="signal-card verified">
+            <div class="sc-icon"><svg><use href="#i-id"/></svg></div>
+            <div class="sc-content">
+              <div class="sc-label">Identity</div>
+              <div class="sc-value">Verified</div>
+            </div>
+          </div>
+          <div class="signal-card verified">
+            <div class="sc-icon"><svg><use href="#i-pound"/></svg></div>
+            <div class="sc-content">
+              <div class="sc-label">Funds</div>
+              <div class="sc-value">£500K</div>
+            </div>
+          </div>
+          <div class="signal-card verified">
+            <div class="sc-icon"><svg><use href="#i-link"/></svg></div>
+            <div class="sc-content">
+              <div class="sc-label">Chain</div>
+              <div class="sc-value">Chain free</div>
+            </div>
+          </div>
+          <div class="signal-card">
+            <div class="sc-icon"><svg><use href="#i-house"/></svg></div>
+            <div class="sc-content">
+              <div class="sc-label">Mortgage</div>
+              <div class="sc-value">AIP £450K</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">Details &amp; documents</div>
+
+        <div class="detail-card verified">
+          <div class="dc-icon"><svg><use href="#i-id"/></svg></div>
+          <div class="dc-content">
+            <div class="dc-title">Identity Verification <span class="verified-pill"><svg><use href="#i-check"/></svg>Verified</span></div>
+            <div class="dc-sub">Verified by Onfido · 12 Mar 2026</div>
+          </div>
+          <div class="dc-arrow">›</div>
+        </div>
+
+        <div class="detail-card verified">
+          <div class="dc-icon"><svg><use href="#i-pound"/></svg></div>
+          <div class="dc-content">
+            <div class="dc-title">Proof of Funds</div>
+            <div class="dc-sub">£500,000 · Lloyds statement · expires 12 Jun 2026</div>
+          </div>
+          <div class="dc-arrow">›</div>
+        </div>
+
+        <div class="detail-card warm">
+          <div class="dc-icon"><svg><use href="#i-house"/></svg></div>
+          <div class="dc-content">
+            <div class="dc-title">Mortgage in principle <span class="warning-pill">Add doc</span></div>
+            <div class="dc-sub">Halifax · £450K · upload AIP letter</div>
+          </div>
+          <div class="dc-arrow">›</div>
+        </div>
+
+        <div class="detail-card">
+          <div class="dc-icon"><svg><use href="#i-link"/></svg></div>
+          <div class="dc-content">
+            <div class="dc-title">Chain Position</div>
+            <div class="dc-sub">Chain free · ready to move on completion</div>
+          </div>
+          <div class="dc-arrow">›</div>
+        </div>
+
+        <div class="detail-card">
+          <div class="dc-icon"><svg><use href="#i-eye"/></svg></div>
+          <div class="dc-content">
+            <div class="dc-title">Buying Stage</div>
+            <div class="dc-sub">Actively viewing · target Coventry, 3 bed</div>
+          </div>
+          <div class="dc-arrow">›</div>
+        </div>
+
+        <div class="section-heading">Your shareable card</div>
+
+        <div class="share-card">
+          <div class="share-card-label">UMU Buyer · 92% strength</div>
+          <div class="share-card-title">Trusted, ready, chain-free.</div>
+          <div class="share-card-name">Jon Paul</div>
+          <div class="share-card-tags">
+            <span class="sct">ID Verified</span>
+            <span class="sct">£500K Funds</span>
+            <span class="sct">AIP Halifax</span>
+          </div>
+          <div class="share-card-cta">
+            <span>Tap to share with sellers</span>
+            <svg width="14" height="14"><use href="#i-share"/></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 1 of 6</span>
+      <span class="pl-name">Buyer Profile</span>
+      <span class="pl-desc">A confidence card. Profile strength gauge, four trust signals, then the digital business card buyers can share with sellers.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ 2. PERSONAL INFORMATION ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Personal Information</div>
+        <button class="nav-action">Edit</button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg warm"></div>
+
+        <div class="pi-hero">
+          <div class="pi-avatar">
+            JP
+            <div class="avatar-camera-mini"><svg><use href="#i-camera"/></svg></div>
+          </div>
+          <div class="pi-name">Jon Paul</div>
+          <div class="pi-meta">jp_ashton@btinternet.com</div>
+          <div class="pi-completion">
+            <span>Profile</span>
+            <div class="pic-track"><div class="pic-fill"></div></div>
+            <span class="pic-pct">78%</span>
+          </div>
+        </div>
+
+        <div class="section-heading">Name &amp; contact</div>
+        <div class="pi-section">
+          <div class="pi-group">
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Full name</div>
+                <div class="pir-value">Jon Paul</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-edit"/></svg></div>
+            </div>
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Email</div>
+                <div class="pir-value">jp_ashton@btinternet.com</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-edit"/></svg></div>
+            </div>
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Phone</div>
+                <div class="pir-value">+44 7540 169372</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-edit"/></svg></div>
+            </div>
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Contact visibility</div>
+                <div class="pir-value" style="font-size:11.5px; color:var(--navy-soft); font-weight:600;">Sellers see your details only when you message them</div>
+              </div>
+              <div class="pir-toggle on"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">Address</div>
+        <div class="pi-section">
+          <div class="pi-group">
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Current address</div>
+                <div class="pir-value">42 Hawthorne Avenue<br/>Coventry, CV4 9JT</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-edit"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">Company <span class="sh-action">+ Add</span></div>
+        <div class="pi-section">
+          <div class="pi-group">
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Registered company</div>
+                <div class="pir-value empty">Add company details</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-plus"/></svg></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">Communication preferences</div>
+        <div class="pi-section">
+          <div class="pi-group">
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">In-app push</div>
+                <div class="pir-value" style="font-size:11.5px; color:var(--navy-soft); font-weight:600;">Viewing reminders &amp; messages</div>
+              </div>
+              <div class="pir-toggle on"></div>
+            </div>
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">Email newsletter</div>
+                <div class="pir-value" style="font-size:11.5px; color:var(--navy-soft); font-weight:600;">Weekly market &amp; saved property updates</div>
+              </div>
+              <div class="pir-toggle on"></div>
+            </div>
+            <div class="pi-row">
+              <div class="pir-content">
+                <div class="pir-label">SMS</div>
+                <div class="pir-value" style="font-size:11.5px; color:var(--navy-soft); font-weight:600;">Time-sensitive alerts only</div>
+              </div>
+              <div class="pir-toggle"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-heading">Identity verification</div>
+        <div class="pi-section">
+          <div class="pi-group">
+            <div class="pi-row verified-row">
+              <div class="pir-verified-icon"><svg><use href="#i-check"/></svg></div>
+              <div class="pir-content">
+                <div class="pir-label" style="color: var(--teal-darker);">Verified</div>
+                <div class="pir-value" style="color: var(--navy);">By Onfido · 12 Mar 2026</div>
+              </div>
+              <div class="pir-edit"><svg><use href="#i-eye"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 2 of 6</span>
+      <span class="pl-name">Personal Information</span>
+      <span class="pl-desc">Same sections as the original, but as proper grouped cards. Inline pencil to edit any field. Verified row gets a teal-tinted highlight.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     ROW 2 — COLLABORATORS & SAVED PROPERTIES
+     ════════════════════════════════════════════════════ -->
+
+<div class="phones-row">
+
+  <!-- ══════════════ 3. COLLABORATORS ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Collaborators</div>
+        <button class="nav-icon-btn" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg teal"></div>
+
+        <div class="cl-hero">
+          <div class="hero-greeting">Your team</div>
+          <div class="h1">People you work with<span class="h1-count">3</span></div>
+          <div class="hero-stats">
+            <span class="stat-num">3</span>&nbsp;collaborators
+            <span class="stat-sep"></span>
+            <span class="stat-num">2</span>&nbsp;properties
+            <span class="stat-sep"></span>
+            <span class="stat-num teal">1</span>&nbsp;new this month
+          </div>
+        </div>
+
+        <div class="cl-filter-row">
+          <button class="cl-chip active">Everyone <span class="cl-chip-num">3</span></button>
+          <button class="cl-chip">Solicitors <span class="cl-chip-num">1</span></button>
+          <button class="cl-chip">Agents <span class="cl-chip-num">1</span></button>
+          <button class="cl-chip">Partners <span class="cl-chip-num">1</span></button>
+          <button class="cl-chip">Per property</button>
+        </div>
+
+        <div class="collaborator-card">
+          <div class="collab-avatar solicitor">SH</div>
+          <div class="collab-content">
+            <div class="collab-name">Sarah Henderson</div>
+            <div class="collab-role">Solicitor</div>
+            <div class="collab-org">Henderson &amp; Reed Conveyancing</div>
+            <div class="collab-properties">
+              <span class="collab-prop-tag global"><svg><use href="#i-pin"/></svg>All properties</span>
+            </div>
+          </div>
+          <div class="collab-actions">
+            <button class="collab-action-btn"><svg><use href="#i-msg"/></svg></button>
+          </div>
+        </div>
+
+        <div class="collaborator-card">
+          <div class="collab-avatar agent">MT</div>
+          <div class="collab-content">
+            <div class="collab-name">Michael Tovey</div>
+            <div class="collab-role">Estate agent</div>
+            <div class="collab-org">Belvoir Coventry</div>
+            <div class="collab-properties">
+              <span class="collab-prop-tag"><svg><use href="#i-house"/></svg>19 Woodfield Rd</span>
+              <span class="collab-prop-tag"><svg><use href="#i-house"/></svg>55 Woodfield Rd</span>
+            </div>
+          </div>
+          <div class="collab-actions">
+            <button class="collab-action-btn"><svg><use href="#i-msg"/></svg></button>
+          </div>
+        </div>
+
+        <div class="collaborator-card">
+          <div class="collab-avatar partner">EP</div>
+          <div class="collab-content">
+            <div class="collab-name">Emma Paul</div>
+            <div class="collab-role">Co-owner · partner</div>
+            <div class="collab-org">Joint owner of investment properties</div>
+            <div class="collab-properties">
+              <span class="collab-prop-tag"><svg><use href="#i-house"/></svg>14 Hazel Grove</span>
+            </div>
+          </div>
+          <div class="collab-actions">
+            <button class="collab-action-btn"><svg><use href="#i-msg"/></svg></button>
+          </div>
+        </div>
+
+        <div class="empty-state" style="padding: 18px 18px;">
+          <div class="empty-state-icon" style="width: 38px; height: 38px;"><svg style="width:18px;height:18px;"><use href="#i-handshake"/></svg></div>
+          <div class="empty-state-title" style="font-size: 13px;">Bring in a mortgage broker?</div>
+          <div class="empty-state-sub" style="font-size: 11.5px; max-width: none;">A broker can speed things up — they'll have direct access to your buyer profile.</div>
+          <button class="btn-secondary" style="display:inline-flex; padding: 8px 14px; font-size: 12px;">+ Add broker</button>
+        </div>
+
+      </div>
+
+      <button class="fab" aria-label="Add collaborator"><svg><use href="#i-plus"/></svg></button>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 3 of 6</span>
+      <span class="pl-name">Collaborators</span>
+      <span class="pl-desc">Each person shows their role, organisation, and which properties they're attached to. Suggested empty state nudges what they're missing.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ 4. SAVED PROPERTIES ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Saved Properties</div>
+        <button class="nav-icon-btn" aria-label="Search"><svg><use href="#i-search"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg coral"></div>
+
+        <div class="sp-hero">
+          <div class="hero-greeting">Properties you've hearted</div>
+          <div class="h1">Saved<span class="h1-count">8</span></div>
+          <div class="hero-stats">
+            <span class="stat-num teal">3</span>&nbsp;passport ready
+            <span class="stat-sep"></span>
+            <span class="stat-num coral">2</span>&nbsp;price changes
+            <span class="stat-sep"></span>
+            <span class="stat-num">5</span>&nbsp;viewed this week
+          </div>
+        </div>
+
+        <div class="cl-filter-row" style="padding-top:0;">
+          <button class="cl-chip active">All <span class="cl-chip-num">8</span></button>
+          <button class="cl-chip">Passport ready <span class="cl-chip-num">3</span></button>
+          <button class="cl-chip">Price changed <span class="cl-chip-num">2</span></button>
+          <button class="cl-chip">Recently viewed</button>
+        </div>
+
+        <div class="sp-grid">
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-1"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status passport-ready"><svg><use href="#i-check"/></svg>Passport</div>
+              <div class="sp-priceflag"><svg><use href="#i-trend-down"/></svg>−£15k</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">19 Woodfield Rd</div>
+              <div class="sp-locality">Coventry, CV5 6AJ</div>
+              <div class="sp-price">£440,000</div>
+            </div>
+          </article>
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-2"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status passport-ready"><svg><use href="#i-check"/></svg>Passport</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">22 Park Crescent</div>
+              <div class="sp-locality">Coventry, CV4 8DN</div>
+              <div class="sp-price">£385,000</div>
+            </div>
+          </article>
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-3"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status no-passport">No passport</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">8 Albion Mews</div>
+              <div class="sp-locality">Coventry, CV3 2HP</div>
+              <div class="sp-price">£412,000</div>
+            </div>
+          </article>
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-4"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status passport-ready"><svg><use href="#i-check"/></svg>Passport</div>
+              <div class="sp-priceflag" style="background: var(--gold-bright); color: #6F4D14;"><svg><use href="#i-trend-up"/></svg>+£8k</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">3 Sycamore Close</div>
+              <div class="sp-locality">Kenilworth, CV8 1RG</div>
+              <div class="sp-price">£468,000</div>
+            </div>
+          </article>
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-1"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status no-passport">No passport</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">11 Beech Lane</div>
+              <div class="sp-locality">Coventry, CV4 7QT</div>
+              <div class="sp-price">£395,000</div>
+            </div>
+          </article>
+
+          <article class="sp-tile">
+            <div class="sp-photo">
+              <svg><use href="#house-2"/></svg>
+              <div class="sp-heart"><svg><use href="#i-heart"/></svg></div>
+              <div class="sp-status no-passport">No passport</div>
+            </div>
+            <div class="sp-info">
+              <div class="sp-addr">5 Linden Drive</div>
+              <div class="sp-locality">Warwick, CV34 6GH</div>
+              <div class="sp-price">£452,000</div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 4 of 6</span>
+      <span class="pl-name">Saved Properties</span>
+      <span class="pl-desc">Hearted properties as a 2-up grid. Status pip on the photo (passport ready/none). Price-change flag in coral or gold for the ones that moved.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     ROW 3 — CALENDAR & DOCUMENTS
+     ════════════════════════════════════════════════════ -->
+
+<div class="phones-row">
+
+  <!-- ══════════════ 5. CALENDAR ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Calendar</div>
+        <button class="nav-icon-btn" aria-label="Filter"><svg><use href="#i-search"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg purple"></div>
+
+        <div class="cal-hero">
+          <div class="cal-monthnav">
+            <button class="cal-arrow"><svg><use href="#i-chevron-l"/></svg></button>
+            <h2>May 2026</h2>
+            <button class="cal-arrow"><svg><use href="#i-chevron-r"/></svg></button>
+          </div>
+          <div class="hero-stats">
+            <span class="stat-num">3</span>&nbsp;this week
+            <span class="stat-sep"></span>
+            <span class="stat-num teal">1</span>&nbsp;viewing
+            <span class="stat-sep"></span>
+            <span class="stat-num coral">2</span>&nbsp;deadlines
+          </div>
+        </div>
+
+        <!-- Mini month grid -->
+        <div class="cal-grid">
+          <div class="cal-dow">M</div><div class="cal-dow">T</div><div class="cal-dow">W</div><div class="cal-dow">T</div><div class="cal-dow">F</div><div class="cal-dow">S</div><div class="cal-dow">S</div>
+
+          <div class="cal-day muted">28</div><div class="cal-day muted">29</div><div class="cal-day muted">30</div><div class="cal-day">1</div><div class="cal-day has-event-warn">2</div><div class="cal-day">3</div><div class="cal-day">4</div>
+          <div class="cal-day today has-event">5</div><div class="cal-day has-event-gold">6</div><div class="cal-day">7</div><div class="cal-day has-event">8</div><div class="cal-day">9</div><div class="cal-day">10</div><div class="cal-day">11</div>
+          <div class="cal-day">12</div><div class="cal-day has-event-warn">13</div><div class="cal-day">14</div><div class="cal-day selected has-event">15</div><div class="cal-day">16</div><div class="cal-day">17</div><div class="cal-day">18</div>
+          <div class="cal-day">19</div><div class="cal-day has-event">20</div><div class="cal-day">21</div><div class="cal-day">22</div><div class="cal-day has-event-gold">23</div><div class="cal-day">24</div><div class="cal-day">25</div>
+          <div class="cal-day">26</div><div class="cal-day">27</div><div class="cal-day">28</div><div class="cal-day">29</div><div class="cal-day">30</div><div class="cal-day">31</div><div class="cal-day muted">1</div>
+        </div>
+
+        <div class="cal-agenda-heading">
+          Today <span class="agenda-day">· Mon 5 May</span>
+        </div>
+
+        <div class="cal-event viewing">
+          <div class="cal-event-time">10:30<div class="cal-event-time-small">45 min</div></div>
+          <div class="cal-event-content">
+            <div class="cal-event-title">Viewing — 22 Park Crescent</div>
+            <div class="cal-event-meta">With Michael Tovey · Belvoir Coventry</div>
+            <span class="cal-event-tag viewing">Viewing</span>
+          </div>
+        </div>
+
+        <div class="cal-event personal">
+          <div class="cal-event-time">14:00<div class="cal-event-time-small">1 hr</div></div>
+          <div class="cal-event-content">
+            <div class="cal-event-title">Call with Emma — chain plan</div>
+            <div class="cal-event-meta">Set up by you</div>
+            <span class="cal-event-tag personal">Personal</span>
+          </div>
+        </div>
+
+        <div class="cal-agenda-heading" style="padding-top: 18px;">
+          Tomorrow <span class="agenda-day">· Tue 6 May</span>
+        </div>
+
+        <div class="cal-event deadline">
+          <div class="cal-event-time">All day<div class="cal-event-time-small"></div></div>
+          <div class="cal-event-content">
+            <div class="cal-event-title">Mortgage AIP review</div>
+            <div class="cal-event-meta">Halifax — submit updated payslip</div>
+            <span class="cal-event-tag deadline">Deadline</span>
+          </div>
+        </div>
+
+        <div class="cal-agenda-heading" style="padding-top: 18px;">
+          Fri 13 May
+        </div>
+
+        <div class="cal-event compliance">
+          <div class="cal-event-time">All day<div class="cal-event-time-small"></div></div>
+          <div class="cal-event-content">
+            <div class="cal-event-title">Gas cert renewal — 14 Hazel Grove</div>
+            <div class="cal-event-meta">Compliance · book a Gas Safe engineer</div>
+            <span class="cal-event-tag compliance">Compliance</span>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="fab" aria-label="Add event"><svg><use href="#i-plus"/></svg></button>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 5 of 6</span>
+      <span class="pl-name">Calendar</span>
+      <span class="pl-desc">Mini month grid up top with coloured dots per event type. Agenda below grouped by day. Floating + adds personal events. Pulls in viewings, compliance renewals, and deadlines automatically.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ 6. YOUR DOCUMENTS ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button class="nav-icon-btn" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+        <div class="nav-title">Your Documents</div>
+        <button class="nav-icon-btn" aria-label="Filter"><svg><use href="#i-folder"/></svg></button>
+      </div>
+
+      <div class="pp-body">
+        <div class="atm-bg warm"></div>
+
+        <div class="dc-hero">
+          <div class="hero-greeting">Everything you've stored</div>
+          <div class="h1">Documents<span class="h1-count">12</span></div>
+          <div class="hero-stats">
+            <span class="stat-num">12</span>&nbsp;total
+            <span class="stat-sep"></span>
+            <span class="stat-num teal">8</span>&nbsp;verified
+            <span class="stat-sep"></span>
+            <span class="stat-num coral">2</span>&nbsp;expiring soon
+          </div>
+        </div>
+
+        <div class="dc-search">
+          <div class="dc-search-icon"><svg><use href="#i-search"/></svg></div>
+          <input class="dc-search-input" type="text" placeholder="Search documents…" />
+        </div>
+
+        <div class="dc-cats">
+          <button class="dc-cat identity">
+            <div class="dc-cat-icon"><svg><use href="#i-id"/></svg></div>
+            <div class="dc-cat-name">Identity &amp; Proof</div>
+            <div class="dc-cat-count">4 documents</div>
+          </button>
+          <button class="dc-cat property">
+            <div class="dc-cat-icon"><svg><use href="#i-house"/></svg></div>
+            <div class="dc-cat-name">Property</div>
+            <div class="dc-cat-count">5 documents</div>
+          </button>
+          <button class="dc-cat financial">
+            <div class="dc-cat-icon"><svg><use href="#i-pound"/></svg></div>
+            <div class="dc-cat-name">Financial</div>
+            <div class="dc-cat-count">2 documents</div>
+          </button>
+          <button class="dc-cat other">
+            <div class="dc-cat-icon"><svg><use href="#i-folder"/></svg></div>
+            <div class="dc-cat-name">Other</div>
+            <div class="dc-cat-count">1 document</div>
+          </button>
+        </div>
+
+        <div class="section-heading">Recently uploaded <span class="sh-action">See all</span></div>
+
+        <div class="dc-doc">
+          <div class="dc-doc-icon pdf">PDF</div>
+          <div class="dc-doc-info">
+            <div class="dc-doc-name">Lloyds Bank Statement.pdf</div>
+            <div class="dc-doc-meta">Proof of Funds · uploaded 2 days ago</div>
+          </div>
+          <div class="dc-doc-action">›</div>
+        </div>
+
+        <div class="dc-doc">
+          <div class="dc-doc-icon img">IMG</div>
+          <div class="dc-doc-info">
+            <div class="dc-doc-name">Passport_Page1.jpg</div>
+            <div class="dc-doc-meta">Identity · 12 Mar 2026</div>
+          </div>
+          <div class="dc-doc-action">›</div>
+        </div>
+
+        <div class="dc-doc">
+          <div class="dc-doc-icon pdf">PDF</div>
+          <div class="dc-doc-info">
+            <div class="dc-doc-name">EPC — 14 Hazel Grove.pdf</div>
+            <div class="dc-doc-meta">Property · 8 Apr 2026</div>
+          </div>
+          <div class="dc-doc-action">›</div>
+        </div>
+
+        <div class="dc-doc">
+          <div class="dc-doc-icon">DOC</div>
+          <div class="dc-doc-info">
+            <div class="dc-doc-name">AST_Tenant_2026.docx</div>
+            <div class="dc-doc-meta">Property · 3 Apr 2026</div>
+          </div>
+          <div class="dc-doc-action">›</div>
+        </div>
+
+        <div class="dc-doc">
+          <div class="dc-doc-icon pdf">PDF</div>
+          <div class="dc-doc-info">
+            <div class="dc-doc-name">Halifax AIP Letter.pdf</div>
+            <div class="dc-doc-meta">Financial · expires 30 Jun</div>
+          </div>
+          <div class="dc-doc-action">›</div>
+        </div>
+
+      </div>
+
+      <button class="fab" aria-label="Upload document"><svg><use href="#i-upload"/></svg></button>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Screen 6 of 6</span>
+      <span class="pl-name">Your Documents</span>
+      <span class="pl-desc">Search, then four colour-coded category cards (Identity, Property, Financial, Other). Recently uploaded list below. Floating upload button.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     MODAL FLOWS — three examples
+     ════════════════════════════════════════════════════ -->
+
+<div class="section-divider">
+  <span class="sd-tag">Modal flows</span>
+  Adding things, the modern way.
+</div>
+
+<div class="phones-row">
+
+  <!-- ══════════════ MODAL 1 — Add Collaborator ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <!-- Faded background of the collaborators screen -->
+      <div style="opacity: 0.3; pointer-events: none; filter: blur(0.5px);">
+        <div class="nav-bar">
+          <button class="nav-icon-btn"><svg><use href="#i-back"/></svg></button>
+          <div class="nav-title">Collaborators</div>
+          <button class="nav-icon-btn"><svg><use href="#i-search"/></svg></button>
+        </div>
+        <div class="cl-hero">
+          <div class="hero-greeting">Your team</div>
+          <div class="h1">People you work with<span class="h1-count">3</span></div>
+        </div>
+      </div>
+
+      <!-- Modal -->
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="modal-header">
+            <div class="modal-title">Add a collaborator</div>
+            <button class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
+
+            <div class="mform-section">
+              <div class="mform-label">Their role</div>
+              <div class="mform-radio-group">
+                <button class="mform-radio active">
+                  <div class="mfr-icon"><svg><use href="#i-balance"/></svg></div>
+                  Solicitor
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-key"/></svg></div>
+                  Estate agent
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-pound"/></svg></div>
+                  Mortgage broker
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-users"/></svg></div>
+                  Co-owner
+                </button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Use existing</div>
+              <div class="mform-existing-row active">
+                <div class="mfe-avatar" style="background: linear-gradient(155deg, #2C5F56, #143F38);">SH</div>
+                <div class="mfe-info">
+                  <div class="mfe-name">Sarah Henderson</div>
+                  <div class="mfe-org">Henderson &amp; Reed Conveyancing</div>
+                </div>
+                <div class="mfe-check"></div>
+              </div>
+            </div>
+
+            <div class="mform-divider"></div>
+
+            <div class="mform-section">
+              <div class="mform-label">Or add new</div>
+              <input class="mform-input" type="text" placeholder="Full name" />
+              <div style="height: 6px;"></div>
+              <input class="mform-input" type="text" placeholder="Firm or company" />
+              <div style="height: 6px;"></div>
+              <input class="mform-input" type="email" placeholder="Email address" />
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Attach to properties</div>
+              <div class="mform-property-list">
+                <button class="mform-property selected">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  19 Woodfield Road
+                  <div class="mfp-check"></div>
+                </button>
+                <button class="mform-property">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  14 Hazel Grove
+                  <div class="mfp-check"></div>
+                </button>
+                <button class="mform-property selected">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  55 Woodfield Road
+                  <div class="mfp-check"></div>
+                </button>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" style="flex:1;">Cancel</button>
+            <button class="btn-primary" style="flex:2;"><svg><use href="#i-plus"/></svg>Add Sarah</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Modal · Collaborators</span>
+      <span class="pl-name">Add a collaborator</span>
+      <span class="pl-desc">Pick a role first. Then either select an existing person or fill in new details. Last step: which properties they're attached to. Sarah is being added to two of three properties.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODAL 2 — Add Calendar Event ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div style="opacity: 0.3; pointer-events: none; filter: blur(0.5px);">
+        <div class="nav-bar">
+          <button class="nav-icon-btn"><svg><use href="#i-back"/></svg></button>
+          <div class="nav-title">Calendar</div>
+          <button class="nav-icon-btn"><svg><use href="#i-search"/></svg></button>
+        </div>
+        <div class="cal-hero">
+          <div class="cal-monthnav">
+            <button class="cal-arrow"><svg><use href="#i-chevron-l"/></svg></button>
+            <h2>May 2026</h2>
+            <button class="cal-arrow"><svg><use href="#i-chevron-r"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="modal-header">
+            <div class="modal-title">New event</div>
+            <button class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
+
+            <div class="mform-section">
+              <div class="mform-label">Title</div>
+              <input class="mform-input" type="text" placeholder="What's happening?" value="Solicitor call — exchange prep" />
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Type</div>
+              <div class="mform-radio-group">
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-eye"/></svg></div>
+                  Viewing
+                </button>
+                <button class="mform-radio active" style="border-color: #9D7BFF; background: var(--purple-pale); color: #6B4E9F;">
+                  <div class="mfr-icon" style="background: #9D7BFF; color: white;"><svg><use href="#i-cal"/></svg></div>
+                  Personal
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-clock"/></svg></div>
+                  Deadline
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon"><svg><use href="#i-shield"/></svg></div>
+                  Compliance
+                </button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">When</div>
+              <div style="display:grid; grid-template-columns: 1.4fr 1fr; gap: 6px;">
+                <input class="mform-input" type="text" value="Wed 7 May 2026" readonly style="cursor:pointer;" />
+                <input class="mform-input" type="text" value="14:00" readonly style="cursor:pointer;" />
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+                <input class="mform-input" type="text" value="30 min" readonly style="cursor:pointer;" />
+                <button class="mform-radio" style="justify-content:center;">+ Reminder</button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Linked property</div>
+              <div class="mform-property-list">
+                <button class="mform-property selected">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  19 Woodfield Road
+                  <div class="mfp-check"></div>
+                </button>
+                <button class="mform-property">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  14 Hazel Grove
+                  <div class="mfp-check"></div>
+                </button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Notes (optional)</div>
+              <input class="mform-input" type="text" placeholder="Any reminders or details…" />
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" style="flex:1;">Cancel</button>
+            <button class="btn-primary" style="flex:2;"><svg><use href="#i-check"/></svg>Save event</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Modal · Calendar</span>
+      <span class="pl-name">New event</span>
+      <span class="pl-desc">Title, type (with colour preview), date and time, link to a property if relevant, notes. Selecting "Personal" tints the event card purple — matches the purple agenda dot.</span>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODAL 3 — Upload Document ══════════════ -->
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="right">
+          <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+          <span style="font-size:11px;font-weight:600;">5G</span>
+          <div class="battery"><i></i></div>
+        </div>
+      </div>
+
+      <div style="opacity: 0.3; pointer-events: none; filter: blur(0.5px);">
+        <div class="nav-bar">
+          <button class="nav-icon-btn"><svg><use href="#i-back"/></svg></button>
+          <div class="nav-title">Your Documents</div>
+          <button class="nav-icon-btn"><svg><use href="#i-folder"/></svg></button>
+        </div>
+        <div class="dc-hero">
+          <div class="hero-greeting">Everything you've stored</div>
+          <div class="h1">Documents<span class="h1-count">12</span></div>
+        </div>
+      </div>
+
+      <div class="modal-overlay">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="modal-header">
+            <div class="modal-title">Upload document</div>
+            <button class="modal-close">×</button>
+          </div>
+          <div class="modal-body">
+
+            <!-- File drop zone -->
+            <div style="background: linear-gradient(135deg, #F1F9F4, #E2F1EA); border: 1.5px dashed var(--teal); border-radius: 14px; padding: 22px 16px; text-align:center; margin-bottom: 14px;">
+              <div style="width:48px; height:48px; background: var(--teal); border-radius: 14px; display:inline-flex; align-items:center; justify-content:center; color:white; margin-bottom:8px; box-shadow: 0 4px 12px rgba(31,122,102,0.32);">
+                <svg style="width:22px;height:22px;"><use href="#i-upload"/></svg>
+              </div>
+              <div style="font-size:14px; font-weight: 800; color: var(--navy); letter-spacing: -0.2px; margin-bottom: 2px;">Drop your file here</div>
+              <div style="font-size:11.5px; font-weight: 600; color: var(--navy-soft); margin-bottom: 10px;">or tap to browse · PDF, JPG, DOCX up to 25MB</div>
+              <div style="display:flex; gap:6px; justify-content:center;">
+                <button class="btn-secondary" style="padding: 7px 12px; font-size: 11.5px;">📷 Camera</button>
+                <button class="btn-secondary" style="padding: 7px 12px; font-size: 11.5px;">📁 Files</button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Category</div>
+              <div class="mform-radio-group">
+                <button class="mform-radio">
+                  <div class="mfr-icon" style="background: rgba(61,189,163,0.18); color: var(--teal-darker);"><svg><use href="#i-id"/></svg></div>
+                  Identity
+                </button>
+                <button class="mform-radio active">
+                  <div class="mfr-icon" style="background: var(--gold); color: #6F4D14;"><svg><use href="#i-house"/></svg></div>
+                  Property
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon" style="background: rgba(255,139,90,0.18); color: var(--coral-deep);"><svg><use href="#i-pound"/></svg></div>
+                  Financial
+                </button>
+                <button class="mform-radio">
+                  <div class="mfr-icon" style="background: rgba(157,123,255,0.18); color: #6B4E9F;"><svg><use href="#i-folder"/></svg></div>
+                  Other
+                </button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Document name</div>
+              <input class="mform-input" type="text" placeholder="e.g. EPC Certificate" />
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Linked property (optional)</div>
+              <div class="mform-property-list">
+                <button class="mform-property">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  19 Woodfield Road
+                  <div class="mfp-check"></div>
+                </button>
+                <button class="mform-property selected">
+                  <div class="mfp-icon"><svg><use href="#i-house"/></svg></div>
+                  14 Hazel Grove
+                  <div class="mfp-check"></div>
+                </button>
+              </div>
+            </div>
+
+            <div class="mform-section">
+              <div class="mform-label">Expires (optional)</div>
+              <input class="mform-input" type="text" value="12 Mar 2027" readonly style="cursor:pointer;" />
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" style="flex:1;">Cancel</button>
+            <button class="btn-primary" style="flex:2;"><svg><use href="#i-upload"/></svg>Upload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <span class="pl-tag">Modal · Documents</span>
+      <span class="pl-name">Upload document</span>
+      <span class="pl-desc">Drag, browse, or take a photo. Pick a category (each one tinted with the matching colour from the docs screen). Optional property link and expiry — useful for time-sensitive things like AIPs or gas certs.</span>
+    </div>
+  </div>
+
+</div>
+
+<div class="decision-panel">
+  <h3>Six screens · three modals · one design language</h3>
+
+  <div class="opt-block">
+    <div class="opt-name">Buyer Profile · the confidence card</div>
+    <div class="opt-text">Sellers want to know they're talking to a real, ready buyer. The hero is a <b>circular profile-strength gauge</b> showing 92% with a "Trusted Buyer" label. Below, four signal cards (Identity / Funds / Chain / Mortgage) tell the story at a glance — the first three filled-teal "verified", the fourth still teal-paler waiting for the AIP letter. Detail rows below let the user dig in. The closing piece is a <b>shareable digital business card</b> in the deep teal-and-gold gilt language we've used for the passport books — it's what the user sends to a seller via the property page's "Message owner" flow.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Personal Information · the same sections, properly grouped</div>
+    <div class="opt-text">Your existing structure stays — Name &amp; Contact, Address, Company, Comms Preferences, Identity Verification — but each one is now a single grouped card with rows separated by hairline dividers, instead of floating chips with edit pencils. <b>Profile completion meter</b> at the top (78%) gives the user a sense of "how done am I" without nagging. Empty rows like "Add company" use teal text in place of grey, so they read as opportunities not gaps. Verified row gets a teal-tinted highlight, with the Onfido date — they earned it, show it.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Collaborators · per-property, but warm</div>
+    <div class="opt-text">Each person card has a <b>coloured-gradient avatar</b> (different palette per role: solicitor deep teal, agent gold, partner coral, broker purple), name, role tag in tracked-out caps, organisation, and the properties they're attached to as small green location pills. Sarah covers all properties so hers is a <b>quieter "All properties" pill</b>; Michael covers two specific ones. Suggested empty state nudges the user: "Bring in a mortgage broker? They'll have direct access to your buyer profile." A floating teal + button is the way in. Tapping it opens the modal you see below — pick role, pick existing OR add new, attach to properties.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Saved Properties · life signals on each card</div>
+    <div class="opt-text">2-up grid of hearted properties with <b>real illustrated SVG scenes</b> per house — different sky colours, different facades, different garden details so they feel like real places not template thumbnails. Status pip lower-left tells you whether each one has a passport (deep-teal pill with gold text for "Passport ready", or quiet white pill for "No passport"). Top-left flag shows price moves: <b>coral with a downward arrow for −£15k, gold with upward for +£8k</b>. Hero stats line up top: 8 saved · 3 passport ready · 2 price changes · 5 viewed this week.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Calendar · everything in one place</div>
+    <div class="opt-text">Mini month grid up top with coloured dots beneath each day-number — <b>teal for viewings, coral for compliance, gold for deadlines, purple for personal</b>. Today is the navy filled circle. The 15th is selected (light teal ring). Below, an agenda grouped by day. Each event card has a coloured left border matching its type, time and duration on the left, title and meta in the middle, and a small tag pill. Pulls in viewings (from property bookings), compliance renewals (from your landlord passports), and deadlines (from your AIP, etc.) automatically — and lets the user add personal events with the floating + (modal shown below).</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Your Documents · categories and recents</div>
+    <div class="opt-text">Search-first hero, then a <b>2x2 grid of colour-coded category cards</b> (Identity teal-green, Property gold, Financial coral, Other purple — using the four-colour system that runs through the rest of the app). Each card shows a count. Below, a list of recently uploaded docs with <b>realistic file-icon thumbnails</b> (PDF coral, IMG green, DOC gold) shaped like a piece of paper with a folded corner. Floating upload button. Modal flow shows the upload experience: drag-drop zone (tinted teal), category picker, optional property link, expiry date — useful for time-sensitive docs like AIPs.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">Modal pattern · centred, modern, contained</div>
+    <div class="opt-text">Three modal flows shown — Add Collaborator, New Event, Upload Document. All use the same pattern: <b>blurred-out background of the screen behind, centred modal with a 24px corner radius, soft handle at the top, header with title and close × on the right</b>. Body scrolls if needed. Footer pinned to the bottom with Cancel + a primary action. Form sections use 10px tracked-out caps as labels (consistent with the screens). Where there are multiple choices, they appear as <b>radio buttons styled as cards with icons</b>, not bare radio dots — much easier to read at a glance and matches the rest of the app.</div>
+  </div>
+
+  <div class="opt-block">
+    <div class="opt-name">What stays consistent across all six</div>
+    <div class="opt-text">Same nav bar pattern (back / centred title / right action). Same italic serif greeting. Same bold sans headline. Same personal stats line. Same floating action button on screens that need adding. Same colour vocabulary: teal for action, gold for value, coral for urgency, purple for personal/social. Same card depth and corner radii. The user moving from Buyer Profile to Calendar to Documents shouldn't need to learn anything — only what's in front of them.</div>
+  </div>
+</div>
+
+<script>
+// All cards and buttons are click-noop in this static review. The design intent is illustrative only.
+</script>
+</body>
+</html>
