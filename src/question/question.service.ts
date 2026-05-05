@@ -114,6 +114,36 @@ export class QuestionService {
     if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
 
     const fileUrl = `${BASE_URL}/uploads/passport-docs/${file.filename}`;
+
+    // Persist the upload as the question's answer + carry the original
+    // filename in answerJson so the UI can show "Gas Safety 2026.pdf"
+    // instead of the random server-side filename.
+    await this.prisma.questionAnswer.upsert({
+      where: { passportQuestionId: questionId },
+      update: {
+        fileUrl,
+        answerJson: {
+          fileName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+        } as any,
+      },
+      create: {
+        passportQuestionId: questionId,
+        fileUrl,
+        answerJson: {
+          fileName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+        } as any,
+      },
+    });
+
+    await this.prisma.passportQuestion.update({
+      where: { id: questionId },
+      data: { status: 'COMPLETED' },
+    });
+
     return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
   }
 }
