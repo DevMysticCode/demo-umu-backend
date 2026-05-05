@@ -35,15 +35,27 @@ export class PassportService {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
       include: {
+        // Sibling passports created via convert-to-seller — used by the
+        // landlord view to surface a "Selling passport linked" CTA.
+        convertedTo: { select: { id: true, type: true } },
         sections: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            status: true,
-            order: true,
-          },
           orderBy: { order: 'asc' },
+          include: {
+            tasks: {
+              orderBy: { order: 'asc' },
+              include: {
+                passportQuestions: {
+                  include: {
+                    questionTemplate: {
+                      select: { id: true, type: true, title: true, description: true },
+                    },
+                    answer: true,
+                  },
+                  orderBy: { createdAt: 'asc' },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -180,21 +192,29 @@ export class PassportService {
       },
     });
 
-    // Load question templates for this passport type only — we still join on
-    // sectionTemplate so we can filter sections and questions consistently.
-    const templates = await this.prisma.questionTemplate.findMany({
-      where: { sectionTemplate: { type: passportType as any } },
+    // Belt-and-braces filter: prefer the section/template `type` column, but
+    // also gate by key prefix so a landlord passport can never accidentally
+    // be seeded with seller sections (or vice-versa) if the type column is
+    // wrong / missing. Landlord templates use the `landlord_` prefix.
+    const isLandlord = passportType === 'LANDLORD';
+    const keyPrefixMatches = (key: string) =>
+      isLandlord ? key.startsWith('landlord_') : !key.startsWith('landlord_');
+
+    const allTemplates = await this.prisma.questionTemplate.findMany({
       orderBy: [{ sectionKey: 'asc' }, { taskKey: 'asc' }, { order: 'asc' }],
     });
+    const templates = allTemplates.filter((t) => keyPrefixMatches(t.sectionKey));
 
     // Group templates by section and task
     const groupedBySection = this.groupTemplatesBySection(templates);
 
-    // Fetch section templates for this passport type, in display order.
-    const sectionTemplates = await this.prisma.sectionTemplate.findMany({
-      where: { type: passportType as any },
+    // Fetch section templates in display order, then filter by key prefix.
+    const allSectionTemplates = await this.prisma.sectionTemplate.findMany({
       orderBy: { order: 'asc' },
     });
+    const sectionTemplates = allSectionTemplates.filter((st) =>
+      keyPrefixMatches(st.key),
+    );
 
     // Create sections, tasks, and questions using SectionTemplate order
     for (const sectionTemplate of sectionTemplates) {
@@ -1026,7 +1046,11 @@ export class PassportService {
 
   // ── Share Link ───────────────────────────────────────────────────────────
 
-  async createShareLink(passportId: string, userId: string) {
+  async createShareLink(
+    passportId: string,
+    userId: string,
+    scope: 'buyer' | 'tenant' = 'buyer',
+  ) {
     const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
     if (!passport) throw new NotFoundException('Passport not found');
     const isOwner = passport.ownerId === userId;
@@ -1040,16 +1064,26 @@ export class PassportService {
       throw new ForbiddenException('Access denied');
     }
 
+    // Tenant scope only makes sense for landlord passports.
+    if (scope === 'tenant' && passport.type !== 'LANDLORD') {
+      throw new BadRequestException(
+        'Tenant share is only available on landlord passports.',
+      );
+    }
+
     const token = require('crypto').randomUUID() as string;
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
 
     await this.prisma.sharedPassportLink.create({
-      data: { passportId, token, expiresAt },
+      data: { passportId, token, expiresAt, scope },
     });
 
     const baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
-    const url = `${baseUrl}/shared/${token}`;
-    return { token, url, expiresAt };
+    const url =
+      scope === 'tenant'
+        ? `${baseUrl}/shared-tenant/${token}`
+        : `${baseUrl}/shared/${token}`;
+    return { token, url, expiresAt, scope };
   }
 
   async getSharedPassport(token: string) {
@@ -1095,7 +1129,24 @@ export class PassportService {
 
     const propertyTenure = (passport.property as any)?.tenure ?? null;
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
-    const visibleSections = passport.sections.filter((s) => s.key !== 'leasehold' || isLeasehold);
+
+    // Tenant-scoped shares of a landlord passport only expose the docs the
+    // tenant is legally entitled to or that they need to keep on hand.
+    const TENANT_VISIBLE_SECTIONS = new Set([
+      'landlord_ast',
+      'landlord_deposit',
+      'landlord_how_to_rent',
+      'landlord_right_to_rent',
+      'landlord_gas_safety',
+      'landlord_eicr',
+      'landlord_epc',
+    ]);
+
+    const visibleSections = passport.sections.filter((s) => {
+      if (s.key === 'leasehold' && !isLeasehold) return false;
+      if (link.scope === 'tenant' && !TENANT_VISIBLE_SECTIONS.has(s.key)) return false;
+      return true;
+    });
 
     return {
       passport: { id: passport.id, addressLine1: passport.addressLine1, postcode: passport.postcode },
