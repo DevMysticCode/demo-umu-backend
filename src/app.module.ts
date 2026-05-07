@@ -18,6 +18,7 @@ import { LearnModule } from './learn/learn.module';
 import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
+import { KycModule } from './kyc/kyc.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
     PaymentModule,
     MaintenanceModule,
     BuyerProfileModule,
+    KycModule,
   ],
   controllers: [AppController],
   providers: [AppService],

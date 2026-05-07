@@ -82,6 +82,20 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(200)
+  async changePassword(
+    @Request() req: any,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    return this.authService.changePassword(
+      req.user.id,
+      body?.currentPassword,
+      body?.newPassword,
+    );
+  }
+
   /** Dev-only: bypasses Apple token verification for local testing */
   @Post('apple/mock')
   appleMockLogin(

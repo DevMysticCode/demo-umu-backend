@@ -16,6 +16,11 @@ model User {
   firstName              String?
   gender                 String?
   isVerified             Boolean                @default(false)
+  // Persona KYC — per-user, one-time. Once kycStatus is "approved" we skip
+  // the KYC steps in the claim flow on every subsequent property claim.
+  kycStatus              String?                // pending | approved | declined | needs_review | failed
+  kycInquiryId           String?                // Persona inquiry/case id (inq_… or case_…)
+  kycCompletedAt         DateTime?
   lastName               String?
   phone                  String?
   postcode               String?
