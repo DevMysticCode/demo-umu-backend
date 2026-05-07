@@ -6,7 +6,12 @@ import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: true tells Nest's body-parser to keep the raw bytes on
+  // req.rawBody as well as the parsed body. The Persona webhook handler
+  // needs the raw bytes to compute its HMAC signature.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   // Serve uploaded files statically at /uploads/*
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });

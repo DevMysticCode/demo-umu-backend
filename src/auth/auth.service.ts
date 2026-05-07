@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Resend } from 'resend';
@@ -497,6 +498,43 @@ export class AuthService {
     );
 
     return { resetToken };
+  }
+
+  /**
+   * Logged-in password change. Verifies the user's current password before
+   * setting a new one. Used by the Settings → Change password drawer.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Current and new password are required');
+    }
+    if (newPassword.length < 8) {
+      throw new BadRequestException('New password must be at least 8 characters');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException('User not found');
+    if (!user.password) {
+      // Account was created via Google / Apple / OTP and has no password set.
+      throw new BadRequestException(
+        'This account does not use a password — sign in with the social provider you originally used.',
+      );
+    }
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) throw new UnauthorizedException('Current password is incorrect');
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    return { message: 'Password updated' };
   }
 
   async resetPassword(dto: ResetPasswordDto) {

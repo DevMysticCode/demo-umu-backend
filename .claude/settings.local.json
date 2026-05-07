@@ -103,7 +103,9 @@
       "Bash(awk '/^\\\\.sp-|^\\\\.cal-|^\\\\.dc-/ {print NR\": \"$0}' \"d:/ReactProjects/op_nuxt/umu-backend/prisma/your-stuff-screens.html\")",
       "Bash(ls pages/passportview/[id]/)",
       "Bash(ls pages/passportview/)",
-      "Bash(mkdir \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/shared-tenant\" 2>&1)"
+      "Bash(mkdir \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/shared-tenant\" 2>&1)",
+      "Bash(npm run *)",
+      "WebFetch(domain:www.umovingu.io)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages"
