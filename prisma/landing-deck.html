@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UMU · Stacked deck landing</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+:root {
+  --navy: #231d45;
+  --navy-2: #1a1535;
+  --navy-3: #110d28;
+  --navy-soft: #4a4566;
+  --navy-faint: #6e6985;
+  --teal: #00a19a;
+  --teal-bright: #00b6ae;
+  --teal-dark: #007e78;
+  --teal-deep: #00514d;
+  --teal-light: #6BD4CD;
+  --teal-pale: #E5F4F2;
+  --teal-paler: #F2FAF8;
+  --text: #231d45;
+  --text-soft: #6b6783;
+  --text-faint: #9c98ad;
+  --line: #ECECEF;
+  --line-soft: #F5F5F7;
+  --bg: #FAFAFA;
+  --canvas: #FAFAFA;
+  --muted: #6b6783;
+  --white: #FFFFFF;
+  --gold: #C18A38;
+  --gold-deep: #8A5F1F;
+  --cream: #F7F2E8;
+  --stage: #131820;
+}
+html, body { font-family: 'Plus Jakarta Sans', sans-serif; }
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,161,154,0.08), transparent 60%),
+    var(--stage);
+  min-height: 100vh;
+  padding: 50px 16px 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+
+.stage-caption { text-align: center; color: rgba(255,255,255,0.6); max-width: 720px; font-size: 13.5px; font-weight: 500; line-height: 1.6; }
+.stage-caption .label { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; display: block; font-weight: 700; }
+.stage-caption .head { font-size: 30px; color: white; line-height: 1.1; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.8px; }
+
+.layout { display: flex; gap: 36px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+.phone {
+  width: 380px; height: 820px;
+  background: var(--white);
+  border-radius: 42px;
+  overflow: hidden;
+  box-shadow: 0 35px 90px rgba(0,0,0,0.55), 0 0 0 8px #0a0d12, 0 0 0 9px rgba(255,255,255,0.06), inset 0 0 0 1px rgba(255,255,255,0.6);
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.phone::before { content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 105px; height: 27px; background: #0a0d12; border-radius: 100px; z-index: 30; }
+
+.status-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 8px;
+  font-size: 14px; font-weight: 700;
+  color: var(--text);
+  position: relative; z-index: 11;
+}
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.signal-bars { display: flex; gap: 2px; align-items: flex-end; }
+.signal-bars i { width: 3px; background: currentColor; border-radius: 1px; display: block; }
+.signal-bars i:nth-child(1) { height: 4px; }
+.signal-bars i:nth-child(2) { height: 6px; }
+.signal-bars i:nth-child(3) { height: 8px; }
+.signal-bars i:nth-child(4) { height: 10px; }
+.battery { width: 24px; height: 11px; border: 1px solid currentColor; border-radius: 3px; position: relative; padding: 1.5px; }
+.battery::after { content: ''; position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 1.5px; height: 5px; background: currentColor; border-radius: 0 1px 1px 0; }
+.battery i { height: 100%; width: 75%; background: currentColor; border-radius: 1px; display: block; }
+
+.body { flex: 1; overflow-y: auto; }
+.body::-webkit-scrollbar { width: 0; }
+
+/* Brand row */
+.brand-row {
+  display: flex; align-items: center;
+  padding: 14px 22px 0;
+  gap: 8px;
+}
+.brand-mark {
+  display: inline-flex; align-items: center;
+  gap: 9px;
+  font-size: 16px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.brand-logo { width: 32px; height: 32px; flex-shrink: 0; }
+.brand-logo svg { width: 100%; height: 100%; }
+.brand-spacer { flex: 1; }
+.beta-pill {
+  font-size: 10px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 1.4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid var(--teal);
+  text-transform: uppercase;
+}
+
+/* Hero */
+.hero {
+  padding: 22px 22px 0;
+}
+.hero-title {
+  font-size: 30px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+  line-height: 1.02;
+  margin-bottom: 8px;
+}
+.hero-title .lt-teal { color: var(--teal); }
+.hero-sub {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-soft);
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+}
+
+/* ════ THE DECK ════ */
+.deck-wrap {
+  margin: 22px 22px 0;
+  position: relative;
+  /* Front card 360 + 3 × 36px peeks visible below */
+  height: 468px;
+}
+
+.deck-card {
+  position: absolute;
+  left: 0; right: 0;
+  height: 360px;
+  border-radius: 22px;
+  cursor: pointer;
+  transition:
+    top 0.55s cubic-bezier(.22,.94,.32,1.04),
+    transform 0.55s cubic-bezier(.22,.94,.32,1.04),
+    box-shadow 0.4s,
+    opacity 0.4s;
+  overflow: hidden;
+  padding: 22px;
+  display: flex; flex-direction: column;
+  color: var(--white);
+  box-shadow:
+    0 18px 40px -10px rgba(0,0,0,0.32),
+    0 4px 8px rgba(0,0,0,0.06),
+    inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* The four cards — each its own colour */
+.deck-card.healthscore { background: var(--teal); }
+.deck-card.passport { background: var(--navy); }
+.deck-card.aisha { background: var(--gold); }
+.deck-card.market { background: var(--navy-2); }
+
+/* Stack positions — front card at top:0, others sit BEHIND it
+   peeking 36px out the bottom. Each card's peek shows its eyebrow strip
+   which is rendered at the BOTTOM of the card via absolute positioning. */
+.deck-card[data-pos="1"] {
+  top: 0;
+  transform: scale(1);
+  z-index: 4;
+}
+.deck-card[data-pos="2"] {
+  /* Top sits 36px below front card's top. Bottom edge is at 36 + 360 = 396. So 36px peeks below front card. */
+  top: 36px;
+  transform: scale(0.985);
+  z-index: 3;
+}
+.deck-card[data-pos="3"] {
+  top: 72px;
+  transform: scale(0.97);
+  z-index: 2;
+}
+.deck-card[data-pos="4"] {
+  top: 108px;
+  transform: scale(0.955);
+  z-index: 1;
+}
+
+/* The peek strip — rendered at the BOTTOM of each card (so it's visible when
+   that card is hidden behind another) */
+.dc-peek {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 22px;
+  pointer-events: none;
+}
+.dc-peek .dc-peek-label {
+  font-size: 10.5px; font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+  display: inline-flex; align-items: center;
+  gap: 7px;
+}
+.dc-peek .dc-peek-label::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+}
+.dc-peek .dc-peek-pill {
+  font-size: 9.5px; font-weight: 800;
+  background: rgba(255,255,255,0.18);
+  color: var(--white);
+  padding: 3px 9px;
+  border-radius: 100px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+/* When card is in front, hide the peek strip (the eyebrow at the top takes over) */
+.deck-card[data-pos="1"] .dc-peek {
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.deck-card:not([data-pos="1"]) .dc-peek {
+  opacity: 1;
+  transition: opacity 0.4s 0.2s;
+}
+
+/* When NOT in front, content is a tiny preview only — top of card */
+.deck-card:not([data-pos="1"]) .dc-content,
+.deck-card:not([data-pos="1"]) .dc-foot {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+/* When in front, content fades in slightly later */
+.deck-card[data-pos="1"] .dc-content,
+.deck-card[data-pos="1"] .dc-foot {
+  opacity: 1;
+  transition: opacity 0.4s 0.2s;
+}
+
+/* Card top — visible even when peeking (this is the bit that shows in the stack) */
+.dc-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dc-eyebrow {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.78);
+  display: inline-flex; align-items: center;
+  gap: 7px;
+}
+.dc-eyebrow .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+}
+.dc-pill {
+  font-size: 9.5px; font-weight: 800;
+  background: rgba(255,255,255,0.18);
+  color: var(--white);
+  padding: 4px 10px;
+  border-radius: 100px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+/* Card body — only visible when card is in front */
+.dc-content {
+  flex: 1;
+  display: flex; flex-direction: column;
+}
+.dc-headline {
+  font-size: 26px; font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.8px;
+  line-height: 1.05;
+  margin-bottom: 8px;
+}
+.dc-sub {
+  font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.5;
+  letter-spacing: -0.1px;
+}
+
+/* HealthScore card — gauge + meta */
+.dc-hs-row {
+  display: flex; align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+.dc-hs-gauge {
+  width: 88px; height: 88px;
+  position: relative;
+  flex-shrink: 0;
+}
+.dc-hs-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dc-hs-gauge .g-bg { stroke: rgba(255,255,255,0.18); }
+.dc-hs-gauge .g-fill { stroke: white; stroke-linecap: round; }
+.dc-hs-gauge .g-num {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.dc-hs-gauge .gn-big {
+  font-size: 30px; font-weight: 800;
+  color: white;
+  letter-spacing: -1px;
+  line-height: 1;
+  font-feature-settings: 'tnum';
+}
+.dc-hs-gauge .gn-small {
+  font-size: 8.5px; font-weight: 800;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 1.2px; text-transform: uppercase;
+  margin-top: 2px;
+}
+.dc-hs-meta {
+  flex: 1;
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.5;
+}
+.dc-hs-meta strong { color: var(--white); font-weight: 800; }
+
+/* Passport card — slim book and category list */
+.dc-pp-row {
+  display: flex;
+  gap: 14px;
+  margin-top: 16px;
+  align-items: stretch;
+}
+.dc-pp-book {
+  width: 56px; height: 80px;
+  background: var(--teal);
+  border-radius: 6px 3px 3px 6px;
+  flex-shrink: 0;
+  padding: 8px;
+  position: relative;
+  display: flex; flex-direction: column;
+  align-items: center;
+}
+.dc-pp-book::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.2), transparent);
+  border-radius: 6px 0 0 6px;
+}
+.dc-pp-book svg { width: 22px; height: 22px; }
+.dc-pp-book-label {
+  font-size: 5px; font-weight: 800;
+  color: white;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 6px;
+  line-height: 1.2;
+}
+.dc-pp-cats {
+  display: flex; flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  align-content: flex-start;
+}
+.dc-pp-cat {
+  font-size: 10.5px; font-weight: 800;
+  background: rgba(255,255,255,0.12);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.18);
+  letter-spacing: -0.1px;
+}
+.dc-pp-cat.more {
+  background: rgba(0,161,154,0.32);
+  border-color: rgba(0,161,154,0.5);
+}
+
+/* Aisha card — number + read */
+.dc-ai-row {
+  display: flex; align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.dc-ai-num {
+  font-size: 56px; font-weight: 800;
+  color: var(--white);
+  letter-spacing: -2px;
+  line-height: 0.9;
+  font-feature-settings: 'tnum';
+  flex-shrink: 0;
+}
+.dc-ai-num .unit {
+  font-size: 24px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  margin-left: 4px;
+}
+.dc-ai-text {
+  flex: 1;
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.5;
+}
+.dc-ai-text strong { color: white; font-weight: 800; }
+
+/* Market card — three small stat cells inside the deck card */
+.dc-mk-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 18px;
+}
+.dc-mk-cell {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: center;
+}
+.dc-mk-num {
+  font-size: 20px; font-weight: 800;
+  color: white;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 4px;
+  font-feature-settings: 'tnum';
+}
+.dc-mk-num .unit {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 800;
+  letter-spacing: 0;
+  margin-left: 2px;
+}
+.dc-mk-label {
+  font-size: 9px; font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* Foot of each card — open button */
+.dc-foot {
+  margin-top: auto;
+  padding-top: 14px;
+}
+.dc-cta {
+  width: 100%;
+  background: rgba(255,255,255,0.18);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 13px; font-weight: 800;
+  padding: 11px 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+  transition: all 0.15s;
+}
+.dc-cta:hover { background: rgba(255,255,255,0.26); }
+.dc-cta svg { width: 13px; height: 13px; }
+
+/* Card index dots — show which card is in front */
+.deck-dots {
+  display: flex; justify-content: center;
+  gap: 6px;
+  margin: 18px 22px 0;
+}
+.deck-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.deck-dot.active {
+  width: 22px;
+  border-radius: 100px;
+  background: var(--teal);
+}
+
+/* CTA block */
+.cta-section { padding: 22px 22px 24px; }
+.btn-primary {
+  width: 100%;
+  background: var(--teal);
+  color: var(--white);
+  border: none;
+  font-family: inherit;
+  font-size: 15px; font-weight: 800;
+  padding: 16px 18px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+  transition: all 0.18s;
+}
+.btn-primary:hover { background: #00b6ae; }
+.btn-primary svg { width: 14px; height: 14px; }
+.cta-signin {
+  margin-top: 14px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-soft);
+  text-align: center;
+}
+.cta-signin a { color: var(--teal); font-weight: 800; cursor: pointer; }
+
+/* Notes */
+.notes-panel {
+  width: 320px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 24px 26px;
+  color: rgba(255,255,255,0.72);
+  flex-shrink: 0;
+}
+.notes-panel h3 { font-size: 20px; color: white; margin-bottom: 14px; font-weight: 700; letter-spacing: -0.3px; }
+.notes-panel .stage-tag { font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.notes-panel .note-block { margin-bottom: 14px; padding-left: 22px; position: relative; }
+.notes-panel .note-block::before { content: ''; position: absolute; left: 0; top: 9px; width: 12px; height: 1px; background: var(--teal); }
+.notes-panel .note-name { font-size: 13px; font-weight: 800; color: white; letter-spacing: -0.2px; margin-bottom: 4px; }
+.notes-panel .note-text { font-size: 12px; font-weight: 500; line-height: 1.6; }
+.notes-panel .note-text b { color: white; font-weight: 700; }
+
+.toast-host { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 12px 22px; border-radius: 12px; font-size: 13px; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000; }
+
+/* ════ SCREEN SWITCHER ════ */
+.screen-switcher {
+  display: inline-flex;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 100px;
+  padding: 6px;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 760px;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+.screen-switcher::before {
+  content: 'Switch screen →';
+  position: absolute;
+  transform: translate(-110%, 50%);
+  margin-top: -8px;
+  font-size: 10px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.screen-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.7);
+  background: transparent;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 100px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  transition: all 0.2s;
+}
+.screen-btn:hover {
+  color: white;
+  background: rgba(255,255,255,0.06);
+}
+.screen-btn .sb-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.screen-btn[data-screen="landing"] .sb-dot {
+  background: var(--teal);
+  box-shadow: 0 0 10px rgba(0,161,154,0.8);
+}
+.screen-btn[data-screen="market"] .sb-dot {
+  background: white;
+  box-shadow: 0 0 10px rgba(255,255,255,0.6);
+}
+.screen-btn.active {
+  background: var(--teal);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,161,154,0.4);
+}
+.screen-btn.active .sb-dot {
+  background: white !important;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8) !important;
+}
+
+.screen { display: none; }
+body[data-screen="landing"] .screen.landing,
+body[data-screen="market"] .screen.market { display: block; }
+
+/* ════ MARKET TODAY SCREEN ════ */
+
+/* Sticky back bar */
+.market-back-bar {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  gap: 10px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0;
+  z-index: 5;
+}
+.back-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.back-btn:hover { background: var(--white); border-color: var(--text-faint); }
+.back-btn svg { width: 14px; height: 14px; }
+.back-bar-title {
+  font-size: 14px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.2px;
+  flex: 1;
+}
+
+/* Hero */
+.market-hero {
+  padding: 24px 22px 22px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.market-eyebrow {
+  font-size: 10px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.market-title {
+  font-size: 32px; font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1.1px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.market-sub {
+  font-size: 14px; font-weight: 500;
+  color: var(--text-soft);
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+}
+
+/* Section headers */
+.market-section-h {
+  font-size: 11px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 28px 22px 14px;
+}
+
+/* Stat tiles — designed, colored, layered */
+.market-stat-block {
+  margin: 0 22px 12px;
+  padding: 24px 22px 22px;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.market-stat-block.navy { background: var(--navy); }
+.market-stat-block.teal { background: var(--teal); }
+.market-stat-block.deep { background: var(--navy-2); }
+.market-stat-block::after {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%);
+  pointer-events: none;
+}
+.market-stat-num {
+  font-size: 48px; font-weight: 800;
+  color: white;
+  letter-spacing: -2px;
+  line-height: 0.95;
+  font-feature-settings: 'tnum';
+  margin-bottom: 10px;
+  display: flex; align-items: baseline;
+  gap: 10px;
+  position: relative; z-index: 1;
+}
+.market-stat-num .ms-d {
+  font-size: 18px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  margin-left: 4px;
+}
+.market-stat-num .ms-arrow {
+  font-size: 20px;
+  color: rgba(255,255,255,0.45);
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+.market-stat-num .ms-target {
+  font-size: 24px;
+  color: rgba(255,255,255,0.72);
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.6px;
+  font-weight: 800;
+}
+.market-stat-num .ms-target .ms-target-unit {
+  font-size: 16px;
+  color: rgba(255,255,255,0.55);
+  font-weight: 800;
+  margin-left: 3px;
+}
+.market-stat-label {
+  font-size: 10px; font-weight: 800;
+  color: rgba(255,255,255,0.72);
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  position: relative; z-index: 1;
+}
+.market-stat-headline {
+  font-size: 18px; font-weight: 800;
+  color: white;
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  position: relative; z-index: 1;
+}
+.market-stat-text {
+  font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+  position: relative; z-index: 1;
+}
+.market-stat-text strong {
+  color: white;
+  font-weight: 800;
+}
+
+/* Narrative paragraphs */
+.market-para {
+  padding: 0 22px;
+  margin-bottom: 14px;
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text);
+  line-height: 1.6;
+  letter-spacing: -0.1px;
+}
+.market-para strong { font-weight: 800; }
+
+/* Pull quote */
+.market-pull-quote {
+  margin: 22px 22px;
+  padding: 16px 0 16px 18px;
+  border-left: 3px solid var(--teal);
+  font-size: 18px; font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+}
+.market-pull-attr {
+  font-size: 11px; font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-top: 12px;
+  font-style: normal;
+}
+.market-pull-attr .illustrative-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  background: var(--bg);
+  color: var(--text-soft);
+  padding: 2px 6px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+}
+
+/* Government section — banner-like, navy strip */
+.govt-card {
+  margin: 0 22px 14px;
+  background: var(--navy);
+  color: white;
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.govt-eyebrow {
+  font-size: 10px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.govt-eyebrow::before {
+  content: '';
+  width: 14px; height: 1px;
+  background: var(--teal);
+}
+.govt-headline {
+  font-size: 18px; font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  color: white;
+}
+.govt-text {
+  font-size: 13px; font-weight: 500;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.55;
+  letter-spacing: -0.1px;
+}
+.govt-text strong { color: white; font-weight: 800; }
+
+/* Founder section — soft cream */
+.founder-card {
+  margin: 0 22px 14px;
+  background: var(--cream);
+  border: 1px solid #EFE6CD;
+  border-radius: 16px;
+  padding: 20px 18px;
+}
+.founder-eyebrow {
+  font-size: 10px; font-weight: 800;
+  color: var(--text-soft);
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.founder-eyebrow::before {
+  content: '';
+  width: 14px; height: 1px;
+  background: var(--text-faint);
+}
+.founder-headline {
+  font-size: 20px; font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.founder-para {
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text);
+  line-height: 1.6;
+  letter-spacing: -0.1px;
+  margin-bottom: 12px;
+}
+.founder-para:last-child { margin-bottom: 0; }
+.founder-para strong { font-weight: 800; }
+.founder-sig {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(35,29,69,0.1);
+  font-size: 11px; font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.founder-sig .illustrative-tag {
+  font-size: 9px;
+  background: rgba(35,29,69,0.06);
+  color: var(--text-soft);
+  padding: 3px 7px;
+  border-radius: 100px;
+  letter-spacing: 0.3px;
+  text-transform: none;
+  font-weight: 700;
+}
+
+/* With/without comparison */
+.compare-grid {
+  margin: 0 22px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.compare-cell {
+  background: var(--white);
+  padding: 14px 12px;
+}
+.compare-cell.without { background: var(--bg); }
+.compare-cell-label {
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.compare-cell.without .compare-cell-label { color: var(--text-soft); }
+.compare-cell.with .compare-cell-label { color: var(--teal); }
+
+.compare-row {
+  display: flex; align-items: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  letter-spacing: -0.1px;
+}
+.compare-row:first-of-type { border-top: none; padding-top: 0; }
+.compare-row .day {
+  font-size: 9.5px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+  width: 38px;
+  padding-top: 2px;
+}
+.compare-row .what { flex: 1; }
+.compare-row.bad .what { color: #B85B36; }
+.compare-row.good .what { color: var(--teal); font-weight: 800; }
+
+/* Closing CTA */
+.market-final-cta {
+  margin: 24px 22px;
+  padding: 22px 20px;
+  background: var(--navy);
+  color: white;
+  border-radius: 18px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.market-final-cta::before {
+  content: '';
+  position: absolute;
+  top: -40%; right: -25%;
+  width: 70%; height: 180%;
+  background: radial-gradient(circle, rgba(0,161,154,0.22), transparent 60%);
+  pointer-events: none;
+}
+.mfc-eyebrow {
+  font-size: 10px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  position: relative; z-index: 2;
+}
+.mfc-headline {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+  position: relative; z-index: 2;
+}
+.mfc-sub {
+  font-size: 12.5px; font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+  margin-bottom: 18px;
+  position: relative; z-index: 2;
+}
+.mfc-btn {
+  width: 100%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 14px; font-weight: 800;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+  transition: all 0.18s;
+  position: relative; z-index: 2;
+}
+.mfc-btn:hover { background: #00b6ae; }
+.mfc-btn svg { width: 13px; height: 13px; }
+
+/* ════ SAMPLE PASSPORT SCREEN ════ */
+
+.sample-back-bar {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  gap: 10px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0;
+  z-index: 5;
+}
+
+/* Sample banner — clear "this is a demo" signal */
+.sample-banner {
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  background: #FFF8E6;
+  border-bottom: 1px solid #F2E6BD;
+}
+.sample-banner-tag {
+  font-size: 9.5px; font-weight: 800;
+  background: var(--gold);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 100px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.sample-banner-text {
+  font-size: 11.5px; font-weight: 600;
+  color: #6B5A2B;
+  letter-spacing: -0.05px;
+  line-height: 1.4;
+}
+
+/* Passport header — book + verified card */
+.passport-header {
+  margin: 14px 16px 0;
+  background: linear-gradient(180deg, #F2FAF8 0%, #E5F4F2 100%);
+  border: 1px solid #C7E8E4;
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.ph-book {
+  width: 96px; height: 130px;
+  background: linear-gradient(155deg, #00a19a 0%, #00514d 100%);
+  border-radius: 4px 6px 6px 4px;
+  flex-shrink: 0;
+  position: relative;
+  padding: 10px 8px;
+  display: flex; flex-direction: column;
+  align-items: center;
+  box-shadow: 0 6px 16px -4px rgba(0,126,120,0.45), inset -2px 0 4px rgba(0,0,0,0.15);
+  color: white;
+}
+.ph-book-spine {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.32), transparent);
+  border-radius: 4px 0 0 4px;
+}
+.ph-book-label-top {
+  font-size: 7.5px; font-weight: 800;
+  letter-spacing: 0.4px;
+  text-align: center;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 6px;
+}
+.ph-book-logo { width: 36px; height: 36px; margin-bottom: 6px; }
+.ph-book-logo svg { width: 100%; height: 100%; }
+.ph-book-addr {
+  font-size: 8px; font-weight: 800;
+  text-align: center;
+  line-height: 1.25;
+  color: white;
+  letter-spacing: 0.1px;
+}
+.ph-info { flex: 1; min-width: 0; }
+.ph-eyebrow {
+  font-size: 9.5px; font-weight: 800;
+  color: var(--teal-dark);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.ph-addr {
+  font-size: 16px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+  margin-bottom: 2px;
+}
+.ph-postcode {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text-soft);
+  margin-bottom: 12px;
+}
+.ph-stats {
+  display: flex; align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid #C7E8E4;
+}
+.ph-stat { flex: 1; text-align: center; }
+.ph-stat-divider {
+  width: 1px; height: 28px;
+  background: #C7E8E4;
+}
+.phs-num {
+  font-size: 18px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.4px;
+  line-height: 1;
+  font-feature-settings: 'tnum';
+}
+.phs-num .phs-pct { font-size: 11px; font-weight: 700; }
+.phs-label {
+  font-size: 9px; font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* Address summary block (below header) */
+.addr-block { padding: 22px 22px 14px; }
+.addr-h {
+  font-size: 22px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.6px;
+  line-height: 1.1;
+}
+.addr-sub {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-soft);
+  margin-top: 2px;
+  margin-bottom: 14px;
+}
+.addr-row {
+  display: flex; align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.addr-value {
+  font-size: 22px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.6px;
+  font-feature-settings: 'tnum';
+}
+.addr-value-label {
+  font-size: 9.5px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.addr-status {
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  font-size: 11px; font-weight: 800;
+  background: var(--teal-pale);
+  color: var(--teal-dark);
+  padding: 5px 10px;
+  border-radius: 100px;
+  margin-left: auto;
+}
+.addr-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.addr-pill {
+  display: inline-flex; align-items: center;
+  gap: 5px;
+  font-size: 11px; font-weight: 700;
+  color: var(--navy);
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  padding: 5px 11px;
+  border-radius: 100px;
+  letter-spacing: -0.1px;
+}
+
+/* Property Details — six cell grid */
+.pd-block { padding: 22px 22px 0; }
+.pd-h {
+  font-size: 18px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.pd-sub {
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-soft);
+  margin-bottom: 14px;
+  letter-spacing: -0.05px;
+}
+.pd-card {
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 14px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.pd-cell {
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 12px 10px;
+}
+.pdc-icon {
+  width: 32px; height: 32px;
+  background: white;
+  border: 1px solid var(--teal-pale);
+  border-radius: 8px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--teal);
+}
+.pdc-icon svg { width: 16px; height: 16px; }
+.pdc-info { min-width: 0; flex: 1; }
+.pdc-label {
+  font-size: 8.5px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.pdc-value {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+
+/* Seller Completion banner */
+.seller-completion {
+  margin: 22px 22px 0;
+  padding: 14px 16px;
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 14px;
+}
+.sc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px;
+}
+.sc-label {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+.sc-pct {
+  font-size: 14px; font-weight: 800;
+  color: var(--teal);
+  font-feature-settings: 'tnum';
+}
+.sc-bar {
+  height: 4px;
+  background: rgba(0,161,154,0.15);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.sc-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--teal);
+  border-radius: 100px;
+}
+.sc-text {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+}
+
+/* Official Records header */
+.or-header { padding: 26px 22px 12px; }
+.or-h {
+  font-size: 18px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+.or-sub {
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  line-height: 1.45;
+}
+
+/* 3-stat strip */
+.or-stats {
+  margin: 0 22px 18px;
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 14px;
+  padding: 14px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+.or-stat { text-align: center; padding: 4px 8px; }
+.ors-num {
+  font-size: 24px; font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1;
+  font-feature-settings: 'tnum';
+  margin-bottom: 4px;
+}
+.or-stat.green .ors-num { color: var(--teal); }
+.or-stat.amber .ors-num { color: var(--gold); }
+.or-stat.grey .ors-num { color: var(--text-faint); }
+.ors-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+/* Section cards — generous white cards matching live app */
+.section-cards {
+  padding: 0 22px;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.sec-card {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: 0 2px 6px rgba(35,29,69,0.04);
+}
+.sec-card:hover {
+  border-color: var(--teal-pale);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(35,29,69,0.08);
+}
+.sec-illus {
+  width: 64px; height: 64px;
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.sec-illus svg { width: 100%; height: 100%; }
+.sec-info { min-width: 0; }
+.sec-name {
+  font-size: 14px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.sec-sub {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  margin-top: 3px;
+  letter-spacing: -0.05px;
+  line-height: 1.35;
+}
+.sec-status-pill {
+  display: inline-block;
+  font-size: 9.5px; font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 100px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+.sec-status-pill.done {
+  background: var(--teal-pale);
+  color: var(--teal-dark);
+}
+.sec-progress-col {
+  display: flex; flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 50px;
+}
+.sec-bar {
+  width: 50px; height: 4px;
+  background: rgba(0,161,154,0.15);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.sec-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--teal);
+  border-radius: 100px;
+}
+.sec-pct {
+  font-size: 11px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: 0;
+  font-feature-settings: 'tnum';
+}
+.sec-arrow {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-soft);
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+/* "+ X more sections" footer hint */
+.sec-more {
+  background: white;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.sec-more:hover {
+  border-color: var(--teal-pale);
+  background: var(--teal-paler);
+}
+.sec-more-text {
+  font-size: 13px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.2px;
+  margin-bottom: 3px;
+}
+.sec-more-meta {
+  font-size: 10.5px; font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: -0.05px;
+  line-height: 1.3;
+}
+
+/* Document download card */
+.doc-download {
+  margin: 0 22px 18px;
+  padding: 14px 16px;
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 14px;
+  display: flex; align-items: center;
+  gap: 12px;
+}
+.doc-info { flex: 1; min-width: 0; }
+.doc-name {
+  font-size: 13.5px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-bottom: 2px;
+}
+.doc-sub {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  line-height: 1.35;
+}
+.doc-btn {
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 12px; font-weight: 800;
+  padding: 9px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  letter-spacing: -0.1px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.doc-btn:hover { background: #00b6ae; transform: translateY(-1px); }
+
+/* Sample CTA bar (closing) */
+.sample-cta-bar {
+  margin: 8px 22px 24px;
+  padding: 18px;
+  background: linear-gradient(155deg, #231d45 0%, #110d28 100%);
+  color: white;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.sample-cta-bar::before {
+  content: '';
+  position: absolute;
+  top: -40%; right: -25%;
+  width: 70%; height: 180%;
+  background: radial-gradient(circle, rgba(0,161,154,0.22), transparent 60%);
+  pointer-events: none;
+}
+.scb-headline {
+  font-size: 17px; font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  position: relative; z-index: 2;
+}
+.scb-sub {
+  font-size: 11.5px; font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.4;
+  margin-bottom: 14px;
+  position: relative; z-index: 2;
+}
+.scb-btn {
+  width: 100%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 14px; font-weight: 800;
+  padding: 13px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.2px;
+  transition: all 0.18s;
+  box-shadow: 0 6px 16px rgba(0,161,154,0.32);
+  position: relative; z-index: 2;
+}
+.scb-btn:hover { background: #00b6ae; transform: translateY(-1px); }
+.scb-btn svg { width: 13px; height: 13px; }
+
+/* ════ AISHA STORY SCREEN — slim version ════ */
+
+.aisha-back-bar {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  gap: 10px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0;
+  z-index: 5;
+}
+.aisha-hero {
+  padding: 28px 22px 24px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.aisha-eyebrow {
+  font-size: 10px; font-weight: 800;
+  color: var(--teal-dark);
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.aisha-title {
+  font-size: 30px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -1px;
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+.aisha-title em {
+  font-style: normal;
+  color: var(--teal);
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.aisha-byline {
+  display: flex; align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-soft);
+  letter-spacing: -0.1px;
+}
+.aisha-byline-av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+  flex-shrink: 0;
+}
+.aisha-byline-name { font-weight: 800; color: var(--navy); }
+.aisha-byline-meta { color: var(--text-faint); }
+
+/* Numbers strip — designed colored tiles */
+.aisha-numbers {
+  background: transparent;
+  padding: 24px 22px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  border-bottom: none;
+}
+.aisha-num-cell {
+  position: relative;
+  padding: 18px 14px 14px;
+  border-radius: 14px;
+  text-align: left;
+}
+.aisha-num-cell.teal { background: var(--teal); }
+.aisha-num-cell.navy { background: var(--navy); }
+.aisha-num-cell.gold { background: var(--gold); }
+.aisha-num-big {
+  font-size: 32px; font-weight: 800;
+  color: white;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  margin-bottom: 10px;
+  font-feature-settings: 'tnum';
+}
+.aisha-num-big .unit {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: -0.1px;
+  margin-left: 3px;
+}
+.aisha-num-label {
+  font-size: 9px; font-weight: 800;
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  line-height: 1.35;
+}
+
+/* Aisha body paragraphs */
+.aisha-section-h {
+  display: flex; align-items: center;
+  gap: 10px;
+  padding: 28px 22px 14px;
+}
+.aisha-section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0;
+}
+.aisha-section-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.aisha-section-title {
+  font-size: 18px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  padding: 0 22px 14px;
+}
+.aisha-section-title em {
+  font-style: normal;
+  color: var(--teal);
+  font-weight: 800;
+}
+.aisha-para {
+  padding: 0 22px;
+  margin-bottom: 14px;
+  font-size: 13.5px; font-weight: 500;
+  color: var(--text);
+  line-height: 1.6;
+  letter-spacing: -0.1px;
+}
+.aisha-para strong { font-weight: 800; }
+
+.aisha-pull {
+  margin: 22px 22px;
+  padding: 14px 0 14px 18px;
+  border-left: 3px solid var(--teal);
+}
+.aisha-pull-quote {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+}
+.aisha-pull-attr {
+  font-size: 10px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.aisha-final-cta {
+  margin: 24px 22px;
+  padding: 22px 20px 20px;
+  background: white;
+  border: 1px solid var(--teal-pale);
+  border-radius: 18px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(35,29,69,0.04);
+}
+.afc-eyebrow-pill {
+  display: inline-block;
+  font-size: 10px; font-weight: 800;
+  color: var(--teal-dark);
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  padding: 5px 11px;
+  border-radius: 100px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.afc-headline {
+  font-size: 22px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.afc-sub {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-soft);
+  line-height: 1.55;
+  margin-bottom: 18px;
+  letter-spacing: -0.05px;
+  padding: 0 4px;
+}
+.afc-btn {
+  display: inline-flex;
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 13px; font-weight: 800;
+  padding: 11px 22px;
+  border-radius: 100px;
+  cursor: pointer;
+  align-items: center; justify-content: center;
+  gap: 6px;
+  letter-spacing: -0.2px;
+  transition: all 0.18s;
+}
+.afc-btn:hover { background: #00b6ae; }
+.afc-btn svg { width: 11px; height: 11px; opacity: 0.85; }
+
+/* Show right screen */
+body[data-screen="sample"] .screen.sample,
+body[data-screen="aisha"] .screen.aisha { display: block; }
+
+@media (max-width: 800px) {
+  .layout { flex-direction: column; align-items: center; }
+  .notes-panel { width: 100%; max-width: 380px; }
+}
+</style>
+</head>
+<body data-screen="landing">
+
+<div class="stage-caption">
+  <span class="label">UMU · Stacked deck · peek at BOTTOM</span>
+  <div class="head">Cards peek under the front one.</div>
+  <div>Apple Wallet pattern. Front card fully visible, others peeking below it. Tap a peeking card to bring it forward, tap a front card to open its page. Compare with the top-peek version to decide which feels right.</div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><polyline points="13,5 19,12 13,19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-8 10-8 10 8 10 8-4 8-10 8-10-8-10-8z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 3h10v18l-5-3.5L7 21z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+
+    <symbol id="umu-logo" viewBox="0 0 60 60">
+      <path d="M 8,28 L 30,12 L 52,28 L 52,52 L 8,52 Z" fill="none" stroke="#231d45" stroke-width="3.5" stroke-linejoin="round"/>
+      <rect x="40" y="14" width="5" height="9" fill="#231d45"/>
+      <path d="M 14,34 Q 14,42 19,42 Q 24,42 24,34" fill="none" stroke="#00a19a" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M 24,42 Q 24,34 28,34 Q 32,34 32,42 Q 32,34 36,34 Q 40,34 40,42" fill="none" stroke="#00a19a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 40,34 Q 40,42 45,42 Q 50,42 50,34" fill="none" stroke="#00a19a" stroke-width="2.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="umu-logo-white" viewBox="0 0 60 60">
+      <path d="M 8,28 L 30,12 L 52,28 L 52,52 L 8,52 Z" fill="none" stroke="white" stroke-width="3.5" stroke-linejoin="round"/>
+      <rect x="40" y="14" width="5" height="9" fill="white"/>
+      <path d="M 14,34 Q 14,42 19,42 Q 24,42 24,34" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M 24,42 Q 24,34 28,34 Q 32,34 32,42 Q 32,34 36,34 Q 40,34 40,42" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 40,34 Q 40,42 45,42 Q 50,42 50,34" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="layout">
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="right">
+        <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+        <span style="font-size:11px;font-weight:600;">5G</span>
+        <div class="battery"><i></i></div>
+      </div>
+    </div>
+
+    <div class="body" id="phoneBody">
+
+      <div class="screen landing">
+
+      <div class="brand-row">
+        <div class="brand-mark">
+          <div class="brand-logo"><svg><use href="#umu-logo"/></svg></div>
+          <span>umovingu</span>
+        </div>
+        <div class="brand-spacer"></div>
+        <div class="beta-pill">Beta</div>
+      </div>
+
+      <div class="hero">
+        <div class="hero-title">
+          Know your home<br/>
+          <span class="lt-teal">inside out.</span>
+        </div>
+        <div class="hero-sub">Tap any card to bring it to the front.</div>
+      </div>
+
+      <!-- ════ THE DECK ════ -->
+      <div class="deck-wrap" id="deck">
+
+        <!-- Card 1 — HealthScore (teal) -->
+        <div class="deck-card healthscore" data-id="healthscore" data-pos="1" onclick="bringToFront('healthscore')">
+          <div class="dc-peek">
+            <span class="dc-peek-label">HealthScore</span>
+            <span class="dc-peek-pill">Free</span>
+          </div>
+          <div class="dc-top">
+            <div class="dc-eyebrow"><span class="dot"></span>HealthScore</div>
+            <div class="dc-pill">Free</div>
+          </div>
+          <div class="dc-content">
+            <div class="dc-headline">How does your<br/>home compare?</div>
+            <div class="dc-sub">Bills vs. street. Value vs. neighbours. Where you could save. In 60 seconds.</div>
+            <div class="dc-hs-row">
+              <div class="dc-hs-gauge">
+                <svg viewBox="0 0 88 88">
+                  <circle class="g-bg" cx="44" cy="44" r="36" fill="none" stroke-width="5"/>
+                  <circle class="g-fill" cx="44" cy="44" r="36" fill="none" stroke-width="5" stroke-dasharray="226.2" stroke-dashoffset="58.8"/>
+                </svg>
+                <div class="g-num">
+                  <div class="gn-big">74</div>
+                  <div class="gn-small">/ 100</div>
+                </div>
+              </div>
+              <div class="dc-hs-meta">
+                Sample · bills <strong>22% above</strong> the street. EPC <strong>C</strong>. Up to <strong>£330/yr</strong> savings available.
+              </div>
+            </div>
+          </div>
+          <div class="dc-foot">
+            <button class="dc-cta" onclick="event.stopPropagation(); t('Run a HealthScore on your home')">
+              Check your home
+              <svg><use href="#i-arrow-right"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2 — Property Passport (navy) -->
+        <div class="deck-card passport" data-id="passport" data-pos="2" onclick="bringToFront('passport')">
+          <div class="dc-peek">
+            <span class="dc-peek-label">Property Passport</span>
+            <span class="dc-peek-pill">Solicitor-grade</span>
+          </div>
+          <div class="dc-top">
+            <div class="dc-eyebrow"><span class="dot"></span>Property Passport</div>
+            <div class="dc-pill">Solicitor-grade</div>
+          </div>
+          <div class="dc-content">
+            <div class="dc-headline">Find out now.<br/>Not three weeks in.</div>
+            <div class="dc-sub">Everything a buyer's solicitor needs — and will ask for. You stay in control.</div>
+            <div class="dc-pp-row">
+              <div class="dc-pp-book">
+                <svg><use href="#umu-logo-white"/></svg>
+                <div class="dc-pp-book-label">Property<br/>Passport</div>
+              </div>
+              <div class="dc-pp-cats">
+                <div class="dc-pp-cat">Deeds</div>
+                <div class="dc-pp-cat">Planning</div>
+                <div class="dc-pp-cat">Surveys</div>
+                <div class="dc-pp-cat">Fittings</div>
+                <div class="dc-pp-cat more">+10 more</div>
+              </div>
+            </div>
+          </div>
+          <div class="dc-foot">
+            <button class="dc-cta" onclick="event.stopPropagation(); openScreen('sample')">
+              <svg><use href="#i-eye"/></svg>
+              See a sample
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3 — Aisha (gold) -->
+        <div class="deck-card aisha" data-id="aisha" data-pos="3" onclick="bringToFront('aisha')">
+          <div class="dc-peek">
+            <span class="dc-peek-label">A real story</span>
+            <span class="dc-peek-pill">5 min read</span>
+          </div>
+          <div class="dc-top">
+            <div class="dc-eyebrow"><span class="dot"></span>A real story</div>
+            <div class="dc-pill">5 min read</div>
+          </div>
+          <div class="dc-content">
+            <div class="dc-headline">Aisha sold<br/>in 14 days.</div>
+            <div class="dc-sub">A two-bed semi in Coventry. No surveys lost. No fall-throughs. Sold March 2026.</div>
+            <div class="dc-ai-row">
+              <div class="dc-ai-num">14<span class="unit">days</span></div>
+              <div class="dc-ai-text">
+                vs UK average <strong>179 days</strong>. <strong>£0</strong> in lost survey fees.
+              </div>
+            </div>
+          </div>
+          <div class="dc-foot">
+            <button class="dc-cta" onclick="event.stopPropagation(); openScreen('aisha')">
+              <svg><use href="#i-bookmark"/></svg>
+              Read her story
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 4 — Market reality (deep navy) -->
+        <div class="deck-card market" data-id="market" data-pos="4" onclick="bringToFront('market')">
+          <div class="dc-peek">
+            <span class="dc-peek-label">The market today</span>
+            <span class="dc-peek-pill">Why we built it</span>
+          </div>
+          <div class="dc-top">
+            <div class="dc-eyebrow"><span class="dot"></span>The market today</div>
+            <div class="dc-pill">Why we built it</div>
+          </div>
+          <div class="dc-content">
+            <div class="dc-headline">UK home sales<br/>are broken.</div>
+            <div class="dc-sub">A third collapse before completion. The average that does complete takes nearly six months.</div>
+            <div class="dc-mk-row">
+              <div class="dc-mk-cell">
+                <div class="dc-mk-num">179<span class="unit">days</span></div>
+                <div class="dc-mk-label">Avg. UK sale</div>
+              </div>
+              <div class="dc-mk-cell">
+                <div class="dc-mk-num">1 in 3</div>
+                <div class="dc-mk-label">Sales collapse</div>
+              </div>
+              <div class="dc-mk-cell">
+                <div class="dc-mk-num">£2.7k</div>
+                <div class="dc-mk-label">Lost per fall-through</div>
+              </div>
+            </div>
+          </div>
+          <div class="dc-foot">
+            <button class="dc-cta" onclick="event.stopPropagation(); openScreen('market')">
+              Read the case
+              <svg><use href="#i-arrow-right"/></svg>
+            </button>
+            <div style="text-align: center; margin-top: 8px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.55); letter-spacing: 0.3px;">Or tap the card to open ›</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Index dots showing which card's at the front -->
+      <div class="deck-dots" id="deckDots">
+        <span class="deck-dot active" data-id="healthscore" onclick="bringToFront('healthscore')"></span>
+        <span class="deck-dot" data-id="passport" onclick="bringToFront('passport')"></span>
+        <span class="deck-dot" data-id="aisha" onclick="bringToFront('aisha')"></span>
+        <span class="deck-dot" data-id="market" onclick="bringToFront('market')"></span>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-section">
+        <button class="btn-primary" onclick="t('Sign-up flow')">
+          Get started
+          <svg><use href="#i-arrow-right"/></svg>
+        </button>
+        <div class="cta-signin">
+          Already have an account? <a onclick="t('Sign in')">Sign in</a>
+        </div>
+      </div>
+
+      </div><!-- /.screen.landing -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           MARKET TODAY SCREEN
+           ════════════════════════════════════════════════════════════ -->
+      <div class="screen market">
+
+        <div class="market-back-bar">
+          <button class="back-btn" onclick="openScreen('landing')"><svg><use href="#i-back"/></svg></button>
+          <div class="back-bar-title">The market today</div>
+        </div>
+
+        <div class="market-hero">
+          <div class="market-eyebrow">Why we built it</div>
+          <div class="market-title">UK home sales<br/>are broken.</div>
+          <div class="market-sub">A third of all sales collapse before they reach completion. Of the ones that do, the average takes nearly six months — almost all of it spent waiting for paperwork that could have been ready on day one. Here's what's actually going wrong, what's being done about it, and why we built UMU.</div>
+        </div>
+
+        <!-- THE NUMBERS -->
+        <div class="market-section-h">The numbers</div>
+
+        <div class="market-stat-block navy">
+          <div class="market-stat-num">
+            179<span class="ms-d">days</span>
+            <span class="ms-arrow">→</span>
+            <span class="ms-target">14<span class="ms-target-unit">days</span></span>
+          </div>
+          <div class="market-stat-label">12× slower</div>
+          <div class="market-stat-headline">UK avg vs. with Passport</div>
+          <div class="market-stat-text">
+            The average UK home sale takes <strong>179 days</strong> from offer accepted to completion. Almost all of that time is the buyer's solicitor asking for documents the seller didn't have ready — title deeds, planning permissions, FENSA certificates, surveys, fittings forms. With a Property Passport in place from day one, that drops to around <strong>14 days</strong>.
+          </div>
+        </div>
+
+        <div class="market-stat-block teal">
+          <div class="market-stat-num">1 in 3</div>
+          <div class="market-stat-label">Sales collapse</div>
+          <div class="market-stat-headline">No safety net before completion</div>
+          <div class="market-stat-text">
+            <strong>Roughly 33% of agreed UK property sales fall through</strong> before completion. The most common cause is a problem revealed in the buyer's solicitor's enquiries weeks into the transaction — something the seller didn't know about, or didn't think mattered. By that point both sides have spent thousands.
+          </div>
+        </div>
+
+        <div class="market-stat-block deep">
+          <div class="market-stat-num">£2,700</div>
+          <div class="market-stat-label">Lost per consumer</div>
+          <div class="market-stat-headline">Per failed sale, on average</div>
+          <div class="market-stat-text">
+            The average buyer or seller burns about <strong>£2,700 per fall-through</strong> — survey fees, legal fees, mortgage application fees, removal deposits, and the personal cost of stress and time off work. Multiply across the country and the figure is roughly <strong>£900 million a year</strong> in waste.
+          </div>
+        </div>
+
+        <!-- WHY IT HAPPENS -->
+        <div class="market-section-h">Why it happens</div>
+
+        <div class="market-para">
+          The English property system has a quiet design flaw at its heart: <strong>everything important is revealed at the wrong time.</strong> A buyer falls in love with a house, makes an offer, gets it accepted — and only then do the questions begin. Where are the title deeds? Has the loft conversion got building regs? Is there a covenant on the boundary? When was the boiler last serviced?
+        </div>
+
+        <div class="market-para">
+          The seller scrambles. Most of these answers exist somewhere — in a drawer, an old email, a council archive — but finding them takes weeks. While the seller hunts, the buyer waits. Their mortgage offer expires. Their patience runs out. Or worse, a survey reveals damp, or a search flags a planning issue, or a leasehold condition turns out to be more onerous than it looked. The buyer pulls out. The seller starts again.
+        </div>
+
+        <div class="market-para">
+          The system assumes <strong>discovery should happen during the transaction.</strong> That's the design flaw. By the time problems surface, they're expensive, emotional, and binary — fix it now or lose the sale. Most sellers had no idea anything was wrong. They just wanted to move.
+        </div>
+
+        <div class="market-pull-quote">
+          "You don't know what you don't know — until you're three weeks in and the buyer's solicitor asks for something you can't find."
+          <div class="market-pull-attr">
+            Industry observation
+            <span class="illustrative-tag">Illustrative</span>
+          </div>
+        </div>
+
+        <!-- GOVERNMENT SECTION -->
+        <div class="market-section-h">What's changing</div>
+
+        <div class="govt-card">
+          <div class="govt-eyebrow">Policy update</div>
+          <div class="govt-headline">The government is acting.</div>
+          <div class="govt-text">
+            The case for upfront information has been understood at a policy level for some time. <strong>Mandation is coming</strong> — every UK property will be required to have a Property Passport-equivalent record before being put on the market. The aim is to surface what buyers' solicitors will inevitably ask for, before the offer stage rather than after it. Estate agents, conveyancers, and consumer bodies have been broadly supportive. UMU has been engaged in the conversations leading up to this change, and is one of the providers preparing for the new regime.
+          </div>
+        </div>
+
+        <!-- FOUNDER SECTION -->
+        <div class="market-section-h">Why I started UMU</div>
+
+        <div class="founder-card">
+          <div class="founder-eyebrow">From the founder</div>
+          <div class="founder-headline">I've spent over 34 years in this industry. I've watched the same thing happen, again and again.</div>
+
+          <div class="founder-para">
+            I've seen heartbreak. I've seen tears. I've watched people lose homes they'd already mentally moved into, lose deposits they couldn't afford to lose, lose months of their lives to a process that promised to deliver and didn't. I've watched buyers and sellers alike feel completely <strong>out of control</strong> — because every answer they need only arrives after they've already committed.
+          </div>
+
+          <div class="founder-para">
+            Every pitfall you can imagine, I've seen play out. The survey that revealed something the seller genuinely didn't know about. The leasehold condition that wasn't flagged until exchange. The chain that broke because the third party in it had paperwork they couldn't find. None of these are dramatic stories on their own — they're the quiet, ordinary failures that happen tens of thousands of times a year in this country.
+          </div>
+
+          <div class="founder-para">
+            UMU exists because <strong>none of it has to be like this.</strong> The information the buyer's solicitor will ask for is, almost without exception, already discoverable. It's just discovered too late. If we surface it on day one — verified, transferable, owned by the seller — the whole rhythm of the transaction changes. The seller stays in control of their own home's record. The buyer makes informed decisions. The system finally serves the people inside it instead of testing them.
+          </div>
+
+          <div class="founder-para">
+            That's why I built this.
+          </div>
+
+          <div class="founder-sig">
+            UMU's founder
+            <span class="illustrative-tag">Draft copy · review with founder</span>
+          </div>
+        </div>
+
+        <!-- COMPARISON -->
+        <div class="market-section-h">With vs without a Passport</div>
+
+        <div class="compare-grid">
+          <div class="compare-cell without">
+            <div class="compare-cell-label">Without</div>
+            <div class="compare-row bad"><span class="day">Day 0</span><span class="what">Offer accepted</span></div>
+            <div class="compare-row bad"><span class="day">Day 21</span><span class="what">Survey reveals issue</span></div>
+            <div class="compare-row bad"><span class="day">Day 47</span><span class="what">Buyer renegotiates</span></div>
+            <div class="compare-row bad"><span class="day">Day 74</span><span class="what">Pulls out, starts again</span></div>
+            <div class="compare-row bad"><span class="day">Day 179</span><span class="what">Eventual completion</span></div>
+          </div>
+          <div class="compare-cell with">
+            <div class="compare-cell-label">With UMU</div>
+            <div class="compare-row good"><span class="day">Day -30</span><span class="what">Passport ready</span></div>
+            <div class="compare-row good"><span class="day">Day 0</span><span class="what">Offer accepted</span></div>
+            <div class="compare-row good"><span class="day">Day 2</span><span class="what">Solicitor reviews record</span></div>
+            <div class="compare-row good"><span class="day">Day 11</span><span class="what">Exchange</span></div>
+            <div class="compare-row good"><span class="day">Day 14</span><span class="what">Completion</span></div>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="market-final-cta">
+          <div class="mfc-eyebrow">This is what UMU is for</div>
+          <div class="mfc-headline">Start with a free HealthScore.</div>
+          <div class="mfc-sub">No card needed. See what your home tells you in 60 seconds. Upgrade to a Passport when you're ready to sell.</div>
+          <button class="mfc-btn" onclick="t('Sign-up flow')">
+            Get started — it's free
+            <svg><use href="#i-arrow-right"/></svg>
+          </button>
+        </div>
+
+        <div style="height: 24px;"></div>
+      </div><!-- /.screen.market -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           SAMPLE PASSPORT SCREEN
+           ════════════════════════════════════════════════════════════ -->
+      <div class="screen sample">
+
+        <div class="sample-back-bar">
+          <button class="back-btn" onclick="openScreen('landing')"><svg><use href="#i-back"/></svg></button>
+          <div class="back-bar-title">Sample Property Passport</div>
+        </div>
+
+        <!-- SAMPLE banner so users don't think this is their property -->
+        <div class="sample-banner">
+          <div class="sample-banner-tag">Sample</div>
+          <div class="sample-banner-text">This is a demo passport for an illustrative property — not a real listing.</div>
+        </div>
+
+        <!-- Header: Passport book + Verified card (matches live app) -->
+        <div class="passport-header">
+          <div class="ph-book">
+            <div class="ph-book-spine"></div>
+            <div class="ph-book-label-top">Property Passport</div>
+            <div class="ph-book-logo">
+              <svg viewBox="0 0 60 60">
+                <path d="M 8,28 L 30,12 L 52,28 L 52,52 L 8,52 Z" fill="none" stroke="white" stroke-width="3.5" stroke-linejoin="round"/>
+                <rect x="40" y="14" width="5" height="9" fill="white"/>
+                <path d="M 14,34 Q 14,42 19,42 Q 24,42 24,34" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+                <path d="M 24,42 Q 24,34 28,34 Q 32,34 32,42 Q 32,34 36,34 Q 40,34 40,42" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M 40,34 Q 40,42 45,42 Q 50,42 50,34" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="ph-book-addr">55, Woodfield<br/>Road<br/>CV5 6AJ</div>
+          </div>
+          <div class="ph-info">
+            <div class="ph-eyebrow">Verified Property Passport</div>
+            <div class="ph-addr">55, Woodfield Road</div>
+            <div class="ph-postcode">Coventry, CV5 6AJ</div>
+            <div class="ph-stats">
+              <div class="ph-stat">
+                <div class="phs-num">74</div>
+                <div class="phs-label">HS™</div>
+              </div>
+              <div class="ph-stat-divider"></div>
+              <div class="ph-stat">
+                <div class="phs-num">17</div>
+                <div class="phs-label">Sections</div>
+              </div>
+              <div class="ph-stat-divider"></div>
+              <div class="ph-stat">
+                <div class="phs-num">100<span class="phs-pct">%</span></div>
+                <div class="phs-label">Complete</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address summary -->
+        <div class="addr-block">
+          <div class="addr-h">55, Woodfield Road</div>
+          <div class="addr-sub">Coventry, CV5 6AJ</div>
+          <div class="addr-row">
+            <div class="addr-value">£420,000</div>
+            <div class="addr-value-label">Estimated value</div>
+            <div class="addr-status">
+              <svg width="12" height="12" viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              100% complete · 0 red flags
+            </div>
+          </div>
+          <div class="addr-pills">
+            <div class="addr-pill">
+              <svg viewBox="0 0 24 24" width="12" height="12"><path d="M3 12h2v8h14v-8h2L12 3 3 12z" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="9" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              4 bed
+            </div>
+            <div class="addr-pill">House</div>
+            <div class="addr-pill">
+              <svg viewBox="0 0 24 24" width="12" height="12"><path d="M5 19l14-14M5 9V5h4M19 15v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              1,406 sqft
+            </div>
+          </div>
+        </div>
+
+        <!-- Property Details — six cell grid in mint card -->
+        <div class="pd-block">
+          <div class="pd-h">Property Details</div>
+          <div class="pd-sub">Key characteristics that define this property.</div>
+          <div class="pd-card">
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><path d="M3 12h2v8h14v-8h2L12 3 3 12z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">Property Type</div>
+                <div class="pdc-value">House</div>
+              </div>
+            </div>
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><line x1="6" y1="4" x2="6" y2="20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="4" x2="14" y2="20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="3" y1="16" x2="21" y2="16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">Title Number</div>
+                <div class="pdc-value">CV722359</div>
+              </div>
+            </div>
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><path d="M3 3h18v18H3z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 16l8-8M14 8h2v2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">Area sqft</div>
+                <div class="pdc-value">1,406 sqft</div>
+              </div>
+            </div>
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">EPC Rating</div>
+                <div class="pdc-value">C</div>
+              </div>
+            </div>
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-7h6v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">Tenure</div>
+                <div class="pdc-value">Freehold</div>
+              </div>
+            </div>
+            <div class="pd-cell">
+              <div class="pdc-icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.8"/><line x1="8" y1="3" x2="8" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="16" y1="3" x2="16" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="pdc-info">
+                <div class="pdc-label">Year Built</div>
+                <div class="pdc-value">1962</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seller Completion banner -->
+        <div class="seller-completion">
+          <div class="sc-row">
+            <div class="sc-label">Seller Completion</div>
+            <div class="sc-pct">100%</div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-fill"></div></div>
+          <div class="sc-text">All sections answered and verified.</div>
+        </div>
+
+        <!-- Official Records header -->
+        <div class="or-header">
+          <div class="or-h">Official Records</div>
+          <div class="or-sub">Verified documents that define the legal and structural status of the property.</div>
+        </div>
+
+        <!-- 3-stat strip -->
+        <div class="or-stats">
+          <div class="or-stat green">
+            <div class="ors-num">17</div>
+            <div class="ors-label">Fully<br/>Answered</div>
+          </div>
+          <div class="or-stat amber">
+            <div class="ors-num">0</div>
+            <div class="ors-label">Partially</div>
+          </div>
+          <div class="or-stat grey">
+            <div class="ors-num">0</div>
+            <div class="ors-label">Not Yet<br/>Shared</div>
+          </div>
+        </div>
+
+        <!-- Section cards — generous white cards matching the live app -->
+        <div class="section-cards">
+
+          <div class="sec-card" onclick="t('Open: Title Deeds and Plan')">
+            <div class="sec-illus deeds">
+              <svg viewBox="0 0 64 64">
+                <rect x="14" y="14" width="36" height="40" rx="2" fill="#FFFEFB" stroke="#231d45" stroke-width="1.8"/>
+                <line x1="20" y1="22" x2="44" y2="22" stroke="#00a19a" stroke-width="2"/>
+                <line x1="20" y1="28" x2="40" y2="28" stroke="#231d45" stroke-width="1.5" opacity="0.5"/>
+                <line x1="20" y1="32" x2="42" y2="32" stroke="#231d45" stroke-width="1.5" opacity="0.5"/>
+                <line x1="20" y1="36" x2="38" y2="36" stroke="#231d45" stroke-width="1.5" opacity="0.5"/>
+                <circle cx="32" cy="46" r="4" fill="#C18A38"/>
+                <path d="M28 50 L 28 56 L 32 53 L 36 56 L 36 50" fill="#C18A38"/>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-name">Title Deeds &amp; Plan</div>
+              <div class="sec-sub">HM Land Registry · CV722359</div>
+              <div class="sec-status-pill done">Verified</div>
+            </div>
+            <div class="sec-progress-col">
+              <div class="sec-bar"><div class="sec-bar-fill"></div></div>
+              <div class="sec-pct">100%</div>
+            </div>
+            <div class="sec-arrow">›</div>
+          </div>
+
+          <div class="sec-card" onclick="t('Open: Searches')">
+            <div class="sec-illus searches">
+              <svg viewBox="0 0 64 64">
+                <rect x="10" y="20" width="34" height="30" rx="2" fill="#FFFEFB" stroke="#231d45" stroke-width="1.8"/>
+                <polygon points="14,28 27,18 40,28 40,42 14,42" fill="none" stroke="#231d45" stroke-width="1.6" stroke-linejoin="round"/>
+                <rect x="24" y="34" width="6" height="8" fill="#00a19a"/>
+                <circle cx="48" cy="38" r="8" fill="none" stroke="#231d45" stroke-width="2.2"/>
+                <line x1="54" y1="44" x2="58" y2="48" stroke="#231d45" stroke-width="2.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-name">Searches</div>
+              <div class="sec-sub">Local authority · Drainage · Environmental</div>
+              <div class="sec-status-pill done">Verified</div>
+            </div>
+            <div class="sec-progress-col">
+              <div class="sec-bar"><div class="sec-bar-fill"></div></div>
+              <div class="sec-pct">100%</div>
+            </div>
+            <div class="sec-arrow">›</div>
+          </div>
+
+          <div class="sec-card" onclick="t('Open: Fixtures and Fittings')">
+            <div class="sec-illus fixtures">
+              <svg viewBox="0 0 64 64">
+                <rect x="8" y="14" width="48" height="40" rx="2" fill="#FFFEFB" stroke="#231d45" stroke-width="1.8"/>
+                <rect x="8" y="14" width="48" height="10" fill="#6BD4CD" opacity="0.4"/>
+                <line x1="32" y1="14" x2="32" y2="54" stroke="#231d45" stroke-width="1.4" opacity="0.3"/>
+                <circle cx="20" cy="36" r="5" fill="#C18A38"/>
+                <path d="M40 30 L 48 30 L 48 44 L 40 44 Z" fill="#00a19a"/>
+                <circle cx="44" cy="34" r="1" fill="white"/>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-name">Fixtures &amp; Fittings</div>
+              <div class="sec-sub">TA10 · 24 items declared</div>
+              <div class="sec-status-pill done">Verified</div>
+            </div>
+            <div class="sec-progress-col">
+              <div class="sec-bar"><div class="sec-bar-fill"></div></div>
+              <div class="sec-pct">100%</div>
+            </div>
+            <div class="sec-arrow">›</div>
+          </div>
+
+          <div class="sec-card" onclick="t('Open: Boundaries')">
+            <div class="sec-illus boundaries">
+              <svg viewBox="0 0 64 64">
+                <rect x="10" y="34" width="44" height="20" fill="#6BD4CD" opacity="0.3"/>
+                <polygon points="16,34 32,20 48,34" fill="#231d45" opacity="0.85"/>
+                <rect x="22" y="34" width="20" height="20" fill="#FFFEFB" stroke="#231d45" stroke-width="1.6"/>
+                <rect x="28" y="42" width="4" height="8" fill="#00a19a"/>
+                <line x1="6" y1="54" x2="58" y2="54" stroke="#C18A38" stroke-width="2" stroke-dasharray="3,3"/>
+              </svg>
+            </div>
+            <div class="sec-info">
+              <div class="sec-name">Boundaries</div>
+              <div class="sec-sub">Identified and confirmed</div>
+              <div class="sec-status-pill done">Verified</div>
+            </div>
+            <div class="sec-progress-col">
+              <div class="sec-bar"><div class="sec-bar-fill"></div></div>
+              <div class="sec-pct">100%</div>
+            </div>
+            <div class="sec-arrow">›</div>
+          </div>
+
+          <!-- "+ 13 more" footer hint -->
+          <div class="sec-more" onclick="t('All 17 sections')">
+            <div class="sec-more-text">+ 13 more sections</div>
+            <div class="sec-more-meta">Occupiers · Services · Disputes · Insurance · Environmental · Parking · ...</div>
+          </div>
+
+        </div>
+
+        <!-- Document download card — Full Property Report -->
+        <div class="doc-download">
+          <div class="doc-info">
+            <div class="doc-name">Full Property Report</div>
+            <div class="doc-sub">All questions &amp; answers — share with solicitors</div>
+          </div>
+          <button class="doc-btn" onclick="event.stopPropagation(); t('Download Full Property Report')">
+            <svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download PDF
+          </button>
+        </div>
+
+        <!-- Closing CTA -->
+        <div class="sample-cta-bar">
+          <div class="scb-headline">Want one for your home?</div>
+          <div class="scb-sub">Solicitor-grade documentation, ready before your first viewing. Free to start.</div>
+          <button class="scb-btn" onclick="t('Sign-up flow')">
+            Start a Property Passport
+            <svg><use href="#i-arrow-right"/></svg>
+          </button>
+        </div>
+
+        <div style="height: 24px;"></div>
+      </div><!-- /.screen.sample -->
+
+      <!-- ════════════════════════════════════════════════════════════
+           AISHA STORY SCREEN
+           ════════════════════════════════════════════════════════════ -->
+      <div class="screen aisha">
+
+        <div class="aisha-back-bar">
+          <button class="back-btn" onclick="openScreen('landing')"><svg><use href="#i-back"/></svg></button>
+          <div class="back-bar-title">A real story</div>
+        </div>
+
+        <div class="aisha-hero">
+          <div class="aisha-eyebrow">A real story · Coventry, March 2026</div>
+          <div class="aisha-title">Aisha sold her two-bed in <em>fourteen days.</em></div>
+          <div class="aisha-byline">
+            <div class="aisha-byline-av">A</div>
+            <div>
+              <div class="aisha-byline-name">Aisha Patel</div>
+              <div class="aisha-byline-meta">Seller · 5 min read</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Numbers strip — designed tiles -->
+        <div class="aisha-numbers">
+          <div class="aisha-num-cell teal">
+            <div class="aisha-num-big">14<span class="unit">days</span></div>
+            <div class="aisha-num-label">Offer to completion</div>
+          </div>
+          <div class="aisha-num-cell gold">
+            <div class="aisha-num-big">£0</div>
+            <div class="aisha-num-label">Lost in survey fees</div>
+          </div>
+          <div class="aisha-num-cell navy">
+            <div class="aisha-num-big">£2.7<span class="unit">k</span></div>
+            <div class="aisha-num-label">Saved vs UK avg</div>
+          </div>
+        </div>
+
+        <!-- Chapter 1 -->
+        <div class="aisha-section-h">
+          <span class="aisha-section-num">01</span>
+          <span class="aisha-section-rule"></span>
+          <span class="aisha-section-num">Before</span>
+        </div>
+        <div class="aisha-section-title">Why she <em>started early.</em></div>
+        <div class="aisha-para">Aisha had watched her parents lose a sale four years ago. The buyer's solicitor asked for FENSA certificates her mother couldn't find, and after two months of searching, the buyer pulled out. They lost £3,400 in survey fees. Her mother started again from scratch.</div>
+        <div class="aisha-para">When Aisha decided to sell her two-bed semi in Coventry, she didn't want to risk the same outcome. She started preparing the paperwork <strong>three weeks before her first viewing.</strong></div>
+
+        <div class="aisha-pull">
+          <div class="aisha-pull-quote">"I didn't want my house to fall through because the buyer's solicitor needed a bit of paper I couldn't find."</div>
+          <div class="aisha-pull-attr">— Aisha</div>
+        </div>
+
+        <!-- Chapter 2 -->
+        <div class="aisha-section-h">
+          <span class="aisha-section-num">02</span>
+          <span class="aisha-section-rule"></span>
+          <span class="aisha-section-num">During</span>
+        </div>
+        <div class="aisha-section-title">A passport, ready <em>before the first viewing.</em></div>
+        <div class="aisha-para">Aisha set up her Property Passport in late February. Title deeds came through automatically from HM Land Registry. The Coventry council's planning portal returned her search results in three days. The 2019 FENSA certificate — the one her mother couldn't find — was already on file with the installer.</div>
+        <div class="aisha-para">By the time the agent put a board up, the Passport was complete. <strong>Fourteen sections, all verified, all ready to share.</strong> She listed on March 3rd.</div>
+
+        <!-- Chapter 3 -->
+        <div class="aisha-section-h">
+          <span class="aisha-section-num">03</span>
+          <span class="aisha-section-rule"></span>
+          <span class="aisha-section-num">After</span>
+        </div>
+        <div class="aisha-section-title">Fourteen days, <em>start to finish.</em></div>
+        <div class="aisha-para">Two viewings on the first weekend. An offer at the asking price by Wednesday. The buyer's solicitor downloaded Aisha's Passport on Thursday morning — and by Thursday afternoon, they'd raised exactly two enquiries, both about the loft conversion.</div>
+        <div class="aisha-para">Both questions had answers waiting in the Passport. Building regs sign-off from 2014. The original architect's plan. Searches were already in. Exchange happened on day 11. Completion on day 14.</div>
+
+        <div class="aisha-pull">
+          <div class="aisha-pull-quote">"We had a Passport ready before our first viewing. The buyer's solicitor had everything they needed in a day. No surveys lost, no fall-through."</div>
+          <div class="aisha-pull-attr">— Aisha</div>
+        </div>
+
+        <!-- Closing CTA — app-native style matching the live application -->
+        <div class="aisha-final-cta">
+          <div class="afc-eyebrow-pill">Ready when you are</div>
+          <div class="afc-headline">Sell like Aisha did.</div>
+          <div class="afc-sub">Start with a free HealthScore. Upgrade to a Passport when you're ready to list.</div>
+          <button class="afc-btn" onclick="t('Sign-up flow')">
+            Start a Property Passport
+            <svg><use href="#i-arrow-right"/></svg>
+          </button>
+        </div>
+
+        <div style="height: 24px;"></div>
+      </div><!-- /.screen.aisha -->
+
+    </div><!-- /.body -->
+  </div><!-- /.phone -->
+
+  <!-- Notes -->
+  <div class="notes-panel">
+    <div class="stage-tag">Stacked deck</div>
+    <h3>Apple Wallet style.</h3>
+
+    <div class="note-block">
+      <div class="note-name">Four cards, one stack</div>
+      <div class="note-text">Each card is a different colour so the stack reads as four distinct things from a glance:<br>
+        <b>HealthScore</b> · brand teal<br>
+        <b>Property Passport</b> · brand navy<br>
+        <b>Aisha's story</b> · warm gold (matches the byline avatar in her story)<br>
+        <b>The market today</b> · deep navy<br>
+      Just the top of each peeking card shows underneath the front one — the eyebrow label and the small pill on the right, like the airline name on a Wallet card.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Tap to bring forward</div>
+      <div class="note-text">Tap any peeking card and it animates up to position 1, the front card slides back to the bottom of the stack, the others shift up one position. Smooth 0.55s ease — no harsh transitions. Front card content fades in 200ms after the position animation.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Each card is properly rich</div>
+      <div class="note-text">Because only one card is shown at a time, each can be detailed without overwhelming the page:<br>
+        <b>HealthScore</b> · gauge + meta line<br>
+        <b>Passport</b> · book illustration + category pills<br>
+        <b>Aisha</b> · big "14d" stat + outcome line<br>
+        <b>Market</b> · three quiet stat cells inside the card<br>
+        Each has a CTA button at the bottom (in white-on-card-colour pill style).</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Index dots below</div>
+      <div class="note-text">Four dots showing which card is in front. The active one extends to a teal pill. Tap any dot to jump that card to the front. Same logic as the cards themselves — just a smaller affordance.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Around the deck · restraint</div>
+      <div class="note-text">Hero is small (30px headline, one short sub-line). Brand row at the top is minimal. Get-started CTA at the bottom is a single teal button. No other moments competing for attention. The deck is the page.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Try this</div>
+      <div class="note-text">Tap any peeking card. Tap the dots. Tap the CTA buttons inside each card. Notice the depth shadow, the slight scale-down on cards behind, the 1px inner stroke on the cards (gives them the "physical" Wallet feel).</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-host" id="toast"></div>
+
+<script>
+function t(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+}
+
+function openScreen(screen) {
+  document.body.dataset.screen = screen;
+  document.querySelectorAll('.screen-btn').forEach(b => b.classList.toggle('active', b.dataset.screen === screen));
+  const phoneBody = document.getElementById('phoneBody');
+  if (phoneBody) phoneBody.scrollTop = 0;
+}
+
+// Card stack order — the order in which cards sit (front to back)
+let stack = ['healthscore', 'passport', 'aisha', 'market'];
+
+// Maps each card to the screen it opens (when already at front)
+const cardScreens = {
+  market: 'market',
+  passport: 'sample',
+  aisha: 'aisha'
+  // healthscore: opens to sign-up flow when we build that
+};
+
+function bringToFront(id) {
+  // If this card is already at the front AND has a destination screen, open it
+  if (stack[0] === id && cardScreens[id]) {
+    openScreen(cardScreens[id]);
+    return;
+  }
+  // Otherwise move the tapped card to the front
+  stack = [id, ...stack.filter(x => x !== id)];
+  applyStack();
+}
+
+function applyStack() {
+  stack.forEach((id, i) => {
+    const card = document.querySelector(`.deck-card[data-id="${id}"]`);
+    if (card) card.dataset.pos = (i + 1).toString();
+  });
+  // Update dots
+  document.querySelectorAll('.deck-dot').forEach(dot => {
+    dot.classList.toggle('active', dot.dataset.id === stack[0]);
+  });
+}
+</script>
+
+</body>
+</html>

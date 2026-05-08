@@ -105,10 +105,17 @@
       "Bash(ls pages/passportview/)",
       "Bash(mkdir \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/shared-tenant\" 2>&1)",
       "Bash(npm run *)",
-      "WebFetch(domain:www.umovingu.io)"
+      "WebFetch(domain:www.umovingu.io)",
+      "Bash(awk -F= '{print $1}')",
+      "Bash(mkdir -p \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/components/landing\")",
+      "Bash(awk 'NR>=1197 && NR<=1280' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
+      "Bash(awk 'NR>=1197 && NR<=1212 { print NR\": \"$0 } NR>=1218 && NR<=1265 { print NR\": \"$0 }' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
+      "Bash(awk 'NR>=1213 && NR<=1260 && length\\($0\\) < 500' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
+      "Bash(awk 'NR>=200 && NR<=775' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)"
     ],
     "additionalDirectories": [
-      "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages"
+      "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
+      "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\components"
     ]
   }
 }
