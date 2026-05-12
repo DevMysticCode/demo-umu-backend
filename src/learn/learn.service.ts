@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SEED_VIDEOS = [
@@ -65,8 +65,36 @@ export class UpdateProgressDto {
 export class LearnService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly logger = new Logger(LearnService.name);
+
   async onModuleInit() {
-    await this.seedVideos();
+    // Boot-time seed must NEVER crash the process — if Prisma's pool has a
+    // stale socket (common with managed Postgres that drops idle connections,
+    // e.g. Railway), the first query throws P1017. Retry a few times with
+    // backoff; if it still fails, log and continue. The seed is idempotent
+    // and can run again on the next boot.
+    void this.seedVideosSafe();
+  }
+
+  private async seedVideosSafe(attempt = 0): Promise<void> {
+    try {
+      await this.seedVideos();
+    } catch (err: any) {
+      const code = err?.code;
+      const transient = code === 'P1017' || code === 'P1001' || code === 'P1002';
+      if (transient && attempt < 3) {
+        const delayMs = 500 * Math.pow(2, attempt);
+        this.logger.warn(
+          `seedVideos failed (${code}) — retry ${attempt + 1}/3 in ${delayMs}ms`,
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+        return this.seedVideosSafe(attempt + 1);
+      }
+      this.logger.error(
+        `seedVideos failed permanently (${code ?? err?.message}). ` +
+          `Skipping seed — will retry on next boot.`,
+      );
+    }
   }
 
   private async seedVideos() {

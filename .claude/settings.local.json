@@ -125,7 +125,21 @@
       "Bash(awk 'NR>=3716 && NR<=4042' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
       "Bash(awk 'NR>=4022 && NR<=4043' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
       "Bash(awk 'NR>=5025 && NR<=5090' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
-      "Bash(awk 'NR>=6473 && NR<=6520' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)"
+      "Bash(awk 'NR>=6473 && NR<=6520' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=4270 && NR<=4430' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=4380 && NR<=4430' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=1280 && NR<=1320' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=6931 && NR<=7000' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=6751 && NR<=6870' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=7076 && NR<=7200' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(mv d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/\\\\[id\\\\]/street.vue d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/street/\\\\[id\\\\].vue)",
+      "Bash(rmdir d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/\\\\[id\\\\])",
+      "Bash(awk 'NR>=3855 && NR<=4220' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=460 && NR<=540' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_198.html)",
+      "Bash(awk 'NR>=85 && NR<=589 { next } { print > \"/tmp/idvue_part1.tmp\" } NR>=1585 && NR<=1868 { next }' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
+      "Bash(awk '/v-else-if=\"screen === .landing.\">/{flag=1; lineStart=NR} flag && /^    <\\\\/template>/{lineEnd=NR; print \"Landing closes at line \" NR; exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
+      "Bash(echo \"started PID $!\")",
+      "Bash(pkill -f \"nuxt dev\")"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
