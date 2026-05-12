@@ -111,7 +111,21 @@
       "Bash(awk 'NR>=1197 && NR<=1280' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
       "Bash(awk 'NR>=1197 && NR<=1212 { print NR\": \"$0 } NR>=1218 && NR<=1265 { print NR\": \"$0 }' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
       "Bash(awk 'NR>=1213 && NR<=1260 && length\\($0\\) < 500' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
-      "Bash(awk 'NR>=200 && NR<=775' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)"
+      "Bash(awk 'NR>=200 && NR<=775' d:/ReactProjects/op_nuxt/umu-backend/prisma/auth-flow.html)",
+      "Bash(awk 'NR>=1199 && NR<=1270' d:/ReactProjects/op_nuxt/umu-backend/prisma/explore-v2.html)",
+      "Bash(awk 'NR>=1270 && NR<=1555' d:/ReactProjects/op_nuxt/umu-backend/prisma/explore-v2.html)",
+      "Bash(awk 'NR>=1555 && NR<=1810' d:/ReactProjects/op_nuxt/umu-backend/prisma/explore-v2.html)",
+      "Bash(awk 'NR>=338 && NR<=755' d:/ReactProjects/op_nuxt/umu-backend/prisma/explore-v2.html)",
+      "Bash(awk 'NR>=2148 && NR<=2432' d:/ReactProjects/op_nuxt/umu-backend/prisma/landing-deck.html)",
+      "Bash(awk 'NR>=160 && NR<=200' d:/ReactProjects/op_nuxt/umu-mobile-webapp/components/landing/LandlordSampleView.vue)",
+      "WebFetch(domain:landregistry.github.io)",
+      "Bash(awk 'NR>=3650 && NR<=3712' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=4044 && NR<=4180' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=4178 && NR<=4270' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=3716 && NR<=4042' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=4022 && NR<=4043' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=5025 && NR<=5090' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)",
+      "Bash(awk 'NR>=6473 && NR<=6520' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_127.html)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
