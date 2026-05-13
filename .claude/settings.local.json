@@ -140,7 +140,9 @@
       "Bash(awk '/v-else-if=\"screen === .landing.\">/{flag=1; lineStart=NR} flag && /^    <\\\\/template>/{lineEnd=NR; print \"Landing closes at line \" NR; exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
       "Bash(echo \"started PID $!\")",
       "Bash(pkill -f \"nuxt dev\")",
-      "Bash(awk '/screen === .results./{flag=1} flag && /Running|running cost|See full|toggleCost|breakdown/{print NR\": \"$0; count++; if\\(count > 15\\) exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)"
+      "Bash(awk '/screen === .results./{flag=1} flag && /Running|running cost|See full|toggleCost|breakdown/{print NR\": \"$0; count++; if\\(count > 15\\) exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
+      "Bash(awk 'NR>=5023 && NR<=5135' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_224.html)",
+      "Bash(npx -p typescript -p vue-tsc vue-tsc --noEmit)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
