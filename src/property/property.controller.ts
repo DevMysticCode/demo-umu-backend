@@ -12,11 +12,15 @@ import {
   Res,
 } from '@nestjs/common';
 import { PropertyService } from './property.service';
+import { RunningCostsService } from './running-costs.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
 @Controller('property')
 export class PropertyController {
-  constructor(private propertyService: PropertyService) {}
+  constructor(
+    private propertyService: PropertyService,
+    private runningCostsService: RunningCostsService,
+  ) {}
 
   @Get('search')
   async searchProperties(
@@ -145,6 +149,11 @@ export class PropertyController {
   @Get(':id/neighbourhood')
   async getNeighbourhood(@Param('id') id: string) {
     return this.propertyService.getNeighbourhoodStats(id);
+  }
+
+  @Get(':id/running-costs')
+  async getRunningCosts(@Param('id') id: string) {
+    return this.runningCostsService.getRunningCosts(id);
   }
 
   // Anonymous "I looked at this address" log — used to render the
