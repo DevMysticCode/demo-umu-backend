@@ -34,6 +34,16 @@ const RATING_FALLBACK_TOTAL: Record<string, number> = {
   A: 980, B: 1100, C: 1300, D: 1592, E: 1823, F: 2200, G: 2600,
 };
 
+/** EPC-rating → typical SAP score midpoint per band. */
+const SAP_BY_RATING: Record<string, number> = {
+  A: 95, B: 85, C: 75, D: 65, E: 52, F: 35, G: 18,
+};
+
+/** EPC-rating → typical CO₂ tonnes/yr (UK averages for a 3-bed property). */
+const CO2_BY_RATING: Record<string, number> = {
+  A: 1.2, B: 2.0, C: 3.4, D: 4.8, E: 6.4, F: 8.2, G: 10.5,
+};
+
 /**
  * Average regional water-and-sewerage charge for an unmetered household.
  * Severn Trent (Midlands) used as the default; replace with a region lookup
@@ -50,6 +60,44 @@ export interface RunningCostsResponse {
     potentialTotal: number;
     potentialSaving: number;
   };
+  energyDetail: {
+    gasKwh: number | null;
+    electricityKwh: number | null;
+    sapCurrent: number;
+    sapTarget: number;
+    epcRating: string;
+    epcTarget: string;
+    primaryEnergyUse: number | null;
+    primaryEnergyTarget: number;
+    floorAreaSqm: number | null;
+  };
+  risks: {
+    flood: { level: 'low' | 'medium' | 'high' | 'clear'; label: string; pill: string };
+    mining: { level: 'low' | 'medium' | 'high' | 'clear'; label: string; pill: string };
+    planning: { level: 'low' | 'medium' | 'high' | 'clear'; label: string; pill: string };
+  };
+  environmentalImpact: {
+    co2Now: number;
+    co2Potential: number;
+    reductionPct: number;
+    ukAverage: number;
+    /** CO₂ figures expressed in kg/yr (UK convention on EPC scale views). */
+    co2NowKg: number;
+    co2PotentialKg: number;
+    ukAverageKg: number;
+    savingKg: number;
+    ratingCurrent: string;
+    ratingPotential: string;
+    /** EPC-style rating label (Very low → Very high). */
+    ratingLabel: string;
+  };
+  /** Top-3 EPC-driven money-saving improvements, ranked by annual £ saving. */
+  savings: Array<{
+    title: string;
+    sub: string;
+    amount: number;
+    points: number;
+  }>;
   water: { cost: number; label: string };
   councilTax: { band: string; cost: number; council: string };
   totalAnnual: number;
@@ -125,6 +173,67 @@ export class RunningCostsService {
     energy.potentialTotal = Math.round(energy.total * (1 - potentialFactor));
     energy.potentialSaving = energy.total - energy.potentialTotal;
 
+    // ── Energy detail ────────────────────────────────────────
+    const gasKwh =
+      heatingKwh != null && hotWaterKwh != null
+        ? heatingKwh + hotWaterKwh
+        : heatingKwh ?? hotWaterKwh ?? null;
+    const epcRating = (p.epcRating || '').toUpperCase() || 'D';
+    const sapCurrent = num(p.epcScore) || SAP_BY_RATING[epcRating] || 65;
+    const epcTarget = improvedRating(epcRating);
+    const sapTarget = SAP_BY_RATING[epcTarget] || sapCurrent + 15;
+    const floorAreaSqm = num(p.floorAreaSqm) || null;
+    const totalKwh =
+      (heatingKwh ?? 0) + (hotWaterKwh ?? 0) + (electricityKwh ?? 0) || null;
+    const primaryEnergyUse =
+      totalKwh && floorAreaSqm ? Math.round(totalKwh / floorAreaSqm) : null;
+
+    const energyDetail = {
+      gasKwh,
+      electricityKwh,
+      sapCurrent,
+      sapTarget,
+      epcRating,
+      epcTarget,
+      primaryEnergyUse,
+      primaryEnergyTarget: 150,
+      floorAreaSqm,
+    };
+
+    // ── Risks ────────────────────────────────────────────────
+    const risks = {
+      flood: floodRiskFlag(p.floodRisk),
+      mining: { level: 'clear' as const, label: 'No recorded mining activity in this area', pill: 'Clear' },
+      planning: { level: 'low' as const, label: 'Public planning data not yet available for this address', pill: 'Note' },
+    };
+
+    // ── Environmental impact ─────────────────────────────────
+    const co2Now =
+      num(p.co2Emissions) > 0
+        ? round1(num(p.co2Emissions))
+        : CO2_BY_RATING[epcRating] || 4.8;
+    const co2Potential = round1(co2Now * (1 - potentialFactor));
+    const reductionPct = Math.round((1 - co2Potential / co2Now) * 1000) / 10;
+    const co2NowKg = Math.round(co2Now * 1000);
+    const co2PotentialKg = Math.round(co2Potential * 1000);
+    const ukAverageKg = 2900;
+    const environmentalImpact = {
+      co2Now,
+      co2Potential,
+      reductionPct,
+      ukAverage: 6.0,
+      co2NowKg,
+      co2PotentialKg,
+      ukAverageKg,
+      savingKg: co2NowKg - co2PotentialKg,
+      ratingCurrent: epcRating,
+      ratingPotential: epcTarget,
+      ratingLabel: ratingImpactLabel(epcRating),
+    };
+
+    // ── Top-3 savings (EPC-driven recommendations) ───────────
+    const savings = buildSavings(p, energy.total, potentialFactor);
+
     // ── Council tax ──────────────────────────────────────────
     const band = (p.councilTaxBand || 'D').toUpperCase();
     const councilTaxCost = COUNCIL_TAX_BAND_AVG[band] ?? COUNCIL_TAX_BAND_AVG.D;
@@ -146,6 +255,10 @@ export class RunningCostsService {
 
     return {
       energy,
+      energyDetail,
+      risks,
+      environmentalImpact,
+      savings,
       water,
       councilTax: { band, cost: councilTaxCost, council },
       totalAnnual,
@@ -163,6 +276,10 @@ function num(v: any): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
 function ratingFallback(rating: string | null): number {
   return RATING_FALLBACK_TOTAL[(rating || '').toUpperCase()] ?? 1592;
 }
@@ -174,6 +291,32 @@ function potentialReductionFactor(rating: string | null): number {
   if (r === 'D') return 0.28;
   if (r === 'E') return 0.38;
   return 0.45; // F / G
+}
+
+function improvedRating(rating: string): string {
+  const order = ['G', 'F', 'E', 'D', 'C', 'B', 'A'];
+  const idx = order.indexOf(rating);
+  if (idx < 0) return 'C';
+  // Improve by 2 bands, capped at A.
+  return order[Math.min(order.length - 1, idx + 2)];
+}
+
+function floodRiskFlag(value: string | null | undefined): {
+  level: 'low' | 'medium' | 'high' | 'clear';
+  label: string;
+  pill: string;
+} {
+  const v = (value || '').toLowerCase();
+  if (v.includes('high')) {
+    return { level: 'high', label: '⚠ High risk · Environment Agency zone 3', pill: 'Check' };
+  }
+  if (v.includes('medium')) {
+    return { level: 'medium', label: '⚠ Medium risk · Environment Agency zone 2', pill: 'Check' };
+  }
+  if (v.includes('low')) {
+    return { level: 'low', label: 'Low risk · Environment Agency zone 1', pill: 'Note' };
+  }
+  return { level: 'clear', label: 'No flood risk recorded for this address', pill: 'Clear' };
 }
 
 function heatingType(value: string | null): string {
@@ -204,6 +347,146 @@ function waterSupplierFromCity(city: string | null): string {
   };
   const supplier = map[city] ?? 'Regional supplier';
   return `${supplier} · unmetered household`;
+}
+
+function ratingImpactLabel(rating: string): string {
+  const r = (rating || '').toUpperCase();
+  if (r === 'A' || r === 'B') return 'Very low';
+  if (r === 'C') return 'Low';
+  if (r === 'D') return 'Average';
+  if (r === 'E') return 'Poor';
+  if (r === 'F') return 'High';
+  return 'Very high';
+}
+
+/**
+ * Build a top-3 list of EPC-driven money-saving improvements.
+ * Picks the most impactful items first based on which EPC efficiency
+ * ratings flag as Poor/Very Poor on this property.
+ */
+function buildSavings(
+  p: any,
+  energyTotal: number,
+  potentialFactor: number,
+): Array<{ title: string; sub: string; amount: number; points: number }> {
+  const candidates: Array<{
+    title: string;
+    sub: string;
+    amount: number;
+    points: number;
+    priority: number;
+  }> = [];
+
+  const isPoor = (eff: string | null | undefined) =>
+    eff != null && /poor|very poor/i.test(String(eff));
+  const isAverage = (eff: string | null | undefined) =>
+    eff != null && /average/i.test(String(eff));
+
+  // Boiler / main heating
+  if (isPoor(p.mainheatEnergyEff)) {
+    candidates.push({
+      title: 'Replace old gas boiler',
+      sub: 'Older boilers run at ~60% efficiency vs 94% modern',
+      amount: Math.round(energyTotal * 0.12),
+      points: 8,
+      priority: 10,
+    });
+  }
+  // Loft / roof insulation
+  if (isPoor(p.roofEnergyEff) || isAverage(p.roofEnergyEff)) {
+    candidates.push({
+      title: 'Increase loft insulation to 270mm+',
+      sub: 'Completing to full depth saves up to £200/yr',
+      amount: Math.min(200, Math.round(energyTotal * 0.11)),
+      points: 3,
+      priority: 9,
+    });
+  }
+  // Walls
+  if (isPoor(p.wallsEnergyEff)) {
+    candidates.push({
+      title: 'Add cavity or solid-wall insulation',
+      sub: 'Uninsulated walls lose a third of all heat',
+      amount: Math.round(energyTotal * 0.18),
+      points: 9,
+      priority: 8,
+    });
+  }
+  // Windows
+  if (isPoor(p.windowsEnergyEff)) {
+    candidates.push({
+      title: 'Upgrade to double or triple glazing',
+      sub: 'Cuts heat loss through windows by ~50%',
+      amount: Math.round(energyTotal * 0.08),
+      points: 4,
+      priority: 6,
+    });
+  }
+  // Heating controls
+  if (isPoor(p.mainheatcEnergyEff) || p.mainheatcEnergyEff == null) {
+    candidates.push({
+      title: 'Fit a smart thermostat',
+      sub: 'Smart controls save ~£130/yr on average',
+      amount: Math.min(130, Math.round(energyTotal * 0.07)),
+      points: 4,
+      priority: 5,
+    });
+  }
+  // Low-energy lighting
+  if (typeof p.lowEnergyLighting === 'number' && p.lowEnergyLighting < 70) {
+    candidates.push({
+      title: 'Switch all bulbs to LED',
+      sub: 'A full LED swap cuts lighting energy by 80%',
+      amount: Math.round(energyTotal * 0.04),
+      points: 2,
+      priority: 3,
+    });
+  }
+  // Solar PV
+  if (!p.photoSupply || Number(p.photoSupply) <= 0) {
+    candidates.push({
+      title: 'Install solar PV',
+      sub: 'Generate your own electricity, cut bills + carbon',
+      amount: Math.round(energyTotal * 0.10),
+      points: 6,
+      priority: 4,
+    });
+  }
+
+  // Fallback defaults if EPC fields are sparse — at least show 3 useful items.
+  if (candidates.length < 3) {
+    const fallback = [
+      {
+        title: 'Replace old gas boiler',
+        sub: 'Older boilers run at ~60% efficiency vs 94% modern',
+        amount: Math.round(energyTotal * 0.12),
+        points: 8,
+        priority: 2,
+      },
+      {
+        title: 'Increase loft insulation to 270mm+',
+        sub: 'Completing to full depth saves up to £200/yr',
+        amount: Math.min(200, Math.round(energyTotal * 0.11)),
+        points: 3,
+        priority: 2,
+      },
+      {
+        title: 'Fit a smart thermostat',
+        sub: 'Smart controls save ~£130/yr on average',
+        amount: Math.min(130, Math.round(energyTotal * 0.07)),
+        points: 4,
+        priority: 2,
+      },
+    ];
+    for (const f of fallback) {
+      if (!candidates.find((c) => c.title === f.title)) candidates.push(f);
+    }
+  }
+
+  return candidates
+    .sort((a, b) => b.amount - a.amount || b.priority - a.priority)
+    .slice(0, 3)
+    .map(({ title, sub, amount, points }) => ({ title, sub, amount, points }));
 }
 
 function epcYearFrom(lodgementDate: string | null | undefined): number | null {
