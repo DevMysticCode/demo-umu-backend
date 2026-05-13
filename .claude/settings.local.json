@@ -139,7 +139,8 @@
       "Bash(awk 'NR>=85 && NR<=589 { next } { print > \"/tmp/idvue_part1.tmp\" } NR>=1585 && NR<=1868 { next }' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
       "Bash(awk '/v-else-if=\"screen === .landing.\">/{flag=1; lineStart=NR} flag && /^    <\\\\/template>/{lineEnd=NR; print \"Landing closes at line \" NR; exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
       "Bash(echo \"started PID $!\")",
-      "Bash(pkill -f \"nuxt dev\")"
+      "Bash(pkill -f \"nuxt dev\")",
+      "Bash(awk '/screen === .results./{flag=1} flag && /Running|running cost|See full|toggleCost|breakdown/{print NR\": \"$0; count++; if\\(count > 15\\) exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
