@@ -146,6 +146,41 @@ export class PropertyController {
     return this.propertyService.getHomeScore(id, req.user.id);
   }
 
+  // ── HomeScore publishing (to the street pool) ──────────────────────────
+  @Post(':id/homescore/publish')
+  @UseGuards(JwtAuthGuard)
+  async publishHomeScore(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.publishHomeScore(id, req.user.id);
+  }
+
+  @Post(':id/homescore/unpublish')
+  @UseGuards(JwtAuthGuard)
+  async unpublishHomeScore(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.unpublishHomeScore(id, req.user.id);
+  }
+
+  @Get(':id/street-publish-stats')
+  async getStreetPublishStats(@Param('id') id: string) {
+    return this.propertyService.getStreetPublishStats(id);
+  }
+
+  // ── KYC / ownership verification ───────────────────────────────────────
+  @Post(':id/kyc/submit')
+  @UseGuards(JwtAuthGuard)
+  async submitKyc(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { method: 'photo-id' | 'mortgage' | 'open-banking' },
+  ) {
+    return this.propertyService.submitKyc(id, req.user.id, body?.method);
+  }
+
+  @Get(':id/kyc/status')
+  @UseGuards(JwtAuthGuard)
+  async getKycStatus(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getKycStatus(id, req.user.id);
+  }
+
   @Get(':id/neighbourhood')
   async getNeighbourhood(@Param('id') id: string) {
     return this.propertyService.getNeighbourhoodStats(id);

@@ -2691,6 +2691,133 @@ export class PropertyService {
     });
   }
 
+  // ── HomeScore street publishing ────────────────────────────────────────────
+
+  /** Mark the user's HomeScoreResult as published — feeds the street pool. */
+  async publishHomeScore(propertyId: string, userId: string) {
+    const existing = await this.prisma.homeScoreResult.findUnique({
+      where: { propertyId_userId: { propertyId, userId } },
+    });
+    if (!existing) {
+      throw new NotFoundException(
+        'No HomeScore on file — run the quiz before publishing.',
+      );
+    }
+    return this.prisma.homeScoreResult.update({
+      where: { propertyId_userId: { propertyId, userId } },
+      data: { publishedAt: new Date() },
+    });
+  }
+
+  /** Take the user's HomeScoreResult out of the street pool. */
+  async unpublishHomeScore(propertyId: string, userId: string) {
+    return this.prisma.homeScoreResult.update({
+      where: { propertyId_userId: { propertyId, userId } },
+      data: { publishedAt: null },
+    });
+  }
+
+  /**
+   * Anonymised street-level publish stats for the publish screen progress bar.
+   * "Street" is approximated by the postcode outcode (e.g. "CV5"); the full
+   * postcode is too narrow for early-adoption stats. Returns:
+   *   - totalHomes:     count of distinct properties seen in this outcode
+   *   - publishedHomes: count of those with at least one published HomeScore
+   */
+  async getStreetPublishStats(propertyId: string) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { postcode: true, addressLine1: true },
+    });
+    if (!property) throw new NotFoundException('Property not found');
+
+    const outcode = (property.postcode || '').split(' ')[0] || '';
+    if (!outcode) {
+      return {
+        outcode: '',
+        streetName: this.extractStreetName(property.addressLine1),
+        totalHomes: 0,
+        publishedHomes: 0,
+      };
+    }
+
+    const [totalHomes, publishedHomes] = await Promise.all([
+      this.prisma.property.count({
+        where: { postcode: { startsWith: outcode } },
+      }),
+      this.prisma.homeScoreResult.count({
+        where: {
+          publishedAt: { not: null },
+          property: { is: { postcode: { startsWith: outcode } } },
+        } as any,
+      }),
+    ]);
+
+    return {
+      outcode,
+      streetName: this.extractStreetName(property.addressLine1),
+      totalHomes,
+      publishedHomes,
+    };
+  }
+
+  private extractStreetName(line: string | null | undefined): string {
+    const v = (line || '').trim();
+    if (!v) return 'your street';
+    const match = v.match(/^\d+\s*[a-zA-Z]?\s*[,.]?\s*(.+)$/);
+    return match?.[1] || v;
+  }
+
+  // ── KYC / ownership verification ───────────────────────────────────────────
+
+  /**
+   * User picked a verification method on the KYC screen. We record it and
+   * mark the verification SUBMITTED. The actual partner round-trip (Onfido /
+   * mortgage doc parser / Open Banking) is stubbed today — this method just
+   * captures the intent so a worker can pick it up later.
+   */
+  async submitKyc(
+    propertyId: string,
+    userId: string,
+    method: 'photo-id' | 'mortgage' | 'open-banking',
+  ) {
+    if (!['photo-id', 'mortgage', 'open-banking'].includes(method)) {
+      throw new NotFoundException('Unknown verification method');
+    }
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { id: true },
+    });
+    if (!property) throw new NotFoundException('Property not found');
+
+    return this.prisma.ownershipVerification.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      create: {
+        propertyId,
+        userId,
+        verificationMethod: method,
+        status: 'SUBMITTED',
+      },
+      update: {
+        verificationMethod: method,
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+        verifiedAt: null,
+      },
+    });
+  }
+
+  /**
+   * Current KYC status for this (user, property). Returns null when nothing
+   * has been submitted. The frontend polls this after kicking off a /submit
+   * to wait for VERIFIED before letting the user proceed to publish.
+   */
+  async getKycStatus(propertyId: string, userId: string) {
+    return this.prisma.ownershipVerification.findUnique({
+      where: { propertyId_userId: { propertyId, userId } },
+    });
+  }
+
   // Returns the best available homescore for a property (owner's first, then any) — no auth needed.
   // Uses the SELLER passport's owner since landlord passports are private.
   async getPublicHomeScore(propertyId: string) {

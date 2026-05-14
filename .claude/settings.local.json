@@ -142,7 +142,9 @@
       "Bash(pkill -f \"nuxt dev\")",
       "Bash(awk '/screen === .results./{flag=1} flag && /Running|running cost|See full|toggleCost|breakdown/{print NR\": \"$0; count++; if\\(count > 15\\) exit}' d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/homescore/[id].vue)",
       "Bash(awk 'NR>=5023 && NR<=5135' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_224.html)",
-      "Bash(npx -p typescript -p vue-tsc vue-tsc --noEmit)"
+      "Bash(npx -p typescript -p vue-tsc vue-tsc --noEmit)",
+      "Bash(sed -i '419,912d' \"pages/homescore/[id].vue\")",
+      "Bash(sed -n '415,425p' \"pages/homescore/[id].vue\")"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",

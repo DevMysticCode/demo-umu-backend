@@ -198,14 +198,17 @@ model PropertySearchLog {
 }
 
 model OwnershipVerification {
-  id          String                      @id @default(uuid())
-  propertyId  String
-  userId      String
-  status      OwnershipVerificationStatus @default(SUBMITTED)
-  submittedAt DateTime                    @default(now())
-  verifiedAt  DateTime?
-  passportId  String?
-  property    Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  id                  String                      @id @default(uuid())
+  propertyId          String
+  userId              String
+  status              OwnershipVerificationStatus @default(SUBMITTED)
+  // How the user proved ownership — drives the partner round-trip behaviour.
+  // null on legacy rows (pre-HomeScore-publish flow).
+  verificationMethod  String?                     // "photo-id" | "mortgage" | "open-banking"
+  submittedAt         DateTime                    @default(now())
+  verifiedAt          DateTime?
+  passportId          String?
+  property            Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([propertyId, userId])
   @@index([propertyId])
@@ -640,9 +643,14 @@ model HomeScoreResult {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // When the owner published this HomeScore to their street pool.
+  // Drives the "1 of N homes" street-publish-stats and the published screen.
+  publishedAt DateTime?
+
   @@unique([propertyId, userId])
   @@index([propertyId])
   @@index([userId])
+  @@index([publishedAt])
 }
 
 model SharedPassportLink {
