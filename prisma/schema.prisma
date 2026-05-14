@@ -128,7 +128,8 @@ model Property {
   lastSoldPrice          Float?
   lastSoldDate           DateTime?
   councilTaxBand         String?
-  floodRisk              String?
+  floodRisk              String?   // EA "Risk of Flooding from Rivers and Sea" (Very Low / Low / Medium / High)
+  floodRiskEnrichedAt    DateTime? // When floodRisk was last fetched from the EA. Cached 90 days.
   imageUrl               String?
   images                 Json?
   titleNumber            String?
@@ -139,6 +140,17 @@ model Property {
   heatingCostCurrent     Float?   // EPC heating-cost-current (£/yr)
   hotWaterCostCurrent    Float?   // EPC hot-water-cost-current (£/yr)
   lightingCostCurrent    Float?   // EPC lighting-cost-current (£/yr)
+
+  // ── EPC "potential" figures (what the same property would achieve with
+  //    all recommended improvements) — used by the environmental-impact
+  //    card and the running-costs "could fall to £X" line. Real EPC data,
+  //    not heuristic. Nullable until the property is enriched.
+  heatingCostPotential   Float?   // EPC heating-cost-potential (£/yr)
+  hotWaterCostPotential  Float?   // EPC hot-water-cost-potential (£/yr)
+  lightingCostPotential  Float?   // EPC lighting-cost-potential (£/yr)
+  co2EmissionsPotential  Float?   // EPC co2-emissions-potential (tonnes/yr)
+  epcRatingPotential     String?  // EPC potential-energy-rating
+  epcScorePotential      Int?     // EPC potential-energy-efficiency (SAP)
 
   // ── HomeScore V2 insulation fields ───────────────────────────────────────
   wallsEnergyEff         String?  // "Very Good" | "Good" | "Average" | "Poor" | "Very Poor"

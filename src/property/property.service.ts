@@ -30,6 +30,7 @@ interface EpcRow {
   'construction-age-band'?: string;
   'main-heating-description'?: string;
   'co2-emissions-current'?: number | string;
+  'co2-emissions-potential'?: number | string;
   'transaction-type'?: string;
   'lodgement-date'?: string;
   'council-tax-band'?: string;
@@ -38,8 +39,11 @@ interface EpcRow {
   'local-authority-label'?: string;
   // HomeScore V2 cost fields
   'heating-cost-current'?: number | string;
+  'heating-cost-potential'?: number | string;
   'hot-water-cost-current'?: number | string;
+  'hot-water-cost-potential'?: number | string;
   'lighting-cost-current'?: number | string;
+  'lighting-cost-potential'?: number | string;
   // HomeScore V2 insulation fields
   'walls-energy-eff'?: string;
   'roof-energy-eff'?: string;
@@ -128,6 +132,17 @@ function epcRowToProperty(row: EpcRow) {
     heatingType: row['main-heating-description'] ?? null,
     co2Emissions:
       parseFloat(String(row['co2-emissions-current'] ?? '0')) || null,
+    co2EmissionsPotential:
+      parseFloat(String(row['co2-emissions-potential'] ?? '0')) || null,
+    epcRatingPotential: row['potential-energy-rating'] ?? null,
+    epcScorePotential:
+      parseInt(String(row['potential-energy-efficiency'] ?? '0')) || null,
+    heatingCostPotential:
+      parseFloat(String(row['heating-cost-potential'] ?? '0')) || null,
+    hotWaterCostPotential:
+      parseFloat(String(row['hot-water-cost-potential'] ?? '0')) || null,
+    lightingCostPotential:
+      parseFloat(String(row['lighting-cost-potential'] ?? '0')) || null,
     councilTaxBand: row['council-tax-band'] ?? null,
     epcEnrichedAt: new Date(),
   };
@@ -159,6 +174,12 @@ interface EpcCert {
   heatingCostCurrent: number | null;
   hotWaterCostCurrent: number | null;
   lightingCostCurrent: number | null;
+  // EPC "potential" figures (with all recommended improvements)
+  heatingCostPotential: number | null;
+  hotWaterCostPotential: number | null;
+  lightingCostPotential: number | null;
+  co2Emissions: number | null;
+  co2EmissionsPotential: number | null;
   // HomeScore V2 insulation
   wallsEnergyEff: string | null;
   roofEnergyEff: string | null;
@@ -221,10 +242,16 @@ function epcRowToCert(row: EpcRow): EpcCert {
     constructionAgeBand: str(row['construction-age-band']),
     builtForm: str(row['built-form']),
     lodgementDate: str(row['lodgement-date']),
-    // Cost
+    // Cost — current
     heatingCostCurrent: parseFloat2(row['heating-cost-current']),
     hotWaterCostCurrent: parseFloat2(row['hot-water-cost-current']),
     lightingCostCurrent: parseFloat2(row['lighting-cost-current']),
+    // Cost + CO₂ — potential (with all recommended improvements)
+    heatingCostPotential: parseFloat2(row['heating-cost-potential']),
+    hotWaterCostPotential: parseFloat2(row['hot-water-cost-potential']),
+    lightingCostPotential: parseFloat2(row['lighting-cost-potential']),
+    co2Emissions: parseFloat2(row['co2-emissions-current']),
+    co2EmissionsPotential: parseFloat2(row['co2-emissions-potential']),
     // Insulation
     wallsEnergyEff: str(row['walls-energy-eff']),
     roofEnergyEff: str(row['roof-energy-eff']),
@@ -1318,6 +1345,23 @@ export class PropertyService {
         updateData.hotWaterCostCurrent = epcData.hotWaterCostCurrent;
       if ((property as any).lightingCostCurrent == null && epcData.lightingCostCurrent != null)
         updateData.lightingCostCurrent = epcData.lightingCostCurrent;
+
+      // EPC "potential" figures — drive the env-impact card + "could fall to"
+      // line on running costs with real EPC numbers (no heuristics).
+      if ((property as any).heatingCostPotential == null && epcData.heatingCostPotential != null)
+        updateData.heatingCostPotential = epcData.heatingCostPotential;
+      if ((property as any).hotWaterCostPotential == null && epcData.hotWaterCostPotential != null)
+        updateData.hotWaterCostPotential = epcData.hotWaterCostPotential;
+      if ((property as any).lightingCostPotential == null && epcData.lightingCostPotential != null)
+        updateData.lightingCostPotential = epcData.lightingCostPotential;
+      if ((property as any).co2Emissions == null && epcData.co2Emissions != null)
+        updateData.co2Emissions = epcData.co2Emissions;
+      if ((property as any).co2EmissionsPotential == null && epcData.co2EmissionsPotential != null)
+        updateData.co2EmissionsPotential = epcData.co2EmissionsPotential;
+      if (!(property as any).epcRatingPotential && epcData.potentialRating)
+        updateData.epcRatingPotential = epcData.potentialRating;
+      if ((property as any).epcScorePotential == null && epcData.potentialScore != null)
+        updateData.epcScorePotential = epcData.potentialScore;
 
       // V2 EPC insulation/fabric fields
       if (!(property as any).wallsEnergyEff && epcData.wallsEnergyEff)

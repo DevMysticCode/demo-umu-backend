@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FloodRiskService, FloodRiskBand } from './flood-risk.service';
 
 /**
  * Per-band annual council tax bills (2024/25 average across England councils).
@@ -45,11 +46,86 @@ const CO2_BY_RATING: Record<string, number> = {
 };
 
 /**
- * Average regional water-and-sewerage charge for an unmetered household.
- * Severn Trent (Midlands) used as the default; replace with a region lookup
- * once we have water-supplier-by-postcode data.
+ * UK water+sewerage suppliers and their 2024/25 average annual unmetered
+ * household bills (combined water + sewerage). Source: Ofwat / company
+ * published rates. Values rounded to nearest £.
  */
-const WATER_DEFAULT = 400;
+const WATER_SUPPLIERS: Record<
+  string,
+  { name: string; cost: number }
+> = {
+  anglian: { name: 'Anglian Water', cost: 521 },
+  welsh: { name: 'Dŵr Cymru / Welsh Water', cost: 544 },
+  hafren: { name: 'Hafren Dyfrdwy', cost: 452 },
+  northumbrian: { name: 'Northumbrian Water', cost: 429 },
+  severnTrent: { name: 'Severn Trent', cost: 430 },
+  southWest: { name: 'South West Water', cost: 684 },
+  southern: { name: 'Southern Water', cost: 497 },
+  thames: { name: 'Thames Water', cost: 492 },
+  unitedUtilities: { name: 'United Utilities', cost: 460 },
+  wessex: { name: 'Wessex Water', cost: 566 },
+  yorkshire: { name: 'Yorkshire Water', cost: 457 },
+  scottish: { name: 'Scottish Water', cost: 423 },
+  niWater: { name: 'NI Water', cost: 420 },
+  unknown: { name: 'Regional water supplier', cost: 480 },
+};
+
+/**
+ * Postcode AREA (the leading 1–2 letters, e.g. "CV", "B", "SW") → water
+ * supplier key. Maps the company providing combined water + sewerage to
+ * that area. Some areas overlap (e.g. "SY" has both Severn Trent and
+ * Welsh Water) — we pick the dominant supplier for that area.
+ */
+const POSTCODE_AREA_TO_SUPPLIER: Record<string, keyof typeof WATER_SUPPLIERS> = {
+  // Anglian — East Anglia + East Midlands
+  CB: 'anglian', CO: 'anglian', IP: 'anglian', NR: 'anglian', PE: 'anglian',
+  LN: 'anglian', NN: 'anglian', MK: 'anglian',
+  // Welsh Water (Dŵr Cymru) — Wales
+  CF: 'welsh', LD: 'welsh', LL: 'welsh', NP: 'welsh', SA: 'welsh',
+  HR: 'welsh',
+  // Hafren Dyfrdwy — small mid-Wales/border slice (Wrexham/Shrewsbury edge)
+  SY: 'hafren',
+  // Northumbrian — North East
+  NE: 'northumbrian', DH: 'northumbrian', DL: 'northumbrian',
+  SR: 'northumbrian', TS: 'northumbrian',
+  // Severn Trent — Midlands
+  B: 'severnTrent', CV: 'severnTrent', DE: 'severnTrent', DY: 'severnTrent',
+  GL: 'severnTrent', LE: 'severnTrent', NG: 'severnTrent', ST: 'severnTrent',
+  TF: 'severnTrent', WR: 'severnTrent', WS: 'severnTrent', WV: 'severnTrent',
+  // South West — Cornwall, Devon
+  EX: 'southWest', PL: 'southWest', TQ: 'southWest', TR: 'southWest',
+  // Southern — Kent, Sussex, Hampshire, IoW
+  BN: 'southern', CT: 'southern', ME: 'southern', PO: 'southern',
+  SO: 'southern', TN: 'southern',
+  // Thames — Greater London, Thames Valley
+  E: 'thames', EC: 'thames', N: 'thames', NW: 'thames', SE: 'thames',
+  SW: 'thames', W: 'thames', WC: 'thames', BR: 'thames', CR: 'thames',
+  DA: 'thames', EN: 'thames', HA: 'thames', IG: 'thames', KT: 'thames',
+  RM: 'thames', SM: 'thames', TW: 'thames', UB: 'thames', WD: 'thames',
+  OX: 'thames', RG: 'thames', SL: 'thames', GU: 'thames',
+  // United Utilities — North West
+  BB: 'unitedUtilities', BL: 'unitedUtilities', CA: 'unitedUtilities',
+  CH: 'unitedUtilities', CW: 'unitedUtilities', FY: 'unitedUtilities',
+  L: 'unitedUtilities', LA: 'unitedUtilities', M: 'unitedUtilities',
+  OL: 'unitedUtilities', PR: 'unitedUtilities', SK: 'unitedUtilities',
+  WA: 'unitedUtilities', WN: 'unitedUtilities',
+  // Wessex — Somerset, Wiltshire, Dorset, Bath
+  BA: 'wessex', BS: 'wessex', DT: 'wessex', TA: 'wessex', SP: 'wessex',
+  SN: 'wessex', BH: 'wessex',
+  // Yorkshire — Yorkshire
+  BD: 'yorkshire', DN: 'yorkshire', HD: 'yorkshire', HG: 'yorkshire',
+  HU: 'yorkshire', HX: 'yorkshire', LS: 'yorkshire', S: 'yorkshire',
+  WF: 'yorkshire', YO: 'yorkshire',
+  // Scotland — all
+  AB: 'scottish', DD: 'scottish', DG: 'scottish', EH: 'scottish',
+  FK: 'scottish', G: 'scottish', HS: 'scottish', IV: 'scottish',
+  KA: 'scottish', KW: 'scottish', KY: 'scottish', ML: 'scottish',
+  PA: 'scottish', PH: 'scottish', TD: 'scottish', ZE: 'scottish',
+  // Northern Ireland
+  BT: 'niWater',
+};
+
+const WATER_DEFAULT = 480; // fallback combined unmetered average when area unknown
 
 export interface RunningCostsResponse {
   energy: {
@@ -111,11 +187,22 @@ export interface RunningCostsResponse {
 
 @Injectable()
 export class RunningCostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly floodRisk: FloodRiskService,
+  ) {}
 
   async getRunningCosts(propertyId: string): Promise<RunningCostsResponse> {
     const p: any = await this.prisma.property.findUnique({ where: { id: propertyId } });
     if (!p) throw new NotFoundException('Property not found');
+
+    // Real street-average energy spend — averages enriched EPC cost fields
+    // across all properties in the same postcode outcode (e.g. "CV5"). Falls
+    // back to a per-band proxy when not enough neighbouring data is on file.
+    const [streetAverageEnergy, floodRiskBand] = await Promise.all([
+      this.computeStreetAverageEnergy(p.postcode, p.epcRating, p.id),
+      this.floodRisk.getFloodRisk(p.id),
+    ]);
 
     // ── Energy ────────────────────────────────────────────────
     const heatingCost = num(p.heatingCostCurrent);
@@ -164,14 +251,28 @@ export class RunningCostsService {
         label: lowEnergyLightingLabel(p.lowEnergyLighting),
       },
       total: Math.round(energyTotal),
-      // Potential savings — if we have an EPC potential, fold it in.
-      // Otherwise assume a ~38% reduction is achievable for E/F/G properties.
       potentialTotal: 0,
       potentialSaving: 0,
     };
+
+    // Potential energy total — prefer the real EPC `*-cost-potential` figures
+    // when they're on file. Falls back to a per-band heuristic only when no
+    // EPC data has been ingested for this property yet.
+    const heatingCostPotential = num(p.heatingCostPotential);
+    const hotWaterCostPotential = num(p.hotWaterCostPotential);
+    const lightingCostPotential = num(p.lightingCostPotential);
+    const epcPotentialTotal =
+      heatingCostPotential + hotWaterCostPotential + lightingCostPotential;
     const potentialFactor = potentialReductionFactor(p.epcRating);
-    energy.potentialTotal = Math.round(energy.total * (1 - potentialFactor));
-    energy.potentialSaving = energy.total - energy.potentialTotal;
+    if (epcPotentialTotal > 0) {
+      energy.potentialTotal = Math.round(epcPotentialTotal);
+    } else {
+      energy.potentialTotal = Math.round(energy.total * (1 - potentialFactor));
+    }
+    energy.potentialSaving = Math.max(
+      0,
+      energy.total - energy.potentialTotal,
+    );
 
     // ── Energy detail ────────────────────────────────────────
     const gasKwh =
@@ -180,8 +281,11 @@ export class RunningCostsService {
         : heatingKwh ?? hotWaterKwh ?? null;
     const epcRating = (p.epcRating || '').toUpperCase() || 'D';
     const sapCurrent = num(p.epcScore) || SAP_BY_RATING[epcRating] || 65;
-    const epcTarget = improvedRating(epcRating);
-    const sapTarget = SAP_BY_RATING[epcTarget] || sapCurrent + 15;
+    // Prefer the real EPC "potential" rating/SAP when present, else heuristic.
+    const epcTarget =
+      (p.epcRatingPotential || '').toUpperCase() || improvedRating(epcRating);
+    const sapTarget =
+      num(p.epcScorePotential) || SAP_BY_RATING[epcTarget] || sapCurrent + 15;
     const floorAreaSqm = num(p.floorAreaSqm) || null;
     const totalKwh =
       (heatingKwh ?? 0) + (hotWaterKwh ?? 0) + (electricityKwh ?? 0) || null;
@@ -202,18 +306,26 @@ export class RunningCostsService {
 
     // ── Risks ────────────────────────────────────────────────
     const risks = {
-      flood: floodRiskFlag(p.floodRisk),
+      flood: floodRiskFlag(floodRiskBand),
       mining: { level: 'clear' as const, label: 'No recorded mining activity in this area', pill: 'Clear' },
       planning: { level: 'low' as const, label: 'Public planning data not yet available for this address', pill: 'Note' },
     };
 
     // ── Environmental impact ─────────────────────────────────
+    // Prefer real EPC figures (`co2-emissions-current` / `-potential`); fall
+    // back to the per-band typical only when the EPC fields are missing.
     const co2Now =
       num(p.co2Emissions) > 0
         ? round1(num(p.co2Emissions))
         : CO2_BY_RATING[epcRating] || 4.8;
-    const co2Potential = round1(co2Now * (1 - potentialFactor));
-    const reductionPct = Math.round((1 - co2Potential / co2Now) * 1000) / 10;
+    const co2Potential =
+      num(p.co2EmissionsPotential) > 0
+        ? round1(num(p.co2EmissionsPotential))
+        : round1(co2Now * (1 - potentialFactor));
+    const reductionPct =
+      co2Now > 0
+        ? Math.round((1 - co2Potential / co2Now) * 1000) / 10
+        : 0;
     const co2NowKg = Math.round(co2Now * 1000);
     const co2PotentialKg = Math.round(co2Potential * 1000);
     const ukAverageKg = 2900;
@@ -242,16 +354,14 @@ export class RunningCostsService {
     const council = councilFromCity(p.city);
 
     // ── Water ────────────────────────────────────────────────
-    const water = { cost: WATER_DEFAULT, label: waterSupplierFromCity(p.city) };
+    // Postcode-area-driven lookup of the dominant water+sewerage supplier
+    // for this address, with the supplier's 2024/25 unmetered combined-bill
+    // average. Falls back to a UK-wide mean when the area is uncharted.
+    const water = waterFromPostcode(p.postcode);
 
     // ── Totals ───────────────────────────────────────────────
     const totalAnnual = energy.total + water.cost + councilTaxCost;
     const totalMonthly = Math.round(totalAnnual / 12);
-
-    // ── Street average (energy only) ─────────────────────────
-    // Use the EPC C/D mid-band as the street average proxy until we have
-    // real comparable data per postcode.
-    const streetAverageEnergy = 1673;
 
     return {
       energy,
@@ -268,6 +378,55 @@ export class RunningCostsService {
       epcYear: epcYearFrom(p.lodgementDate),
       confidence,
     };
+  }
+
+  /**
+   * Average annual energy spend across neighbouring properties on the same
+   * postcode outcode (e.g. "CV5"), excluding this property. Uses each row's
+   * enriched EPC `heating + hot water + lighting` figures. Requires at least
+   * three neighbours with cost data on file before trusting the average —
+   * otherwise falls back to a per-band proxy from `RATING_FALLBACK_TOTAL`.
+   */
+  private async computeStreetAverageEnergy(
+    postcode: string | null | undefined,
+    epcRating: string | null | undefined,
+    selfId: string,
+  ): Promise<number> {
+    const outcode = (postcode || '').split(' ')[0] || '';
+    const fallback = ratingFallback(epcRating ?? null);
+    if (!outcode) return fallback;
+    try {
+      const neighbours = await this.prisma.property.findMany({
+        where: {
+          postcode: { startsWith: outcode },
+          id: { not: selfId },
+          OR: [
+            { heatingCostCurrent: { not: null } },
+            { hotWaterCostCurrent: { not: null } },
+            { lightingCostCurrent: { not: null } },
+          ],
+        },
+        select: {
+          heatingCostCurrent: true,
+          hotWaterCostCurrent: true,
+          lightingCostCurrent: true,
+        } as any,
+        take: 200,
+      });
+      const totals = neighbours
+        .map(
+          (n: any) =>
+            num(n.heatingCostCurrent) +
+            num(n.hotWaterCostCurrent) +
+            num(n.lightingCostCurrent),
+        )
+        .filter((t: number) => t > 0);
+      if (totals.length < 3) return fallback;
+      const avg = totals.reduce((a: number, b: number) => a + b, 0) / totals.length;
+      return Math.round(avg);
+    } catch {
+      return fallback;
+    }
   }
 }
 
@@ -301,22 +460,49 @@ function improvedRating(rating: string): string {
   return order[Math.min(order.length - 1, idx + 2)];
 }
 
-function floodRiskFlag(value: string | null | undefined): {
+/**
+ * Map the EA's 4-band classification (plus our `Unknown` fallback) into the
+ * traffic-light shape the UI cards expect. The labels reference the live EA
+ * "Risk of Flooding from Rivers and Sea" dataset so users know it's official.
+ */
+function floodRiskFlag(band: FloodRiskBand | null | undefined): {
   level: 'low' | 'medium' | 'high' | 'clear';
   label: string;
   pill: string;
 } {
-  const v = (value || '').toLowerCase();
-  if (v.includes('high')) {
-    return { level: 'high', label: '⚠ High risk · Environment Agency zone 3', pill: 'Check' };
+  switch (band) {
+    case 'High':
+      return {
+        level: 'high',
+        label: '⚠ High risk · Environment Agency rivers & sea',
+        pill: 'Check',
+      };
+    case 'Medium':
+      return {
+        level: 'medium',
+        label: '⚠ Medium risk · Environment Agency rivers & sea',
+        pill: 'Check',
+      };
+    case 'Low':
+      return {
+        level: 'low',
+        label: 'Low risk · Environment Agency rivers & sea',
+        pill: 'Note',
+      };
+    case 'Very Low':
+      return {
+        level: 'clear',
+        label: 'Very low risk · Environment Agency rivers & sea',
+        pill: 'Clear',
+      };
+    case 'Unknown':
+    default:
+      return {
+        level: 'clear',
+        label: 'No flood-risk data on file for this address',
+        pill: 'Clear',
+      };
   }
-  if (v.includes('medium')) {
-    return { level: 'medium', label: '⚠ Medium risk · Environment Agency zone 2', pill: 'Check' };
-  }
-  if (v.includes('low')) {
-    return { level: 'low', label: 'Low risk · Environment Agency zone 1', pill: 'Note' };
-  }
-  return { level: 'clear', label: 'No flood risk recorded for this address', pill: 'Clear' };
 }
 
 function heatingType(value: string | null): string {
@@ -334,19 +520,36 @@ function councilFromCity(city: string | null): string {
   return `${city} City Council`;
 }
 
-function waterSupplierFromCity(city: string | null): string {
-  if (!city) return 'Regional water supplier · unmetered average';
-  const map: Record<string, string> = {
-    Coventry: 'Severn Trent',
-    Birmingham: 'Severn Trent',
-    London: 'Thames Water',
-    Manchester: 'United Utilities',
-    Liverpool: 'United Utilities',
-    Leeds: 'Yorkshire Water',
-    Bristol: 'Wessex Water',
+/**
+ * Look up the dominant water+sewerage supplier for a UK postcode by its area
+ * letters (leading characters before the first digit). Returns the supplier's
+ * 2024/25 average unmetered combined bill plus a human-readable label.
+ * Edge cases (e.g. "SY" spans both Severn Trent and Welsh Water) take the
+ * dominant supplier; the user can correct via the "Upload a bill" CTA.
+ */
+function waterFromPostcode(
+  postcode: string | null | undefined,
+): { cost: number; label: string } {
+  const area = postcodeArea(postcode);
+  const key = POSTCODE_AREA_TO_SUPPLIER[area];
+  const supplier = key ? WATER_SUPPLIERS[key] : null;
+  if (!supplier) {
+    return {
+      cost: WATER_DEFAULT,
+      label: 'Regional water supplier · unmetered average',
+    };
+  }
+  return {
+    cost: supplier.cost,
+    label: `${supplier.name} · unmetered household${area ? ` (${area})` : ''}`,
   };
-  const supplier = map[city] ?? 'Regional supplier';
-  return `${supplier} · unmetered household`;
+}
+
+/** Leading letters of a UK postcode (e.g. "CV5 6AJ" → "CV", "SW1A 1AA" → "SW"). */
+function postcodeArea(postcode: string | null | undefined): string {
+  if (!postcode) return '';
+  const match = String(postcode).trim().toUpperCase().match(/^([A-Z]+)/);
+  return match ? match[1] : '';
 }
 
 function ratingImpactLabel(rating: string): string {

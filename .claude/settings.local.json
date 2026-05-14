@@ -144,7 +144,9 @@
       "Bash(awk 'NR>=5023 && NR<=5135' d:/ReactProjects/op_nuxt/umu-backend/prisma/healthscore-v3_224.html)",
       "Bash(npx -p typescript -p vue-tsc vue-tsc --noEmit)",
       "Bash(sed -i '419,912d' \"pages/homescore/[id].vue\")",
-      "Bash(sed -n '415,425p' \"pages/homescore/[id].vue\")"
+      "Bash(sed -n '415,425p' \"pages/homescore/[id].vue\")",
+      "Bash(sed -i '1717,1991d' \"pages/homescore/[id].vue\")",
+      "Bash(sed -n '1714,1722p' \"pages/homescore/[id].vue\")"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
