@@ -10,9 +10,16 @@ import {
   Delete,
   Body,
   Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { join, extname } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { PropertyService } from './property.service';
 import { RunningCostsService } from './running-costs.service';
+import { BillParserService } from './bill-parser.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
 @Controller('property')
@@ -20,6 +27,7 @@ export class PropertyController {
   constructor(
     private propertyService: PropertyService,
     private runningCostsService: RunningCostsService,
+    private billParser: BillParserService,
   ) {}
 
   @Get('search')
@@ -162,6 +170,46 @@ export class PropertyController {
   @Get(':id/street-publish-stats')
   async getStreetPublishStats(@Param('id') id: string) {
     return this.propertyService.getStreetPublishStats(id);
+  }
+
+  // Energy-cost rank among neighbouring properties on the same outcode.
+  // Powers the "Nth of M on street" + "best on street £X/yr" copy on the
+  // buyer-results screen.
+  @Get(':id/street-energy-rank')
+  async getStreetEnergyRank(@Param('id') id: string) {
+    return this.propertyService.getStreetEnergyRank(id);
+  }
+
+  // ── Bill OCR + parsing ─────────────────────────────────────────────────
+  // Owner uploads a recent energy bill from the simulator; we OCR it with
+  // Tesseract and parse the structured spend, supplier, and period. The
+  // parsed result is persisted on the property and echoed back so the UI
+  // can immediately reflect actual figures in the score / cost cards.
+  @Post(':id/bill-parse')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'bills');
+          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+    }),
+  )
+  async parseBill(
+    @Param('id') id: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    @UploadedFile() file: any,
+  ) {
+    if (!file) throw new NotFoundException('No file uploaded');
+    return this.billParser.parseAndSave(id, file.path, file.mimetype);
   }
 
   // ── KYC / ownership verification ───────────────────────────────────────

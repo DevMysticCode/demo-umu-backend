@@ -46,14 +46,18 @@ interface EpcRow {
   'lighting-cost-potential'?: number | string;
   // HomeScore V2 insulation fields
   'walls-energy-eff'?: string;
+  'walls-description'?: string;
   'roof-energy-eff'?: string;
+  'roof-description'?: string;
   'floor-energy-eff'?: string;
   'floor-description'?: string;
   'windows-energy-eff'?: string;
+  'windows-description'?: string;
   'glazed-area'?: string;
   'multi-glaze-proportion'?: number | string;
   // HomeScore V2 heating fields
   'mainheat-energy-eff'?: string;
+  'mainheat-description'?: string;
   'mainheatc-energy-eff'?: string;
   'hot-water-energy-eff'?: string;
   'hotwater-description'?: string;
@@ -68,6 +72,80 @@ interface EpcRow {
   'photo-supply'?: number | string;
   'solar-water-heating-flag'?: string;
   'wind-turbine-count'?: number | string;
+}
+
+// ── EPC Recommendations (per-cert improvement list) ──────────────────────────
+
+/**
+ * Canonical shape we persist on `Property.epcRecommendations` and serve to
+ * the simulator. Built from a single row of the EPC Register's
+ * /recommendations endpoint.
+ */
+export interface EpcRecommendation {
+  /** Stable identifier within the cert (`improvement-id`), e.g. "1". */
+  id: string;
+  /** Short human-readable title shown on the card, e.g. "Increase loft insulation to 270 mm". */
+  title: string;
+  /** Longer description text from EPC, used in the expanded card. */
+  description: string | null;
+  /** EPC indicative-cost range as displayed, e.g. "£100 - £350". */
+  costRange: string | null;
+  /** Annual £ saving (from EPC `typical-saving`). Some EPCs return a range
+   *  text; we store the parsed midpoint number when possible. */
+  typicalSaving: number | null;
+  /** Resulting SAP rating after applying this improvement (NOT a delta). */
+  resultingSap: number | null;
+  /** Resulting environmental-impact rating after this improvement. */
+  resultingEnvRating: number | null;
+  /** EPC's category code so we can group / order across screens. */
+  improvementType: string | null;
+}
+
+/** Map one row of the EPC recommendations API → our canonical shape. */
+function mapEpcRecommendationRow(row: any): EpcRecommendation | null {
+  if (!row) return null;
+  const id = String(row['improvement-id'] ?? row['improvement-item'] ?? '').trim();
+  const title = String(
+    row['improvement-id-text'] ??
+      row['improvement-summary-text'] ??
+      row['improvement-description-text'] ??
+      '',
+  ).trim();
+  if (!id || !title) return null;
+  return {
+    id,
+    title,
+    description:
+      String(row['improvement-description-text'] ?? '').trim() || null,
+    costRange: String(row['indicative-cost'] ?? '').trim() || null,
+    typicalSaving: parseSavingValue(row['typical-saving']),
+    resultingSap: parseIntOrNull(row['energy-performance-rating-improvement']),
+    resultingEnvRating: parseIntOrNull(
+      row['environmental-impact-rating-improvement'],
+    ),
+    improvementType:
+      String(row['improvement-type'] ?? row['improvement-item'] ?? '').trim() ||
+      null,
+  };
+}
+
+/** "39" → 39, "39 - 50" → 44 (midpoint), "" → null. */
+function parseSavingValue(v: any): number | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  // Handle ranges like "39 - 50" or "39 to 50"
+  const parts = s.split(/\s*(?:-|to)\s*/).map((p) => parseFloat(p));
+  const nums = parts.filter((n) => Number.isFinite(n));
+  if (nums.length === 0) return null;
+  if (nums.length === 1) return Math.round(nums[0]);
+  return Math.round((nums[0] + nums[1]) / 2);
+}
+
+function parseIntOrNull(v: any): number | null {
+  if (v == null) return null;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -152,6 +230,7 @@ function epcRowToProperty(row: EpcRow) {
 
 interface EpcCert {
   certUrl: string | null;
+  lmkKey: string | null;
   potentialRating: string | null;
   potentialScore: number | null;
   councilTaxBand: string | null;
@@ -182,14 +261,18 @@ interface EpcCert {
   co2EmissionsPotential: number | null;
   // HomeScore V2 insulation
   wallsEnergyEff: string | null;
+  wallsDescription: string | null;
   roofEnergyEff: string | null;
+  roofDescription: string | null;
   floorEnergyEff: string | null;
   floorDescription: string | null;
   windowsEnergyEff: string | null;
+  windowsDescription: string | null;
   glazedArea: string | null;
   multiGlazeProportion: number | null;
   // HomeScore V2 heating
   mainheatEnergyEff: string | null;
+  mainheatDescription: string | null;
   mainheatcEnergyEff: string | null;
   hotWaterEnergyEff: string | null;
   hotwaterDescription: string | null;
@@ -225,6 +308,7 @@ function epcRowToCert(row: EpcRow): EpcCert {
     certUrl: lmkKey
       ? `https://epc.opendatacommunities.org/files/${lmkKey}`
       : null,
+    lmkKey: lmkKey ? String(lmkKey) : null,
     potentialRating: str(row['potential-energy-rating']),
     potentialScore: parseInt2(row['potential-energy-efficiency']),
     councilTaxBand: mapped.councilTaxBand,
@@ -254,14 +338,18 @@ function epcRowToCert(row: EpcRow): EpcCert {
     co2EmissionsPotential: parseFloat2(row['co2-emissions-potential']),
     // Insulation
     wallsEnergyEff: str(row['walls-energy-eff']),
+    wallsDescription: str(row['walls-description']),
     roofEnergyEff: str(row['roof-energy-eff']),
+    roofDescription: str(row['roof-description']),
     floorEnergyEff: str(row['floor-energy-eff']),
     floorDescription: str(row['floor-description']),
     windowsEnergyEff: str(row['windows-energy-eff']),
+    windowsDescription: str(row['windows-description']),
     glazedArea: str(row['glazed-area']),
     multiGlazeProportion: parseFloat2(row['multi-glaze-proportion']),
     // Heating
     mainheatEnergyEff: str(row['mainheat-energy-eff']),
+    mainheatDescription: str(row['mainheat-description']),
     mainheatcEnergyEff: str(row['mainheatc-energy-eff']),
     hotWaterEnergyEff: str(row['hot-water-energy-eff']),
     hotwaterDescription: str(row['hotwater-description']),
@@ -1363,21 +1451,50 @@ export class PropertyService {
       if ((property as any).epcScorePotential == null && epcData.potentialScore != null)
         updateData.epcScorePotential = epcData.potentialScore;
 
+      // EPC certificate LMK key — needed to re-fetch recommendations later
+      // without doing another address search.
+      if (!(property as any).epcLmkKey && epcData.lmkKey)
+        updateData.epcLmkKey = epcData.lmkKey;
+
+      // Pull per-cert improvement recommendations once we know the LMK key.
+      // Stored as JSON so the simulator can render real improvements with
+      // real £ savings instead of the hardcoded fallback list.
+      const lmkForRecs = epcData.lmkKey || (property as any).epcLmkKey;
+      const hasRecs =
+        Array.isArray((property as any).epcRecommendations) &&
+        (property as any).epcRecommendations.length > 0;
+      if (lmkForRecs && !hasRecs) {
+        try {
+          const recs = await this.fetchEpcRecommendations(lmkForRecs);
+          if (recs.length > 0) updateData.epcRecommendations = recs as any;
+        } catch {
+          /* non-fatal — leave to next enrichment */
+        }
+      }
+
       // V2 EPC insulation/fabric fields
       if (!(property as any).wallsEnergyEff && epcData.wallsEnergyEff)
         updateData.wallsEnergyEff = epcData.wallsEnergyEff;
+      if (!(property as any).wallsDescription && epcData.wallsDescription)
+        updateData.wallsDescription = epcData.wallsDescription;
       if (!(property as any).roofEnergyEff && epcData.roofEnergyEff)
         updateData.roofEnergyEff = epcData.roofEnergyEff;
+      if (!(property as any).roofDescription && epcData.roofDescription)
+        updateData.roofDescription = epcData.roofDescription;
       if (!(property as any).floorEnergyEff && epcData.floorEnergyEff)
         updateData.floorEnergyEff = epcData.floorEnergyEff;
       if (!(property as any).windowsEnergyEff && epcData.windowsEnergyEff)
         updateData.windowsEnergyEff = epcData.windowsEnergyEff;
+      if (!(property as any).windowsDescription && epcData.windowsDescription)
+        updateData.windowsDescription = epcData.windowsDescription;
       if ((property as any).multiGlazeProportion == null && epcData.multiGlazeProportion != null)
         updateData.multiGlazeProportion = epcData.multiGlazeProportion;
 
       // V2 EPC heating/HW fields
       if (!(property as any).mainheatEnergyEff && epcData.mainheatEnergyEff)
         updateData.mainheatEnergyEff = epcData.mainheatEnergyEff;
+      if (!(property as any).mainheatDescription && epcData.mainheatDescription)
+        updateData.mainheatDescription = epcData.mainheatDescription;
       if (!(property as any).mainheatcEnergyEff && epcData.mainheatcEnergyEff)
         updateData.mainheatcEnergyEff = epcData.mainheatcEnergyEff;
       if (!(property as any).hotWaterEnergyEff && epcData.hotWaterEnergyEff)
@@ -2351,6 +2468,36 @@ export class PropertyService {
       return epcRowToCert(row);
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Pull the EPC Register's improvement recommendations for a single
+   * certificate (identified by its LMK key). Each row is reshaped into our
+   * canonical shape used by the simulator's improvement cards. Returns an
+   * empty array on any error so the caller can store `[]` and not retry on
+   * every page load.
+   */
+  private async fetchEpcRecommendations(
+    lmkKey: string,
+  ): Promise<EpcRecommendation[]> {
+    if (!lmkKey) return [];
+    try {
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/recommendations?lmk-key=${encodeURIComponent(lmkKey)}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: epcAuthHeader(),
+          Accept: 'application/json',
+        },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const rows: any[] = Array.isArray(data?.rows) ? data.rows : [];
+      return rows
+        .map((r) => mapEpcRecommendationRow(r))
+        .filter((r): r is EpcRecommendation => !!r);
+    } catch {
+      return [];
     }
   }
 
@@ -3850,6 +3997,111 @@ export class PropertyService {
       },
     });
     return { logged: true };
+  }
+
+  /**
+   * Where does this property sit on its street, ranked by annual energy cost?
+   * Powers the "Nth of M on street" + "best on street £X/yr" copy on the
+   * buyer-results screen. Uses each neighbour's enriched EPC cost fields
+   * (heating + hot water + lighting) — only properties with real cost data
+   * on file are counted, so the rank reflects comparable data, not noise.
+   *
+   * Returns rank / total / bestCost / averageCost. If we don't have at
+   * least 3 cost-enriched neighbours yet, returns null fields so the UI
+   * can hide the row gracefully.
+   */
+  async getStreetEnergyRank(propertyId: string): Promise<{
+    rank: number | null;
+    total: number;
+    bestCost: number | null;
+    averageCost: number | null;
+    yourCost: number | null;
+  }> {
+    const self: any = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: {
+        id: true,
+        postcode: true,
+        heatingCostCurrent: true,
+        hotWaterCostCurrent: true,
+        lightingCostCurrent: true,
+      } as any,
+    });
+    if (!self) {
+      return { rank: null, total: 0, bestCost: null, averageCost: null, yourCost: null };
+    }
+
+    const outcode = (self.postcode || '').split(' ')[0] || '';
+    if (!outcode) {
+      return { rank: null, total: 0, bestCost: null, averageCost: null, yourCost: null };
+    }
+
+    const yourCost =
+      Number(self.heatingCostCurrent ?? 0) +
+      Number(self.hotWaterCostCurrent ?? 0) +
+      Number(self.lightingCostCurrent ?? 0);
+
+    const neighbours: any[] = await this.prisma.property.findMany({
+      where: {
+        postcode: { startsWith: outcode },
+        OR: [
+          { heatingCostCurrent: { not: null } },
+          { hotWaterCostCurrent: { not: null } },
+          { lightingCostCurrent: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        heatingCostCurrent: true,
+        hotWaterCostCurrent: true,
+        lightingCostCurrent: true,
+      } as any,
+      take: 500,
+    });
+
+    // Total annual cost per home; drop zero-cost rows (missing data).
+    const ranked = neighbours
+      .map((n) => ({
+        id: n.id as string,
+        cost:
+          Number(n.heatingCostCurrent ?? 0) +
+          Number(n.hotWaterCostCurrent ?? 0) +
+          Number(n.lightingCostCurrent ?? 0),
+      }))
+      .filter((r) => r.cost > 0)
+      .sort((a, b) => a.cost - b.cost); // ascending = cheapest first
+
+    if (ranked.length < 3) {
+      return {
+        rank: null,
+        total: ranked.length,
+        bestCost: null,
+        averageCost: null,
+        yourCost: yourCost > 0 ? Math.round(yourCost) : null,
+      };
+    }
+
+    const total = ranked.length;
+    const bestCost = Math.round(ranked[0].cost);
+    const averageCost = Math.round(
+      ranked.reduce((s, r) => s + r.cost, 0) / total,
+    );
+
+    // 1-indexed rank where 1 = cheapest. If we don't have own cost on file,
+    // rank is null but the rest of the figures still useful.
+    let rank: number | null = null;
+    if (yourCost > 0) {
+      const idx = ranked.findIndex((r) => r.id === self.id);
+      rank = idx >= 0 ? idx + 1 : null;
+    }
+
+    return {
+      rank,
+      total,
+      bestCost,
+      averageCost,
+      yourCost: yourCost > 0 ? Math.round(yourCost) : null,
+    };
   }
 
   async getPropertySearchStats(propertyId: string) {

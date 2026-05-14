@@ -146,7 +146,12 @@
       "Bash(sed -i '419,912d' \"pages/homescore/[id].vue\")",
       "Bash(sed -n '415,425p' \"pages/homescore/[id].vue\")",
       "Bash(sed -i '1717,1991d' \"pages/homescore/[id].vue\")",
-      "Bash(sed -n '1714,1722p' \"pages/homescore/[id].vue\")"
+      "Bash(sed -n '1714,1722p' \"pages/homescore/[id].vue\")",
+      "WebFetch(domain:www.counciltaxfinder.com)",
+      "WebFetch(domain:api.counciltaxfinder.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api *)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
