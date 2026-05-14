@@ -1,0 +1,3521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMU HomeScore — Property Lookup · States</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ─── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #0e1416;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── Stage Caption ─────────────────────────────────────────── */
+  .stage-caption { text-align: center; margin-bottom: 28px; }
+  .stage-eyebrow {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(255,255,255,0.35); margin-bottom: 8px; font-weight: 800;
+  }
+  .stage-title {
+    font-size: 22px; color: white; font-weight: 800; letter-spacing: -0.5px;
+  }
+  .stage-sub {
+    font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 6px;
+  }
+
+  /* ─── Phone Frame ───────────────────────────────────────────── */
+  .phone {
+    width: 390px;
+    background: #f5f5f7;
+    border-radius: 44px;
+    overflow: hidden;
+    box-shadow:
+      0 35px 90px rgba(0,0,0,0.6),
+      0 0 0 8px #0a0d12,
+      0 0 0 9px rgba(255,255,255,0.06);
+    height: 880px;
+    position: relative;
+  }
+  /* Inner scroll wrapper — sheets sit outside this */
+  .phone-scroll {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+    position: relative;
+  }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+
+  /* ─── Notch ─────────────────────────────────────────────────── */
+  .notch-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 0;
+    pointer-events: none;
+  }
+  .notch {
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 105px;
+    height: 27px;
+    background: #0a0d12;
+    border-radius: 100px;
+  }
+
+  /* ─── Section 1: Hero ───────────────────────────────────────── */
+  .hero {
+    height: 260px;
+    background: linear-gradient(180deg, #b8cfc4 0%, #8aab96 40%, #6d9080 70%, #f5f5f7 100%);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .status-bar {
+    position: absolute;
+    top: 16px;
+    left: 0; right: 0;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .status-icons { display: flex; align-items: center; gap: 5px; }
+  .status-icons svg { opacity: 0.95; }
+
+  .hero-btn {
+    position: absolute;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+  }
+  .hero-btn-back { top: 52px; left: 16px; }
+  .hero-btn-fav  { top: 52px; right: 60px; }
+  .hero-btn-share { top: 52px; right: 16px; }
+
+  .hero-house {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px;
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  .hero-gradient-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .hero-badges {
+    position: absolute;
+    bottom: 14px;
+    left: 14px; right: 14px;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    animation: badgeSlideUp 0.4s 0.4s both;
+  }
+  @keyframes badgeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .badge-passport {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(26,21,53,0.88);
+    color: white;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .badge-passport-dot {
+    width: 7px; height: 7px;
+    background: #00b6ae;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .badge-flood {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(255,255,255,0.92);
+    color: #C73E36;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* ─── Section 2: Property Identity ─────────────────────────── */
+  .identity {
+    background: white;
+    padding: 18px 18px 14px;
+  }
+
+  .identity-address { font-size: 22px; font-weight: 800; color: #1a1535; line-height: 1.1; }
+  .identity-suburb  { font-size: 13px; color: #888; margin-top: 3px; }
+
+  .price-row {
+    margin-top: 12px;
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .price-value {
+    font-size: 30px;
+    font-weight: 800;
+    color: #00a19a;
+    line-height: 1;
+  }
+  .price-source {
+    font-size: 11px;
+    color: #aaa;
+    margin-left: 10px;
+    align-self: baseline;
+  }
+
+  .pill-row {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pill {
+    background: #f0f0f2;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: #444;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* ─── Section 3: Action Bar ─────────────────────────────────── */
+  .action-bar {
+    margin: 0;
+    padding: 14px 16px;
+    background: white;
+    border-top: 1px solid #f0f0f2;
+    border-bottom: 1px solid #f0f0f2;
+  }
+
+  .primary-cta {
+    background: linear-gradient(135deg, #00a19a 0%, #007e78 100%);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 20px rgba(0,161,154,0.30);
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+  .primary-cta::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0;
+    width: 60%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(400%) skewX(-15deg); }
+  }
+
+  .primary-cta-icon {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+  }
+  .primary-cta-text { flex: 1; }
+  .primary-cta-title { font-size: 14px; font-weight: 800; color: white; display: block; }
+  .primary-cta-sub   { font-size: 11px; color: rgba(255,255,255,0.75); display: block; margin-top: 2px; }
+  .primary-cta-arrow { font-size: 18px; color: rgba(255,255,255,0.7); flex-shrink: 0; }
+
+  /* In Progress primary CTA — white card, green border (softer — notify only) */
+  .primary-cta--notify {
+    background: white !important;
+    border: 2px solid #2EAB55 !important;
+    box-shadow: 0 4px 16px rgba(46,171,85,0.12) !important;
+  }
+  .primary-cta--notify::after { display: none !important; }
+  .primary-cta-icon--notify {
+    background: #E8F5EE !important;
+    font-size: 18px;
+  }
+  .primary-cta-title--notify { color: #1a1535 !important; }
+  .primary-cta-sub--notify   { color: #6b6783 !important; }
+
+  /* Published primary CTA — balayage warm brown gradient */
+  .primary-cta--passport {
+    background: linear-gradient(135deg, #F0B460 0%, #D4822A 45%, #7A3A05 100%) !important;
+    border: none !important;
+    box-shadow: 0 6px 22px rgba(122,58,5,0.35) !important;
+    overflow: hidden !important;
+  }
+  .primary-cta--passport::after {
+    display: block !important;
+  }
+  .primary-cta-icon--passport {
+    background: rgba(255,255,255,0.18) !important;
+  }
+  .primary-cta-title--passport { color: white !important; }
+  .primary-cta-sub--passport   { color: rgba(255,255,255,0.75) !important; }
+  .primary-cta-price-badge {
+    background: rgba(255,255,255,0.22);
+    border: 1.5px solid rgba(255,255,255,0.4);
+    color: white;
+    font-size: 14px; font-weight: 800;
+    border-radius: 10px;
+    padding: 6px 12px;
+    flex-shrink: 0;
+    flex-grow: 0;
+    align-self: center;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Passport card unlock button — balayage warm brown */
+  .passport-cta--unlock {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: linear-gradient(135deg, #F0B460 0%, #D4822A 45%, #7A3A05 100%);
+    border: none;
+    border-radius: 16px;
+    padding: 20px 20px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: all 0.15s ease;
+    box-shadow: 0 6px 22px rgba(122,58,5,0.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .passport-cta--unlock::after {
+    content: '';
+    position: absolute; top: 0; bottom: 0; left: 0; width: 60%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  .passport-cta--unlock:hover {
+    box-shadow: 0 10px 28px rgba(122,58,5,0.45);
+    transform: translateY(-1px);
+  }
+  .passport-cta--unlock:active { transform: translateY(0); }
+  .passport-cta--unlock-left { flex: 1; position: relative; z-index: 1; }
+  .passport-cta--unlock-title {
+    font-size: 15px; font-weight: 800; color: white;
+    letter-spacing: -0.3px;
+  }
+  .passport-cta--unlock-sub {
+    font-size: 11.5px; color: rgba(255,255,255,0.72); margin-top: 4px;
+  }
+  .passport-cta--unlock-price {
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0; position: relative; z-index: 1;
+  }
+  .passport-cta--unlock-amount {
+    font-size: 26px; font-weight: 900; color: white;
+    letter-spacing: -0.8px; line-height: 1;
+  }
+  .passport-cta--unlock-arrow {
+    font-size: 20px; color: rgba(255,255,255,0.8); font-weight: 700;
+  }
+
+  .secondary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .secondary-btn {
+    background: white;
+    border: 1.5px solid #ECECEF;
+    border-radius: 12px;
+    padding: 12px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+  }
+  .secondary-btn:hover {
+    border-color: #231d45;
+    box-shadow: 0 4px 12px rgba(35,29,69,0.10);
+    transform: translateY(-1px);
+  }
+  .secondary-btn-label { font-size: 13px; font-weight: 700; color: #1a1535; display: block; }
+  .secondary-btn-sub   { font-size: 10px; color: #999; display: block; margin-top: 2px; }
+
+  /* ─── Section 4: Live Signal Bar ───────────────────────────── */
+  .signal-bar {
+    background: #F2FAF8;
+    border-top: 1px solid #E5F4F2;
+    border-bottom: 1px solid #E5F4F2;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .signal-left { display: flex; align-items: center; gap: 8px; }
+  .pulse-dot {
+    width: 6px; height: 6px;
+    background: #00a19a;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulseDot 1.8s infinite;
+  }
+  @keyframes pulseDot {
+    0%   { box-shadow: 0 0 0 0 rgba(0,161,154,0.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(0,161,154,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,161,154,0); }
+  }
+  .signal-viewing { font-size: 12px; font-weight: 600; color: #00897b; }
+  .signal-count   { font-size: 11px; color: #aaa; }
+
+  /* ─── Section 5: HomeScore ──────────────────────────────────── */
+  .score-card {
+    margin: 14px 14px 0;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid #231d45;
+    box-shadow: 0 4px 20px rgba(35,29,69,0.10);
+  }
+
+  .score-top {
+    background: linear-gradient(135deg, #F2FAF8 0%, #E5F4F2 100%);
+    padding: 24px 22px 20px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .score-blob-tr {
+    position: absolute;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(0,161,154,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    top: -60px; right: -40px;
+    pointer-events: none;
+  }
+  .score-blob-bl {
+    position: absolute;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(35,29,69,0.04) 0%, transparent 70%);
+    border-radius: 50%;
+    bottom: -30px; left: -20px;
+    pointer-events: none;
+  }
+
+  /* Gauge */
+  .gauge-wrap {
+    position: relative;
+    width: 100px; height: 100px;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .gauge-svg {
+    width: 100px; height: 100px;
+    transform: rotate(-90deg);
+  }
+  .gauge-bg   { fill: none; stroke: rgba(35,29,69,0.10); stroke-width: 8; }
+  .gauge-fill {
+    fill: none;
+    stroke: #00a19a;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 251.33;
+    stroke-dashoffset: 251.33;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1);
+  }
+  .gauge-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .gauge-num      { font-size: 28px; font-weight: 900; color: #231d45; line-height: 1; }
+  .gauge-denom    { font-size: 10px; color: #9c98ad; margin-top: 1px; }
+
+  .score-info { flex: 1; z-index: 1; }
+  .score-eyebrow {
+    font-size: 9px; font-weight: 800; color: #007e78;
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .score-verdict  { font-size: 17px; font-weight: 800; color: #231d45; letter-spacing: -0.3px; }
+  .score-desc     {
+    font-size: 11.5px; color: #6b6783;
+    margin-top: 5px; line-height: 1.5;
+  }
+  .score-epc-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    background: white;
+    border: 1px solid #ECECEF;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: #444;
+  }
+  .epc-dot {
+    width: 6px; height: 6px;
+    background: #E6A23C;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* EPC breakdown */
+  .score-bottom {
+    background: white;
+    padding: 16px 18px;
+  }
+  .epc-header {
+    font-size: 9px; font-weight: 800; color: #aaa;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .epc-rows { display: flex; flex-direction: column; gap: 10px; }
+  .epc-row  { display: flex; align-items: center; gap: 10px; }
+  .epc-label { font-size: 12px; font-weight: 700; color: #333; width: 60px; flex-shrink: 0; }
+  .epc-track {
+    flex: 1;
+    height: 8px;
+    background: #f0f0f2;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: #00a19a;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.7s cubic-bezier(0.22,1,0.36,1);
+  }
+  .epc-rating { font-size: 12px; font-weight: 600; color: #555; width: 48px; text-align: right; flex-shrink: 0; }
+
+  /* ─── Section 6: Explore Grid ───────────────────────────────── */
+  .explore-header {
+    padding: 20px 16px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .explore-title   { font-size: 15px; font-weight: 800; color: #1a1535; }
+  .explore-sources { font-size: 12px; color: #00a19a; font-weight: 700; }
+
+  .explore-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 14px;
+  }
+
+  .tile {
+    background: white;
+    border-radius: 16px;
+    padding: 16px 14px;
+    cursor: pointer;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+    border: 1.5px solid transparent;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+  }
+  .tile:hover {
+    transform: scale(1.03);
+    border-color: #231d45;
+    box-shadow: 0 8px 24px rgba(35,29,69,0.12);
+  }
+  .tile:active { transform: scale(0.97); }
+
+  .tile:nth-child(1) { animation: tileIn 0.4s 0.10s both; }
+  .tile:nth-child(2) { animation: tileIn 0.4s 0.15s both; }
+  .tile:nth-child(3) { animation: tileIn 0.4s 0.20s both; }
+  .tile:nth-child(4) { animation: tileIn 0.4s 0.25s both; }
+  .tile:nth-child(5) { animation: tileIn 0.4s 0.30s both; }
+  .tile:nth-child(6) { animation: tileIn 0.4s 0.35s both; }
+  .tile:nth-child(7) { animation: tileIn 0.4s 0.40s both; }
+  .tile:nth-child(8) { animation: tileIn 0.4s 0.45s both; }
+  .tile:nth-child(9)  { animation: tileIn 0.4s 0.50s both; }
+  .tile:nth-child(10) { animation: tileIn 0.4s 0.55s both; }
+  @keyframes tileIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tile-icon {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  .tile-title    { font-size: 13px; font-weight: 800; color: #1a1535; margin-top: 10px; }
+  .tile-value    { font-size: 15px; font-weight: 800; color: #00a19a; margin-top: 3px; }
+  .tile-sub      { font-size: 10px; color: #999; margin-top: 2px; }
+  .tile-trend {
+    font-size: 10px; font-weight: 700; color: #2EAB55;
+    margin-top: 4px; display: flex; align-items: center; gap: 2px;
+  }
+  .tile-trend-arrow { font-size: 11px; }
+  .tile-new-pip {
+    display: inline-block;
+    background: #00a19a;
+    color: white;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    border-radius: 4px;
+    padding: 1px 5px;
+    vertical-align: middle;
+    margin-left: 3px;
+    animation: pipPulse 2s ease-in-out infinite;
+  }
+  @keyframes pipPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .tile-arrow {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    font-size: 11px; color: #ccc;
+    line-height: 1;
+  }
+
+  /* ─── Section 7: Passport ───────────────────────────────────── */
+  .passport-card {
+    margin: 16px 14px 0;
+    background: white;
+    border-radius: 20px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #231d45;
+    box-shadow: 0 4px 20px rgba(35,29,69,0.10);
+  }
+
+  .passport-eyebrow-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .passport-eyebrow {
+    font-size: 9px; font-weight: 800; color: #9c98ad;
+    letter-spacing: 2px; text-transform: uppercase;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .passport-eyebrow-dot {
+    width: 8px; height: 8px; border-radius: 2px;
+    background: #00a19a; flex-shrink: 0;
+  }
+  .passport-price-pill {
+    background: #F2FAF8;
+    color: #007e78;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 20px;
+    padding: 3px 10px;
+    border: 1px solid #E5F4F2;
+    transition: all 0.15s;
+  }
+  .passport-card--clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .passport-card--clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(35,29,69,0.16);
+  }
+  .passport-card--clickable:hover .passport-price-pill {
+    background: #231d45;
+    color: white;
+    border-color: #231d45;
+  }
+  .passport-card--clickable:active {
+    transform: translateY(0);
+  }
+
+  .passport-title { font-size: 18px; font-weight: 800; color: #231d45; margin-top: 8px; }
+
+  .progress-bar-wrap {
+    margin: 14px 0 4px;
+    background: #ECECEF;
+    border-radius: 100px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: linear-gradient(90deg, #00a19a, #00b6ae);
+    border-radius: 100px;
+    height: 100%;
+    width: 0%;
+    transition: width 1s 0.6s cubic-bezier(0.22,1,0.36,1);
+  }
+  .progress-label {
+    font-size: 11px; color: #9c98ad;
+    text-align: right; margin-bottom: 0;
+  }
+
+  .passport-features { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .passport-feature  { display: flex; align-items: center; gap: 12px; }
+  .feature-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+  .feature-icon--verified { background: #E5F4F2; }
+  .feature-icon--locked   { background: #F5F5F7; }
+  .feature-icon--locked svg { stroke: #c0bdcc; }
+  .feature-text-title--verified { font-size: 13px; font-weight: 800; color: #231d45; }
+  .feature-text-title--locked   { font-size: 13px; font-weight: 800; color: #c0bdcc; }
+  .feature-text-sub { font-size: 11px; color: #9c98ad; margin-top: 1px; }
+
+  .passport-cta {
+    width: 100%;
+    background: #00a19a;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+    box-shadow: 0 4px 16px rgba(0,161,154,0.35);
+    transition: all 0.15s ease;
+    position: relative;
+    z-index: 1;
+  }
+  .passport-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,161,154,0.45); }
+  .passport-cta:active { transform: translateY(0); }
+
+  .passport-cta-sub {
+    font-size: 10px; color: #9c98ad;
+    text-align: center; margin-top: 8px;
+    position: relative; z-index: 1;
+  }
+
+  /* ─── Section 8: Running Costs ──────────────────────────────── */
+  .costs-card {
+    margin: 14px 14px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid #231d45;
+    box-shadow: 0 4px 20px rgba(35,29,69,0.08);
+  }
+  .costs-header {
+    background: linear-gradient(135deg, #FBEFD9 0%, #F5E0B5 100%);
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #F0DC80;
+  }
+  .costs-header-title { font-size: 13px; font-weight: 800; color: #7A3A05; }
+  .costs-header-sub   { font-size: 11px; color: #C18A38; }
+
+  .costs-body { background: white; padding: 16px 18px; }
+  .costs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  /* Running costs flip cards */
+  .costs-box {
+    border: 1px solid #ECECEF;
+    border-radius: 10px;
+    padding: 0;
+    text-align: center;
+    perspective: 600px;
+    cursor: default;
+    height: 68px;
+  }
+  .costs-box-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.42s cubic-bezier(0.4, 0.2, 0.2, 1);
+    border-radius: 10px;
+  }
+  .costs-box:hover .costs-box-inner {
+    transform: rotateY(180deg);
+  }
+  .costs-box-front, .costs-box-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+  }
+  .costs-box-back {
+    transform: rotateY(180deg);
+    background: #231d45;
+    border: 1.5px solid #231d45;
+  }
+  .costs-box-back-label {
+    font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .costs-box-back-val {
+    font-size: 13px; font-weight: 800; color: white; line-height: 1.2;
+  }
+  .costs-box--highlight {
+    background: transparent;
+    border-color: #00a19a;
+    border-width: 1.5px;
+  }
+  .costs-box--highlight .costs-box-front {
+    background: #F2FAF8;
+    border-radius: 10px;
+  }
+  .costs-box--highlight .costs-box-back {
+    background: #007e78;
+    border-color: #007e78;
+  }
+  .costs-box-value {
+    font-size: 18px; font-weight: 800; color: #231d45;
+    display: block;
+  }
+  .costs-box--highlight .costs-box-value { color: #007e78; }
+  .costs-box-label {
+    font-size: 10px; color: #999; margin-top: 3px;
+    display: block;
+  }
+  .costs-attr { font-size: 11px; color: #bbb; font-style: italic; margin-top: 12px; }
+
+  /* Map tab buttons */
+  .map-tab {
+    background: #F5F5F7; border: none; border-radius: 20px;
+    padding: 7px 14px; font-size: 11px; font-weight: 700;
+    color: #6b6783; cursor: pointer; white-space: nowrap;
+    font-family: inherit; transition: all 0.18s ease;
+    flex-shrink: 0;
+  }
+  .map-tab--active {
+    background: #231d45; color: white;
+  }
+  .map-tab:hover:not(.map-tab--active) { background: #ECECEF; }
+
+  /* Stamp duty type buttons */
+  .sd-type-btn {
+    background: transparent; border: none; border-radius: 9px;
+    padding: 9px 6px; font-size: 11px; font-weight: 700;
+    color: #6b6783; cursor: pointer; font-family: inherit;
+    transition: all 0.18s ease;
+  }
+  .sd-type-btn--active {
+    background: white; color: #231d45;
+    box-shadow: 0 2px 8px rgba(35,29,69,0.10);
+  }
+
+  /* SD band row */
+  .sd-band {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .sd-band-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .sd-band-pct { font-size: 13px; font-weight: 800; color: #231d45; }
+  .sd-band-amt { font-size: 13px; font-weight: 800; color: #231d45; width: 80px; text-align: right; flex-shrink: 0; }
+  .sd-band-track {
+    height: 7px; background: #ECECEF; border-radius: 4px; overflow: hidden;
+  }
+  .sd-band-fill {
+    height: 100%; background: #00a19a; border-radius: 4px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .sd-band-range { font-size: 10px; color: #9c98ad; margin-top: 2px; }
+
+  /* Stepper hover tooltips */
+  .pp-step { position: relative; }
+  .pp-step-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #231d45;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.45;
+    padding: 8px 10px;
+    border-radius: 9px;
+    width: 110px;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 20;
+    white-space: normal;
+    box-shadow: 0 4px 14px rgba(35,29,69,0.25);
+  }
+  .pp-step-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #231d45;
+  }
+  .pp-step:hover .pp-step-tooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .pp-step:hover .pp-step-dot {
+    background: #231d45 !important;
+    color: white !important;
+    transform: scale(1.15);
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  .pp-step:hover .pp-step-label {
+    color: #231d45 !important;
+    transition: color 0.18s ease;
+  }
+
+  /* ─── Section 9: Property Details ──────────────────────────── */
+  .details-card {
+    margin: 14px 14px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+    background: white;
+  }
+  .details-header { padding: 14px 16px 0; font-size: 13px; font-weight: 800; color: #1a1535; }
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 14px 14px;
+  }
+  .detail-tile {
+    padding: 12px;
+    border-radius: 10px;
+    background: #f9f9fb;
+    border: 1.5px solid transparent;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  .detail-tile:hover {
+    transform: translateY(-3px) scale(1.02);
+    border-color: #231d45;
+    background: white;
+    box-shadow: 0 6px 18px rgba(35,29,69,0.10);
+  }
+  .detail-tile-icon {
+    font-size: 16px; margin-bottom: 6px; display: block;
+  }
+  .detail-label { font-size: 9px; font-weight: 800; color: #aaa; letter-spacing: 1px; text-transform: uppercase; }
+  .detail-value { font-size: 13px; font-weight: 700; color: #1a1535; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+  .epc-badge {
+    background: #2EAB55;
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 5px;
+    padding: 1px 6px;
+  }
+
+  /* ─── Clickable score card ───────────────────────────────────────── */
+  .score-card--clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .score-card--clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(35,29,69,0.14);
+  }
+  .score-card--clickable:active { transform: translateY(0); }
+  /* Subtle "tap me" hint on eyebrow */
+  .score-card--clickable .score-eyebrow::after {
+    content: ' ↗';
+    opacity: 0.5;
+    font-size: 8px;
+  }
+
+  /* ─── Intent sheet options ───────────────────────────────────────── */
+  .intent-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+  .intent-opt {
+    display: flex; align-items: center; gap: 14px;
+    background: #F5F5F7;
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    padding: 14px 14px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: all 0.15s ease;
+    width: 100%;
+  }
+  .intent-opt:hover {
+    background: white;
+    border-color: #231d45;
+    box-shadow: 0 4px 14px rgba(35,29,69,0.08);
+    transform: translateY(-1px);
+  }
+  .intent-opt:active { transform: translateY(0); }
+  .intent-opt-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .intent-opt-body { flex: 1; }
+  .intent-opt-title { font-size: 14px; font-weight: 800; color: #231d45; letter-spacing: -0.2px; }
+  .intent-opt-sub   { font-size: 11.5px; color: #6b6783; margin-top: 2px; line-height: 1.4; }
+  .intent-opt-chev  { font-size: 20px; color: #c0bdcc; flex-shrink: 0; font-weight: 300; }
+
+  /* ─── Data Source Sheet Components ──────────────────────────────── */
+  .ds-header {
+    display: flex; align-items: center; gap: 14px;
+    border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .ds-header-icon { font-size: 26px; flex-shrink: 0; }
+  .ds-header-title { font-size: 17px; font-weight: 800; color: #231d45; letter-spacing: -0.3px; }
+  .ds-header-meta  { font-size: 11px; color: #9c98ad; margin-top: 2px; }
+
+  .ds-section-title {
+    font-size: 10px; font-weight: 800; color: #9c98ad;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Table */
+  .ds-table { background: #F5F5F7; border-radius: 12px; overflow: hidden; }
+  .ds-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    padding: 10px 14px;
+    border-bottom: 1px solid #ECECEF;
+    font-size: 13px; font-weight: 600; color: #231d45;
+    align-items: center;
+  }
+  .ds-row:last-child { border-bottom: none; }
+  .ds-row--header { font-size: 10px; font-weight: 800; color: #9c98ad; letter-spacing: 0.5px; text-transform: uppercase; background: white; }
+  .ds-val   { font-weight: 800; color: #231d45; }
+  .ds-muted { color: #9c98ad; font-size: 12px; }
+
+  /* Highlight box */
+  .ds-highlight-box {
+    background: linear-gradient(135deg, #F2FAF8 0%, #E5F4F2 100%);
+    border: 1.5px solid #E5F4F2;
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .ds-highlight-num { font-size: 26px; font-weight: 800; color: #231d45; letter-spacing: -0.5px; }
+  .ds-highlight-sub { font-size: 12px; color: #6b6783; margin-top: 4px; }
+
+  /* Key-value list */
+  .ds-kv-list { display: flex; flex-direction: column; }
+  .ds-kv {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid #F5F5F7;
+    font-size: 13px;
+  }
+  .ds-kv:last-child { border-bottom: none; }
+  .ds-k { color: #6b6783; font-weight: 500; }
+  .ds-v { font-weight: 700; color: #231d45; }
+  .ds-v--red    { color: #C73E36; }
+  .ds-v--amber  { color: #b07a1c; }
+  .ds-v--green  { color: #2EAB55; }
+
+  .ds-attribution {
+    font-size: 11px; color: #c0bdcc; text-align: center;
+    margin: 14px 0 6px; font-style: italic;
+  }
+
+  /* Risk card */
+  .ds-risk-card {
+    border-radius: 12px; padding: 14px 16px;
+    border-left: 4px solid;
+  }
+  .ds-risk-card--high { background: #FEF0EF; border-color: #C73E36; }
+  .ds-risk-label { font-size: 14px; font-weight: 800; color: #C73E36; margin-bottom: 6px; }
+  .ds-risk-desc  { font-size: 12px; color: #6b6783; line-height: 1.55; }
+
+  /* Schools */
+  .ds-school-list { display: flex; flex-direction: column; gap: 2px; }
+  .ds-school-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid #F5F5F7;
+  }
+  .ds-school-row:last-child { border-bottom: none; }
+  .ds-school-name { font-size: 13px; font-weight: 700; color: #231d45; }
+  .ds-school-meta { font-size: 11px; color: #9c98ad; margin-top: 2px; }
+  .ds-ofsted {
+    font-size: 11px; font-weight: 800; border-radius: 20px;
+    padding: 4px 10px; white-space: nowrap; flex-shrink: 0;
+  }
+  .ds-ofsted--outstanding { background: #E5F4F2; color: #007e78; }
+  .ds-ofsted--good        { background: #E8F5E9; color: #2EAB55; }
+  .ds-ofsted--ri          { background: #FBEFD9; color: #b07a1c; }
+  .ds-ofsted--inadequate  { background: #FEF0EF; color: #C73E36; }
+
+  /* Transport */
+  .ds-transport-list { display: flex; flex-direction: column; gap: 2px; }
+  .ds-transport-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #F5F5F7;
+  }
+  .ds-transport-row:last-child { border-bottom: none; }
+  .ds-transport-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .ds-transport-name { font-size: 13px; font-weight: 700; color: #231d45; }
+  .ds-transport-meta { font-size: 11px; color: #9c98ad; margin-top: 2px; }
+  .ds-transport-time {
+    font-size: 13px; font-weight: 800; color: #00a19a;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Street bars */
+  .ds-bar-list { display: flex; flex-direction: column; gap: 8px; }
+  .ds-bar-item { display: flex; align-items: center; gap: 10px; }
+  .ds-bar-item--active .ds-bar-label { font-weight: 800; color: #231d45; }
+  .ds-bar-label { font-size: 12px; font-weight: 600; color: #9c98ad; width: 14px; flex-shrink: 0; }
+  .ds-bar-track { flex: 1; height: 8px; background: #F5F5F7; border-radius: 4px; overflow: hidden; }
+  .ds-bar-fill  { height: 100%; border-radius: 4px; background: #9c98ad; }
+  .ds-bar-count { font-size: 11px; color: #9c98ad; width: 50px; text-align: right; flex-shrink: 0; }
+
+  /* Rank card */
+  .ds-rank-card {
+    background: linear-gradient(135deg, #F2FAF8 0%, #E5F4F2 100%);
+    border: 1.5px solid #E5F4F2; border-radius: 14px;
+    padding: 16px; text-align: center;
+  }
+  .ds-rank-big { font-size: 48px; font-weight: 900; color: #231d45; line-height: 1; letter-spacing: -2px; }
+  .ds-rank-sub { font-size: 13px; color: #6b6783; margin-top: 6px; }
+
+  /* Planning */
+  .ds-planning-list { display: flex; flex-direction: column; gap: 2px; }
+  .ds-planning-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #F5F5F7;
+  }
+  .ds-planning-row:last-child { border-bottom: none; }
+  .ds-planning-status {
+    font-size: 10px; font-weight: 800; border-radius: 20px;
+    padding: 3px 8px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .ds-planning-status--approved { background: #E8F5E9; color: #2EAB55; }
+  .ds-planning-status--refused  { background: #FEF0EF; color: #C73E36; }
+  .ds-planning-status--pending  { background: #FBEFD9; color: #b07a1c; }
+  .ds-planning-desc { font-size: 13px; font-weight: 700; color: #231d45; }
+  .ds-planning-meta { font-size: 11px; color: #9c98ad; margin-top: 2px; }
+
+  /* Council tax band bars */
+  .ds-band-list { display: flex; flex-direction: column; gap: 6px; }
+  .ds-band-row { display: flex; align-items: center; gap: 10px; }
+  .ds-band-row--active .ds-band-letter { font-weight: 800; color: #007e78; }
+  .ds-band-letter { font-size: 12px; font-weight: 600; color: #9c98ad; width: 28px; flex-shrink: 0; }
+  .ds-band-bar-track { flex: 1; height: 8px; background: #F5F5F7; border-radius: 4px; overflow: hidden; }
+  .ds-band-bar { height: 100%; border-radius: 4px; background: #c0bdcc; }
+  .ds-band-amt { font-size: 12px; font-weight: 700; color: #231d45; width: 50px; text-align: right; flex-shrink: 0; }
+
+  /* Broadband */
+  .ds-broadband-list { display: flex; flex-direction: column; gap: 2px; }
+  .ds-bb-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid #F5F5F7;
+  }
+  .ds-bb-row:last-child { border-bottom: none; }
+  .ds-bb-check {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; flex-shrink: 0;
+  }
+  .ds-bb-check--yes { background: #E5F4F2; color: #00a19a; }
+  .ds-bb-check--no  { background: #F5F5F7; color: #c0bdcc; }
+  .ds-bb-name { font-size: 13px; font-weight: 700; color: #231d45; }
+  .ds-bb-meta { font-size: 11px; color: #9c98ad; margin-top: 2px; }
+
+  /* Info note */
+  .ds-info-note {
+    background: #F5F5F7; border-radius: 10px; padding: 11px 13px;
+    font-size: 11px; color: #9c98ad; line-height: 1.55; margin: 14px 0;
+  }
+
+  /* ─── Bottom Sheets ─────────────────────────────────────────────── */
+  .sheet-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(17,13,40,0.55);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+    border-radius: 44px;
+    overflow: hidden;
+  }
+  .sheet-overlay.open {
+    display: flex;
+    animation: sheetFadeIn 0.2s ease;
+  }
+  @keyframes rankFlash {
+    from { opacity: 0; transform: scale(0.7); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes sheetFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .sheet {
+    width: 100%;
+    background: white;
+    border-radius: 22px 22px 0 0;
+    padding: 8px 20px 32px;
+    animation: sheetSlideUp 0.32s cubic-bezier(0.22,1,0.36,1);
+    max-height: 85%;
+    overflow-y: auto;
+  }
+  .sheet--tall { max-height: 92%; }
+  @keyframes sheetSlideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .sheet-handle {
+    width: 32px; height: 4px;
+    background: #ECECEF;
+    border-radius: 100px;
+    margin: 0 auto 18px;
+  }
+  .sheet-icon {
+    font-size: 32px;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .sheet-title {
+    font-size: 20px; font-weight: 800; color: #231d45;
+    text-align: center; letter-spacing: -0.4px; margin-bottom: 6px;
+  }
+  .sheet-sub {
+    font-size: 13px; font-weight: 500; color: #6b6783;
+    text-align: center; line-height: 1.55; margin-bottom: 20px;
+  }
+  .sheet-field-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .sheet-field { display: flex; flex-direction: column; gap: 5px; }
+  .sheet-label { font-size: 11px; font-weight: 800; color: #9c98ad; letter-spacing: 0.5px; text-transform: uppercase; }
+  .sheet-input {
+    font-family: inherit;
+    font-size: 14px; font-weight: 600; color: #231d45;
+    background: #F5F5F7;
+    border: 1.5px solid transparent;
+    border-radius: 10px;
+    padding: 11px 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .sheet-input:focus { border-color: #00a19a; background: white; }
+  .sheet-textarea { resize: none; min-height: 80px; line-height: 1.5; }
+  .sheet-choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sheet-choice {
+    font-family: inherit;
+    font-size: 12px; font-weight: 700; color: #6b6783;
+    background: #F5F5F7; border: 1.5px solid transparent;
+    border-radius: 20px; padding: 7px 14px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .sheet-choice.active {
+    background: #E5F4F2; color: #007e78; border-color: #00a19a;
+  }
+  .sheet-privacy-note {
+    display: flex; align-items: flex-start; gap: 7px;
+    background: #F5F5F7; border-radius: 10px; padding: 10px 12px;
+    font-size: 11px; color: #9c98ad; line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .sheet-privacy-note svg { flex-shrink: 0; margin-top: 1px; color: #c0bdcc; }
+  .sheet-cta {
+    width: 100%; padding: 16px;
+    background: #00a19a; color: white;
+    border: none; border-radius: 14px;
+    font-family: inherit; font-size: 15px; font-weight: 800;
+    cursor: pointer; margin-bottom: 10px;
+    box-shadow: 0 4px 16px rgba(0,161,154,0.30);
+    position: relative; overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: -0.1px;
+  }
+  .sheet-cta:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,161,154,0.40); }
+  .sheet-cta--shimmer::after {
+    content: '';
+    position: absolute; top: 0; bottom: 0; left: 0; width: 60%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  .sheet-cancel {
+    width: 100%; padding: 10px;
+    background: none; color: #9c98ad;
+    border: none; font-family: inherit;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  /* Passport sheet specifics */
+  .passport-sheet-header {
+    background: linear-gradient(135deg, #F2FAF8 0%, #E5F4F2 100%);
+    border: 1.5px solid #E5F4F2;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .passport-sheet-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: white; border-radius: 20px; padding: 4px 12px;
+    font-size: 11px; font-weight: 800; color: #007e78;
+    margin-bottom: 10px;
+  }
+  .passport-sheet-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #00a19a; flex-shrink: 0;
+  }
+  .passport-sheet-address { font-size: 17px; font-weight: 800; color: #231d45; letter-spacing: -0.3px; }
+  .passport-sheet-meta { font-size: 12px; color: #9c98ad; margin-top: 3px; }
+  .passport-sheet-section-title {
+    font-size: 11px; font-weight: 800; color: #9c98ad;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .passport-sheet-items { display: flex; flex-direction: column; gap: 2px; }
+  .psi-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #F5F5F7;
+  }
+  .psi-row:last-child { border-bottom: none; }
+  .psi-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .psi-text { flex: 1; }
+  .psi-name { font-size: 13px; font-weight: 700; color: #231d45; }
+  .psi-meta { font-size: 11px; color: #9c98ad; margin-top: 1px; }
+  .psi-check { font-size: 14px; color: #00a19a; font-weight: 800; flex-shrink: 0; }
+  .passport-price-breakdown {
+    background: #F5F5F7; border-radius: 12px; padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .ppb-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; font-weight: 600; color: #6b6783;
+    padding: 3px 0;
+  }
+  .ppb-divider { height: 1px; background: #ECECEF; margin: 8px 0; }
+  .ppb-total { font-size: 15px; font-weight: 800; color: #231d45; }
+  .ppb-note { font-size: 11px; color: #9c98ad; text-align: center; margin-top: 10px; line-height: 1.4; }
+  /* Toast */
+  .sheet-toast {
+    position: absolute;
+    bottom: 90px;
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #231d45;
+    color: white;
+    font-size: 13px; font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 100px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+    z-index: 300;
+  }
+  .sheet-toast.show {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+  }
+
+  /* ─── Section 10: Bottom Nav ────────────────────────────────── */
+  .bottom-nav {
+    position: sticky;
+    bottom: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid #efefef;
+    display: flex;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    margin-top: 14px;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 4px 12px;
+    cursor: pointer;
+    gap: 3px;
+    transition: opacity 0.15s;
+  }
+  .nav-tab:hover { opacity: 0.7; }
+  .nav-label       { font-size: 9px; font-weight: 600; color: #aaa; }
+  .nav-label--active { color: #00a19a; }
+  .nav-icon        { color: #ccc; }
+  .nav-icon--active { color: #00a19a; }
+
+  /* ─── State Switcher ────────────────────────────────────────── */
+  .state-switcher {
+    display: inline-flex;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 100px;
+    padding: 5px;
+    gap: 4px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    margin-bottom: 20px;
+  }
+  .state-btn {
+    font-family: inherit;
+    font-size: 12px; font-weight: 800;
+    color: rgba(255,255,255,0.70);
+    background: transparent;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 100px;
+    cursor: pointer;
+    letter-spacing: -0.05px;
+    transition: all 0.2s;
+  }
+  .state-btn:hover { color: white; background: rgba(255,255,255,0.06); }
+  .state-btn.active {
+    background: #00a19a;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,161,154,0.45);
+  }
+
+  /* ─── State Show/Hide ───────────────────────────────────────── */
+  [data-show-state] { display: none; }
+  body[data-pp-state="unclaimed"] [data-show-state="unclaimed"] { display: block; }
+  body[data-pp-state="progress"]  [data-show-state="progress"]  { display: block; }
+  body[data-pp-state="published"] [data-show-state="published"] { display: block; }
+  /* flex overrides */
+  body[data-pp-state="unclaimed"] .flex-show[data-show-state="unclaimed"] { display: flex; }
+  body[data-pp-state="progress"]  .flex-show[data-show-state="progress"]  { display: flex; }
+  body[data-pp-state="published"] .flex-show[data-show-state="published"] { display: flex; }
+
+  body[data-pp-state="unclaimed"] .grid-show[data-show-state="unclaimed"] { display: grid; }
+  body[data-pp-state="progress"]  .grid-show[data-show-state="progress"]  { display: grid; }
+  body[data-pp-state="published"] .grid-show[data-show-state="published"] { display: grid; }
+
+  /* ─── Stepper ───────────────────────────────────────────────── */
+  .pp-stepper {
+    display: flex;
+    align-items: center;
+    margin: 20px 0 6px;
+    gap: 0;
+  }
+  .pp-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  .pp-step-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #ECECEF;
+    color: #9c98ad;
+    font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pp-step--active .pp-step-dot {
+    background: #231d45;
+    color: white;
+  }
+  .pp-step-label {
+    font-size: 10px; font-weight: 700;
+    color: #9c98ad;
+    letter-spacing: 0.2px;
+  }
+  .pp-step--active .pp-step-label { color: #231d45; }
+  .pp-step-line {
+    flex: 1;
+    height: 1.5px;
+    background: #ECECEF;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Stage Caption -->
+<div class="stage-caption">
+  <div class="stage-eyebrow">UMU HomeScore</div>
+  <div class="stage-title">Property lookup · Reimagined</div>
+  <div class="stage-sub">Animated · Gamified · Light palette · Navy brand borders</div>
+</div>
+
+<!-- State Switcher -->
+<div class="state-switcher">
+  <button class="state-btn" data-state="unclaimed" onclick="openState('unclaimed')">Unclaimed</button>
+  <button class="state-btn" data-state="progress" onclick="openState('progress')">In Progress</button>
+  <button class="state-btn active" data-state="published" onclick="openState('published')">Published</button>
+</div>
+
+<!-- Phone -->
+<div class="phone">
+
+<div class="phone-scroll">
+  <!-- Sticky Notch -->
+  <div class="notch-wrap"><div class="notch"></div></div>
+
+  <!-- ─── SECTION 1: Hero ──────────────────────────────────────── -->
+  <div class="hero">
+    <!-- Status bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="status-icons">
+        <!-- Signal bars -->
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="white">
+          <rect x="0"  y="8"  width="3" height="4" rx="1"/>
+          <rect x="4.5" y="5" width="3" height="7" rx="1"/>
+          <rect x="9"  y="2.5" width="3" height="9.5" rx="1"/>
+          <rect x="13.5" y="0" width="3" height="12" rx="1"/>
+        </svg>
+        <!-- WiFi -->
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="white" stroke-width="1.5">
+          <path d="M8 9.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" fill="white" stroke="none"/>
+          <path d="M4.5 7C5.7 5.8 6.8 5.2 8 5.2s2.3.6 3.5 1.8" stroke-linecap="round"/>
+          <path d="M1.5 4C3.5 2 5.7 1 8 1s4.5 1 6.5 3" stroke-linecap="round"/>
+        </svg>
+        <!-- Battery -->
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none">
+          <rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="white" stroke-opacity="0.4"/>
+          <rect x="2"   y="2"   width="16" height="8"  rx="1.5" fill="white"/>
+          <path d="M23 4v4a2 2 0 0 0 0-4z" fill="white" opacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <button class="hero-btn hero-btn-back" aria-label="Back">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 1L2 8l6 7"/>
+      </svg>
+    </button>
+    <button class="hero-btn hero-btn-fav" aria-label="Favourite">
+      <svg width="16" height="15" viewBox="0 0 16 15" fill="none" stroke="white" stroke-width="1.8">
+        <path d="M8 13.5S1 9.5 1 4.5A3.5 3.5 0 0 1 8 2.9 3.5 3.5 0 0 1 15 4.5C15 9.5 8 13.5 8 13.5z" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="hero-btn hero-btn-share" aria-label="Share">
+      <svg width="14" height="16" viewBox="0 0 14 16" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11.5" cy="2.5" r="1.8"/>
+        <circle cx="2.5" cy="8" r="1.8"/>
+        <circle cx="11.5" cy="13.5" r="1.8"/>
+        <line x1="4.2" y1="7" x2="9.8" y2="3.5"/>
+        <line x1="4.2" y1="9" x2="9.8" y2="12.5"/>
+      </svg>
+    </button>
+
+    <!-- House silhouette -->
+    <svg class="hero-house" viewBox="0 0 80 70" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path d="M40 5L5 32h8v33h54V32h8L40 5z"/>
+      <rect x="28" y="44" width="10" height="21" fill="#0a0d12" opacity="0.3"/>
+      <rect x="42" y="44" width="10" height="21" fill="#0a0d12" opacity="0.3"/>
+    </svg>
+
+    <!-- Gradient overlay -->
+    <div class="hero-gradient-overlay"></div>
+
+    <!-- Badges — three state versions -->
+    <div class="hero-badges flex-show" data-show-state="unclaimed">
+      <div class="badge-passport badge-passport--unclaimed">
+        <span class="badge-passport-dot" style="background:#9c98ad;"></span>
+        Unclaimed
+      </div>
+      <div class="badge-flood">💧 Flood · Zone 3</div>
+    </div>
+    <div class="hero-badges flex-show" data-show-state="progress">
+      <div class="badge-passport badge-passport--progress">
+        <span class="badge-passport-dot" style="background:#E6A23C;"></span>
+        Passport in progress
+      </div>
+      <div class="badge-flood">💧 Flood · Zone 3</div>
+    </div>
+    <div class="hero-badges flex-show" data-show-state="published">
+      <div class="badge-passport">
+        <span class="badge-passport-dot"></span>
+        ✓ Passport available
+      </div>
+      <div class="badge-flood">💧 Flood · Zone 3</div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: Property Identity ────────────────────────── -->
+  <div class="identity">
+    <div class="identity-address">11 Woodfield Road</div>
+    <div class="identity-suburb">Coventry, CV5 6AJ</div>
+
+    <div class="price-row">
+      <span class="price-value" id="price">£0</span>
+      <span class="price-source">Land Registry · 2001 · HPI adjusted</span>
+    </div>
+
+    <div class="pill-row">
+      <span class="pill">🛏 2 bed</span>
+      <span class="pill">Semi-Detached</span>
+      <span class="pill">📐 1,528 sqft</span>
+      <span class="pill">📅 1950</span>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: Action Bar ────────────────────────────────── -->
+  <div class="action-bar">
+
+    <!-- Unclaimed CTA — brand navy solid -->
+    <button class="passport-cta--unlock flex-show" data-show-state="unclaimed" style="background: #231d45; box-shadow: 0 6px 22px rgba(35,29,69,0.40); margin-bottom:10px;">
+      <div class="passport-cta--unlock-left">
+        <div class="passport-cta--unlock-title">Claim this property — it's free</div>
+        <div class="passport-cta--unlock-sub">Build a verified Passport · TA6, TA7, TA10 · certificates · history</div>
+      </div>
+      <div class="passport-cta--unlock-price">
+        <span class="passport-cta--unlock-amount" style="font-size:18px; letter-spacing:-0.3px;">Free</span>
+        <span class="passport-cta--unlock-arrow">→</span>
+      </div>
+    </button>
+
+    <!-- In Progress CTA — teal balayage -->
+    <button class="passport-cta--unlock flex-show" data-show-state="progress" onclick="openSheet('sheetPassport')" style="background: linear-gradient(135deg, #4DD4CE 0%, #00a19a 45%, #006e68 100%); box-shadow: 0 6px 22px rgba(0,161,154,0.35); margin-bottom:10px;">
+      <div class="passport-cta--unlock-left">
+        <div class="passport-cta--unlock-title">Preview what's being built</div>
+        <div class="passport-cta--unlock-sub">TA6, TA7, TA10 · certificates · history — live soon</div>
+      </div>
+      <div class="passport-cta--unlock-price">
+        <span class="passport-cta--unlock-amount" style="font-size:14px; letter-spacing:-0.2px; line-height:1.3;">60%<br><span style="font-size:10px; font-weight:600; opacity:0.8;">done</span></span>
+        <span class="passport-cta--unlock-arrow">→</span>
+      </div>
+    </button>
+
+    <!-- Published CTA — balayage, matches passport card button -->
+    <button class="passport-cta--unlock flex-show" data-show-state="published" onclick="openSheet('sheetPassport')">
+      <div class="passport-cta--unlock-left">
+        <div class="passport-cta--unlock-title">Get the full Passport</div>
+        <div class="passport-cta--unlock-sub">Conveyancing questions answered · TA6, TA7, TA10 · certificates · history · all in one verified record</div>
+      </div>
+      <div class="passport-cta--unlock-price">
+        <span class="passport-cta--unlock-amount">£99</span>
+        <span class="passport-cta--unlock-arrow">→</span>
+      </div>
+    </button>
+
+    <!-- Secondary buttons: Unclaimed state -->
+    <div class="secondary-row grid-show" data-show-state="unclaimed">
+      <button class="secondary-btn" onclick="openSheet('sheetRegister')">
+        <span class="secondary-btn-label">🔔 Watch this</span>
+        <span class="secondary-btn-sub">Save &amp; get alerts</span>
+      </button>
+      <button class="secondary-btn" onclick="openSheet('sheetOwner')">
+        <span class="secondary-btn-label">💬 Ask a question</span>
+        <span class="secondary-btn-sub">Neighbour or curious buyer</span>
+      </button>
+    </div>
+    <!-- Secondary buttons: In Progress state -->
+    <div class="secondary-row grid-show" data-show-state="progress">
+      <button class="secondary-btn" onclick="openSheet('sheetRegister')">
+        <span class="secondary-btn-label">🔔 Get notified</span>
+        <span class="secondary-btn-sub">Alert when Passport is live</span>
+      </button>
+      <button class="secondary-btn" onclick="openSheet('sheetOwner')">
+        <span class="secondary-btn-label">💬 Ask a question</span>
+        <span class="secondary-btn-sub">Neighbour or curious buyer</span>
+      </button>
+    </div>
+    <!-- Secondary buttons: Published state -->
+    <div class="secondary-row grid-show" data-show-state="published">
+      <button class="secondary-btn" onclick="openSheet('sheetRegister')">
+        <span class="secondary-btn-label">🔔 Watch this</span>
+        <span class="secondary-btn-sub">Save &amp; get alerts</span>
+      </button>
+      <button class="secondary-btn" onclick="openSheet('sheetOwner')">
+        <span class="secondary-btn-label">💬 Make contact</span>
+        <span class="secondary-btn-sub">Owner or neighbour</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: Live Signal Bar ──────────────────────────── -->
+  <!-- Unclaimed -->
+  <div class="signal-bar flex-show" data-show-state="unclaimed">
+    <div class="signal-left">
+      <div class="pulse-dot" style="background:#9c98ad; animation: none;"></div>
+      <span class="signal-viewing" style="color:#9c98ad;">No Passport on this address yet</span>
+    </div>
+    <span class="signal-count">18 searches this month</span>
+  </div>
+  <!-- In progress -->
+  <div class="signal-bar flex-show" data-show-state="progress">
+    <div class="signal-left">
+      <div class="pulse-dot" style="background:#E6A23C;"></div>
+      <span class="signal-viewing" style="color:#b07a1c;">Owner building a Passport</span>
+    </div>
+    <span class="signal-count">23 searches this month</span>
+  </div>
+  <!-- Published -->
+  <div class="signal-bar flex-show" data-show-state="published">
+    <div class="signal-left">
+      <div class="pulse-dot"></div>
+      <span class="signal-viewing"><span id="liveViewers">3</span> people viewing now</span>
+    </div>
+    <span class="signal-count">Searched 47 times this month</span>
+  </div>
+
+  <!-- ─── SECTION 5: HomeScore ─────────────────────────────────── -->
+  <div class="score-card score-card--clickable" onclick="scoreCardTap()" title="Tap to explore your HomeScore">
+    <div class="score-top">
+      <div class="score-blob-tr"></div>
+      <div class="score-blob-bl"></div>
+
+      <!-- Gauge -->
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 100 100">
+          <circle class="gauge-bg"   cx="50" cy="50" r="40"/>
+          <circle class="gauge-fill" cx="50" cy="50" r="40" id="gaugeFill"/>
+        </svg>
+        <div class="gauge-center" id="gaugeCenterWrap">
+          <span class="gauge-num" id="scoreNum">0</span>
+          <span class="gauge-denom" id="gaugeDenom">/100</span>
+          <span id="gaugeRank" style="display:none; font-size:9px; font-weight:800; color:#00a19a; letter-spacing:-0.2px; line-height:1.2; text-align:center; max-width:60px;">Top 18%<br>on street</span>
+        </div>
+      </div>
+
+      <!-- Score info -->
+      <div class="score-info">
+        <div class="score-eyebrow">HomeScore™</div>
+        <div class="score-verdict">Room to improve</div>
+        <div class="score-desc">Score from public EPC data. Owner can run a full HomeScore for a verified picture.</div>
+        <div class="score-epc-pill">
+          <span class="epc-dot"></span>
+          EPC C (72) · Built 1950
+        </div>
+      </div>
+    </div>
+
+    <!-- EPC Breakdown -->
+    <div class="score-bottom">
+      <div class="epc-header">From the public EPC certificate</div>
+      <div class="epc-rows">
+        <div class="epc-row">
+          <span class="epc-label">Walls</span>
+          <div class="epc-track"><div class="bar-fill" data-width="68%"></div></div>
+          <span class="epc-rating">Good</span>
+        </div>
+        <div class="epc-row">
+          <span class="epc-label">Roof</span>
+          <div class="epc-track"><div class="bar-fill" data-width="45%"></div></div>
+          <span class="epc-rating">Average</span>
+        </div>
+        <div class="epc-row">
+          <span class="epc-label">Heating</span>
+          <div class="epc-track"><div class="bar-fill" data-width="30%"></div></div>
+          <span class="epc-rating">Fair</span>
+        </div>
+        <div class="epc-row">
+          <span class="epc-label">Windows</span>
+          <div class="epc-track"><div class="bar-fill" data-width="65%"></div></div>
+          <span class="epc-rating">Good</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 6: Explore Grid ──────────────────────────────── -->
+  <div class="explore-header">
+    <span class="explore-title">Explore this property</span>
+    <span class="explore-sources">10 data sources</span>
+  </div>
+
+  <div class="explore-grid">
+    <div class="tile" onclick="openSheet('sheetHistory')">
+      <div class="tile-icon" style="background:#FFF3E0;">🏠</div>
+      <div class="tile-title">Property history</div>
+      <div class="tile-value">2 sales</div>
+      <div class="tile-sub">Last sold Apr 2001</div>
+      <div class="tile-trend"><span class="tile-trend-arrow">↑</span> 12% vs area avg</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetStreet')">
+      <div class="tile-icon" style="background:#E8F5E9;">🏘️</div>
+      <div class="tile-title">Street data</div>
+      <div class="tile-value">12 homes</div>
+      <div class="tile-sub">4th best on street</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetSchools')">
+      <div class="tile-icon" style="background:#E3F2FD;">🎓</div>
+      <div class="tile-title">Schools</div>
+      <div class="tile-value">3 nearby</div>
+      <div class="tile-sub">0.91 km closest</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetTransport')">
+      <div class="tile-icon" style="background:#F3E5F5;">🚂</div>
+      <div class="tile-title">Transport</div>
+      <div class="tile-value">2 stations</div>
+      <div class="tile-sub">Canley 0.4 km</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetMap')">
+      <div class="tile-icon" style="background:#E8F5E9;">📍</div>
+      <div class="tile-title">Location &amp; map</div>
+      <div class="tile-value">CV5 6AJ</div>
+      <div class="tile-sub">Canley · Coventry</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetFlood')">
+      <div class="tile-icon" style="background:#FFF8E1;">💧</div>
+      <div class="tile-title">Flood &amp; risk <span class="tile-new-pip" style="background:#C73E36;">!</span></div>
+      <div class="tile-value" style="color:#C73E36;">Zone 3</div>
+      <div class="tile-sub">High · River Sherbourne</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetPlanning')">
+      <div class="tile-icon" style="background:#FAFAFA;">📋</div>
+      <div class="tile-title">Planning <span class="tile-new-pip">New</span></div>
+      <div class="tile-value">4 decisions</div>
+      <div class="tile-sub">Last 10 years</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetCouncil')">
+      <div class="tile-icon" style="background:#E8F5E9;">🏛️</div>
+      <div class="tile-title">Council tax</div>
+      <div class="tile-value">Band D</div>
+      <div class="tile-sub">£2,100 / year</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetBroadband')">
+      <div class="tile-icon" style="background:#E3F2FD;">📶</div>
+      <div class="tile-title">Broadband</div>
+      <div class="tile-value">Up to 1Gbps</div>
+      <div class="tile-sub">Full fibre available</div>
+      <span class="tile-arrow">→</span>
+    </div>
+    <div class="tile" onclick="openSheet('sheetStampDuty')">
+      <div class="tile-icon" style="background:#FCE4EC;">🏛️</div>
+      <div class="tile-title">Stamp duty</div>
+      <div class="tile-value" id="sdTileVal">£10,300</div>
+      <div class="tile-sub">On est. value · Standard</div>
+      <span class="tile-arrow">→</span>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 7: Passport ──────────────────────────────────── -->
+
+  <!-- UNCLAIMED passport card -->
+  <div class="passport-card" data-show-state="unclaimed">
+    <div class="score-blob-tr"></div>
+    <div class="score-blob-bl"></div>
+    <div class="passport-eyebrow-row">
+      <span class="passport-eyebrow"><span class="passport-eyebrow-dot" style="background:#9c98ad;"></span>Property Passport</span>
+      <span class="passport-price-pill" style="background:#F5F5F7; color:#9c98ad; border-color:#ECECEF;">Unclaimed</span>
+    </div>
+    <div class="passport-title">No Passport yet — be the first</div>
+    <div style="background:#F5F3FF; border-left:3px solid #231d45; border-radius:0 8px 8px 0; padding:9px 12px; margin-top:10px; display:flex; align-items:flex-start; gap:8px;">
+      <div style="flex:1;">
+        <div style="font-size:9px; font-weight:800; color:#231d45; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:3px;">Your home's permanent record</div>
+        <div style="font-size:11px; color:#4a4560; line-height:1.5;">Why would anyone buy a home without seeing its full history? A Passport stays with this property for life — documents, certificates, everything verified. The new standard buyers will come to expect.</div>
+      </div>
+      <button onclick="event.stopPropagation(); openSheet('sheetExplainUnclaimed')" style="width:24px; height:24px; border-radius:50%; background:#231d45; border:none; color:white; font-size:12px; font-weight:900; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px;">?</button>
+    </div>
+
+    <!-- 4-step horizontal stepper -->
+    <div class="pp-stepper">
+      <div class="pp-step pp-step--active">
+        <div class="pp-step-tooltip">Confirm you own this address — takes 2 minutes, completely free</div>
+        <div class="pp-step-dot">1</div>
+        <div class="pp-step-label">Claim</div>
+      </div>
+      <div class="pp-step-line"></div>
+      <div class="pp-step">
+        <div class="pp-step-tooltip">Upload documents &amp; certificates — we verify each one against official sources</div>
+        <div class="pp-step-dot">2</div>
+        <div class="pp-step-label">Verify</div>
+      </div>
+      <div class="pp-step-line"></div>
+      <div class="pp-step">
+        <div class="pp-step-tooltip">Your property gets a HomeScore based on verified data — transparency for buyers</div>
+        <div class="pp-step-dot">3</div>
+        <div class="pp-step-label">Score</div>
+      </div>
+      <div class="pp-step-line"></div>
+      <div class="pp-step">
+        <div class="pp-step-tooltip">Go live — buyers, agents &amp; neighbours can access your verified Passport</div>
+        <div class="pp-step-dot">4</div>
+        <div class="pp-step-label">Publish</div>
+      </div>
+    </div>
+
+    <button class="passport-cta" style="background: #231d45; box-shadow: 0 4px 16px rgba(35,29,69,0.35); color: white;">
+      Claim this property — it's free →
+    </button>
+    <div class="passport-cta-sub">Takes 2 minutes · No listing required · Free forever</div>
+  </div>
+
+  <!-- IN PROGRESS passport card -->
+  <div class="passport-card" data-show-state="progress">
+    <div class="score-blob-tr"></div>
+    <div class="score-blob-bl"></div>
+    <div class="passport-eyebrow-row">
+      <span class="passport-eyebrow"><span class="passport-eyebrow-dot" style="background:#00a19a;"></span>Property Passport</span>
+      <span class="passport-price-pill" style="background:#E6F7F6; color:#007e78; border-color:#B2E4E1;">In progress</span>
+    </div>
+    <div class="passport-title" style="color:#00a19a;">Passport being built</div>
+    <div style="background:#E6F7F6; border-left:3px solid #00a19a; border-radius:0 8px 8px 0; padding:9px 12px; margin-top:10px; margin-bottom:14px; display:flex; align-items:flex-start; gap:8px;">
+      <div style="flex:1;">
+        <div style="font-size:9px; font-weight:800; color:#007e78; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:3px;">Stop buying blind</div>
+        <div style="font-size:11px; color:#2a5c58; line-height:1.5;">Why would anyone buy a home without seeing its full history? This Passport is being built right now — so when you make your move, the answers are already there.</div>
+      </div>
+      <button onclick="event.stopPropagation(); openSheet('sheetExplainProgress')" style="width:24px; height:24px; border-radius:50%; background:#00a19a; border:none; color:white; font-size:12px; font-weight:900; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px;">?</button>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="passportProgress" style="background: linear-gradient(90deg, #00a19a, #4DD4CE);"></div>
+    </div>
+    <div class="progress-label">60% complete</div>
+
+    <div class="passport-features">
+      <!-- Ticked: already uploaded -->
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">EPC Certificate</div>
+          <div class="feature-text-sub">Lodged 2014 · Grade C</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Land Registry Title</div>
+          <div class="feature-text-sub">Freehold confirmed</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Title Plan</div>
+          <div class="feature-text-sub">Boundary map · HMLR verified</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">TA6 — Property Information</div>
+          <div class="feature-text-sub">Boundaries, disputes, utilities</div>
+        </div>
+      </div>
+      <!-- Locked: still to come -->
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--locked">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#c0bdcc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1.5" y="6" width="9" height="7" rx="2"/>
+            <path d="M3.5 6V4a2.5 2.5 0 0 1 5 0v2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--locked">TA10 — Fittings &amp; Contents</div>
+          <div class="feature-text-sub">What's included in the sale</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--locked">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#c0bdcc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1.5" y="6" width="9" height="7" rx="2"/>
+            <path d="M3.5 6V4a2.5 2.5 0 0 1 5 0v2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--locked">Gas Safety Record</div>
+          <div class="feature-text-sub">Not yet uploaded</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--locked">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#c0bdcc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1.5" y="6" width="9" height="7" rx="2"/>
+            <path d="M3.5 6V4a2.5 2.5 0 0 1 5 0v2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--locked">Electrical Certificate (EICR)</div>
+          <div class="feature-text-sub">Not yet uploaded</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--locked">
+          <svg width="12" height="14" viewBox="0 0 12 14" fill="none" stroke="#c0bdcc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1.5" y="6" width="9" height="7" rx="2"/>
+            <path d="M3.5 6V4a2.5 2.5 0 0 1 5 0v2"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--locked">TA7 — Leasehold Information</div>
+          <div class="feature-text-sub">Service charges, lease terms</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="passport-cta" onclick="openSheet('sheetRegister')" style="background: #00a19a; box-shadow: 0 4px 14px rgba(0,161,154,0.30); color: white;">
+      🔔 Get notified when published →
+    </button>
+    <div class="passport-cta-sub">We'll alert you the moment this Passport goes live</div>
+  </div>
+
+  <!-- PUBLISHED passport card -->
+  <div class="passport-card passport-card--clickable" data-show-state="published" onclick="openSheet('sheetPassport')" role="button" tabindex="0">
+    <div class="score-blob-tr"></div>
+    <div class="score-blob-bl"></div>
+
+    <div class="passport-eyebrow-row">
+      <span class="passport-eyebrow"><span class="passport-eyebrow-dot"></span>Property Passport</span>
+      <span class="passport-price-pill">£99 →</span>
+    </div>
+
+    <div class="passport-title">This home's Passport</div>
+    <div style="background:#FEF9F0; border-left:3px solid #D4822A; border-radius:0 8px 8px 0; padding:9px 12px; margin-top:10px; margin-bottom:14px; display:flex; align-items:flex-start; gap:8px;">
+      <div style="flex:1;">
+        <div style="font-size:9px; font-weight:800; color:#b07a1c; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:3px;">The HPI check for your home</div>
+        <div style="font-size:11px; color:#6b4c1a; line-height:1.5;">Why would anyone buy a home without seeing its full history? This is the verified record that should have always existed — and now it does.</div>
+      </div>
+      <button onclick="event.stopPropagation(); openSheet('sheetExplainPublished')" style="width:24px; height:24px; border-radius:50%; background:#D4822A; border:none; color:white; font-size:12px; font-weight:900; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; margin-top:1px;">?</button>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="passportProgressPublished"></div>
+    </div>
+    <div class="progress-label">100% complete — Passport live</div>
+
+    <div class="passport-features">
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">TA6 — Property Information</div>
+          <div class="feature-text-sub">Boundaries, disputes, planning, utilities</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">TA7 — Leasehold Information</div>
+          <div class="feature-text-sub">Service charges, lease terms, ground rent</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">TA10 — Fittings &amp; Contents</div>
+          <div class="feature-text-sub">What's included in the sale</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Land Registry Title &amp; Title Plan</div>
+          <div class="feature-text-sub">Freehold confirmed · Boundary map</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">EPC Certificate</div>
+          <div class="feature-text-sub">Lodged 2014 · Grade C</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Gas Safety Record</div>
+          <div class="feature-text-sub">Verified · Current</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Electrical Certificate (EICR)</div>
+          <div class="feature-text-sub">EICR verified · 2022</div>
+        </div>
+      </div>
+      <div class="passport-feature">
+        <div class="feature-icon feature-icon--verified">
+          <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+            <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="#00b6ae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="feature-text-title--verified">Planning History</div>
+          <div class="feature-text-sub">Applications, permissions, works</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="passport-cta-sub" style="margin-top:14px; text-align:left;">Secure payment · Instant access · No subscription</div>
+  </div>
+
+  <!-- ─── SECTION 8: Running Costs ─────────────────────────────── -->
+  <div class="costs-card">
+    <div class="costs-header">
+      <span class="costs-header-title">Estimated running costs</span>
+      <span class="costs-header-sub">EPC estimate</span>
+    </div>
+    <div class="costs-body">
+      <div class="costs-grid">
+        <div class="costs-box">
+          <div class="costs-box-inner">
+            <div class="costs-box-front">
+              <span class="costs-box-value">£1,320</span>
+              <span class="costs-box-label">Heating</span>
+            </div>
+            <div class="costs-box-back">
+              <div class="costs-box-back-label">Per month</div>
+              <div class="costs-box-back-val">~£110</div>
+            </div>
+          </div>
+        </div>
+        <div class="costs-box">
+          <div class="costs-box-inner">
+            <div class="costs-box-front">
+              <span class="costs-box-value">£197</span>
+              <span class="costs-box-label">Hot water</span>
+            </div>
+            <div class="costs-box-back">
+              <div class="costs-box-back-label">Per month</div>
+              <div class="costs-box-back-val">~£16</div>
+            </div>
+          </div>
+        </div>
+        <div class="costs-box">
+          <div class="costs-box-inner">
+            <div class="costs-box-front">
+              <span class="costs-box-value">£75</span>
+              <span class="costs-box-label">Lighting</span>
+            </div>
+            <div class="costs-box-back">
+              <div class="costs-box-back-label">Per month</div>
+              <div class="costs-box-back-val">~£6</div>
+            </div>
+          </div>
+        </div>
+        <div class="costs-box costs-box--highlight">
+          <div class="costs-box-inner">
+            <div class="costs-box-front">
+              <span class="costs-box-value">£1,592</span>
+              <span class="costs-box-label">Total / year</span>
+            </div>
+            <div class="costs-box-back">
+              <div class="costs-box-back-label">Per month</div>
+              <div class="costs-box-back-val">~£133</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="costs-attr">Based on EPC assumptions. Costs vary by usage and tariff.</div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 9: Property Details ──────────────────────────── -->
+  <div class="details-card">
+    <div class="details-header">Property details</div>
+    <div class="details-grid">
+      <div class="detail-tile">
+        <span class="detail-tile-icon">🏠</span>
+        <div class="detail-label">Type</div>
+        <div class="detail-value">Semi-Detached</div>
+      </div>
+      <div class="detail-tile">
+        <span class="detail-tile-icon">🔑</span>
+        <div class="detail-label">Tenure</div>
+        <div class="detail-value">Freehold</div>
+      </div>
+      <div class="detail-tile">
+        <span class="detail-tile-icon">📅</span>
+        <div class="detail-label">Year built</div>
+        <div class="detail-value">1950</div>
+      </div>
+      <div class="detail-tile">
+        <span class="detail-tile-icon">📐</span>
+        <div class="detail-label">Floor area</div>
+        <div class="detail-value">1,528 sqft</div>
+      </div>
+      <div class="detail-tile">
+        <span class="detail-tile-icon">⚡</span>
+        <div class="detail-label">EPC</div>
+        <div class="detail-value">
+          <span class="epc-badge">C</span>
+          72/100
+        </div>
+      </div>
+      <div class="detail-tile">
+        <span class="detail-tile-icon">🔢</span>
+        <div class="detail-label">UPRN</div>
+        <div class="detail-value" style="font-size:11px;">10023456789</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 10: Bottom Nav ───────────────────────────────── -->
+  <div class="bottom-nav">
+    <div class="nav-tab">
+      <svg class="nav-icon nav-icon--active" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/>
+        <line x1="16.5" y1="16.5" x2="22" y2="22"/>
+      </svg>
+      <span class="nav-label nav-label--active">Explore</span>
+    </div>
+    <div class="nav-tab">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="8" y1="13" x2="16" y2="13"/>
+        <line x1="8" y1="17" x2="16" y2="17"/>
+      </svg>
+      <span class="nav-label">Passport</span>
+    </div>
+    <div class="nav-tab">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      <span class="nav-label">Properties</span>
+    </div>
+    <div class="nav-tab">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span class="nav-label">Viewings</span>
+    </div>
+    <div class="nav-tab">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span class="nav-label">Highlights</span>
+    </div>
+  </div>
+
+</div><!-- /phone-scroll -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       BOTTOM SHEETS (overlays inside the phone, outside scroll)
+       ═══════════════════════════════════════════════════════ -->
+
+  <!-- ═══ DATA SOURCE SHEETS ═══ -->
+
+  <!-- Sheet: Property History -->
+  <div id="sheetHistory" class="sheet-overlay" onclick="closeSheet('sheetHistory')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#FFF3E0;">
+        <span class="ds-header-icon">🏠</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Price History</div>
+          <div class="ds-header-meta">HM Land Registry · Updated monthly</div>
+        </div>
+      </div>
+
+      <!-- Compound growth banner -->
+      <div style="background:#E6F7F6; border:1.5px solid #B2E4E1; border-radius:12px; padding:12px 16px; margin:14px 0 10px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:10px; font-weight:800; color:#6b6783; letter-spacing:1px; text-transform:uppercase;">Compound growth · since 2014</div>
+        <div style="font-size:16px; font-weight:900; color:#00a19a;">+4.1% / yr</div>
+      </div>
+
+      <!-- Current estimated value -->
+      <div style="border:1.5px solid #ECECEF; border-radius:14px; padding:16px; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:12px; height:12px; border-radius:50%; background:#00a19a; border:2px solid white; box-shadow:0 0 0 2px #00a19a; flex-shrink:0; margin-top:4px;"></div>
+            <div>
+              <div style="font-size:22px; font-weight:900; color:#231d45; letter-spacing:-0.5px;">£456,000</div>
+              <div style="font-size:11px; color:#9c98ad; margin-top:2px;">HPI adjusted estimate</div>
+            </div>
+          </div>
+          <div style="background:#E6F7F6; border:1.5px solid #B2E4E1; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:800; color:#007e78;">CURRENT</div>
+        </div>
+        <div style="background:#E8F5EE; border-radius:8px; padding:6px 10px; display:inline-flex; align-items:center; gap:6px;">
+          <span style="color:#2EAB55; font-size:12px;">↑</span>
+          <span style="font-size:12px; font-weight:700; color:#1a7a3a;">+£171,000 (+60%)</span>
+          <span style="font-size:10px; color:#6b9c78;">since last sold</span>
+        </div>
+      </div>
+
+      <!-- Last sold -->
+      <div style="border:1.5px solid #ECECEF; border-radius:14px; padding:16px; margin-bottom:14px; opacity:0.75;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:12px; height:12px; border-radius:50%; background:white; border:2px solid #c0bdcc; flex-shrink:0; margin-top:4px;"></div>
+            <div>
+              <div style="font-size:20px; font-weight:900; color:#231d45; letter-spacing:-0.5px;">£285,000</div>
+              <div style="font-size:11px; color:#9c98ad; margin-top:2px;">Oct 2014</div>
+            </div>
+          </div>
+          <div style="background:#F5F5F7; border:1.5px solid #ECECEF; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:800; color:#9c98ad;">SOLD</div>
+        </div>
+      </div>
+
+      <!-- Earlier sale -->
+      <div class="ds-section-title">Earlier sales</div>
+      <div class="ds-table">
+        <div class="ds-row ds-row--header">
+          <span>Date</span><span>Price paid</span><span>HPI adjusted</span>
+        </div>
+        <div class="ds-row">
+          <span>Apr 2001</span><span class="ds-val">£68,500</span><span class="ds-muted">≈ £145,000</span>
+        </div>
+        <div class="ds-row">
+          <span>Nov 1995</span><span class="ds-val">£42,000</span><span class="ds-muted">≈ £112,000</span>
+        </div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Title details</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">Tenure</span><span class="ds-v">Freehold</span></div>
+        <div class="ds-kv"><span class="ds-k">Title number</span><span class="ds-v">WM 184932</span></div>
+        <div class="ds-kv"><span class="ds-k">UPRN</span><span class="ds-v">10023456789</span></div>
+      </div>
+
+      <div class="ds-attribution">Data from HM Land Registry · Updated monthly</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetHistory')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Street Data -->
+  <div id="sheetStreet" class="sheet-overlay" onclick="closeSheet('sheetStreet')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#E8F5E9;">
+        <span class="ds-header-icon">🏘️</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Street data</div>
+          <div class="ds-header-meta">Woodfield Road · CV5 6AJ · 12 properties</div>
+        </div>
+      </div>
+
+      <div class="ds-section-title">This property vs the street</div>
+      <div class="ds-rank-card">
+        <div class="ds-rank-big">4<span style="font-size:18px;">th</span></div>
+        <div class="ds-rank-sub">out of 12 homes for energy efficiency</div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Street EPC distribution</div>
+      <div class="ds-bar-list">
+        <div class="ds-bar-item">
+          <span class="ds-bar-label">B</span>
+          <div class="ds-bar-track"><div class="ds-bar-fill" style="width:8%; background:#2EAB55;"></div></div>
+          <span class="ds-bar-count">1</span>
+        </div>
+        <div class="ds-bar-item">
+          <span class="ds-bar-label">C</span>
+          <div class="ds-bar-track"><div class="ds-bar-fill" style="width:42%; background:#7DC459;"></div></div>
+          <span class="ds-bar-count">5</span>
+        </div>
+        <div class="ds-bar-item ds-bar-item--active">
+          <span class="ds-bar-label">D</span>
+          <div class="ds-bar-track"><div class="ds-bar-fill" style="width:33%; background:#E6A23C;"></div></div>
+          <span class="ds-bar-count">4 ← you</span>
+        </div>
+        <div class="ds-bar-item">
+          <span class="ds-bar-label">E</span>
+          <div class="ds-bar-track"><div class="ds-bar-fill" style="width:17%; background:#C73E36;"></div></div>
+          <span class="ds-bar-count">2</span>
+        </div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Street averages</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">Avg. EPC score</span><span class="ds-v">68 / 100</span></div>
+        <div class="ds-kv"><span class="ds-k">Avg. sale price</span><span class="ds-v">£312,000</span></div>
+        <div class="ds-kv"><span class="ds-k">Avg. running cost</span><span class="ds-v">£1,420 / yr</span></div>
+        <div class="ds-kv"><span class="ds-k">Properties with Passport</span><span class="ds-v">2 of 12</span></div>
+      </div>
+
+      <div class="ds-attribution">Source: Land Registry + EPC register · Aggregated</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetStreet')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Schools -->
+  <div id="sheetSchools" class="sheet-overlay" onclick="closeSheet('sheetSchools')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#E3F2FD;">
+        <span class="ds-header-icon">🎓</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Schools</div>
+          <div class="ds-header-meta">Source: Ofsted · Get Information About Schools</div>
+        </div>
+      </div>
+
+      <div class="ds-section-title">Nearby schools</div>
+      <div class="ds-school-list">
+        <div class="ds-school-row">
+          <div class="ds-school-info">
+            <div class="ds-school-name">Cannon Park Primary</div>
+            <div class="ds-school-meta">Primary · 0.91 km</div>
+          </div>
+          <div class="ds-ofsted ds-ofsted--good">Good</div>
+        </div>
+        <div class="ds-school-row">
+          <div class="ds-school-info">
+            <div class="ds-school-name">Finham Park Academy</div>
+            <div class="ds-school-meta">Secondary · 1.3 km</div>
+          </div>
+          <div class="ds-ofsted ds-ofsted--outstanding">Outstanding</div>
+        </div>
+        <div class="ds-school-row">
+          <div class="ds-school-info">
+            <div class="ds-school-name">St. Martin's C of E</div>
+            <div class="ds-school-meta">Primary · 1.6 km</div>
+          </div>
+          <div class="ds-ofsted ds-ofsted--good">Good</div>
+        </div>
+      </div>
+
+      <div class="ds-info-note">
+        Ofsted ratings are the most recent available. Catchment boundaries are indicative — check with Coventry City Council for admissions.
+      </div>
+
+      <div class="ds-attribution">Source: Ofsted · GIAS database · Updated annually</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetSchools')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Transport -->
+  <div id="sheetTransport" class="sheet-overlay" onclick="closeSheet('sheetTransport')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#F3E5F5;">
+        <span class="ds-header-icon">🚂</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Transport</div>
+          <div class="ds-header-meta">Source: National Rail · TfL · Bus Open Data</div>
+        </div>
+      </div>
+
+      <!-- Proximity pills -->
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin:14px 0;">
+        <div style="background:#F5F5F7; border-radius:20px; padding:7px 13px; font-size:11px; font-weight:700; color:#1a1535; display:flex; align-items:center; gap:5px;"><span>🚂</span> 0.4 km Station</div>
+        <div style="background:#F5F5F7; border-radius:20px; padding:7px 13px; font-size:11px; font-weight:700; color:#1a1535; display:flex; align-items:center; gap:5px;"><span>🚌</span> 0.12 km Bus</div>
+        <div style="background:#F5F5F7; border-radius:20px; padding:7px 13px; font-size:11px; font-weight:700; color:#1a1535; display:flex; align-items:center; gap:5px;"><span>🚲</span> Good cycling</div>
+      </div>
+
+      <div class="ds-section-title">Nearest stations</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">🚂 Canley</span><span class="ds-v">0.4 km · 5 min walk</span></div>
+        <div class="ds-kv"><span class="ds-k">🚂 Coventry</span><span class="ds-v">2.8 km · 8 min bus</span></div>
+        <div class="ds-kv"><span class="ds-k">🚂 Tile Hill</span><span class="ds-v">1.2 km · 15 min walk</span></div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Bus stops</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">🚌 Canley Road</span><span class="ds-v">0.12 km · 2 min walk</span></div>
+        <div class="ds-kv"><span class="ds-k">🚌 Charter Ave</span><span class="ds-v">0.28 km · 4 min walk</span></div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Commute times</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">Coventry city centre</span><span class="ds-v">12 min · train</span></div>
+        <div class="ds-kv"><span class="ds-k">Birmingham New St</span><span class="ds-v">22 min · train</span></div>
+        <div class="ds-kv"><span class="ds-k">London Euston</span><span class="ds-v">1hr 4min · train</span></div>
+      </div>
+
+      <div class="ds-attribution">Source: National Rail · Bus Open Data Service</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetTransport')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Location & Map -->
+  <div id="sheetMap" class="sheet-overlay" onclick="closeSheet('sheetMap')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#E8F5E9;">
+        <span class="ds-header-icon">📍</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Location &amp; Map</div>
+          <div class="ds-header-meta">Map · Street view · Parks &amp; amenities</div>
+        </div>
+      </div>
+
+      <!-- Map / Street tabs only -->
+      <div id="mapTabBar" style="display:flex; gap:8px; margin:12px 0 10px;">
+        <button class="map-tab map-tab--active" onclick="switchMapTab('map')" id="mapTabMap">📍 Map</button>
+        <button class="map-tab" onclick="switchMapTab('street')" id="mapTabStreet">📸 Street view</button>
+      </div>
+
+      <!-- Map container -->
+      <div id="leafletMap" style="width:100%; height:240px; border-radius:12px; overflow:hidden; margin-bottom:14px; background:#e8eaed; position:relative;">
+        <div id="mapLoading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:12px; color:#9c98ad; font-weight:600;">Loading map…</div>
+      </div>
+
+      <!-- Map legend — parks & amenities only -->
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#6b6783; font-weight:600;"><span style="width:9px; height:9px; border-radius:50%; background:#231d45; display:inline-block;"></span> Property</div>
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#6b6783; font-weight:600;"><span style="width:9px; height:9px; border-radius:50%; background:#00a19a; display:inline-block;"></span> Parks</div>
+        <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:#6b6783; font-weight:600;"><span style="width:9px; height:9px; border-radius:50%; background:#F59E0B; display:inline-block;"></span> Amenities</div>
+      </div>
+
+      <!-- Nearby parks & amenities -->
+      <div class="ds-section-title">Parks &amp; green space</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">🌳 Canley Gardens</span><span class="ds-v">0.18 km · 2 min walk</span></div>
+        <div class="ds-kv"><span class="ds-k">🌳 War Memorial Park</span><span class="ds-v">0.9 km · 11 min walk</span></div>
+        <div class="ds-kv"><span class="ds-k">🌳 Tile Hill Wood LNR</span><span class="ds-v">1.2 km · nature reserve</span></div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:16px;">Local amenities</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">🛒 Supermarket</span><span class="ds-v">0.4 km · Tesco Express</span></div>
+        <div class="ds-kv"><span class="ds-k">🏥 GP Surgery</span><span class="ds-v">0.6 km · Canley Health Centre</span></div>
+        <div class="ds-kv"><span class="ds-k">☕ Café / restaurant</span><span class="ds-v">0.3 km · Charter Ave</span></div>
+      </div>
+
+      <div class="ds-attribution">Map: OpenStreetMap contributors · Leaflet</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetMap')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Flood & Risk -->
+  <div id="sheetFlood" class="sheet-overlay" onclick="closeSheet('sheetFlood')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#FFF8E1;">
+        <span class="ds-header-icon">💧</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Flood &amp; environmental risk</div>
+          <div class="ds-header-meta">Source: Environment Agency · GOV.UK</div>
+        </div>
+      </div>
+
+      <div class="ds-risk-card ds-risk-card--high">
+        <div class="ds-risk-label">Flood Zone 3 — High risk</div>
+        <div class="ds-risk-desc">This property falls within a zone where there is a greater than 1 in 100 (1%) annual chance of river flooding, or a greater than 1 in 200 (0.5%) chance of sea flooding.</div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Risk breakdown</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">River flooding</span><span class="ds-v ds-v--red">High</span></div>
+        <div class="ds-kv"><span class="ds-k">Surface water</span><span class="ds-v ds-v--amber">Medium</span></div>
+        <div class="ds-kv"><span class="ds-k">Groundwater</span><span class="ds-v ds-v--green">Low</span></div>
+        <div class="ds-kv"><span class="ds-k">Reservoir</span><span class="ds-v ds-v--green">Very low</span></div>
+        <div class="ds-kv"><span class="ds-k">Nearest watercourse</span><span class="ds-v">River Sherbourne</span></div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Other environmental</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">Radon risk</span><span class="ds-v ds-v--green">Below action level</span></div>
+        <div class="ds-kv"><span class="ds-k">Subsidence risk</span><span class="ds-v ds-v--amber">Low–medium</span></div>
+        <div class="ds-kv"><span class="ds-k">Air quality (NO₂)</span><span class="ds-v">22 µg/m³ · Good</span></div>
+        <div class="ds-kv"><span class="ds-k">Ground stability</span><span class="ds-v ds-v--green">Stable</span></div>
+      </div>
+
+      <div class="ds-info-note">
+        Flood risk data is from the Environment Agency's national flood mapping. It does not guarantee a property will flood — it indicates statistical probability.
+      </div>
+
+      <div class="ds-attribution">Source: Environment Agency · BGS · DEFRA</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetFlood')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Planning -->
+  <div id="sheetPlanning" class="sheet-overlay" onclick="closeSheet('sheetPlanning')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#F5F5F7;">
+        <span class="ds-header-icon">📋</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Planning history</div>
+          <div class="ds-header-meta">Source: Coventry City Council · Planning Portal</div>
+        </div>
+      </div>
+
+      <div class="ds-section-title">Decisions on this property</div>
+      <div class="ds-planning-list">
+        <div class="ds-planning-row">
+          <div class="ds-planning-status ds-planning-status--approved">Approved</div>
+          <div class="ds-planning-info">
+            <div class="ds-planning-desc">Rear single-storey extension</div>
+            <div class="ds-planning-meta">Ref: COV/2019/0234 · May 2019</div>
+          </div>
+        </div>
+        <div class="ds-planning-row">
+          <div class="ds-planning-status ds-planning-status--approved">Approved</div>
+          <div class="ds-planning-info">
+            <div class="ds-planning-desc">Loft conversion with dormer</div>
+            <div class="ds-planning-meta">Ref: COV/2015/1187 · Oct 2015</div>
+          </div>
+        </div>
+        <div class="ds-planning-row">
+          <div class="ds-planning-status ds-planning-status--approved">Approved</div>
+          <div class="ds-planning-info">
+            <div class="ds-planning-desc">Replacement windows (UPVC)</div>
+            <div class="ds-planning-meta">Ref: COV/2008/0651 · Feb 2008</div>
+          </div>
+        </div>
+        <div class="ds-planning-row">
+          <div class="ds-planning-status ds-planning-status--refused">Refused</div>
+          <div class="ds-planning-info">
+            <div class="ds-planning-desc">Side garage conversion</div>
+            <div class="ds-planning-meta">Ref: COV/2006/0422 · Jun 2006</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Nearby applications (200m)</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">Active applications</span><span class="ds-v">1</span></div>
+        <div class="ds-kv"><span class="ds-k">Decided (5 yrs)</span><span class="ds-v">7</span></div>
+        <div class="ds-kv"><span class="ds-k">Conservation area</span><span class="ds-v">No</span></div>
+        <div class="ds-kv"><span class="ds-k">Listed building</span><span class="ds-v">No</span></div>
+      </div>
+
+      <div class="ds-attribution">Source: Coventry City Council Planning · Planning Portal</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetPlanning')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Council Tax -->
+  <div id="sheetCouncil" class="sheet-overlay" onclick="closeSheet('sheetCouncil')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#E8F5E9;">
+        <span class="ds-header-icon">🏛️</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Council tax</div>
+          <div class="ds-header-meta">Source: VOA · Coventry City Council</div>
+        </div>
+      </div>
+
+      <div class="ds-highlight-box" style="margin-top:14px;">
+        <div class="ds-highlight-num">£2,100 / yr</div>
+        <div class="ds-highlight-sub">Band D · 2024–25 rate · Coventry City Council</div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">All bands — Coventry 2024–25</div>
+      <div class="ds-band-list">
+        <div class="ds-band-row"><span class="ds-band-letter">A</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:44%;"></div></div><span class="ds-band-amt">£1,400</span></div>
+        <div class="ds-band-row"><span class="ds-band-letter">B</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:52%;"></div></div><span class="ds-band-amt">£1,633</span></div>
+        <div class="ds-band-row"><span class="ds-band-letter">C</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:60%;"></div></div><span class="ds-band-amt">£1,867</span></div>
+        <div class="ds-band-row ds-band-row--active"><span class="ds-band-letter">D ←</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:66%; background:#00a19a;"></div></div><span class="ds-band-amt">£2,100</span></div>
+        <div class="ds-band-row"><span class="ds-band-letter">E</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:78%;"></div></div><span class="ds-band-amt">£2,567</span></div>
+        <div class="ds-band-row"><span class="ds-band-letter">F</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:88%;"></div></div><span class="ds-band-amt">£3,033</span></div>
+        <div class="ds-band-row"><span class="ds-band-letter">G</span><div class="ds-band-bar-track"><div class="ds-band-bar" style="width:100%;"></div></div><span class="ds-band-amt">£3,500</span></div>
+      </div>
+
+      <div class="ds-kv-list" style="margin-top:14px;">
+        <div class="ds-kv"><span class="ds-k">Valuation date</span><span class="ds-v">1 Apr 1991</span></div>
+        <div class="ds-kv"><span class="ds-k">Local authority</span><span class="ds-v">Coventry City</span></div>
+        <div class="ds-kv"><span class="ds-k">Monthly equivalent</span><span class="ds-v">£175 / month</span></div>
+      </div>
+
+      <div class="ds-attribution">Source: Valuation Office Agency · 2024–25</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetCouncil')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Broadband -->
+  <div id="sheetBroadband" class="sheet-overlay" onclick="closeSheet('sheetBroadband')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ds-header" style="background:#E3F2FD;">
+        <span class="ds-header-icon">📶</span>
+        <div class="ds-header-text">
+          <div class="ds-header-title">Broadband</div>
+          <div class="ds-header-meta">Source: Ofcom Connected Nations · UPRN lookup</div>
+        </div>
+      </div>
+
+      <div class="ds-highlight-box" style="margin-top:14px;">
+        <div class="ds-highlight-num">Up to 1 Gbps</div>
+        <div class="ds-highlight-sub">Full fibre (FTTP) available at this address</div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Technology available</div>
+      <div class="ds-broadband-list">
+        <div class="ds-bb-row">
+          <div class="ds-bb-check ds-bb-check--yes">✓</div>
+          <div class="ds-bb-info">
+            <div class="ds-bb-name">Full Fibre (FTTP)</div>
+            <div class="ds-bb-meta">Up to 1,000 Mbps download · Virgin Media / Openreach</div>
+          </div>
+        </div>
+        <div class="ds-bb-row">
+          <div class="ds-bb-check ds-bb-check--yes">✓</div>
+          <div class="ds-bb-info">
+            <div class="ds-bb-name">Superfast (FTTC)</div>
+            <div class="ds-bb-meta">Up to 80 Mbps download · BT Openreach</div>
+          </div>
+        </div>
+        <div class="ds-bb-row">
+          <div class="ds-bb-check ds-bb-check--yes">✓</div>
+          <div class="ds-bb-info">
+            <div class="ds-bb-name">Cable (DOCSIS 3.1)</div>
+            <div class="ds-bb-meta">Up to 1,130 Mbps · Virgin Media</div>
+          </div>
+        </div>
+        <div class="ds-bb-row">
+          <div class="ds-bb-check ds-bb-check--no">✗</div>
+          <div class="ds-bb-info">
+            <div class="ds-bb-name">Ultrafast (>300 Mbps) guaranteed</div>
+            <div class="ds-bb-meta">Not currently listed as guaranteed</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-section-title" style="margin-top:18px;">Mobile signal (outdoor)</div>
+      <div class="ds-kv-list">
+        <div class="ds-kv"><span class="ds-k">EE (4G/5G)</span><span class="ds-v ds-v--green">Strong</span></div>
+        <div class="ds-kv"><span class="ds-k">O2</span><span class="ds-v ds-v--green">Strong</span></div>
+        <div class="ds-kv"><span class="ds-k">Vodafone</span><span class="ds-v ds-v--amber">Limited</span></div>
+        <div class="ds-kv"><span class="ds-k">Three</span><span class="ds-v ds-v--green">Good</span></div>
+      </div>
+
+      <div class="ds-attribution">Source: Ofcom Connected Nations · 2024</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetBroadband')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Stamp Duty Calculator -->
+  <div id="sheetStampDuty" class="sheet-overlay" onclick="closeSheet('sheetStampDuty')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 0 16px;">
+        <div style="font-size:17px; font-weight:900; color:#231d45; letter-spacing:-0.3px;">Stamp Duty Calculator</div>
+        <div style="font-size:11px; color:#9c98ad; font-weight:600;">England &amp; NI · 2026</div>
+      </div>
+
+      <!-- Result banner -->
+      <div style="background:#E6F7F6; border:1.5px solid #B2E4E1; border-radius:14px; padding:16px 18px; margin-bottom:16px;">
+        <div style="font-size:9px; font-weight:800; color:#6b6783; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px;">Your estimated stamp duty</div>
+        <div id="sdResult" style="font-size:32px; font-weight:900; color:#00a19a; letter-spacing:-1px;">£10,300</div>
+        <div id="sdOnPrice" style="font-size:12px; color:#6b6783; margin-top:4px;">On a price of £456,000</div>
+      </div>
+
+      <!-- Price input -->
+      <div style="border:1.5px solid #ECECEF; border-radius:14px; padding:14px 18px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:20px; color:#c0bdcc; font-weight:700;">£</span>
+        <input id="sdInput" type="number" value="456000" min="0" max="10000000" step="1000"
+          style="border:none; outline:none; font-size:22px; font-weight:800; color:#231d45; font-family:inherit; width:100%; background:transparent; letter-spacing:-0.5px;"
+          oninput="calcStampDuty()" />
+      </div>
+
+      <!-- Buyer type toggle -->
+      <div style="background:#F5F5F7; border-radius:12px; padding:4px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:18px;">
+        <button id="sdBtnStandard" class="sd-type-btn sd-type-btn--active" onclick="setSdType('standard')">🏠 Standard</button>
+        <button id="sdBtnFirst" class="sd-type-btn" onclick="setSdType('first')">🌱 First-time</button>
+        <button id="sdBtnAdditional" class="sd-type-btn" onclick="setSdType('additional')">🏘️ Additional</button>
+      </div>
+
+      <!-- Bands breakdown -->
+      <div id="sdBands" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;"></div>
+
+      <!-- GOV link -->
+      <div style="margin-bottom:14px;">
+        <a href="https://www.gov.uk/stamp-duty-land-tax" target="_blank" style="font-size:12px; font-weight:700; color:#00a19a; text-decoration:none;">Full rates on GOV.UK →</a>
+      </div>
+
+      <button class="sheet-cancel" onclick="closeSheet('sheetStampDuty')">Close</button>
+    </div>
+  </div>
+
+  <!-- Sheet: HomeScore Intent Fork -->
+  <div id="sheetIntent" class="sheet-overlay" onclick="closeSheet('sheetIntent')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="sheet-icon">🏠</div>
+      <div class="sheet-title">What's your interest?</div>
+      <div class="sheet-sub">Tell us a bit about why you're here — we'll show you the most relevant view.</div>
+
+      <div class="intent-options">
+        <button class="intent-opt" onclick="closeSheet('sheetIntent'); sheetSuccess('sheetIntent', '🏠 Welcome — let\'s build your HomeScore.')">
+          <div class="intent-opt-icon" style="background:#E5F4F2;">🏠</div>
+          <div class="intent-opt-body">
+            <div class="intent-opt-title">I own this property</div>
+            <div class="intent-opt-sub">Claim it, run your full HomeScore and build your Passport</div>
+          </div>
+          <div class="intent-opt-chev">›</div>
+        </button>
+        <button class="intent-opt" onclick="closeSheet('sheetIntent'); openSheet('sheetRegister')">
+          <div class="intent-opt-icon" style="background:#FFF3E0;">👀</div>
+          <div class="intent-opt-body">
+            <div class="intent-opt-title">I'm interested in buying</div>
+            <div class="intent-opt-sub">Save it, watch for updates and make a quiet approach</div>
+          </div>
+          <div class="intent-opt-chev">›</div>
+        </button>
+        <button class="intent-opt" onclick="closeSheet('sheetIntent'); openSheet('sheetStreet')">
+          <div class="intent-opt-icon" style="background:#F3E5F5;">🏘️</div>
+          <div class="intent-opt-body">
+            <div class="intent-opt-title">Neighbour / just curious</div>
+            <div class="intent-opt-sub">See how this property compares to the rest of the street</div>
+          </div>
+          <div class="intent-opt-chev">›</div>
+        </button>
+      </div>
+
+      <button class="sheet-cancel" onclick="closeSheet('sheetIntent')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Watch This (Register) -->
+  <div id="sheetRegister" class="sheet-overlay" onclick="closeSheet('sheetRegister')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="sheet-icon">🔔</div>
+      <div class="sheet-title">Watch this property</div>
+      <div class="sheet-sub">Save it to your list. We'll alert you if it comes to market, when the Passport publishes, or if anything changes.</div>
+
+      <div class="sheet-field-group">
+        <div class="sheet-field">
+          <label class="sheet-label">Your name</label>
+          <input class="sheet-input" type="text" placeholder="Alex Quinn">
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">Email address</label>
+          <input class="sheet-input" type="email" placeholder="alex@email.com">
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">Why are you watching?</label>
+          <div class="sheet-choice-row">
+            <button class="sheet-choice active" onclick="pickChoice(this)">Potential buyer</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">I love the road</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">Investor</button>
+          </div>
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">Alert me when…</label>
+          <div class="sheet-choice-row">
+            <button class="sheet-choice active" onclick="pickChoice(this)">Listed for sale</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">Passport live</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">Any update</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="sheet-cta" onclick="sheetSuccess('sheetRegister', '🔔 Saved! We\'ll notify you.')">
+        Save &amp; watch →
+      </button>
+      <button class="sheet-cancel" onclick="closeSheet('sheetRegister')">Not now</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Make Contact -->
+  <div id="sheetOwner" class="sheet-overlay" onclick="closeSheet('sheetOwner')">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="sheet-icon">💬</div>
+      <div class="sheet-title">Make contact</div>
+      <div class="sheet-sub">Drop a note to the owner — whether you're a neighbour with a question or a buyer making a quiet approach.</div>
+
+      <div class="sheet-field-group">
+        <div class="sheet-field">
+          <label class="sheet-label">I am a…</label>
+          <div class="sheet-choice-row">
+            <button class="sheet-choice active" onclick="pickChoice(this); setOwnerPlaceholder(this)">Potential buyer</button>
+            <button class="sheet-choice" onclick="pickChoice(this); setOwnerPlaceholder(this)">Neighbour</button>
+            <button class="sheet-choice" onclick="pickChoice(this); setOwnerPlaceholder(this)">Agent</button>
+          </div>
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">Your name</label>
+          <input class="sheet-input" type="text" placeholder="Alex Quinn">
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">Your message</label>
+          <textarea class="sheet-input sheet-textarea" id="ownerMessageBox" placeholder="Hi — I've been following this road for a while and would love to know if you'd ever consider selling. No pressure at all."></textarea>
+        </div>
+        <div class="sheet-field">
+          <label class="sheet-label">How should they reply?</label>
+          <div class="sheet-choice-row">
+            <button class="sheet-choice active" onclick="pickChoice(this)">Email</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">Phone</button>
+            <button class="sheet-choice" onclick="pickChoice(this)">Either</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sheet-privacy-note">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Your details go only to the verified owner. We never share with third parties or agents without your consent.
+      </div>
+
+      <button class="sheet-cta" onclick="sheetSuccess('sheetOwner', '✉️ Message sent to the owner.')">
+        Send message →
+      </button>
+      <button class="sheet-cancel" onclick="closeSheet('sheetOwner')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Sheet: Open Passport (Published) -->
+  <div id="sheetPassport" class="sheet-overlay" onclick="closeSheet('sheetPassport')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+
+      <!-- Passport header -->
+      <div class="passport-sheet-header">
+        <div class="passport-sheet-badge">
+          <span class="passport-sheet-dot"></span>
+          Verified Passport
+        </div>
+        <div class="passport-sheet-address">11 Woodfield Road</div>
+        <div class="passport-sheet-meta">Coventry · CV5 6AJ · Semi-Detached · 2 bed</div>
+      </div>
+
+      <!-- What's inside -->
+      <div class="passport-sheet-section-title">What's inside</div>
+      <div class="passport-sheet-items">
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#E5F4F2;">📄</div>
+          <div class="psi-text">
+            <div class="psi-name">EPC Certificate</div>
+            <div class="psi-meta">Lodged 2014 · Grade C · Full document</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#E5F4F2;">🏛️</div>
+          <div class="psi-text">
+            <div class="psi-name">Land Registry Title</div>
+            <div class="psi-meta">Freehold · Current owner verified</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#E5F4F2;">🔧</div>
+          <div class="psi-text">
+            <div class="psi-name">Gas Safety Record</div>
+            <div class="psi-meta">Renewed Jan 2024 · Gas Safe registered</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#E5F4F2;">⚡</div>
+          <div class="psi-text">
+            <div class="psi-name">Electrical Certificate</div>
+            <div class="psi-meta">EICR passed · Feb 2023</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#FFF3E0;">🏠</div>
+          <div class="psi-text">
+            <div class="psi-name">HomeScore™ Full Report</div>
+            <div class="psi-meta">Owner-verified · Score 59/100</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+        <div class="psi-row">
+          <div class="psi-icon" style="background:#F3E5F5;">📋</div>
+          <div class="psi-text">
+            <div class="psi-name">Planning history</div>
+            <div class="psi-meta">4 decisions · All resolved</div>
+          </div>
+          <div class="psi-check">✓</div>
+        </div>
+      </div>
+
+      <!-- Price breakdown -->
+      <div class="passport-sheet-section-title" style="margin-top:18px;">One-off access</div>
+      <div class="passport-price-breakdown">
+        <div class="ppb-row">
+          <span>Passport access</span><span>£79</span>
+        </div>
+        <div class="ppb-row">
+          <span>HomeScore™ full report</span><span>£20</span>
+        </div>
+        <div class="ppb-divider"></div>
+        <div class="ppb-row ppb-total">
+          <span>Total today</span><span>£99</span>
+        </div>
+        <div class="ppb-note">Instant access · No subscription · Secure payment</div>
+      </div>
+
+      <button class="sheet-cta sheet-cta--shimmer" onclick="sheetSuccess('sheetPassport', '🔓 Access granted. Opening Passport…')">
+        Unlock for £99 →
+      </button>
+      <button class="sheet-cancel" onclick="closeSheet('sheetPassport')">Not now</button>
+    </div>
+  </div>
+
+  <!-- Toast confirmation -->
+  <div id="sheetToast" class="sheet-toast"></div>
+
+  <!-- ── Explainer: Published ──────────────────────────────────── -->
+  <div id="sheetExplainPublished" class="sheet-overlay" onclick="closeSheet('sheetExplainPublished')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <!-- Hero -->
+      <div style="background:linear-gradient(135deg,#F0B460 0%,#D4822A 45%,#7A3A05 100%); border-radius:16px; padding:20px; margin-bottom:16px; position:relative; overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:6px;">Property Passport™</div>
+        <div style="font-size:18px;font-weight:900;color:white;line-height:1.25;letter-spacing:-0.3px;margin-bottom:8px;">The biggest purchase of your life — and you're doing it blind.</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.55;">You wouldn't buy a £15,000 car without its service history. This is the verified record that should have always existed for every home.</div>
+      </div>
+      <!-- Why callout -->
+      <div style="background:#F9F9FB;border-radius:14px;padding:14px;margin-bottom:16px;border-left:3px solid #00a19a;">
+        <div style="font-size:9px;font-weight:800;color:#00a19a;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Why this exists</div>
+        <div style="font-size:12px;color:#4a4560;line-height:1.6;">Conveyancing takes 150 days on average. Nearly half that time is spent chasing documents that already exist somewhere — just not in one place. The Property Passport ends that. Everything verified by the owner, ready before solicitors are even instructed.</div>
+        <div style="font-size:12px;font-weight:700;color:#231d45;margin-top:8px;">⏱ Average sale time cut by 6–8 weeks with upfront disclosure</div>
+      </div>
+      <!-- Search reuse insight -->
+      <div style="background:#FEF9F0;border-radius:14px;padding:14px;margin-bottom:16px;border-left:3px solid #D4822A;">
+        <div style="font-size:9px;font-weight:800;color:#b07a1c;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Not just for buying this home</div>
+        <div style="font-size:12px;color:#6b4c1a;line-height:1.6;">The environmental data, flood risk, and planning history in this Passport applies to the whole street. Solicitors charge £300–500 for searches that get thrown away after every transaction. This data stays — and you can use it even if you're interested in a neighbouring property.</div>
+      </div>
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;letter-spacing:-0.5px;">150</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">Avg. days in conveyancing</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">£99</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">One-off · no subscription</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">23×</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">Same search bought per street</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">100%</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">Owner-verified · HMLR backed</div></div>
+      </div>
+      <!-- Checklist -->
+      <div style="font-size:10px;font-weight:800;color:#9c98ad;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">What's inside</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📋</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">TA6, TA7 &amp; TA10 forms</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">All conveyancing questions answered upfront</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#E6F7F6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🏛️</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">Land Registry Title &amp; Plan</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">Verified ownership · boundary map</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#E6F7F6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🔧</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">Gas, Electrical &amp; EPC</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">All certificates verified</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#F3E5F5;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📅</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">Planning History</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">Extensions, permissions, works</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#9c98ad;line-height:1.6;padding:0 8px 16px;">The way people buy homes is changing — and we're building that future with government.</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetExplainPublished')">Got it</button>
+    </div>
+  </div>
+
+  <!-- ── Explainer: In Progress ────────────────────────────────── -->
+  <div id="sheetExplainProgress" class="sheet-overlay" onclick="closeSheet('sheetExplainProgress')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="background:linear-gradient(135deg,#4DD4CE 0%,#00a19a 45%,#006e68 100%);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.7);margin-bottom:6px;">Property Passport™ · In Progress</div>
+        <div style="font-size:18px;font-weight:900;color:white;line-height:1.25;letter-spacing:-0.3px;margin-bottom:8px;">This owner is building something that removes 150 days of uncertainty.</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.85);line-height:1.55;">A permanent verified record for this property. When it publishes, you get instant access to everything — before you even make an offer.</div>
+      </div>
+      <div style="background:#F9F9FB;border-radius:14px;padding:14px;margin-bottom:16px;border-left:3px solid #00a19a;">
+        <div style="font-size:9px;font-weight:800;color:#00a19a;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Why this matters</div>
+        <div style="font-size:12px;color:#4a4560;line-height:1.6;">People fall in love with a house in 20 minutes, then spend an average of 150 days hanging off a cliff — chasing solicitors, waiting on documents that already exist somewhere. This Passport collects all of that upfront, so by the time you make an offer, the hard work is already done.</div>
+        <div style="font-size:12px;font-weight:700;color:#231d45;margin-top:8px;">🔔 Get notified the moment it publishes — be first in the door</div>
+      </div>
+      <!-- Progress -->
+      <div style="font-size:10px;font-weight:800;color:#9c98ad;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Build progress</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><span style="font-size:13px;font-weight:800;color:#231d45;">60% complete</span><span style="font-size:11px;color:#9c98ad;">4 of 8 verified</span></div>
+      <div style="height:8px;background:#ECECEF;border-radius:4px;overflow:hidden;margin-bottom:16px;"><div style="width:60%;height:100%;background:linear-gradient(90deg,#00a19a,#4DD4CE);border-radius:4px;"></div></div>
+      <!-- Already verified -->
+      <div style="font-size:10px;font-weight:800;color:#9c98ad;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Already verified</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#E6F7F6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">⚡</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">EPC Certificate</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">Grade C · Lodged 2014</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#E6F7F6;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🏛️</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">Land Registry Title &amp; Plan</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">Freehold confirmed</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F9F9FB;border-radius:11px;padding:10px 12px;"><div style="width:30px;height:30px;border-radius:8px;background:#FFF3E0;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📋</div><div style="flex:1;"><div style="font-size:12px;font-weight:800;color:#231d45;">TA6 — Property Information</div><div style="font-size:10px;color:#9c98ad;margin-top:1px;">Boundaries, disputes, utilities</div></div><div style="color:#00a19a;font-weight:800;font-size:13px;">✓</div></div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#9c98ad;line-height:1.6;padding:0 8px 16px;">The way people buy homes is changing — and we're building that future with government.</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetExplainProgress')">Got it</button>
+    </div>
+  </div>
+
+  <!-- ── Explainer: Unclaimed ──────────────────────────────────── -->
+  <div id="sheetExplainUnclaimed" class="sheet-overlay" onclick="closeSheet('sheetExplainUnclaimed')">
+    <div class="sheet sheet--tall" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div style="background:#231d45;border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:6px;">Property Passport™</div>
+        <div style="font-size:18px;font-weight:900;color:white;line-height:1.25;letter-spacing:-0.3px;margin-bottom:8px;">Your home's permanent record — not just for selling, for owning.</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.75);line-height:1.55;">A Passport stays with this property for life. Build it now, keep it updated, and when you do decide to sell — the hard work is already done.</div>
+      </div>
+      <div style="background:#F9F9FB;border-radius:14px;padding:14px;margin-bottom:16px;border-left:3px solid #231d45;">
+        <div style="font-size:9px;font-weight:800;color:#231d45;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">The car you'd never buy blind</div>
+        <div style="font-size:12px;color:#4a4560;line-height:1.6;">You wouldn't buy a £15,000 car without an HPI check, its MOT history, and a service record. Yet every day people spend £300,000, £400,000, £500,000 on a home with almost no verified information at all. A Property Passport changes that — permanently.</div>
+        <div style="font-size:12px;font-weight:700;color:#231d45;margin-top:8px;">🏡 The biggest financial investment anyone makes — and it's done almost completely blind</div>
+      </div>
+      <!-- Lifetime concept -->
+      <div style="background:#F0F0FF;border-radius:14px;padding:14px;margin-bottom:16px;border-left:3px solid #5B52A0;">
+        <div style="font-size:9px;font-weight:800;color:#5B52A0;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Stays with the property forever</div>
+        <div style="font-size:12px;color:#3a3560;line-height:1.6;">A Passport isn't a transaction tool. It's property infrastructure. Claim it now, add your gas certificate when it's renewed, upload planning permission when you do the extension. By the time you sell — in 5, 10, 20 years — everything is already there.</div>
+      </div>
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">Free</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">To claim &amp; build forever</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">2 min</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">To claim ownership today</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">150</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">Days avg. conveyancing anxiety</div></div>
+        <div style="background:#F9F9FB;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:20px;font-weight:900;color:#231d45;">18</div><div style="font-size:10px;color:#9c98ad;margin-top:2px;font-weight:600;">Searches on this address this month</div></div>
+      </div>
+      <!-- 4 steps -->
+      <div style="font-size:10px;font-weight:800;color:#9c98ad;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Your four steps</div>
+      <div style="display:flex;align-items:flex-start;gap:0;margin-bottom:18px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#231d45;color:white;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">1</div>
+          <div style="font-size:10px;font-weight:700;color:#231d45;">Claim</div>
+          <div style="font-size:9px;color:#9c98ad;text-align:center;line-height:1.4;padding:0 2px;">Confirm ownership. 2 min. Free.</div>
+        </div>
+        <div style="flex:1;height:2px;background:#ECECEF;margin-top:17px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#ECECEF;color:#9c98ad;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">2</div>
+          <div style="font-size:10px;font-weight:700;color:#9c98ad;">Verify</div>
+          <div style="font-size:9px;color:#9c98ad;text-align:center;line-height:1.4;padding:0 2px;">Upload docs. We verify against official sources.</div>
+        </div>
+        <div style="flex:1;height:2px;background:#ECECEF;margin-top:17px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#ECECEF;color:#9c98ad;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">3</div>
+          <div style="font-size:10px;font-weight:700;color:#9c98ad;">Score</div>
+          <div style="font-size:9px;color:#9c98ad;text-align:center;line-height:1.4;padding:0 2px;">Get your verified HomeScore.</div>
+        </div>
+        <div style="flex:1;height:2px;background:#ECECEF;margin-top:17px;"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#ECECEF;color:#9c98ad;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">4</div>
+          <div style="font-size:10px;font-weight:700;color:#9c98ad;">Publish</div>
+          <div style="font-size:9px;color:#9c98ad;text-align:center;line-height:1.4;padding:0 2px;">Go live whenever you're ready.</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#9c98ad;line-height:1.6;padding:0 8px 16px;">The way people buy homes is changing — and we're building that future with government.</div>
+      <button class="sheet-cancel" onclick="closeSheet('sheetExplainUnclaimed')">Got it</button>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+  /* ─── Utilities ──────────────────────────────────────────────── */
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function countUp(el, target, duration, prefix, suffix, formatter) {
+    var start = performance.now();
+    function update(now) {
+      var progress = Math.min((now - start) / duration, 1);
+      var eased    = easeOutCubic(progress);
+      var val      = Math.round(eased * target);
+      el.textContent = prefix + (formatter ? formatter(val) : val) + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  function formatPrice(n) {
+    return n.toLocaleString('en-GB');
+  }
+
+  /* ─── State Management ───────────────────────────────────────── */
+  function openState(state) {
+    document.body.dataset.ppState = state;
+    document.querySelectorAll('.state-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.state === state);
+    });
+    triggerStateAnimations(state);
+  }
+
+  function triggerStateAnimations(state) {
+    // Reset and re-animate gauge
+    var gaugeFill = document.getElementById('gaugeFill');
+    if (gaugeFill) {
+      gaugeFill.style.transition = 'none';
+      gaugeFill.style.strokeDashoffset = '251.33';
+      requestAnimationFrame(function() {
+        setTimeout(function() {
+          gaugeFill.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(0.22,1,0.36,1)';
+          gaugeFill.style.strokeDashoffset = '103.05';
+        }, 80);
+      });
+    }
+
+    // Re-animate score count-up
+    setTimeout(function() {
+      var scoreEl = document.getElementById('scoreNum');
+      if (scoreEl) countUp(scoreEl, 59, 1000, '', '', null);
+    }, 100);
+
+    // Re-animate EPC bars
+    setTimeout(function() {
+      var bars = document.querySelectorAll('.bar-fill');
+      bars.forEach(function(b, i) {
+        b.style.transition = 'none';
+        b.style.width = '0%';
+        requestAnimationFrame(function() {
+          setTimeout(function() {
+            b.style.transition = 'width 0.7s cubic-bezier(0.22,1,0.36,1)';
+            b.style.transitionDelay = (i * 80) + 'ms';
+            b.style.width = b.dataset.width;
+          }, 50);
+        });
+      });
+    }, 400);
+
+    // Passport progress bars
+    var pbProgress = document.getElementById('passportProgress');
+    if (pbProgress) {
+      pbProgress.style.transition = 'none';
+      pbProgress.style.width = '0%';
+      setTimeout(function() {
+        pbProgress.style.transition = 'width 1s 0.6s cubic-bezier(0.22,1,0.36,1)';
+        pbProgress.style.width = '60%';
+      }, 100);
+    }
+
+    var pbPublished = document.getElementById('passportProgressPublished');
+    if (pbPublished) {
+      pbPublished.style.transition = 'none';
+      pbPublished.style.width = '0%';
+      setTimeout(function() {
+        pbPublished.style.transition = 'width 1s 0.6s cubic-bezier(0.22,1,0.36,1)';
+        pbPublished.style.width = '100%';
+      }, 100);
+    }
+  }
+
+  /* ─── On Load ────────────────────────────────────────────────── */
+  window.addEventListener('load', function () {
+    // Set initial state
+    document.body.dataset.ppState = 'published';
+
+    // Price count-up
+    var priceEl = document.getElementById('price');
+    if (priceEl) countUp(priceEl, 486000, 1200, '£', '', formatPrice);
+
+    // Trigger all state animations on initial load
+    triggerStateAnimations('published');
+  });
+
+  /* ─── Bottom Sheets ──────────────────────────────────────────── */
+  function scoreCardTap() {
+    var numEl = document.getElementById('scoreNum');
+    var denomEl = document.getElementById('gaugeDenom');
+    var rankEl = document.getElementById('gaugeRank');
+    if (!numEl || !rankEl) { openSheet('sheetIntent'); return; }
+    // Flash the rank briefly
+    numEl.style.display = 'none';
+    denomEl.style.display = 'none';
+    rankEl.style.display = 'block';
+    rankEl.style.animation = 'rankFlash 0.3s ease';
+    setTimeout(function() {
+      rankEl.style.display = 'none';
+      numEl.style.display = '';
+      denomEl.style.display = '';
+      openSheet('sheetIntent');
+    }, 900);
+  }
+
+  // Live viewer count pulse
+  (function() {
+    var base = 3;
+    var el = document.getElementById('liveViewers');
+    if (!el) return;
+    setInterval(function() {
+      var delta = Math.random() < 0.5 ? 1 : -1;
+      base = Math.max(2, Math.min(6, base + delta));
+      el.textContent = base;
+      el.style.transition = 'color 0.3s';
+      el.style.color = '#00a19a';
+      setTimeout(function() { el.style.color = ''; }, 600);
+    }, 4000);
+  })();
+
+  function openSheet(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('open');
+    // Lock inner scroll while sheet is open
+    var scroll = document.querySelector('.phone-scroll');
+    if (scroll) scroll.style.overflow = 'hidden';
+  }
+
+  function closeSheet(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('open');
+    var scroll = document.querySelector('.phone-scroll');
+    if (scroll) scroll.style.overflow = '';
+  }
+
+  function pickChoice(btn) {
+    // Deselect siblings in same row
+    var row = btn.closest('.sheet-choice-row');
+    if (!row) return;
+    row.querySelectorAll('.sheet-choice').forEach(function(b) {
+      b.classList.remove('active');
+    });
+    btn.classList.add('active');
+  }
+
+  function setOwnerPlaceholder(btn) {
+    var box = document.getElementById('ownerMessageBox');
+    if (!box) return;
+    var placeholders = {
+      'Potential buyer': 'Hi — I\'ve been following this road for a while and would love to know if you\'d ever consider selling. No pressure at all.',
+      'Neighbour': 'Hi neighbour! Just a quick question about the property — hope you don\'t mind me reaching out.',
+      'Agent': 'Hi, I\'m a local agent and have a buyer actively looking in this area. Would you be open to a chat?'
+    };
+    var label = btn.textContent.trim();
+    if (placeholders[label]) box.placeholder = placeholders[label];
+  }
+
+  function sheetSuccess(sheetId, message) {
+    closeSheet(sheetId);
+    var toast = document.getElementById('sheetToast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(function() {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  // ── Stamp Duty Calculator ─────────────────────────────────────
+  var sdType = 'standard';
+
+  var sdRates = {
+    standard:   [{max:250000,rate:0},{max:925000,rate:0.05},{max:1500000,rate:0.10},{max:Infinity,rate:0.12}],
+    first:      [{max:425000,rate:0},{max:625000,rate:0.05},{max:925000,rate:0.05},{max:1500000,rate:0.10},{max:Infinity,rate:0.12}],
+    additional: [{max:250000,rate:0.03},{max:925000,rate:0.08},{max:1500000,rate:0.13},{max:Infinity,rate:0.15}]
+  };
+
+  function calcStampDuty() {
+    var price = parseInt(document.getElementById('sdInput').value) || 0;
+    var bands = sdRates[sdType];
+    var total = 0;
+    var prev = 0;
+    var bandData = [];
+    for (var i = 0; i < bands.length; i++) {
+      var cap = Math.min(price, bands[i].max);
+      var taxable = Math.max(0, cap - prev);
+      var tax = Math.round(taxable * bands[i].rate);
+      bandData.push({ pct: (bands[i].rate*100)+'%', tax: tax, min: prev, max: bands[i].max, fill: price >= prev ? Math.min(100, ((cap-prev)/Math.max(1,bands[i].max-prev))*100) : 0 });
+      total += tax;
+      prev = bands[i].max;
+      if (price <= bands[i].max) break;
+    }
+    // Update result
+    document.getElementById('sdResult').textContent = '£' + total.toLocaleString();
+    document.getElementById('sdOnPrice').textContent = 'On a price of £' + price.toLocaleString();
+    // Update tile
+    var tileEl = document.getElementById('sdTileVal');
+    if (tileEl) tileEl.textContent = '£' + total.toLocaleString();
+    // Render bands
+    var html = '';
+    for (var j = 0; j < bandData.length; j++) {
+      var b = bandData[j];
+      var label = b.min === 0 ? '£0 – £' + Math.min(b.max/1000,999)+'k' : '£'+(b.min/1000)+'k – ' + (b.max === Infinity ? 'above' : '£'+(b.max/1000)+'k');
+      var amtStr = b.tax === 0 ? 'Price on request' : '£' + b.tax.toLocaleString();
+      html += '<div class="sd-band">'
+        + '<div class="sd-band-top"><span class="sd-band-pct">'+b.pct+'</span><span class="sd-band-amt">'+amtStr+'</span></div>'
+        + '<div class="sd-band-track"><div class="sd-band-fill" style="width:'+b.fill+'%"></div></div>'
+        + '<div class="sd-band-range">'+label+'</div>'
+        + '</div>';
+    }
+    document.getElementById('sdBands').innerHTML = html;
+  }
+
+  function setSdType(type) {
+    sdType = type;
+    ['standard','first','additional'].forEach(function(t) {
+      var btn = document.getElementById('sdBtn'+t.charAt(0).toUpperCase()+t.slice(1));
+      if (btn) btn.classList.toggle('sd-type-btn--active', t === type);
+    });
+    calcStampDuty();
+  }
+
+  // Run on open
+  document.getElementById('sheetStampDuty').addEventListener('click', function(){});
+  // Init on page load
+  setTimeout(calcStampDuty, 300);
+
+  // ── Map tab switcher ──────────────────────────────────────────
+  var leafletLoaded = false;
+
+  function switchMapTab(tab) {
+    document.querySelectorAll('.map-tab').forEach(function(b){ b.classList.remove('map-tab--active'); });
+    var activeBtn = document.getElementById('mapTab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+    if (activeBtn) activeBtn.classList.add('map-tab--active');
+    if (tab === 'map' && !leafletLoaded) { initLeafletMap(); }
+    if (tab === 'street') {
+      document.getElementById('leafletMap').innerHTML = '<iframe width="100%" height="220" style="border:0;border-radius:12px;" loading="lazy" src="https://www.google.com/maps/embed/v1/streetview?key=AIzaSyD-placeholder&location=52.4066,-1.5080&heading=210&pitch=10&fov=90" allowfullscreen></iframe>';
+    }
+  }
+
+  function initLeafletMap() {
+    if (leafletLoaded) return;
+    leafletLoaded = true;
+    // Load Leaflet CSS + JS
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(link);
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    script.onload = function() {
+      var mapEl = document.getElementById('leafletMap');
+      mapEl.innerHTML = '';
+      var map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: false }).setView([52.4066, -1.5080], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors', maxZoom: 19
+      }).addTo(map);
+      // Property marker
+      var propIcon = L.divIcon({ html: '<div style="width:36px;height:36px;border-radius:50%;background:#231d45;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,0.3);">🏠</div>', iconSize:[36,36], iconAnchor:[18,18], className:'' });
+      L.marker([52.4066,-1.5080], {icon: propIcon}).addTo(map).bindPopup('<b>14 Woodfield Road</b><br>CV5 6AJ');
+      // Schools
+      var schoolPts = [[52.4090,-1.5050],[52.4050,-1.5100],[52.4110,-1.5020]];
+      schoolPts.forEach(function(p){
+        var ic = L.divIcon({ html:'<div style="width:30px;height:30px;border-radius:50%;background:#3B82F6;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">🎓</div>', iconSize:[30,30],iconAnchor:[15,15],className:''});
+        L.marker(p,{icon:ic}).addTo(map);
+      });
+      // Train stations
+      var trainPts = [[52.4030,-1.5200],[52.4100,-1.4950]];
+      trainPts.forEach(function(p){
+        var ic = L.divIcon({ html:'<div style="width:30px;height:30px;border-radius:50%;background:#8B5CF6;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,0.25);">🚂</div>', iconSize:[30,30],iconAnchor:[15,15],className:''});
+        L.marker(p,{icon:ic}).addTo(map);
+      });
+      // Bus stops
+      var busPts = [[52.4075,-1.5060],[52.4055,-1.5090],[52.4080,-1.5110]];
+      busPts.forEach(function(p){
+        var ic = L.divIcon({ html:'<div style="width:28px;height:28px;border-radius:50%;background:#F59E0B;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">🚌</div>', iconSize:[28,28],iconAnchor:[14,14],className:''});
+        L.marker(p,{icon:ic}).addTo(map);
+      });
+      // Parks
+      var parkPts = [[52.4070,-1.5040],[52.4045,-1.5065]];
+      parkPts.forEach(function(p){
+        var ic = L.divIcon({ html:'<div style="width:28px;height:28px;border-radius:50%;background:#00a19a;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">🌳</div>', iconSize:[28,28],iconAnchor:[14,14],className:''});
+        L.marker(p,{icon:ic}).addTo(map);
+      });
+      document.getElementById('mapLoading').style.display = 'none';
+    };
+    document.head.appendChild(script);
+  }
+
+  // Auto-init map when transport sheet opens
+  document.getElementById('sheetTransport').addEventListener('transitionend', function(){});
+  // Hook into openSheet to init map
+  var _origOpenSheet = openSheet;
+  openSheet = function(id) {
+    _origOpenSheet(id);
+    if (id === 'sheetMap') {
+      setTimeout(function(){ if (!leafletLoaded) initLeafletMap(); }, 200);
+    }
+  };
+</script>
+</body>
+</html>

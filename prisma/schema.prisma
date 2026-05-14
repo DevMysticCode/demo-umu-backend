@@ -154,15 +154,19 @@ model Property {
 
   // ── HomeScore V2 insulation fields ───────────────────────────────────────
   wallsEnergyEff         String?  // "Very Good" | "Good" | "Average" | "Poor" | "Very Poor"
+  wallsDescription       String?  // EPC walls-description, e.g. "Cavity wall, as built, no insulation (assumed)"
   roofEnergyEff          String?
+  roofDescription        String?  // EPC roof-description, e.g. "Pitched, 100 mm loft insulation"
   floorEnergyEff         String?
   floorDescription       String?  // used to detect "assumed" no insulation
   windowsEnergyEff       String?
+  windowsDescription     String?  // EPC windows-description, e.g. "Single glazed" / "Fully double glazed"
   glazedArea             String?  // "Less than typical" | "Normal" | "More than typical" | "Much more than typical"
   multiGlazeProportion   Float?   // 0–100 percentage
 
   // ── HomeScore V2 heating fields ──────────────────────────────────────────
   mainheatEnergyEff      String?  // main heating system efficiency rating
+  mainheatDescription    String?  // EPC mainheat-description, e.g. "Boiler and radiators, mains gas"
   mainheatcEnergyEff     String?  // heating controls efficiency rating
   hotWaterEnergyEff      String?
   hotwaterDescription    String?  // used to detect "no cylinder thermostat"
@@ -185,6 +189,28 @@ model Property {
   lodgementDate          String?  // EPC lodgement date (YYYY-MM-DD)
   constructionAgeBand    String?  // e.g. "1930-1949"
   builtForm              String?  // "Detached" | "Semi-Detached" | "Mid-Terrace" | etc.
+
+  // Lookup key for the EPC certificate this row was enriched from. Used to
+  // re-fetch recommendations / the full cert without another address search.
+  epcLmkKey              String?
+
+  // EPC recommendations array, fetched from the EPC Register's
+  // /recommendations?lmk-key=... endpoint at enrichment time. Each entry is
+  // an object: { id, title, description, cost, typicalSaving, resultingSap,
+  // resultingEnvRating }. Renders as the simulator's improvement steps.
+  epcRecommendations     Json?
+
+  // ── Actual energy spend (from uploaded bills) ──────────────────────────
+  // When the user uploads an energy bill on the simulator, we OCR + parse it
+  // and persist the structured result here. Overrides EPC estimates in
+  // running-cost calculations when present.
+  actualEnergySpend       Float?    // £/yr extracted from the bill
+  actualGasSpend          Float?    // £/yr (gas portion)
+  actualElectricitySpend  Float?    // £/yr (electricity portion)
+  actualBillSupplier      String?   // "British Gas" | "Octopus" | etc.
+  actualBillPeriod        String?   // "annual" | "quarterly" | "monthly"
+  actualBillRawText       String?   // raw OCR text (for debugging + future re-parse)
+  actualBillUploadedAt    DateTime?
 
   passports              Passport[]
   ownershipVerifications OwnershipVerification[]
