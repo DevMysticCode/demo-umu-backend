@@ -151,7 +151,8 @@
       "WebFetch(domain:api.counciltaxfinder.com)",
       "WebFetch(domain:github.com)",
       "Bash(gh api *)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(test -f \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id].vue.bak\")"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",

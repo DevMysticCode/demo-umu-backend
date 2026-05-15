@@ -1668,6 +1668,7 @@ export class PropertyService {
             parks: [],
             airports: [],
             listedBuildings: [],
+            amenities: [],
           }),
       lat && lon ? this.fetchFloodDetail(lat, lon) : Promise.resolve(null),
       this.fetchPropertySalesHistory(postcode, property.addressLine1),
@@ -1894,11 +1895,11 @@ export class PropertyService {
       // Google Street View Static API
       streetViewUrl,
 
-      // OS NGD + Overpass: schools (categorised), trains, bus stops, parks, airports
+      // OS NGD + Overpass: schools (categorised), trains, bus stops, parks, airports, amenities
       nearby:
         nearby.status === 'fulfilled'
           ? nearby.value
-          : { schools: [], trains: [], busStops: [], parks: [], airports: [] },
+          : { schools: [], trains: [], busStops: [], parks: [], airports: [], amenities: [] },
 
       // Environment Agency Flood Risk API
       floodRisk: floodData?.rating ?? null,
@@ -2038,6 +2039,16 @@ export class PropertyService {
       node["historic"](around:800,${lat},${lon});
       way["historic"](around:800,${lat},${lon});
       way["heritage"](around:800,${lat},${lon});
+      node["shop"="supermarket"]["name"](around:1200,${lat},${lon});
+      node["amenity"="cafe"]["name"](around:800,${lat},${lon});
+      node["amenity"="restaurant"]["name"](around:800,${lat},${lon});
+      node["amenity"="pub"]["name"](around:800,${lat},${lon});
+      node["amenity"="pharmacy"]["name"](around:1500,${lat},${lon});
+      node["amenity"="hospital"]["name"](around:5000,${lat},${lon});
+      way["amenity"="hospital"]["name"](around:5000,${lat},${lon});
+      node["amenity"="doctors"]["name"](around:2000,${lat},${lon});
+      node["leisure"="fitness_centre"]["name"](around:2000,${lat},${lon});
+      node["leisure"="sports_centre"]["name"](around:2500,${lat},${lon});
     );out center body;`;
 
     // Try several Overpass mirrors — the main one (overpass-api.de) is
@@ -2205,7 +2216,62 @@ export class PropertyService {
         };
       });
 
-    return { schools, trains, busStops, parks, airports, listedBuildings };
+    // ── Local amenities (shops, food, health, leisure) ─────────────────────
+    const amenityIcon: Record<string, string> = {
+      supermarket: '🛒',
+      cafe: '☕',
+      restaurant: '🍽️',
+      pub: '🍺',
+      pharmacy: '💊',
+      hospital: '🏥',
+      doctors: '🩺',
+      fitness_centre: '💪',
+      sports_centre: '🏟️',
+    };
+    const amenityLabel: Record<string, string> = {
+      supermarket: 'Supermarket',
+      cafe: 'Cafe',
+      restaurant: 'Restaurant',
+      pub: 'Pub',
+      pharmacy: 'Pharmacy',
+      hospital: 'Hospital',
+      doctors: 'GP / Doctors',
+      fitness_centre: 'Gym',
+      sports_centre: 'Sports centre',
+    };
+    const amenities = elements
+      .filter((e) => {
+        const t = e.tags ?? {};
+        return (
+          (t.shop === 'supermarket' && t.name) ||
+          (t.amenity &&
+            ['cafe', 'restaurant', 'pub', 'pharmacy', 'hospital', 'doctors'].includes(
+              t.amenity,
+            ) &&
+            t.name) ||
+          (t.leisure && ['fitness_centre', 'sports_centre'].includes(t.leisure) && t.name)
+        );
+      })
+      .map((e) => {
+        const t = e.tags ?? {};
+        const key = (t.shop ?? t.amenity ?? t.leisure ?? '') as string;
+        const elat = e.center?.lat ?? e.lat;
+        const elon = e.center?.lon ?? e.lon;
+        return {
+          name: t.name as string,
+          category: amenityLabel[key] ?? key,
+          icon: amenityIcon[key] ?? '📍',
+          key,
+          lat: elat,
+          lon: elon,
+          distanceKm: elat && elon ? distKm(elat, elon) : null,
+        };
+      })
+      .filter((a) => a.distanceKm !== null)
+      .sort((a, b) => (a.distanceKm! - b.distanceKm!))
+      .slice(0, 30);
+
+    return { schools, trains, busStops, parks, airports, listedBuildings, amenities };
   }
 
   private async fetchFloodDetail(
@@ -4016,24 +4082,46 @@ export class PropertyService {
     bestCost: number | null;
     averageCost: number | null;
     yourCost: number | null;
+    yourEpcRating: string | null;
+    epcDistribution: { letter: string; count: number }[];
+    avgEpcScore: number | null;
   }> {
     const self: any = await this.prisma.property.findUnique({
       where: { id: propertyId },
       select: {
         id: true,
         postcode: true,
+        epcRating: true,
         heatingCostCurrent: true,
         hotWaterCostCurrent: true,
         lightingCostCurrent: true,
       } as any,
     });
     if (!self) {
-      return { rank: null, total: 0, bestCost: null, averageCost: null, yourCost: null };
+      return {
+        rank: null,
+        total: 0,
+        bestCost: null,
+        averageCost: null,
+        yourCost: null,
+        yourEpcRating: null,
+        epcDistribution: [],
+        avgEpcScore: null,
+      };
     }
 
     const outcode = (self.postcode || '').split(' ')[0] || '';
     if (!outcode) {
-      return { rank: null, total: 0, bestCost: null, averageCost: null, yourCost: null };
+      return {
+        rank: null,
+        total: 0,
+        bestCost: null,
+        averageCost: null,
+        yourCost: null,
+        yourEpcRating: self.epcRating ?? null,
+        epcDistribution: [],
+        avgEpcScore: null,
+      };
     }
 
     const yourCost =
@@ -4052,12 +4140,33 @@ export class PropertyService {
       },
       select: {
         id: true,
+        epcRating: true,
+        epcScore: true,
         heatingCostCurrent: true,
         hotWaterCostCurrent: true,
         lightingCostCurrent: true,
       } as any,
       take: 500,
     });
+
+    // EPC letter distribution across the same outcode (includes self).
+    const epcCounts: Record<string, number> = {};
+    let epcScoreSum = 0;
+    let epcScoreN = 0;
+    for (const n of neighbours) {
+      const letter = (n.epcRating || '').toString().toUpperCase().trim();
+      if (letter && letter.length === 1 && 'ABCDEFG'.includes(letter)) {
+        epcCounts[letter] = (epcCounts[letter] || 0) + 1;
+      }
+      if (n.epcScore && Number(n.epcScore) > 0) {
+        epcScoreSum += Number(n.epcScore);
+        epcScoreN += 1;
+      }
+    }
+    const epcDistribution = Object.entries(epcCounts)
+      .map(([letter, count]) => ({ letter, count }))
+      .sort((a, b) => a.letter.localeCompare(b.letter));
+    const avgEpcScore = epcScoreN > 0 ? Math.round(epcScoreSum / epcScoreN) : null;
 
     // Total annual cost per home; drop zero-cost rows (missing data).
     const ranked = neighbours
@@ -4078,6 +4187,9 @@ export class PropertyService {
         bestCost: null,
         averageCost: null,
         yourCost: yourCost > 0 ? Math.round(yourCost) : null,
+        yourEpcRating: self.epcRating ?? null,
+        epcDistribution,
+        avgEpcScore,
       };
     }
 
@@ -4101,6 +4213,9 @@ export class PropertyService {
       bestCost,
       averageCost,
       yourCost: yourCost > 0 ? Math.round(yourCost) : null,
+      yourEpcRating: self.epcRating ?? null,
+      epcDistribution,
+      avgEpcScore,
     };
   }
 
