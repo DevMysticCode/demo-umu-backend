@@ -19,6 +19,7 @@ import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
 import { KycModule } from './kyc/kyc.module';
+import { VerifierApiModule } from './verifier-api/verifier-api.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { KycModule } from './kyc/kyc.module';
     MaintenanceModule,
     BuyerProfileModule,
     KycModule,
+    VerifierApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

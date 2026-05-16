@@ -46,6 +46,7 @@ model User {
   videoProgress          VideoProgress[]
   buyerNotes             BuyerNote[]
   buyerProfile           BuyerProfile?
+  accessRequests         AccessRequest[]  // OPDA verifier-API requests (Sprint 1)
 }
 
 model UserAddress {
@@ -781,6 +782,95 @@ model BuyerProfile {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   shares          BuyerProfileShare[]
+}
+
+// ── Buyer Profile External API (OPDA / PDTF Sprint 1) ───────────────────────
+// A verifier organisation (lender, conveyancer, solicitor, etc.) registers as
+// a VerifierOrg. Each org has one or more VerifierClient credentials they use
+// to call our OpenProperty API. When a client wants to read a buyer's
+// verified credentials, it creates an AccessRequest — the buyer approves it
+// in-app with per-scope toggles, which mints an AccessGrant with a bearer
+// access_token. Every API call against that token writes an AccessLog row.
+
+model VerifierOrg {
+  id            String   @id @default(uuid())
+  name          String                       // "Lloyds Bank"
+  legalName     String?                      // "Lloyds Banking Group plc"
+  logoEmoji     String?                      // "🏦" — used until brand assets ship
+  description   String?                      // "Mortgage division · FCA authorised"
+  fcaNumber     String?                      // FRN for regulated firms
+  contactEmail  String
+  websiteUrl    String?
+  status        String   @default("ACTIVE")  // ACTIVE | SUSPENDED
+  createdAt     DateTime @default(now())
+  clients       VerifierClient[]
+  requests      AccessRequest[]
+}
+
+model VerifierClient {
+  id               String   @id @default(uuid())
+  orgId            String
+  org              VerifierOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  clientId         String   @unique          // public ID, sent in API headers
+  clientSecretHash String                    // bcrypt of generated secret
+  redirectUris     String[] @default([])     // for future OAuth phase
+  allowedScopes    String[]                  // max scopes this client can request
+  createdAt        DateTime @default(now())
+  revokedAt        DateTime?
+  requests         AccessRequest[]
+
+  @@index([orgId])
+}
+
+model AccessRequest {
+  id              String   @id @default(uuid())
+  orgId           String
+  org             VerifierOrg @relation(fields: [orgId], references: [id])
+  clientId        String
+  client          VerifierClient @relation(fields: [clientId], references: [id])
+  buyerUserId     String
+  buyer           User @relation(fields: [buyerUserId], references: [id], onDelete: Cascade)
+  requestedScopes String[]                   // what the org asked for
+  approvedScopes  String[] @default([])      // subset granted (filled on approve)
+  reason          String?                    // optional message from verifier
+  status          String   @default("PENDING")  // PENDING | APPROVED | DECLINED | EXPIRED
+  expiresAt       DateTime                   // request itself expires (48h)
+  decidedAt       DateTime?
+  createdAt       DateTime @default(now())
+  grant           AccessGrant?
+
+  @@index([buyerUserId, status])
+  @@index([clientId])
+}
+
+model AccessGrant {
+  id            String   @id @default(uuid())
+  requestId     String   @unique
+  request       AccessRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  accessToken   String   @unique             // bearer token (UUID-shaped or longer)
+  refreshToken  String?  @unique             // optional, Sprint 2 OAuth
+  scopes        String[]                     // approved scopes (subset of request)
+  expiresAt     DateTime                     // grant TTL — max 30 days
+  revokedAt     DateTime?                    // buyer-revocable at any time
+  createdAt     DateTime @default(now())
+  lastUsedAt    DateTime?
+  useCount      Int      @default(0)
+  logs          AccessLog[]
+
+  @@index([accessToken])
+}
+
+model AccessLog {
+  id             String   @id @default(uuid())
+  grantId        String
+  grant          AccessGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  scopesReturned String[]
+  ip             String?
+  userAgent      String?
+  endpoint       String?                     // e.g. "GET /api/v1/buyer-profile"
+  createdAt      DateTime @default(now())
+
+  @@index([grantId])
 }
 
 // Per-recipient share token for a buyer profile. Lets agents view a scoped,

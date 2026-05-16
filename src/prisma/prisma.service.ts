@@ -36,6 +36,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   // Expose prisma client methods
+  $transaction = (...args: any[]) => (this.prisma as any).$transaction(...args);
+
   get user() {
     return this.prisma.user;
   }
@@ -166,6 +168,22 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get buyerProfileShare() {
     return this.prisma.buyerProfileShare;
+  }
+
+  get verifierOrg() {
+    return this.prisma.verifierOrg;
+  }
+  get verifierClient() {
+    return this.prisma.verifierClient;
+  }
+  get accessRequest() {
+    return this.prisma.accessRequest;
+  }
+  get accessGrant() {
+    return this.prisma.accessGrant;
+  }
+  get accessLog() {
+    return this.prisma.accessLog;
   }
 
   get propertySearchLog() {
