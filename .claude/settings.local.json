@@ -152,11 +152,13 @@
       "WebFetch(domain:github.com)",
       "Bash(gh api *)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(test -f \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id].vue.bak\")"
+      "Bash(test -f \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id].vue.bak\")",
+      "Bash(grep -oE \"[0-9]{4} *Ray|Ray *ID[^<]*<[^>]*>[^<]+|cferror_details.{0,300}\" /tmp/cf-response.html | head -10 *)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
-      "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\components"
+      "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\components",
+      "\\tmp"
     ]
   }
 }

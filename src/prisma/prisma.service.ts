@@ -164,6 +164,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.buyerProfile;
   }
 
+  get buyerProfileShare() {
+    return this.prisma.buyerProfileShare;
+  }
+
   get propertySearchLog() {
     return this.prisma.propertySearchLog;
   }
