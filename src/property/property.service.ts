@@ -1362,14 +1362,23 @@ export class PropertyService {
    * This is called after fetching a property to guarantee EPC data (titleNumber, floorAreaSqm, epcRating, tenure, yearBuilt).
    */
   private async enrichPropertyWithEpc(property: Property): Promise<Property> {
-    // If all basic AND V2 cost fields are present, return as-is
+    // Early return only if BOTH basic fields AND the V2 fabric/recs fields the
+    // simulator depends on are present. Without the V2 fields the homescore
+    // simulator falls back to generic hardcoded copy ("75mm loft · EPC: Average")
+    // even for properties whose real EPC describes different fabric.
+    const hasV2Detail =
+      (property as any).wallsDescription &&
+      (property as any).roofDescription &&
+      Array.isArray((property as any).epcRecommendations) &&
+      (property as any).epcRecommendations.length > 0;
     if (
       property.epcRating &&
       property.floorAreaSqm &&
       property.tenure &&
       property.yearBuilt &&
       property.titleNumber &&
-      (property as any).heatingCostCurrent != null
+      (property as any).heatingCostCurrent != null &&
+      hasV2Detail
     ) {
       console.log(
         `[Enrich] Property ${property.id} already has all EPC fields`,
@@ -1567,15 +1576,63 @@ export class PropertyService {
           where: { id: property.id },
           data: { titleNumber },
         });
-        return updated;
+        property = updated;
       } catch (error) {
         console.error(`[Enrich] Failed to update titleNumber: ${error}`);
-        return { ...property, titleNumber };
+        property = { ...property, titleNumber } as Property;
       }
     }
 
+    // ── Council Tax Finder API ─────────────────────────────────────────────
+    // Per-address band + £ figure. Cached on the row for 30 days. Skipped when
+    // the API key isn't set or the upstream errors (geo-block, etc.) — caller
+    // gracefully falls back to the band-D-average estimator.
+    await this.maybeEnrichCouncilTax(property);
+
     console.log(`[Enrich] Returning property without any updates`);
     return property;
+  }
+
+  /**
+   * Refresh the Council Tax Finder columns on a property row when missing or
+   * older than 30 days. Mutates the passed property object in-place so callers
+   * see the new fields without re-fetching. Errors are swallowed.
+   */
+  private async maybeEnrichCouncilTax(property: any): Promise<void> {
+    if (!property?.postcode) return;
+    const fresh =
+      property.councilTaxAnnual != null &&
+      property.councilTaxFetchedAt &&
+      Date.now() - new Date(property.councilTaxFetchedAt).getTime() <
+        30 * 24 * 60 * 60 * 1000; // 30 days
+    if (fresh) return;
+
+    const result = await this.fetchCouncilTaxFinder(
+      property.postcode,
+      property.addressLine1 ?? null,
+    );
+    if (!result) return;
+
+    try {
+      const updated = await this.prisma.property.update({
+        where: { id: property.id },
+        data: {
+          councilTaxBand: result.band,
+          councilTaxAnnual: result.annual,
+          councilTaxCouncilName: result.councilName,
+          councilTaxCouncilWeb: result.councilWeb,
+          councilTaxRef: result.laRef,
+          councilTaxYear: result.taxYear,
+          councilTaxFetchedAt: new Date(),
+        } as any,
+      });
+      Object.assign(property, updated);
+    } catch (error) {
+      console.error(
+        `[Enrich] Failed to persist council tax data for ${property.id}:`,
+        error,
+      );
+    }
   }
 
   /**
@@ -1635,6 +1692,148 @@ export class PropertyService {
   }
 
   // ── Enrichment (on-demand, not stored) ────────────────────────────────────
+
+  // Diagnostic endpoint: which enrichment sources succeeded, which returned
+  // empty payloads, which threw. Used to surface why a sheet is "missing data"
+  // without having to tail the backend logs.
+  async getEnrichmentDebug(propertyId: string): Promise<any> {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+        postcode: true,
+        uprn: true,
+        addressLine1: true,
+      },
+    });
+    if (!property) return { error: 'Property not found' };
+
+    const lat = property.latitude;
+    const lon = property.longitude;
+    const postcode = property.postcode;
+    const uprn = property.uprn;
+
+    const env = {
+      OS_API_KEY: !!process.env.OS_API_KEY,
+      OFCOM_API_KEY: !!process.env.OFCOM_API_KEY,
+      GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
+      EPC_API_KEY: !!process.env.EPC_API_KEY,
+      MAPBOX_TOKEN: !!process.env.MAPBOX_TOKEN,
+    };
+
+    const probe = async <T>(
+      name: string,
+      fn: () => Promise<T>,
+    ): Promise<{ source: string; status: string; count?: number; sample?: any; error?: string; ms: number }> => {
+      const t0 = Date.now();
+      try {
+        const value = await fn();
+        const ms = Date.now() - t0;
+        let count: number | undefined;
+        let sample: any;
+        if (Array.isArray(value)) {
+          count = value.length;
+          sample = value[0];
+        } else if (value && typeof value === 'object') {
+          sample = value;
+        } else {
+          sample = value;
+        }
+        const status =
+          value === null || value === undefined
+            ? 'null'
+            : Array.isArray(value) && value.length === 0
+              ? 'empty'
+              : 'ok';
+        return { source: name, status, count, sample, ms };
+      } catch (e: any) {
+        return {
+          source: name,
+          status: 'error',
+          error: String(e?.message ?? e).slice(0, 200),
+          ms: Date.now() - t0,
+        };
+      }
+    };
+
+    const results = await Promise.all([
+      probe('nearby (OS NGD + Overpass)', () =>
+        lat && lon
+          ? this.fetchNearbyOS(lat, lon)
+          : Promise.resolve({ skipped: true } as any),
+      ),
+      probe('floodRisk (EA)', () =>
+        lat && lon ? this.fetchFloodDetail(lat, lon) : Promise.resolve(null),
+      ),
+      probe('broadband (Ofcom)', () =>
+        postcode ? (this as any).fetchBroadband(postcode) : Promise.resolve(null),
+      ),
+      probe('mobileSignal (Ofcom)', () =>
+        postcode ? (this as any).fetchMobileSignal(postcode) : Promise.resolve(null),
+      ),
+      probe('osPlaces (OS Places)', () =>
+        postcode ? (this as any).fetchOsPlaces(postcode) : Promise.resolve(null),
+      ),
+      probe('epc (EPC Register)', () =>
+        uprn
+          ? (this as any).fetchEpcData(uprn)
+          : (this as any).fetchEpcDataByAddress(postcode, property.addressLine1),
+      ),
+      probe('planning (planning.data.gov.uk)', () =>
+        lat && lon
+          ? (this as any).fetchPlanningData(lat, lon, uprn)
+          : Promise.resolve({ constraints: [], applications: [] }),
+      ),
+      probe('titleBoundary (OS NGD buildings)', () =>
+        lat && lon
+          ? (this as any).fetchInspireBoundary(lat, lon)
+          : Promise.resolve(null),
+      ),
+      probe('nearbyCouncilTax', () =>
+        postcode
+          ? (this as any).fetchNearbyCouncilTax(postcode)
+          : Promise.resolve(null),
+      ),
+    ]);
+
+    // For the OS+Overpass combined fetch, also break out the sub-arrays so the
+    // caller can see which Overpass categories came back empty.
+    const nearby = results[0]?.sample as any;
+    const overpassBreakdown = nearby && typeof nearby === 'object'
+      ? {
+          schools: Array.isArray(nearby.schools) ? nearby.schools.length : null,
+          trains: Array.isArray(nearby.trains) ? nearby.trains.length : null,
+          busStops: Array.isArray(nearby.busStops) ? nearby.busStops.length : null,
+          parks: Array.isArray(nearby.parks) ? nearby.parks.length : null,
+          airports: Array.isArray(nearby.airports) ? nearby.airports.length : null,
+          listedBuildings: Array.isArray(nearby.listedBuildings)
+            ? nearby.listedBuildings.length
+            : null,
+          amenities: Array.isArray(nearby.amenities) ? nearby.amenities.length : null,
+        }
+      : null;
+
+    return {
+      property: {
+        id: property.id,
+        postcode,
+        lat,
+        lon,
+        uprn,
+      },
+      env,
+      overpassBreakdown,
+      sources: results.map((r) => ({
+        source: r.source,
+        status: r.status,
+        count: r.count,
+        ms: r.ms,
+        error: r.error,
+      })),
+    };
+  }
 
   async getPropertyEnrichment(propertyId: string) {
     const property = await this.prisma.property.findUnique({
@@ -2565,6 +2764,122 @@ export class PropertyService {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * Council Tax Finder API (counciltaxfinder.com) — exact band + £/yr + LA ref
+   * per address. Three modes attempted in order:
+   *   1. Postcode + door (most precise — uses door number parsed from addressLine1)
+   *   2. Postcode + alladdress=<door> (fallback when door= isn't matched)
+   *   3. Postcode-only (returns one sample row — useful only if other modes fail)
+   *
+   * Returns `null` when:
+   *   - API key not set (silent — caller falls back to estimate)
+   *   - HTTP non-200 (e.g. 403 from Cloudflare geo-block on non-UK IPs)
+   *   - Response is not valid JSON or contains no matching row
+   *
+   * NOTE: counciltaxfinder.com appears to geo-block non-UK source IPs at the
+   * Cloudflare edge. From UK production infra this will return JSON; from
+   * non-UK dev IPs it returns an HTML 403 block page (caller treats as null).
+   */
+  private async fetchCouncilTaxFinder(
+    postcode: string,
+    addressLine1: string | null,
+  ): Promise<{
+    band: string;
+    annual: number;
+    councilName: string | null;
+    councilWeb: string | null;
+    laRef: string | null;
+    taxYear: string | null;
+  } | null> {
+    const userid = process.env.COUNCIL_TAX_FINDER_USERID;
+    const apikey = process.env.COUNCIL_TAX_FINDER_APIKEY;
+    if (!userid || !apikey) return null;
+    if (!postcode) return null;
+
+    const pcCompact = postcode.replace(/\s+/g, '').toUpperCase();
+    // Extract leading door number from "30 Whittington Grove" / "Flat 4, 30 …" /
+    // "30A Mill Road". Falls back to first numeric token.
+    const door = (() => {
+      const a = (addressLine1 || '').trim();
+      if (!a) return '';
+      const flat = a.match(/^(?:flat|apt|apartment|unit)\s*([\d\w]+)/i);
+      if (flat) return flat[1];
+      const m = a.match(/(\d+[a-zA-Z]?)/);
+      return m ? m[1] : '';
+    })();
+
+    const headers = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+      Accept: 'application/json, text/javascript, */*; q=0.01',
+      'Accept-Language': 'en-GB,en;q=0.9',
+      Referer: 'https://www.counciltaxfinder.com/',
+    };
+
+    const parseRow = (row: any) => {
+      if (!row || typeof row !== 'object') return null;
+      const band = String(row.Band ?? '').trim().toUpperCase();
+      const taxStr = String(row.Tax ?? '').replace(/[^\d.]/g, '');
+      const annual = taxStr ? Number(taxStr) : NaN;
+      if (!band || !Number.isFinite(annual)) return null;
+      return {
+        band,
+        annual: Math.round(annual * 100) / 100,
+        councilName: row['Council Name'] ? String(row['Council Name']) : null,
+        councilWeb: row['Council Web'] ? String(row['Council Web']) : null,
+        laRef: row['Local Authority Reference Number']
+          ? String(row['Local Authority Reference Number'])
+          : null,
+        taxYear: row.Year ? String(row.Year) : null,
+      };
+    };
+
+    // Best-match scorer for multi-row results: prefer rows whose Address text
+    // contains the door number we parsed (handles flats above shops, etc.)
+    const pickBest = (rows: any[]) => {
+      if (!Array.isArray(rows) || rows.length === 0) return null;
+      if (door) {
+        const re = new RegExp(`(^|[^0-9])${door}([^0-9]|$)`, 'i');
+        const match = rows.find((r) => re.test(String(r?.Address ?? '')));
+        if (match) return parseRow(match);
+      }
+      return parseRow(rows[0]);
+    };
+
+    const callApi = async (qs: string) => {
+      const url = `https://api.counciltaxfinder.com/counciltaxfinder/counciltax/${pcCompact}?${qs}&userid=${encodeURIComponent(userid)}&apikey=${encodeURIComponent(apikey)}`;
+      try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) return null;
+        const ct = res.headers.get('content-type') ?? '';
+        if (!ct.includes('json')) return null;
+        const body = await res.json();
+        return Array.isArray(body) ? body : null;
+      } catch {
+        return null;
+      }
+    };
+
+    // 1. Try door= mode first (most precise per docs).
+    if (door) {
+      const rows = await callApi(`door=${encodeURIComponent(door)}&page=`);
+      const hit = pickBest(rows || []);
+      if (hit) return hit;
+    }
+    // 2. alladdress= fallback uses partial-match semantics. Per docs, door=
+    //    must still be present but is ignored when alladdress is set.
+    if (door) {
+      const rows = await callApi(
+        `door=&alladdress=${encodeURIComponent(door)}&page=`,
+      );
+      const hit = pickBest(rows || []);
+      if (hit) return hit;
+    }
+    // 3. Last resort: postcode-only sample row.
+    const rows = await callApi('door=&page=');
+    return pickBest(rows || []);
   }
 
   private async fetchNearbyCouncilTax(postcode: string): Promise<

@@ -128,6 +128,13 @@ model Property {
   lastSoldPrice          Float?
   lastSoldDate           DateTime?
   councilTaxBand         String?
+  // ── Council Tax Finder API (counciltaxfinder.com) — exact per-address figures ──
+  councilTaxAnnual       Float?    // £/yr for this exact address (e.g. 1377.60)
+  councilTaxCouncilName  String?   // Billing council label (e.g. "NEWCASTLE UPON TYNE")
+  councilTaxRef          String?   // Local Authority Reference Number
+  councilTaxYear         String?   // Tax year string from the API (e.g. "2024-2025")
+  councilTaxCouncilWeb   String?   // Council website host (e.g. "newcastle.gov.uk")
+  councilTaxFetchedAt    DateTime? // When the API was last hit successfully. Cached ~30 days.
   floodRisk              String?   // EA "Risk of Flooding from Rivers and Sea" (Very Low / Low / Medium / High)
   floodRiskEnrichedAt    DateTime? // When floodRisk was last fetched from the EA. Cached 90 days.
   imageUrl               String?
@@ -726,27 +733,74 @@ model BuyerProfile {
   id               String   @id @default(uuid())
   userId           String   @unique
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Public reference — short, URL-safe code shown on shared profile (e.g. "K3M9X2").
+  publicRef        String?  @unique
+  // Tier — BASIC (free) / VERIFIED (£29) / PREMIUM (£79).
+  tier             String   @default("BASIC")
+  tierPaidAt       DateTime?
+  tierPaymentId    String?  // Stripe PaymentIntent id (£ paid for Verified/Premium)
   // Step 1: ID
   idDocumentType   String?  // "passport" | "drivingLicence" | "nationalId"
   idDocumentUrl    String?
   idVerified       Boolean  @default(false)
+  // Phase 2 (Persona) — populated by the KYC webhook.
+  idVerificationProvider String?  // "persona"
+  idVerificationId       String?
+  idVerifiedAt           DateTime?
   // Step 2: Funds
   fundsType        String?  // "mortgage" | "cash" | "help"
   fundsAmount      Int?     // max budget in GBP
   fundsDocumentUrl String?
   fundsVerified    Boolean  @default(false)
+  // Phase 3 (Armalytix/TrueLayer) — mock-shaped fields persisted from day 1.
+  fundsProvider           String?   // "armalytix" | "truelayer" | "mock"
+  fundsVerificationId     String?
+  fundsVerifiedAt         DateTime?
+  fundsAmountVerified     Int?      // £ confirmed by open-banking pass
+  amlStatus               String?   // "CLEAR" | "FLAG" | "PENDING"
+  affordabilityScore      Int?      // 0–100
+  sourceOfFundsJson       Json?     // breakdown rows
   // Step 3: Chain
   chainPosition   String?   // "ftb" | "selling" | "sold" | "renting"
-  // Step 4: Solicitor + timeline
+  // Step 4: Solicitor + timeline + property type
   solicitorStatus String?   // "yes" | "looking" | "notsure"
   timeline        String?   // "asap" | "3m" | "6m" | "flex"
+  propertyType    String?   // "house" | "flat" | "newBuild" | "any"
   // Step 5: Statement
   statement       String?
+  // Digital signature (canvas PNG data URL OR typed name).
+  signatureData   String?   // base64 data URL when canvas-drawn
+  signedName      String?   // populated when user typed their name instead
+  signedAt        DateTime?
   // Meta
   completedSteps  Int       @default(0) // 1-5
   published       Boolean   @default(false)
+  publishedAt     DateTime?
+  // Strength score (0–100) computed server-side on every upsert.
+  strengthScore   Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  shares          BuyerProfileShare[]
+}
+
+// Per-recipient share token for a buyer profile. Lets agents view a scoped,
+// expiring read-only badge at /shared-buyer/<token>. Expiry is agent-configurable
+// at create time; revocation flips revokedAt and 410s the public route.
+model BuyerProfileShare {
+  id             String   @id @default(uuid())
+  profileId      String
+  profile        BuyerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  token          String   @unique          // short URL-safe slug
+  recipientName  String?                   // "Hamilton Court Estates"
+  recipientEmail String?                   // optional, used by Resend
+  scope          Json                      // ["identity","deposit","sof","afford","credit","story"]
+  sentAt         DateTime @default(now())
+  expiresAt      DateTime                  // agent-configurable
+  revokedAt      DateTime?
+  lastViewedAt   DateTime?
+  viewCount      Int      @default(0)
+
+  @@index([profileId])
 }
 
 // HM Land Registry Price Paid Data — imported via scripts/import-price-paid.ts

@@ -1,0 +1,2690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMU Buyer Passport v6</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#231d45;--navy-2:#1a1535;--navy-soft:#4a4566;--navy-pale:#eeedf5;--navy-paler:#f6f5fb;
+  --teal:#00a19a;--teal-bright:#00b6ae;--teal-dark:#007e78;--teal-deep:#00514d;
+  --teal-pale:#E5F4F2;--teal-paler:#F2FAF8;
+  --amber:#E6A23C;--amber-dark:#c4821a;--amber-pale:#FBEFD9;--amber-faint:#fffaf0;
+  --red:#C73E36;--red-pale:#FCEBEA;
+  --text:#231d45;--text-soft:#6b6783;--text-faint:#9c98ad;
+  --line:#ECECEF;--line-soft:#F5F5F7;
+  --bg:#FAFAFA;--white:#FFFFFF;
+  --stage:#0e1a1a;
+  --success:#2EAB55;
+}
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(0,161,154,0.08),transparent 60%),#0e1a1a;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:32px 16px 48px;
+}
+/* Stage caption */
+.stage-label{color:rgba(255,255,255,.45);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px}
+/* Screen switcher */
+.screen-switcher{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:5px;gap:4px;display:inline-flex;flex-wrap:wrap;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.25);margin-bottom:20px}
+.screen-btn{font-family:inherit;font-size:12px;font-weight:800;color:rgba(255,255,255,.7);background:transparent;border:none;padding:9px 14px;border-radius:100px;cursor:pointer;transition:all .2s}
+.screen-btn.active{background:var(--teal);color:white;box-shadow:0 4px 12px rgba(0,161,154,.4)}
+/* Phone shell */
+.phone{width:380px;height:820px;background:var(--bg);border-radius:42px;overflow:hidden;
+  box-shadow:0 35px 90px rgba(0,0,0,.55),0 0 0 8px #0a0d12,0 0 0 9px rgba(255,255,255,.06),inset 0 0 0 1px rgba(255,255,255,.6);
+  display:flex;flex-direction:column;position:relative;isolation:isolate}
+.phone::before{content:'';position:absolute;top:11px;left:50%;transform:translateX(-50%);width:105px;height:27px;background:#0a0d12;border-radius:100px;z-index:30}
+/* Status bar */
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px 0;height:44px;flex-shrink:0;position:relative;z-index:20}
+.status-time{font-size:15px;font-weight:700;color:var(--navy)}
+.status-right{display:flex;align-items:center;gap:5px}
+.status-right svg{color:var(--navy)}
+/* Body */
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:70px}
+.body::-webkit-scrollbar{display:none}
+/* Screens */
+.screen{display:none}
+body[data-screen="intro"] .screen.intro{display:block}
+body[data-screen="s1"] .screen.s1{display:block}
+body[data-screen="s1modal"] .screen.s1{display:block}
+body[data-screen="s1modal"] .id-modal-overlay{display:flex!important}
+body[data-screen="s2"] .screen.s2{display:block}
+body[data-screen="s3"] .screen.s3{display:block}
+body[data-screen="s4"] .screen.s4{display:block}
+body[data-screen="s5"] .screen.s5{display:block}
+body[data-screen="complete"] .screen.complete{display:block}
+body[data-screen="badge"] .screen.badge{display:block}
+body[data-screen="share"] .screen.share{display:block}
+body[data-screen="s2bank"] .screen.s2bank{display:block}
+body[data-screen="s2processing"] .screen.s2processing{display:block}
+body[data-screen="s2result"] .screen.s2result{display:block}
+body[data-screen="lender-req"] .screen.lender-req{display:block}
+body[data-screen="lender-approve"] .screen.lender-approve{display:block}
+body[data-screen="lender-portal"] .screen.lender-portal{display:block}
+body[data-screen="eq-bank"] .screen.eq-bank{display:block}
+body[data-screen="eq-result"] .screen.eq-result{display:block}
+body[data-screen="send-agent"] .screen.send-agent{display:block}
+body[data-screen="pdf-view"] .screen.pdf-view{display:block}
+body[data-screen="sign-doc"] .screen.sign-doc{display:block}
+body[data-screen="sign-done"] .screen.sign-done{display:block}
+/* Top nav */
+.top-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 6px;flex-shrink:0}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--navy);cursor:pointer;flex-shrink:0}
+.nav-centre{flex:1;display:flex;justify-content:center;align-items:center}
+.nav-right{font-size:13px;font-weight:700;color:var(--teal);cursor:pointer;white-space:nowrap}
+/* Eyebrow pill */
+.eyebrow-pill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:var(--teal-dark);background:var(--teal-paler);border:1px solid var(--teal-pale);padding:6px 12px;border-radius:100px;letter-spacing:1.4px;text-transform:uppercase}
+.eyebrow-dot{width:5px;height:5px;border-radius:50%;background:var(--teal);flex-shrink:0}
+/* Pulse dot */
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);position:relative;flex-shrink:0}
+.pulse-dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;background:var(--teal);opacity:.35;animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.6);opacity:.5}100%{transform:scale(1.6);opacity:0}}
+/* Teal gradient hero card */
+.hero-card{background:linear-gradient(140deg,var(--teal-bright) 0%,var(--teal) 50%,var(--teal-deep) 100%);
+  box-shadow:0 12px 32px -10px rgba(0,161,154,0.45),inset 0 1px 0 rgba(255,255,255,0.18);
+  border-radius:20px;padding:22px;color:white;position:relative;overflow:hidden}
+.hero-card::after{content:'';position:absolute;top:-40%;right:-20%;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,0.16) 0%,transparent 65%);pointer-events:none}
+.hero-card::before{content:'';position:absolute;top:0;left:0;width:60px;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);
+  transform:translateX(-100%) skewX(-15deg);animation:shimmer 3s ease-in-out infinite;pointer-events:none}
+@keyframes shimmer{0%{transform:translateX(-100%) skewX(-15deg)}100%{transform:translateX(600%) skewX(-15deg)}}
+.hero-eyebrow{font-size:9px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;opacity:.7;margin-bottom:4px}
+.hero-tagline{font-size:20px;font-weight:800;font-style:italic;line-height:1.25;margin-bottom:12px}
+.hero-name{font-size:13px;font-weight:700;margin-bottom:12px}
+.hero-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.hero-pill{font-size:10px;font-weight:700;border:1px solid rgba(255,255,255,.4);border-radius:100px;padding:5px 10px;color:white;white-space:nowrap}
+.hero-footer{display:flex;align-items:center;justify-content:space-between}
+.hero-footer-text{font-size:11px;font-weight:600;opacity:.75}
+.hero-share-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+/* Section header */
+.section-header{display:flex;align-items:center;gap:12px;padding:20px 22px 10px}
+.sec-icon{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--teal-bright),var(--teal-dark));
+  box-shadow:0 3px 10px rgba(0,161,154,.30);display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0}
+.sec-title{font-size:14px;font-weight:800;color:var(--navy)}
+.sec-sub{font-size:11.5px;color:var(--text-soft)}
+/* Progress bar */
+.pb-track{height:10px;background:var(--line);border-radius:100px;overflow:hidden;margin:0 22px}
+.pb-fill{height:100%;background:linear-gradient(90deg,#00a19a,#00b6ae);border-radius:100px;width:0%;transition:width 1s .6s cubic-bezier(.22,1,.36,1)}
+/* Step progress */
+.step-bar{display:flex;gap:4px;padding:10px 22px 4px}
+.step-seg{height:4px;flex:1;border-radius:100px;background:var(--line)}
+.step-seg.done{background:var(--teal)}
+.step-seg.active{background:var(--amber)}
+/* Option radio cards */
+.options-block{padding:0 22px;display:flex;flex-direction:column;gap:8px}
+.opt-card{background:var(--bg);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.opt-card.sel{background:var(--teal-paler);border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,161,154,.10)}
+.opt-icon{font-size:20px;width:36px;text-align:center;flex-shrink:0}
+.opt-text{flex:1}
+.opt-title{font-size:13.5px;font-weight:800;color:var(--navy)}
+.opt-sub{font-size:11px;color:var(--text-soft);margin-top:1px}
+.opt-radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0;transition:all .15s}
+.opt-card.sel .opt-radio{background:var(--teal);border-color:var(--teal)}
+.opt-radio-dot{width:6px;height:6px;border-radius:50%;background:white;display:none}
+.opt-card.sel .opt-radio-dot{display:block}
+/* Tile grid */
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 22px}
+.tile{background:white;border-radius:16px;padding:16px 14px;border:1.5px solid transparent;box-shadow:0 1px 8px rgba(0,0,0,.06);transition:all .2s cubic-bezier(.34,1.56,.64,1);opacity:0}
+.tile:nth-child(1){animation:tileIn .4s .10s both}
+.tile:nth-child(2){animation:tileIn .4s .15s both}
+.tile:nth-child(3){animation:tileIn .4s .20s both}
+.tile:nth-child(4){animation:tileIn .4s .25s both}
+.tile:hover{transform:scale(1.03);border-color:var(--navy);box-shadow:0 8px 24px rgba(35,29,69,.12)}
+.tile.amber{border-color:var(--amber)}
+@keyframes tileIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.tile-icon{width:32px;height:32px;border-radius:10px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:10px}
+.tile-icon.amber-bg{background:var(--amber-pale)}
+.tile-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:2px}
+.tile-value{font-size:15px;font-weight:800;color:var(--teal)}
+.tile-value.amber{color:var(--amber-dark)}
+.tile-sub{font-size:10px;color:#999;margin-top:2px}
+/* CTA buttons */
+.cta-btn{width:100%;background:var(--teal);color:white;border:none;border-radius:14px;padding:16px;font-size:14px;font-weight:800;box-shadow:0 4px 16px rgba(0,161,154,.35);position:relative;overflow:hidden;cursor:pointer;font-family:inherit;transition:all .15s}
+.cta-btn::after{content:'';position:absolute;top:0;left:0;width:50px;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transform:translateX(-100%) skewX(-15deg);animation:shimmer 2.5s ease-in-out 1s infinite}
+.cta-btn:hover{background:var(--teal-bright);transform:translateY(-1px)}
+.cta-btn.outline{background:white;color:var(--navy);border:1.5px solid var(--navy);box-shadow:none}
+.cta-btn.outline::after{display:none}
+.ghost-link{text-align:center;display:block;font-size:12px;font-weight:700;color:var(--text-soft);cursor:pointer;padding:10px}
+/* Doc rows */
+.doc-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .15s}
+.doc-row:last-child{border-bottom:none}
+.doc-row:hover{background:var(--bg)}
+.doc-icon{width:32px;height:32px;border-radius:10px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.doc-body{flex:1;min-width:0}
+.doc-title{font-size:13.5px;font-weight:800;color:var(--navy)}
+.doc-meta{font-size:11px;color:var(--text-soft);margin-top:1px}
+.doc-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+/* Risk pills */
+.risk-pill{font-size:10px;font-weight:800;padding:4px 8px;border-radius:100px;white-space:nowrap}
+.risk-pill.clear{background:var(--teal-paler);color:var(--teal-dark);border:1px solid var(--teal-pale)}
+.risk-pill.flag{background:var(--amber-pale);color:var(--amber)}
+.risk-pill.ok{background:#E8F5EE;color:#2EAB55;border:1px solid #B8E8C8}
+.risk-pill.add{background:var(--amber-pale);color:var(--amber-dark);border:1px solid var(--amber)}
+/* Animations */
+@keyframes fadeSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeSlideDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+@keyframes gaugeIn{from{stroke-dashoffset:251}to{stroke-dashoffset:25}}
+/* Chips */
+.chip-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 22px}
+.chip{border:1.5px solid var(--line);border-radius:100px;padding:10px 16px;font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;transition:all .15s;background:white;font-family:inherit;text-align:center}
+.chip.active{background:var(--teal);color:white;border-color:var(--teal)}
+/* How tabs */
+.how-tabs{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:100px;padding:4px;gap:4px}
+.how-tab{font-family:inherit;font-size:12px;font-weight:700;color:var(--text-soft);background:transparent;border:none;padding:8px 14px;border-radius:100px;cursor:pointer;transition:all .15s}
+.how-tab.active{background:var(--teal);color:white;box-shadow:0 2px 8px rgba(0,161,154,.3)}
+/* Tab bar */
+.tab-bar{display:flex;background:white;border-top:1px solid var(--line);padding:8px 0 12px;flex-shrink:0}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--text-faint);background:none;border:none;cursor:pointer;font-family:inherit}
+.tab-item.active{color:var(--teal)}
+.tab-item span{font-size:10px}
+/* Modal overlay */
+.id-modal-overlay{position:absolute;inset:0;z-index:50;background:rgba(14,26,26,.65);backdrop-filter:blur(3px);display:none;flex-direction:column;justify-content:flex-end}
+.id-modal{background:white;border-radius:28px 28px 0 0;padding:0 0 28px;animation:modalUp .35s cubic-bezier(.22,1,.36,1) both}
+@keyframes modalUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-handle{width:36px;height:4px;background:var(--line);border-radius:100px;margin:12px auto 18px}
+/* ID step rows */
+.id-step{display:flex;align-items:center;gap:12px;padding:10px 0}
+.id-step-icon{width:36px;height:36px;border-radius:10px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .15s}
+.id-step-icon.done{background:var(--teal);color:white}
+.id-step-icon.active{animation:borderPulse 1.5s ease-in-out infinite}
+@keyframes borderPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,161,154,.4)}50%{box-shadow:0 0 0 4px rgba(0,161,154,.2)}}
+.id-step-title{font-size:13px;font-weight:800;color:var(--navy)}
+.id-step-sub{font-size:11px;color:var(--text-soft)}
+.id-step.locked{opacity:.5}
+/* Teal-bordered white card */
+.teal-card{background:white;border:2px solid var(--teal);border-radius:16px;box-shadow:0 4px 16px rgba(0,161,154,.08)}
+/* Navy-bordered white card */
+.navy-card{background:white;border:2px solid var(--navy);border-radius:16px;box-shadow:0 4px 16px rgba(35,29,69,.08)}
+/* Amber gradient card */
+.amber-card{background:linear-gradient(180deg,rgba(251,239,217,0.6) 0%,white 50%);border:2px solid var(--amber);border-radius:16px}
+/* Row action */
+.action-row{display:flex;align-items:center;gap:14px;padding:14px 22px;cursor:pointer;transition:background .15s}
+.action-row:hover{background:var(--bg)}
+.action-icon{width:36px;height:36px;border-radius:10px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.action-title{font-size:13.5px;font-weight:800;color:var(--navy)}
+.action-sub{font-size:11px;color:var(--text-soft)}
+/* Recipient rows */
+.recipient-card{background:white;border:2px solid var(--teal);border-radius:14px;overflow:hidden;margin:0 22px}
+.recipient-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--line-soft)}
+.recipient-row:last-child{border-bottom:none}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--navy);color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.send-btn{background:var(--teal);color:white;border:none;border-radius:100px;padding:7px 13px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+/* Amber nudge */
+.amber-nudge{background:var(--amber-pale);border:1px solid var(--amber);border-radius:12px;padding:12px 14px;font-size:12px;font-weight:700;color:var(--amber-dark);cursor:pointer}
+/* Live bar */
+.live-bar{background:var(--teal-paler);border-top:1px solid var(--teal-pale);border-bottom:1px solid var(--teal-pale);padding:10px 22px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--teal-dark);font-weight:700}
+/* Prompt chips */
+.prompt-chip{border:1.5px solid var(--line);border-radius:100px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--text-soft);cursor:pointer;transition:all .15s;background:white;font-family:inherit}
+.prompt-chip.active{background:var(--teal-paler);border-color:var(--teal);color:var(--teal-dark)}
+/* Textarea */
+.story-ta{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:14px;font-family:inherit;font-size:14px;font-weight:500;color:var(--navy);resize:none;height:120px;outline:none;transition:border-color .15s}
+.story-ta:focus{border-color:var(--teal)}
+/* Section label */
+.sec-label{font-size:11px;font-weight:800;color:var(--text-soft);letter-spacing:1px;text-transform:uppercase;padding:16px 22px 8px;display:block}
+/* Budget display card */
+.budget-card{background:white;border:2px solid var(--teal);border-radius:16px;padding:16px 22px;margin:0 22px;box-shadow:0 4px 16px rgba(0,161,154,.08)}
+.budget-label{font-size:10px;font-weight:800;color:var(--teal-dark);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:4px}
+.budget-amount{font-size:28px;font-weight:800;color:var(--navy);line-height:1}
+.budget-sub{font-size:12px;color:var(--text-soft);margin-top:4px}
+.budget-edit{font-size:12px;font-weight:800;color:var(--teal);cursor:pointer;margin-top:8px;display:inline-block}
+/* Solicitor card */
+.sol-card{background:white;border:2px solid var(--teal);border-radius:14px;padding:14px 16px;margin:0 22px}
+/* Trust strip */
+.trust-strip{background:var(--bg);border-top:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-soft);font-weight:600}
+/* XP row */
+.xp-row{display:flex;align-items:center;gap:12px;margin:0 22px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px}
+.xp-icon{width:38px;height:38px;border-radius:10px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+/* Step icon box */
+.step-icon-box{width:58px;height:58px;border-radius:18px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 12px}
+.step-icon-box.amber-box{background:var(--amber-faint);border:1px solid var(--amber-pale)}
+/* AMBER pill on option */
+.rec-pill{font-size:9px;font-weight:800;background:var(--amber-pale);color:var(--amber-dark);border:1px solid var(--amber);border-radius:100px;padding:3px 8px;white-space:nowrap}
+/* Mobile */
+@media(max-width:700px){
+  body{padding:0;justify-content:flex-start}
+  .stage-label,.screen-switcher{display:none}
+  .phone{width:100%;height:100vh;border-radius:0;box-shadow:none}
+  .phone::before{display:none}
+}
+
+/* ── NEW v6 STYLES ─────────────────────────────────────────────── */
+
+/* Passport tier cards */
+.tier-card{border-radius:18px;padding:16px 18px;margin:0 22px;cursor:pointer;
+  border:2px solid transparent;transition:all .2s;position:relative;overflow:hidden}
+.tier-card.basic{background:linear-gradient(135deg,#f6f5fb,#eeedf5);border-color:var(--navy-pale)}
+.tier-card.verified{background:linear-gradient(135deg,var(--teal-paler),#d0f0ee);border-color:var(--teal-pale)}
+.tier-card.premium{background:linear-gradient(135deg,#fbefd9,#fff8ec);border-color:var(--amber-pale)}
+.tier-card.active{box-shadow:0 0 0 3px rgba(0,161,154,.2)}
+.tier-card.premium.active{box-shadow:0 0 0 3px rgba(230,162,60,.25)}
+.tier-badge{font-size:9px;font-weight:800;letter-spacing:1px;border-radius:100px;
+  padding:3px 10px;display:inline-block;margin-bottom:8px}
+.tier-badge.basic{background:var(--navy-pale);color:var(--navy-soft)}
+.tier-badge.verified{background:var(--teal-paler);color:var(--teal-dark);border:1px solid var(--teal-pale)}
+.tier-badge.premium{background:var(--amber-pale);color:var(--amber-dark);border:1px solid var(--amber)}
+.tier-title{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.tier-sub{font-size:11px;color:var(--text-soft);line-height:1.4;margin-bottom:10px}
+.tier-includes{font-size:10.5px;font-weight:700;color:var(--text-soft);display:flex;flex-direction:column;gap:4px}
+.tier-inc-row{display:flex;align-items:center;gap:6px}
+.tier-corner{position:absolute;top:12px;right:14px;font-size:11px;font-weight:800}
+.tier-cta{font-size:11px;font-weight:800;color:var(--teal-dark);margin-top:10px;
+  display:flex;align-items:center;gap:4px}
+.tier-cta.amber{color:var(--amber-dark)}
+
+/* Upgrade nudge on passport */
+.upgrade-nudge{background:linear-gradient(135deg,var(--teal-paler),var(--navy-paler));
+  border:1.5px solid var(--teal-pale);border-radius:14px;padding:12px 14px;
+  margin:10px 22px 0;cursor:pointer;display:flex;align-items:center;gap:10px}
+.upgrade-nudge.amber-n{background:linear-gradient(135deg,var(--amber-faint),#fff8ec);
+  border-color:var(--amber-pale)}
+
+/* Bureau comparison row */
+.bureau-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 22px}
+.bureau-card{background:white;border-radius:14px;padding:14px;border:1.5px solid var(--line)}
+.bureau-card.active-b{border-color:var(--teal)}
+.bureau-name{font-size:9px;font-weight:800;letter-spacing:.8px;color:var(--text-soft);
+  text-transform:uppercase;margin-bottom:6px}
+.bureau-score{font-size:24px;font-weight:800;color:var(--navy);line-height:1}
+.bureau-band{font-size:10px;font-weight:700;margin-top:3px}
+.bureau-band.excellent{color:var(--success)}
+.bureau-band.good{color:var(--teal-dark)}
+
+/* PDF view */
+.pdf-doc{background:white;margin:0 14px;border-radius:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.15);overflow:hidden}
+.pdf-header{background:var(--navy);padding:18px 20px}
+.pdf-header-title{font-size:10px;font-weight:800;letter-spacing:1.5px;
+  color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:6px}
+.pdf-header-name{font-size:20px;font-weight:800;color:white;margin-bottom:4px}
+.pdf-header-ref{font-size:10px;color:rgba(255,255,255,.5)}
+.pdf-section{padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.pdf-section:last-child{border-bottom:none}
+.pdf-section-title{font-size:9px;font-weight:800;letter-spacing:1px;
+  color:var(--text-faint);text-transform:uppercase;margin-bottom:10px}
+.pdf-cred-row{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;gap:8px}
+.pdf-cred-row:last-child{margin-bottom:0}
+.pdf-cred-label{font-size:12px;font-weight:700;color:var(--text-soft)}
+.pdf-cred-value{font-size:12px;font-weight:800;color:var(--navy)}
+.pdf-pill{font-size:9px;font-weight:800;background:var(--teal-paler);
+  color:var(--teal-dark);border:1px solid var(--teal-pale);border-radius:100px;padding:3px 8px}
+.pdf-watermark{font-size:9px;color:var(--text-faint);font-weight:600;
+  text-align:center;padding:10px;border-top:1px solid var(--line-soft)}
+
+/* Signature pad */
+.sig-pad{background:white;border:2px dashed var(--line);border-radius:14px;
+  margin:0 22px;height:130px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  position:relative;overflow:hidden;transition:border-color .2s}
+.sig-pad.signed{border-style:solid;border-color:var(--teal);background:var(--teal-paler)}
+.sig-canvas{position:absolute;inset:0;width:100%;height:100%}
+.sig-placeholder{font-size:13px;font-weight:700;color:var(--text-faint);
+  display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+
+/* Send agent confirmed state */
+.sent-confirm{background:linear-gradient(135deg,#dcfce7,#f0fdf4);
+  border:2px solid #bbf7d0;border-radius:16px;padding:18px;
+  margin:0 22px;text-align:center}
+
+/* ── NEW v5 STYLES ─────────────────────────────────────────────── */
+
+/* Armalytix bank selector */
+.bank-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 22px}
+.bank-tile{background:white;border:1.5px solid var(--line);border-radius:14px;padding:14px 8px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;transition:all .15s}
+.bank-tile:hover,.bank-tile.sel{border-color:var(--teal);background:var(--teal-paler);
+  box-shadow:0 0 0 3px rgba(0,161,154,.1)}
+.bank-logo{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;font-weight:800;color:white;flex-shrink:0}
+.bank-name{font-size:10px;font-weight:700;color:var(--navy);text-align:center}
+
+/* Processing animation */
+.process-step{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line-soft)}
+.process-step:last-child{border-bottom:none}
+.ps-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:17px;flex-shrink:0}
+.ps-icon.done{background:var(--teal);color:white}
+.ps-icon.pending{background:var(--teal-paler)}
+.ps-icon.running{background:var(--teal-paler);animation:borderPulse 1.4s ease-in-out infinite}
+.ps-title{font-size:13px;font-weight:800;color:var(--navy)}
+.ps-sub{font-size:11px;color:var(--text-soft);margin-top:1px}
+.ps-badge{margin-left:auto;font-size:10px;font-weight:800;padding:3px 8px;
+  border-radius:100px;flex-shrink:0}
+.ps-badge.done{background:var(--teal-paler);color:var(--teal-dark)}
+.ps-badge.running{background:var(--amber-pale);color:var(--amber-dark)}
+.ps-badge.pending{background:var(--line);color:var(--text-faint)}
+
+/* Armalytix result cards */
+.result-card{background:white;border:2px solid var(--teal);border-radius:16px;
+  padding:16px;margin:0 22px;box-shadow:0 4px 16px rgba(0,161,154,.08)}
+.result-label{font-size:9px;font-weight:800;letter-spacing:1.2px;color:var(--teal-dark);
+  text-transform:uppercase;margin-bottom:4px}
+.result-value{font-size:24px;font-weight:800;color:var(--navy);line-height:1}
+.result-sub{font-size:11px;color:var(--text-soft);margin-top:3px}
+.result-source{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10px;
+  font-weight:700;color:var(--teal-dark)}
+.result-row{display:flex;gap:10px;padding:0 22px}
+.result-row .result-card{flex:1;margin:0;padding:14px}
+.result-row .result-value{font-size:18px}
+
+/* Affordability meter */
+.afford-bar-track{height:10px;background:linear-gradient(90deg,#ef4444 0%,#f59e0b 40%,#22c55e 75%,#22c55e 100%);
+  border-radius:100px;position:relative;margin-top:8px}
+.afford-bar-marker{width:3px;height:16px;background:var(--navy);border-radius:2px;
+  position:absolute;top:-3px;transform:translateX(-50%);transition:left 1s .5s ease}
+.afford-bar-marker::after{content:'';width:10px;height:10px;border-radius:50%;
+  background:var(--navy);border:2px solid white;position:absolute;top:3px;left:-3.5px;
+  box-shadow:0 2px 6px rgba(0,0,0,.3)}
+
+/* Lender request notification */
+.notif-card{background:white;border:2px solid var(--navy);border-radius:18px;
+  padding:18px;margin:0 22px;box-shadow:0 8px 24px rgba(35,29,69,.12)}
+.notif-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.notif-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;
+  justify-content:center;font-size:20px;background:var(--navy);color:white;flex-shrink:0}
+.notif-title{font-size:15px;font-weight:800;color:var(--navy)}
+.notif-sub{font-size:12px;color:var(--text-soft);margin-top:2px}
+.notif-badge{font-size:9px;font-weight:800;background:var(--amber-pale);color:var(--amber-dark);
+  border:1px solid var(--amber);border-radius:100px;padding:3px 10px}
+
+/* Scope approval rows */
+.scope-approve-row{display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--line-soft)}
+.scope-approve-row:last-child{border-bottom:none}
+.scope-toggle{width:38px;height:22px;border-radius:100px;background:var(--teal);
+  border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.scope-toggle::after{content:'';width:16px;height:16px;border-radius:50%;background:white;
+  position:absolute;top:3px;right:3px;transition:right .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.scope-toggle.off{background:var(--line)}
+.scope-toggle.off::after{right:auto;left:3px}
+.scope-approve-label{flex:1}
+.scope-approve-title{font-size:13px;font-weight:800;color:var(--navy)}
+.scope-approve-sub{font-size:11px;color:var(--text-soft)}
+
+/* Lender portal */
+.portal-screen{background:var(--navy);min-height:820px;display:flex;flex-direction:column}
+.portal-header{background:var(--navy-2);padding:18px 20px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.portal-title{font-size:16px;font-weight:800;color:white}
+.portal-sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.portal-body{flex:1;overflow-y:auto;padding:16px 16px 32px}
+.portal-card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;padding:16px;margin-bottom:12px}
+.portal-card-title{font-size:11px;font-weight:800;letter-spacing:1px;color:rgba(255,255,255,.45);
+  text-transform:uppercase;margin-bottom:12px}
+.portal-cred-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.portal-cred-row:last-child{margin-bottom:0}
+.portal-cred-icon{width:32px;height:32px;border-radius:9px;background:rgba(0,161,154,.25);
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.portal-cred-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);flex:1}
+.portal-cred-value{font-size:13px;font-weight:800;color:white}
+.portal-verified{font-size:9px;font-weight:800;background:rgba(0,161,154,.2);
+  color:#5eead4;border:1px solid rgba(0,161,154,.3);border-radius:100px;padding:3px 8px;white-space:nowrap}
+.portal-unverified{font-size:9px;font-weight:800;background:rgba(230,162,60,.15);
+  color:#fbbf24;border:1px solid rgba(230,162,60,.3);border-radius:100px;padding:3px 8px;white-space:nowrap}
+.portal-api-block{background:rgba(0,0,0,.3);border-radius:10px;padding:12px;
+  font-family:monospace;font-size:9.5px;color:#5eead4;line-height:1.7;overflow-x:auto}
+.portal-api-key{color:rgba(255,255,255,.4)}
+.portal-api-str{color:#86efac}
+.portal-api-num{color:#fbbf24}
+.portal-scope-pill{font-size:9px;font-weight:800;background:rgba(0,161,154,.2);
+  color:#5eead4;border:1px solid rgba(0,161,154,.25);border-radius:100px;
+  padding:3px 9px;display:inline-block;margin:2px}
+.portal-tab-bar{display:flex;background:rgba(0,0,0,.25);border-top:1px solid rgba(255,255,255,.08);
+  padding:8px 0 12px;flex-shrink:0}
+.portal-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:9px;font-weight:700;color:rgba(255,255,255,.35);background:none;border:none;
+  cursor:pointer;font-family:inherit}
+.portal-tab.active{color:#5eead4}
+
+/* ── NEW v4 STYLES (preserved) ─────────────────────────────────── */
+
+/* Provenance badge under tile values */
+.tile-prov{font-size:9px;font-weight:700;color:var(--teal-dark);background:var(--teal-paler);
+  border:1px solid var(--teal-pale);border-radius:100px;padding:2px 7px;margin-top:5px;
+  display:inline-block;line-height:1.4}
+.tile-prov.amber{color:var(--amber-dark);background:var(--amber-pale);border-color:var(--amber)}
+
+/* DVS trust strip */
+.dvs-strip{background:linear-gradient(90deg,var(--navy-paler),var(--teal-paler));
+  border:1px solid var(--teal-pale);border-radius:12px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;margin:0 22px}
+.dvs-badge{background:var(--navy);color:white;font-size:8px;font-weight:800;
+  letter-spacing:.8px;padding:4px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0}
+.dvs-text{font-size:10.5px;font-weight:700;color:var(--navy-soft);line-height:1.35}
+
+/* Scope disclosure panel (shown before Send) */
+.scope-panel{background:var(--teal-paler);border:1.5px solid var(--teal-pale);
+  border-radius:12px;padding:12px 14px;margin:10px 22px 0}
+.scope-title{font-size:11px;font-weight:800;color:var(--teal-dark);letter-spacing:.5px;margin-bottom:7px}
+.scope-row{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;
+  color:var(--navy);margin-bottom:4px}
+.scope-row:last-child{margin-bottom:0}
+.scope-check{width:14px;height:14px;border-radius:50%;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.scope-hidden{font-size:10px;font-weight:700;color:var(--text-faint);margin-top:7px;
+  padding-top:7px;border-top:1px solid var(--teal-pale)}
+
+/* Active shares tab */
+.share-entry{display:flex;align-items:center;gap:12px;padding:13px 14px;
+  border-bottom:1px solid var(--line-soft)}
+.share-entry:last-child{border-bottom:none}
+.share-meta{flex:1;min-width:0}
+.share-name{font-size:12px;font-weight:800;color:var(--navy)}
+.share-scope{font-size:10.5px;color:var(--text-soft);margin-top:1px}
+.share-expiry{font-size:10px;font-weight:700;color:var(--amber-dark);margin-top:2px}
+.revoke-btn{background:var(--red-pale);color:var(--red);border:1px solid #f5c6c4;
+  border-radius:100px;padding:6px 11px;font-size:10px;font-weight:800;cursor:pointer;
+  font-family:inherit;white-space:nowrap;flex-shrink:0}
+
+/* Permanence banner */
+.persist-banner{background:linear-gradient(135deg,var(--navy-paler),var(--teal-paler));
+  border:1px solid var(--teal-pale);border-radius:12px;padding:12px 14px;
+  margin:0 22px;display:flex;align-items:flex-start;gap:10px}
+.persist-icon{font-size:20px;flex-shrink:0;line-height:1}
+.persist-title{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:2px}
+.persist-sub{font-size:11px;color:var(--text-soft);line-height:1.4}
+
+/* AML note on gifted deposit */
+.aml-note{background:var(--amber-faint);border:1px solid var(--amber-pale);border-radius:10px;
+  padding:9px 12px;font-size:11px;font-weight:700;color:var(--amber-dark);
+  margin-top:8px;display:none;line-height:1.4}
+
+/* Solicitor verified sub-label */
+.sol-verified{font-size:10px;font-weight:700;color:var(--teal-dark);margin-top:3px;
+  display:flex;align-items:center;gap:4px}
+</style>
+</head>
+<body data-screen="intro">
+
+<div class="stage-label">UMU · BUYER PASSPORT v6 · TIERS + EQUIFAX + SHARE + PDF + SIGNATURE</div>
+
+<div class="screen-switcher">
+  <button class="screen-btn active" data-screen="intro" onclick="goScreen('intro')">Intro</button>
+  <button class="screen-btn" data-screen="s1" onclick="goScreen('s1')">Step 1</button>
+  <button class="screen-btn" data-screen="s1modal" onclick="goScreen('s1modal')">ID Check</button>
+  <button class="screen-btn" data-screen="s2" onclick="goScreen('s2')">Step 2</button>
+  <button class="screen-btn" data-screen="s2bank" onclick="goScreen('s2bank')">Bank Link</button>
+  <button class="screen-btn" data-screen="s2processing" onclick="goScreen('s2processing')">Processing</button>
+  <button class="screen-btn" data-screen="s2result" onclick="goScreen('s2result')">Funds Result</button>
+  <button class="screen-btn" data-screen="s3" onclick="goScreen('s3')">Step 3</button>
+  <button class="screen-btn" data-screen="s4" onclick="goScreen('s4')">Step 4</button>
+  <button class="screen-btn" data-screen="s5" onclick="goScreen('s5')">Step 5</button>
+  <button class="screen-btn" data-screen="complete" onclick="goScreen('complete')">Done!</button>
+  <button class="screen-btn" data-screen="badge" onclick="goScreen('badge')">Passport</button>
+  <button class="screen-btn" data-screen="share" onclick="goScreen('share')">Share</button>
+  <button class="screen-btn" data-screen="lender-req" onclick="goScreen('lender-req')">Lender Request</button>
+  <button class="screen-btn" data-screen="lender-approve" onclick="goScreen('lender-approve')">Approve</button>
+  <button class="screen-btn" data-screen="lender-portal" onclick="goScreen('lender-portal')">Lender Portal</button>
+  <button class="screen-btn" data-screen="eq-bank" onclick="goScreen('eq-bank')">Equifax Bank</button>
+  <button class="screen-btn" data-screen="eq-result" onclick="goScreen('eq-result')">Equifax Result</button>
+  <button class="screen-btn" data-screen="send-agent" onclick="goScreen('send-agent')">Send Agent</button>
+  <button class="screen-btn" data-screen="pdf-view" onclick="goScreen('pdf-view')">PDF View</button>
+  <button class="screen-btn" data-screen="sign-doc" onclick="goScreen('sign-doc')">Sign Doc</button>
+  <button class="screen-btn" data-screen="sign-done" onclick="goScreen('sign-done')">Signed!</button>
+</div>
+
+<div class="phone">
+  <!-- STATUS BAR (shared) -->
+
+  <!-- BODY -->
+  <div class="body" id="phoneBody">
+
+    <!-- ===== SCREEN: INTRO ===== -->
+    <div class="screen intro">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <!-- Signal -->
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#231d45" opacity=".25"/></svg>
+          <!-- WiFi -->
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z" fill="#231d45"/><path d="M3.8 6.5C5.1 5.2 6.5 4.4 8 4.4s2.9.8 4.2 2.1" stroke="#231d45" stroke-width="1.5" stroke-linecap="round"/><path d="M1 3.5C2.9 1.7 5.3.5 8 .5s5.1 1.2 7 3" stroke="#231d45" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>
+          <!-- Battery -->
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <div style="width:36px"></div>
+        <div class="nav-centre">
+          <div class="eyebrow-pill"><div class="eyebrow-dot"></div>BUYER PASSPORT</div>
+        </div>
+        <span class="nav-right">Sign in</span>
+      </div>
+      <!-- Hero text -->
+      <div style="padding:16px 22px 0">
+        <h1 style="font-size:26px;font-weight:800;color:var(--navy);line-height:1.2;margin-bottom:8px;animation:fadeSlideUp .4s .05s both;opacity:0">Stand out as a serious buyer</h1>
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5;animation:fadeSlideUp .4s .1s both;opacity:0">Verified buyers get 3× more offers accepted. Build your passport in 5 minutes.</p>
+      </div>
+      <!-- Hero card -->
+      <div style="margin:16px 22px 0;animation:fadeSlideUp .45s .15s both;opacity:0">
+        <div class="hero-card" onclick="goScreen('s1')" style="cursor:pointer">
+          <div class="hero-eyebrow">UMU BUYER PASSPORT</div>
+          <div class="hero-tagline">"Trusted, ready,<br>chain-free."</div>
+          <div class="hero-name">Alexandria Quinn</div>
+          <div class="hero-pills">
+            <div class="hero-pill">🪪 ID Verified</div>
+            <div class="hero-pill">£400K Funds</div>
+            <div class="hero-pill">Chain free</div>
+          </div>
+          <div class="hero-footer">
+            <span class="hero-footer-text">Tap to share</span>
+            <button class="hero-share-btn" aria-label="Share">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Why it matters -->
+      <div class="section-header" style="animation:fadeSlideDown .4s .25s both;opacity:0">
+        <div class="sec-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <div class="sec-title">WHY IT MATTERS</div>
+          <div class="sec-sub">Your competitive edge</div>
+        </div>
+      </div>
+      <!-- Benefits -->
+      <div style="padding:0 22px;display:flex;flex-direction:column;gap:10px;animation:fadeSlideUp .4s .3s both;opacity:0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <span style="font-size:13.5px;font-weight:700;color:var(--navy)">Sellers take your offer seriously</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <span style="font-size:13.5px;font-weight:700;color:var(--navy)">Agents prioritise your viewings</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+          </div>
+          <span style="font-size:13.5px;font-weight:700;color:var(--navy)">Solicitors can start faster</span>
+        </div>
+      </div>
+      <!-- Live signal bar -->
+      <div class="live-bar" style="margin-top:18px;animation:fadeSlideUp .4s .35s both;opacity:0">
+        <div class="pulse-dot"></div>
+        <span>1,247 buyers verified this week · avg. 4 min to complete</span>
+      </div>
+      <!-- CTA -->
+      <div style="margin:18px 22px 0;animation:fadeSlideUp .4s .4s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s1')">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px">
+            Build my Passport
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </span>
+        </button>
+      </div>
+      <div class="ghost-link" style="animation:fadeSlideUp .4s .45s both;opacity:0">Already have one? Sign in</div>
+    </div><!-- /intro -->
+
+    <!-- ===== SCREEN: S1 – IDENTITY ===== -->
+    <div class="screen s1">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#231d45" opacity=".25"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z" fill="#231d45"/><path d="M3.8 6.5C5.1 5.2 6.5 4.4 8 4.4s2.9.8 4.2 2.1" stroke="#231d45" stroke-width="1.5" stroke-linecap="round"/><path d="M1 3.5C2.9 1.7 5.3.5 8 .5s5.1 1.2 7 3" stroke="#231d45" stroke-width="1.5" stroke-linecap="round" opacity=".4"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()" id="topBack" style="visibility:hidden">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">STEP 1 OF 5</div></div>
+        <span class="nav-right">Save</span>
+      </div>
+      <div class="step-bar">
+        <div class="step-seg active"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+      </div>
+      <div style="padding:22px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div class="step-icon-box">🪪</div>
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:8px">Verify your identity</h2>
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5">One-time check powered by Onfido.<br>Takes about 60 seconds.</p>
+      </div>
+      <div style="padding:20px 0 0;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <div class="options-block">
+          <div class="opt-card sel" data-group="idtype" onclick="selectOpt(this,'idtype')">
+            <div class="opt-icon">🛂</div>
+            <div class="opt-text">
+              <div class="opt-title">UK / EU Passport</div>
+            </div>
+            <span class="rec-pill">RECOMMENDED</span>
+            <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+          </div>
+          <div class="opt-card" data-group="idtype" onclick="selectOpt(this,'idtype')">
+            <div class="opt-icon">🪪</div>
+            <div class="opt-text"><div class="opt-title">UK Driving Licence</div></div>
+            <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+          </div>
+          <div class="opt-card" data-group="idtype" onclick="selectOpt(this,'idtype')">
+            <div class="opt-icon">🪪</div>
+            <div class="opt-text"><div class="opt-title">National ID Card</div></div>
+            <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:18px;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <div class="dvs-strip">
+          <div class="dvs-badge">UK DVS</div>
+          <div class="dvs-text">Powered by Onfido · Certified under the UK Digital Verification Services Trust Framework · Bank-grade · Data deleted after 90 days</div>
+        </div>
+      </div>
+      <div style="padding:18px 22px 0;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s1modal')">Start verification →</button>
+      </div>
+      <div class="ghost-link">Save and continue later</div>
+    </div><!-- /s1 -->
+
+    <!-- ===== MODAL OVERLAY (shown on s1modal) ===== -->
+    <div class="id-modal-overlay">
+      <div class="id-modal">
+        <div class="modal-handle"></div>
+        <div style="padding:0 22px">
+          <h3 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Verifying your identity</h3>
+          <p style="font-size:13px;color:var(--text-soft);margin-bottom:20px;line-height:1.4">Please wait while Onfido processes your documents</p>
+          <!-- Progress -->
+          <div style="margin-bottom:8px">
+            <div style="height:8px;background:var(--line);border-radius:100px;overflow:hidden">
+              <div style="height:100%;width:33%;background:linear-gradient(90deg,var(--teal),var(--teal-bright));border-radius:100px;transition:width 1s ease"></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text-soft);font-weight:700;margin-bottom:16px">Step 1 of 3 · Selfie complete</div>
+          <!-- Steps -->
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div class="id-step">
+              <div class="id-step-icon done">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+              </div>
+              <div>
+                <div class="id-step-title">Selfie</div>
+                <div class="id-step-sub">Completed</div>
+              </div>
+            </div>
+            <div class="id-step">
+              <div class="id-step-icon active" style="background:var(--teal-paler)">📄</div>
+              <div>
+                <div class="id-step-title">Document scan</div>
+                <div class="id-step-sub">Scanning…</div>
+              </div>
+            </div>
+            <div class="id-step locked">
+              <div class="id-step-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <div class="id-step-title">Liveness check</div>
+                <div class="id-step-sub">Next</div>
+              </div>
+            </div>
+          </div>
+          <!-- Trust -->
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 0;font-size:11px;color:var(--text-soft)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Powered by Onfido · GDPR compliant</span>
+          </div>
+          <button class="cta-btn" onclick="goScreen('s2')" style="margin-top:8px">Continue to Step 2 →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SCREEN: S2 – PROOF OF FUNDS ===== -->
+    <div class="screen s2">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="#231d45" opacity=".25"/></svg>
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z" fill="#231d45"/><path d="M3.8 6.5C5.1 5.2 6.5 4.4 8 4.4s2.9.8 4.2 2.1" stroke="#231d45" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">STEP 2 OF 5</div></div>
+        <span class="nav-right">Save</span>
+      </div>
+      <div class="step-bar">
+        <div class="step-seg done"></div>
+        <div class="step-seg active"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+      </div>
+      <div style="padding:16px 22px 4px;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <h2 style="font-size:21px;font-weight:800;color:var(--navy);margin-bottom:6px">Choose your passport level</h2>
+        <p style="font-size:12px;color:var(--text-soft);line-height:1.5">Start with the basics — you can upgrade anytime. More verification = stronger passport = more offers accepted.</p>
+      </div>
+      <!-- Tier cards -->
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 0 4px;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <!-- Basic -->
+        <div class="tier-card basic" id="tier-basic" onclick="selectTier('basic')">
+          <div class="tier-corner">○</div>
+          <div class="tier-badge basic">BASIC · FREE</div>
+          <div class="tier-title">Identity Verified</div>
+          <div class="tier-sub">Get started — show sellers you're a real, verified buyer.</div>
+          <div class="tier-includes">
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> DVS-certified identity check (Onfido)</div>
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Chain position &amp; timeline</div>
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Solicitor instructed status</div>
+            <div class="tier-inc-row" style="color:var(--text-faint)"><span>○</span> Funds &amp; affordability not verified</div>
+          </div>
+          <div class="tier-cta">Continue with Basic <span>→</span></div>
+        </div>
+        <!-- Verified -->
+        <div class="tier-card verified active" id="tier-verified" onclick="selectTier('verified')">
+          <div class="tier-corner" style="color:var(--teal)">✓</div>
+          <div class="tier-badge verified">VERIFIED · RECOMMENDED</div>
+          <div class="tier-title">Identity + Funds Verified</div>
+          <div class="tier-sub">The level most sellers and agents expect. Proves you can buy.</div>
+          <div class="tier-includes">
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Everything in Basic</div>
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Proof of deposit (Armalytix open banking)</div>
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Source of funds + AML clear</div>
+            <div class="tier-inc-row"><span style="color:var(--teal)">✓</span> Affordability score</div>
+            <div class="tier-inc-row" style="color:var(--text-faint)"><span>○</span> Credit file not included</div>
+          </div>
+          <div class="tier-cta">Continue with Verified <span>→</span></div>
+        </div>
+        <!-- Premium -->
+        <div class="tier-card premium" id="tier-premium" onclick="selectTier('premium')">
+          <div class="tier-corner" style="color:var(--amber)">★</div>
+          <div class="tier-badge premium">PREMIUM · PLATINUM</div>
+          <div class="tier-title">Full Financial Profile</div>
+          <div class="tier-sub">Maximum strength — lenders can pre-approve faster with this data.</div>
+          <div class="tier-includes">
+            <div class="tier-inc-row"><span style="color:var(--amber-dark)">✓</span> Everything in Verified</div>
+            <div class="tier-inc-row"><span style="color:var(--amber-dark)">✓</span> Experian credit file + score</div>
+            <div class="tier-inc-row"><span style="color:var(--amber-dark)">✓</span> Equifax cross-check (two-bureau)</div>
+            <div class="tier-inc-row"><span style="color:var(--amber-dark)">✓</span> Direct lender API access</div>
+          </div>
+          <div class="tier-cta amber">Continue with Platinum <span>→</span></div>
+        </div>
+      </div>
+      <div style="padding:12px 22px 4px;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <button class="cta-btn" id="tier-btn" onclick="advanceTier()">Continue with Verified →</button>
+      </div>
+      <div style="text-align:center;animation:fadeSlideUp .4s .25s both;opacity:0">
+        <span style="font-size:11px;color:var(--text-faint);cursor:pointer" onclick="goScreen('s3')">Skip for now — I'll add this later</span>
+      </div>
+    </div><!-- /s2 -->
+
+    <!-- ===== SCREEN: S3 – CHAIN POSITION ===== -->
+    <div class="screen s3">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">STEP 3 OF 5</div></div>
+        <span class="nav-right">Save</span>
+      </div>
+      <div class="step-bar">
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg active"></div>
+        <div class="step-seg"></div>
+        <div class="step-seg"></div>
+      </div>
+      <div style="padding:22px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div class="step-icon-box">🔗</div>
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:8px">Your chain position</h2>
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5">Chain-free buyers are preferred by 78% of sellers.</p>
+      </div>
+      <div style="padding:16px 22px 0;display:flex;flex-direction:column;gap:10px;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <div class="opt-card sel" data-group="chain" onclick="selectOpt(this,'chain')" style="padding:16px 14px">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <div class="opt-title">Chain free</div>
+              <span style="font-size:10px;font-weight:800;background:var(--teal-paler);color:var(--teal-dark);border:1px solid var(--teal-pale);border-radius:100px;padding:2px 8px">✅ BEST</span>
+            </div>
+            <div class="opt-sub">No property to sell. Move on completion day.</div>
+          </div>
+          <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        </div>
+        <div class="opt-card" data-group="chain" onclick="selectOpt(this,'chain')" style="padding:16px 14px">
+          <div style="flex:1">
+            <div class="opt-title" style="margin-bottom:4px">Property to sell</div>
+            <div class="opt-sub">You have an existing property in the chain.</div>
+          </div>
+          <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        </div>
+        <div class="opt-card" data-group="chain" onclick="selectOpt(this,'chain')" style="padding:16px 14px">
+          <div style="flex:1">
+            <div class="opt-title" style="margin-bottom:4px">First-time buyer</div>
+            <div class="opt-sub">No chain, no complications. Fastest route.</div>
+          </div>
+          <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        </div>
+      </div>
+      <!-- Amber context card -->
+      <div style="margin:16px 22px 0;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <div class="amber-card" style="padding:14px 16px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--amber-pale);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">💡</div>
+            <div>
+              <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:4px">Chain-free buyers</div>
+              <div style="font-size:12px;color:var(--text-soft);line-height:1.4">Sellers receive 78% fewer complications from chain-free buyers and often prefer them even at a lower offer price.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 22px 0;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s4')">Confirm my position →</button>
+      </div>
+    </div><!-- /s3 -->
+
+    <!-- ===== SCREEN: S4 – QUICK QUESTIONS ===== -->
+    <div class="screen s4">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">STEP 4 OF 5</div></div>
+        <span class="nav-right">Save</span>
+      </div>
+      <div class="step-bar">
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg active"></div>
+        <div class="step-seg"></div>
+      </div>
+      <div style="padding:22px 22px 8px;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:8px">A few quick questions</h2>
+        <p style="font-size:13px;color:var(--text-soft)">Helps sellers understand your situation</p>
+      </div>
+      <!-- Timeline -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .1s both;opacity:0">TIMELINE</span>
+      <div class="chip-row" style="animation:fadeSlideUp .4s .1s both;opacity:0">
+        <button class="chip" data-chipgroup="timeline" onclick="selectChip(this,'timeline')">Ready now</button>
+        <button class="chip active" data-chipgroup="timeline" onclick="selectChip(this,'timeline')">1–3 months</button>
+        <button class="chip" data-chipgroup="timeline" onclick="selectChip(this,'timeline')">3–6 months</button>
+        <button class="chip" data-chipgroup="timeline" onclick="selectChip(this,'timeline')">Flexible</button>
+      </div>
+      <!-- Property type -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .15s both;opacity:0">PROPERTY TYPE</span>
+      <div class="chip-row" style="animation:fadeSlideUp .4s .15s both;opacity:0">
+        <button class="chip" data-chipgroup="proptype" onclick="selectChip(this,'proptype')">House</button>
+        <button class="chip active" data-chipgroup="proptype" onclick="selectChip(this,'proptype')">Flat</button>
+        <button class="chip" data-chipgroup="proptype" onclick="selectChip(this,'proptype')">Any</button>
+        <button class="chip" data-chipgroup="proptype" onclick="selectChip(this,'proptype')">New build</button>
+      </div>
+      <!-- Solicitor -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .2s both;opacity:0">SOLICITOR</span>
+      <div style="animation:fadeSlideUp .4s .2s both;opacity:0">
+        <div class="sol-card">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--teal-paler);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏛️</div>
+            <div style="flex:1">
+              <div style="font-size:13.5px;font-weight:800;color:var(--navy)">Fletcher & Hart Solicitors</div>
+              <div style="font-size:11px;color:var(--text-soft);margin-top:2px">Solicitor instructed · Ready to proceed</div>
+            </div>
+            <span class="risk-pill ok">✓ INSTRUCTED</span>
+          </div>
+        </div>
+      </div>
+      <!-- Tip -->
+      <div style="margin:10px 22px 0;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;font-size:11px;color:var(--text-soft);line-height:1.4;animation:fadeSlideUp .4s .25s both;opacity:0">
+        💡 Having a solicitor instructed tells sellers you're serious and legally ready to proceed.
+      </div>
+      <div style="padding:16px 22px 0;animation:fadeSlideUp .4s .3s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s5')">Next step →</button>
+      </div>
+    </div><!-- /s4 -->
+
+    <!-- ===== SCREEN: S5 – YOUR STORY ===== -->
+    <div class="screen s5">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">STEP 5 OF 5</div></div>
+        <span class="nav-right">Save</span>
+      </div>
+      <div class="step-bar">
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg done"></div>
+        <div class="step-seg active"></div>
+      </div>
+      <div style="padding:22px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div class="step-icon-box amber-box">✍️</div>
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:8px">Tell your story <span style="font-size:14px;font-weight:700;color:var(--amber-dark)">(optional)</span></h2>
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5">A short personal note makes a real difference — sellers often choose buyers they connect with.</p>
+      </div>
+      <!-- Prompt chips -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:16px 22px 0;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <button class="prompt-chip" onclick="this.classList.toggle('active')">+ Why I love this type of home</button>
+        <button class="prompt-chip" onclick="this.classList.toggle('active')">+ My timeline &amp; flexibility</button>
+        <button class="prompt-chip" onclick="this.classList.toggle('active')">+ What matters most to me</button>
+      </div>
+      <!-- Textarea -->
+      <div style="padding:12px 22px 0;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <textarea class="story-ta" id="story-ta" placeholder="Write something that shows sellers who you are and why you'd be the perfect owner of their home…"></textarea>
+      </div>
+      <!-- AI draft -->
+      <div style="margin:10px 22px 0;padding:12px 14px;background:linear-gradient(135deg,var(--teal-paler),var(--navy-paler));border:1px solid var(--teal-pale);border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:12px;animation:fadeSlideUp .4s .2s both;opacity:0" onclick="aiDraft()">
+        <div style="background:var(--teal);color:white;font-size:9px;font-weight:800;padding:4px 8px;border-radius:100px;white-space:nowrap">✨ AI</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:var(--navy)">Let AI write a compelling story based on your profile</div>
+        <span style="font-size:12px;font-weight:800;color:var(--teal-dark);white-space:nowrap">Try it ›</span>
+      </div>
+      <div style="padding:16px 22px 0;animation:fadeSlideUp .4s .25s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('complete')">✓ Generate my Passport</button>
+      </div>
+      <div class="ghost-link">Skip this step →</div>
+    </div><!-- /s5 -->
+
+    <!-- ===== SCREEN: COMPLETE ===== -->
+    <div class="screen complete">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <!-- Celebration hero -->
+      <div style="padding:28px 22px 20px;text-align:center">
+        <div style="font-size:52px;line-height:1;margin-bottom:12px;animation:pop .5s ease-out .1s both;display:inline-block">🎉</div>
+        <h2 style="font-size:24px;font-weight:800;color:var(--navy);margin-bottom:6px;animation:fadeSlideUp .4s .2s both;opacity:0">You're a Trusted Buyer!</h2>
+        <p style="font-size:13px;color:var(--text-soft);animation:fadeSlideUp .4s .25s both;opacity:0">Your passport is live.</p>
+      </div>
+      <!-- XP row -->
+      <div class="xp-row" style="animation:fadeSlideUp .4s .4s both;opacity:0">
+        <div class="xp-icon">⭐</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;color:var(--navy)">Passport badge earned</div>
+          <div style="font-size:11px;color:var(--text-soft)">90% strength · Trusted Buyer tier</div>
+        </div>
+        <div style="font-size:15px;font-weight:800;color:var(--amber-dark)">+100 XP</div>
+      </div>
+      <!-- Teal hero card -->
+      <div style="margin:16px 22px 0;animation:fadeSlideUp .45s .5s both;opacity:0">
+        <div class="hero-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="hero-eyebrow" style="margin:0">UMU BUYER PASSPORT</div>
+            <span style="font-size:9px;font-weight:800;background:rgba(255,255,255,.2);color:white;border-radius:100px;padding:4px 10px">90% STRENGTH</span>
+          </div>
+          <div class="hero-tagline">"Trusted, ready, chain-free."</div>
+          <div class="hero-name">Alexandria Quinn</div>
+          <div class="hero-pills">
+            <div class="hero-pill">🪪 ID Verified</div>
+            <div class="hero-pill">£400K Funds</div>
+            <div class="hero-pill">Chain free</div>
+            <div class="hero-pill">Solicitor instructed</div>
+          </div>
+          <div class="hero-footer">
+            <span class="hero-footer-text">Tap to share with sellers</span>
+            <button class="hero-share-btn" onclick="goScreen('share')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Amber nudge -->
+      <div class="amber-nudge" style="margin:16px 22px 0;animation:fadeSlideUp .4s .65s both;opacity:0">
+        One step to 100% Platinum: Add your Mortgage in Principle →
+      </div>
+      <!-- Buttons -->
+      <div style="margin:16px 22px 0;display:flex;flex-direction:column;gap:10px;animation:fadeSlideUp .4s .75s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('send-agent')">⤴ Share with agent now</button>
+        <button class="cta-btn outline" onclick="goScreen('pdf-view')">📄 Download as PDF</button>
+        <button onclick="goScreen('badge')" style="background:none;border:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--navy);cursor:pointer;padding:10px;text-align:center">View my full Passport →</button>
+      </div>
+    </div><!-- /complete -->
+
+    <!-- ===== SCREEN: BADGE – FULL PASSPORT ===== -->
+    <div class="screen badge">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre" style="font-size:15px;font-weight:800;color:var(--navy)">Buyer Passport</div>
+        <span class="nav-right" onclick="goScreen('share')">Share</span>
+      </div>
+      <div style="text-align:center;padding:6px 22px 0">
+        <div class="eyebrow-pill" style="margin:0 auto"><div class="pulse-dot"></div>BUYER PASSPORT</div>
+      </div>
+      <!-- Hero card with gauge -->
+      <div style="margin:14px 22px 0;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <div class="hero-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+            <span style="font-size:9px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:1.2px">TRUSTED BUYER</span>
+            <span style="font-size:9px;font-weight:800;background:rgba(255,255,255,.95);color:var(--teal);border-radius:100px;padding:4px 10px">90% STRENGTH</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+            <!-- Gauge SVG -->
+            <div style="flex-shrink:0">
+              <svg width="80" height="80" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="8"/>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="white" stroke-width="8"
+                  stroke-dasharray="251" stroke-dashoffset="25"
+                  stroke-linecap="round"
+                  transform="rotate(-90 50 50)"
+                  style="animation:gaugeIn .9s .3s cubic-bezier(.22,1,.36,1) both"/>
+                <text x="50" y="45" text-anchor="middle" font-size="22" font-weight="800" fill="white" font-family="Plus Jakarta Sans,sans-serif">90</text>
+                <text x="50" y="60" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.7)" font-family="Plus Jakarta Sans,sans-serif">strength</text>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size:17px;font-weight:800;color:white;margin-bottom:2px">Alexandria Quinn</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.65);margin-bottom:10px">Verified · AQ2024</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px">
+                <div class="hero-pill" style="font-size:9px">🪪 Verified</div>
+                <div class="hero-pill" style="font-size:9px">£400K</div>
+                <div class="hero-pill" style="font-size:9px">Chain free</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div style="margin:14px 22px 0;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:700;color:var(--navy)">Profile completion</span>
+          <span style="font-size:12px;font-weight:800;color:var(--teal)">90%</span>
+        </div>
+        <div class="pb-track" style="margin:0">
+          <div class="pb-fill passport-pb-fill"></div>
+        </div>
+        <div style="font-size:11px;color:var(--teal-dark);font-weight:700;margin-top:7px">+ Add Mortgage AIP to reach 100% Platinum</div>
+      </div>
+      <!-- DVS Trust mark -->
+      <div style="margin:12px 0 0;animation:fadeSlideUp .4s .18s both;opacity:0">
+        <div class="dvs-strip">
+          <div class="dvs-badge">UK DVS</div>
+          <div class="dvs-text">Identity verified under the UK Digital Verification Services Trust Framework</div>
+        </div>
+      </div>
+      <!-- Permanence banner -->
+      <div style="margin:10px 0 0;animation:fadeSlideUp .4s .19s both;opacity:0">
+        <div class="persist-banner">
+          <div class="persist-icon">♾️</div>
+          <div>
+            <div class="persist-title">Your passport carries forward</div>
+            <div class="persist-sub">When you buy your next home, your verified identity and documents come with you — no need to reverify.</div>
+          </div>
+        </div>
+      </div>
+      <!-- Tier upgrade nudge -->
+      <div style="margin:10px 0 0;animation:fadeSlideUp .4s .195s both;opacity:0">
+        <div class="upgrade-nudge amber-n" onclick="goScreen('s2')">
+          <div style="font-size:20px">★</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:800;color:var(--navy)">Upgrade to Platinum</div>
+            <div style="font-size:11px;color:var(--text-soft);margin-top:1px">Add Equifax + lender API access — takes 2 minutes</div>
+          </div>
+          <span style="font-size:12px;font-weight:800;color:var(--amber-dark)">→</span>
+        </div>
+      </div>
+      <!-- Credentials -->
+      <div class="section-header" style="animation:fadeSlideDown .4s .2s both;opacity:0">
+        <div class="sec-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <div class="sec-title">VERIFIED CREDENTIALS</div>
+          <div class="sec-sub">Your verified information</div>
+        </div>
+      </div>
+      <div class="tile-grid">
+        <div class="tile">
+          <div class="tile-icon">🪪</div>
+          <div class="tile-title">Identity</div>
+          <div class="tile-value">Verified</div>
+          <div class="tile-prov">via Onfido / DVS</div>
+        </div>
+        <div class="tile">
+          <div class="tile-icon">💰</div>
+          <div class="tile-title">Funds</div>
+          <div class="tile-value">£400K</div>
+          <div class="tile-prov">Help to Buy scheme</div>
+        </div>
+        <div class="tile">
+          <div class="tile-icon">🔗</div>
+          <div class="tile-title">Chain</div>
+          <div class="tile-value">Chain free</div>
+          <div class="tile-prov">Self-declared</div>
+        </div>
+        <div class="tile amber">
+          <div class="tile-icon amber-bg">⚠️</div>
+          <div class="tile-title">Mortgage</div>
+          <div class="tile-value amber">Add AIP</div>
+          <div class="tile-prov amber">Not yet verified</div>
+        </div>
+      </div>
+      <!-- Documents -->
+      <div class="section-header" style="margin-top:8px;animation:fadeSlideDown .4s .3s both;opacity:0">
+        <div class="sec-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div>
+          <div class="sec-title">DOCUMENTS</div>
+          <div class="sec-sub">Your verified records</div>
+        </div>
+      </div>
+      <div style="margin:0 22px;animation:fadeSlideUp .4s .3s both;opacity:0;overflow:hidden;border-radius:16px" class="teal-card">
+        <div class="doc-row">
+          <div class="doc-icon">🪪</div>
+          <div class="doc-body">
+            <div class="doc-title">Identity Verification</div>
+            <div class="doc-meta">UK / EU Passport · verified by Onfido (DVS)</div>
+          </div>
+          <div class="doc-right">
+            <span class="risk-pill clear">✓ VERIFIED</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon">💰</div>
+          <div class="doc-body">
+            <div class="doc-title">Proof of Funds</div>
+            <div class="doc-meta">Help to Buy scheme · government verified</div>
+          </div>
+          <div class="doc-right" style="flex-direction:column;align-items:flex-end;gap:4px">
+            <span class="risk-pill clear">✓ VERIFIED</span>
+            <span class="risk-pill ok" style="font-size:9px">Expires Jan 2026</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon">🏦</div>
+          <div class="doc-body">
+            <div class="doc-title">Mortgage in Principle</div>
+            <div class="doc-meta">Upload your AIP — lender will be verified</div>
+          </div>
+          <div class="doc-right">
+            <span class="risk-pill add">+ ADD DOC</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon">🔗</div>
+          <div class="doc-body">
+            <div class="doc-title">Chain Position</div>
+            <div class="doc-meta">Chain free · self-declared · ready to move</div>
+          </div>
+          <div class="doc-right">
+            <span class="risk-pill flag">Self-declared</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon">🏛️</div>
+          <div class="doc-body">
+            <div class="doc-title">Solicitor</div>
+            <div class="doc-meta">Fletcher &amp; Hart Solicitors</div>
+            <div class="sol-verified">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+              Confirmed on Law Society register
+            </div>
+          </div>
+          <div class="doc-right">
+            <span class="risk-pill ok">✓ INSTRUCTED</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </div>
+        </div>
+      </div>
+      <!-- Share section -->
+      <div class="section-header" style="margin-top:8px;animation:fadeSlideDown .4s .4s both;opacity:0">
+        <div class="sec-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        </div>
+        <div><div class="sec-title">SHARE YOUR PASSPORT</div></div>
+      </div>
+      <div style="margin:0 22px;background:white;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;animation:fadeSlideUp .4s .4s both;opacity:0">
+        <div class="action-row" onclick="goScreen('share')">
+          <div class="action-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </div>
+          <div style="flex:1"><div class="action-title">Share</div><div class="action-sub">Send to agents or generate link</div></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div class="action-row" style="border-top:1px solid var(--line-soft)">
+          <div class="action-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style="flex:1"><div class="action-title">Download PDF</div><div class="action-sub">Certified passport document</div></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div class="action-row" style="border-top:1px solid var(--line-soft)">
+          <div class="action-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--teal-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div style="flex:1"><div class="action-title">Edit Profile</div><div class="action-sub">Update your information</div></div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+      <div style="height:12px"></div>
+    </div><!-- /badge -->
+
+    <!-- ===== SCREEN: SHARE ===== -->
+    <div class="screen share">
+      <div class="status-bar">
+        <span class="status-time">9:41</span>
+        <div class="status-right">
+          <svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg>
+        </div>
+      </div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div class="nav-centre" style="font-size:15px;font-weight:800;color:var(--navy)">Share Passport</div>
+        <span class="nav-right">Done</span>
+      </div>
+      <!-- Tab switcher -->
+      <div style="display:flex;justify-content:center;margin:14px 22px 0;animation:fadeSlideDown .4s .05s both;opacity:0">
+        <div class="how-tabs">
+          <button class="how-tab active share-tab-btn" onclick="setShareTab(this,'people')">Send</button>
+          <button class="how-tab share-tab-btn" onclick="setShareTab(this,'active')">Active ●</button>
+          <button class="how-tab share-tab-btn" onclick="setShareTab(this,'link')">Link &amp; QR</button>
+          <button class="how-tab share-tab-btn" onclick="setShareTab(this,'pdf')">PDF</button>
+        </div>
+      </div>
+
+      <!-- People tab -->
+      <div id="tab-people" style="animation:fadeSlideUp .4s .1s both;opacity:0">
+        <!-- Scope disclosure -->
+        <div class="scope-panel">
+          <div class="scope-title">📋  THEY WILL SEE</div>
+          <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>ID Verified (Onfido / DVS)</div>
+          <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Budget — up to £400K</div>
+          <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Chain free · solicitor instructed</div>
+          <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Your story (optional)</div>
+          <div class="scope-hidden">🔒 Not shared: personal address, full name, date of birth, account numbers</div>
+        </div>
+        <span class="sec-label">SEND TO AGENT</span>
+        <div class="recipient-card">
+          <div class="recipient-row">
+            <div class="avatar">JC</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:800;color:var(--navy)">Savills – Notting Hill</div>
+              <div style="font-size:11px;color:var(--text-soft)">James Cooper</div>
+            </div>
+            <button class="send-btn" onclick="markSent(this,'JC')">⤴ Send</button>
+          </div>
+          <div class="recipient-row">
+            <div class="avatar">SM</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:800;color:var(--navy)">Knight Frank</div>
+              <div style="font-size:11px;color:var(--text-soft)">Sarah Mitchell</div>
+            </div>
+            <button class="send-btn" onclick="markSent(this,'SM')">⤴ Send</button>
+          </div>
+          <div class="recipient-row">
+            <div class="avatar">DC</div>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:800;color:var(--navy)">Foxtons</div>
+              <div style="font-size:11px;color:var(--text-soft)">David Chen</div>
+            </div>
+            <button class="send-btn" onclick="markSent(this,'DC')">⤴ Send</button>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:12px;font-weight:700;color:var(--teal-dark);margin:14px 0;cursor:pointer" onclick="setShareTabByName('link')">Or share a link instead →</div>
+      </div>
+
+      <!-- Active shares tab -->
+      <div id="tab-active" style="display:none;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <span class="sec-label">WHO HAS ACCESS</span>
+        <div style="margin:0 22px;background:white;border:2px solid var(--teal);border-radius:14px;overflow:hidden">
+          <div class="share-entry">
+            <div class="avatar" style="background:var(--teal)">JC</div>
+            <div class="share-meta">
+              <div class="share-name">James Cooper · Savills</div>
+              <div class="share-scope">ID · Budget · Chain · Story</div>
+              <div class="share-expiry">⏱ Expires in 28 days</div>
+            </div>
+            <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+          </div>
+          <div class="share-entry" id="active-sm" style="display:none">
+            <div class="avatar" style="background:var(--teal)">SM</div>
+            <div class="share-meta">
+              <div class="share-name">Sarah Mitchell · Knight Frank</div>
+              <div class="share-scope">ID · Budget · Chain · Story</div>
+              <div class="share-expiry">⏱ Expires in 30 days</div>
+            </div>
+            <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+          </div>
+          <div class="share-entry" id="active-dc" style="display:none">
+            <div class="avatar" style="background:var(--teal)">DC</div>
+            <div class="share-meta">
+              <div class="share-name">David Chen · Foxtons</div>
+              <div class="share-scope">ID · Budget · Chain · Story</div>
+              <div class="share-expiry">⏱ Expires in 30 days</div>
+            </div>
+            <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+          </div>
+        </div>
+        <div style="padding:14px 22px 0;font-size:11px;color:var(--text-faint);text-align:center;line-height:1.5">Access expires automatically after 30 days.<br>You can revoke at any time.</div>
+        <div style="margin:14px 22px 0">
+          <button class="cta-btn outline" onclick="setShareTabByName('people')">+ Send to another agent</button>
+        </div>
+      </div>
+
+      <!-- Link tab -->
+      <div id="tab-link" style="display:none;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <span class="sec-label">YOUR UNIQUE LINK</span>
+        <div style="margin:0 22px;border-radius:16px;overflow:hidden" class="teal-card">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--navy)">umu.co/passport/AQ2024</div>
+            </div>
+            <button style="background:var(--teal);color:white;border:none;border-radius:100px;padding:8px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">Copy link</button>
+          </div>
+        </div>
+        <!-- QR code -->
+        <div style="margin:16px 22px 0" class="navy-card">
+          <div style="padding:20px;text-align:center">
+            <svg width="120" height="120" viewBox="0 0 120 120" style="display:block;margin:0 auto">
+              <!-- QR pattern - realistic looking -->
+              <rect width="120" height="120" fill="white"/>
+              <!-- Top-left finder -->
+              <rect x="10" y="10" width="30" height="30" rx="3" fill="black"/>
+              <rect x="14" y="14" width="22" height="22" rx="2" fill="white"/>
+              <rect x="18" y="18" width="14" height="14" rx="1" fill="black"/>
+              <!-- Top-right finder -->
+              <rect x="80" y="10" width="30" height="30" rx="3" fill="black"/>
+              <rect x="84" y="14" width="22" height="22" rx="2" fill="white"/>
+              <rect x="88" y="18" width="14" height="14" rx="1" fill="black"/>
+              <!-- Bottom-left finder -->
+              <rect x="10" y="80" width="30" height="30" rx="3" fill="black"/>
+              <rect x="14" y="84" width="22" height="22" rx="2" fill="white"/>
+              <rect x="18" y="88" width="14" height="14" rx="1" fill="black"/>
+              <!-- Data modules (scattered pattern) -->
+              <rect x="46" y="10" width="4" height="4" fill="black"/>
+              <rect x="54" y="10" width="4" height="4" fill="black"/>
+              <rect x="62" y="10" width="4" height="4" fill="black"/>
+              <rect x="70" y="10" width="4" height="4" fill="black"/>
+              <rect x="46" y="18" width="4" height="4" fill="black"/>
+              <rect x="62" y="18" width="4" height="4" fill="black"/>
+              <rect x="70" y="22" width="4" height="4" fill="black"/>
+              <rect x="50" y="26" width="4" height="4" fill="black"/>
+              <rect x="66" y="26" width="4" height="4" fill="black"/>
+              <rect x="10" y="46" width="4" height="4" fill="black"/>
+              <rect x="18" y="46" width="4" height="4" fill="black"/>
+              <rect x="26" y="46" width="4" height="4" fill="black"/>
+              <rect x="10" y="54" width="4" height="4" fill="black"/>
+              <rect x="22" y="54" width="4" height="4" fill="black"/>
+              <rect x="30" y="54" width="4" height="4" fill="black"/>
+              <rect x="14" y="62" width="4" height="4" fill="black"/>
+              <rect x="26" y="62" width="4" height="4" fill="black"/>
+              <rect x="10" y="70" width="4" height="4" fill="black"/>
+              <rect x="18" y="70" width="4" height="4" fill="black"/>
+              <rect x="46" y="46" width="4" height="4" fill="black"/>
+              <rect x="54" y="46" width="4" height="4" fill="black"/>
+              <rect x="66" y="46" width="4" height="4" fill="black"/>
+              <rect x="74" y="46" width="4" height="4" fill="black"/>
+              <rect x="50" y="54" width="4" height="4" fill="black"/>
+              <rect x="62" y="54" width="4" height="4" fill="black"/>
+              <rect x="46" y="62" width="4" height="4" fill="black"/>
+              <rect x="58" y="62" width="4" height="4" fill="black"/>
+              <rect x="70" y="62" width="4" height="4" fill="black"/>
+              <rect x="54" y="70" width="4" height="4" fill="black"/>
+              <rect x="66" y="70" width="4" height="4" fill="black"/>
+              <rect x="74" y="70" width="4" height="4" fill="black"/>
+              <rect x="82" y="46" width="4" height="4" fill="black"/>
+              <rect x="94" y="46" width="4" height="4" fill="black"/>
+              <rect x="106" y="46" width="4" height="4" fill="black"/>
+              <rect x="86" y="54" width="4" height="4" fill="black"/>
+              <rect x="98" y="54" width="4" height="4" fill="black"/>
+              <rect x="82" y="62" width="4" height="4" fill="black"/>
+              <rect x="90" y="62" width="4" height="4" fill="black"/>
+              <rect x="102" y="62" width="4" height="4" fill="black"/>
+              <rect x="46" y="82" width="4" height="4" fill="black"/>
+              <rect x="58" y="82" width="4" height="4" fill="black"/>
+              <rect x="70" y="82" width="4" height="4" fill="black"/>
+              <rect x="82" y="82" width="4" height="4" fill="black"/>
+              <rect x="94" y="82" width="4" height="4" fill="black"/>
+              <rect x="50" y="90" width="4" height="4" fill="black"/>
+              <rect x="62" y="90" width="4" height="4" fill="black"/>
+              <rect x="78" y="90" width="4" height="4" fill="black"/>
+              <rect x="90" y="90" width="4" height="4" fill="black"/>
+              <rect x="54" y="98" width="4" height="4" fill="black"/>
+              <rect x="66" y="98" width="4" height="4" fill="black"/>
+              <rect x="82" y="98" width="4" height="4" fill="black"/>
+              <rect x="98" y="98" width="4" height="4" fill="black"/>
+              <rect x="106" y="90" width="4" height="4" fill="black"/>
+              <rect x="102" y="82" width="4" height="4" fill="black"/>
+              <!-- UMU centre dot -->
+              <rect x="52" y="52" width="16" height="16" rx="8" fill="var(--teal)"/>
+              <text x="60" y="64" text-anchor="middle" font-size="7" font-weight="800" fill="white" font-family="Plus Jakarta Sans,sans-serif">UMU</text>
+            </svg>
+            <div style="font-size:11px;color:var(--text-soft);margin-top:8px;font-weight:600">Scan to verify</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--text-faint);padding:12px 22px">Valid for 30 days · Share only with trusted parties</div>
+      </div>
+
+      <!-- PDF tab -->
+      <div id="tab-pdf" style="display:none;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <span class="sec-label">DOWNLOAD YOUR PASSPORT</span>
+        <!-- Preview card -->
+        <div style="margin:0 22px;background:var(--navy);border-radius:16px;padding:20px;color:white">
+          <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;opacity:.5;text-transform:uppercase;margin-bottom:8px">UMU BUYER PASSPORT</div>
+          <div style="font-size:16px;font-weight:800;font-style:italic;margin-bottom:10px">"Trusted, ready, chain-free."</div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:10px">Alexandria Quinn</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:4px 8px">🪪 ID Verified</span>
+            <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:4px 8px">£400K Funds</span>
+            <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:4px 8px">Chain free</span>
+          </div>
+        </div>
+        <div style="padding:16px 22px 0">
+          <button class="cta-btn" onclick="goScreen('pdf-view')">📄 Preview &amp; Download PDF</button>
+        </div>
+        <div style="text-align:center;padding:12px 22px 0;font-size:13px;font-weight:800;color:var(--teal-dark);cursor:pointer" onclick="goScreen('sign-doc')">✍️ Add digital signature</div>
+        <div style="text-align:center;font-size:11px;color:var(--text-faint);padding:10px 22px">PDF includes your verified badge and is digitally signed by UMU</div>
+      </div>
+
+    </div><!-- /share -->
+
+    <!-- ===== SCREEN: EQ-BANK – EQUIFAX BANK SELECTOR ===== -->
+    <div class="screen eq-bank">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">EQUIFAX CROSSCHECK</div></div>
+        <span class="nav-right"></span>
+      </div>
+      <div style="padding:14px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:12px">
+          <div style="background:var(--navy);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:6px">
+            <span style="font-size:9px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.8px">EXPERIAN</span>
+            <span style="color:rgba(255,255,255,.3)">+</span>
+            <span style="font-size:11px;font-weight:800;color:white">EQ EQUIFAX</span>
+          </div>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Add Equifax crosscheck</h2>
+        <p style="font-size:12px;color:var(--text-soft);line-height:1.5">Many lenders check both Experian and Equifax. Adding both gives you a stronger, more complete financial profile.</p>
+      </div>
+      <!-- Why two bureaus -->
+      <div style="margin:14px 22px 0;background:var(--amber-faint);border:1px solid var(--amber-pale);border-radius:14px;padding:12px 14px;animation:fadeSlideUp .4s .08s both;opacity:0">
+        <div style="font-size:10px;font-weight:800;color:var(--amber-dark);letter-spacing:.8px;margin-bottom:8px">WHY TWO BUREAUS MATTER</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="font-size:11.5px;font-weight:700;color:var(--navy);display:flex;gap:7px"><span>🏦</span>HSBC, Lloyds, Barclays check Equifax as primary</div>
+          <div style="font-size:11.5px;font-weight:700;color:var(--navy);display:flex;gap:7px"><span>📊</span>Equifax may show different data than Experian</div>
+          <div style="font-size:11.5px;font-weight:700;color:var(--navy);display:flex;gap:7px"><span>✅</span>Two-bureau pass = significantly faster DIP decisions</div>
+        </div>
+      </div>
+      <!-- Experian already done -->
+      <div style="margin:14px 22px 0;background:var(--teal-paler);border:1px solid var(--teal-pale);border-radius:12px;padding:11px 14px;display:flex;align-items:center;gap:10px;animation:fadeSlideUp .4s .1s both;opacity:0">
+        <div style="width:30px;height:30px;border-radius:8px;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0">EX</div>
+        <div style="flex:1"><div style="font-size:12px;font-weight:800;color:var(--navy)">Experian already verified</div><div style="font-size:10px;color:var(--teal-dark)">Score: 821 · Excellent · ✓ done</div></div>
+        <span class="risk-pill clear">✓ DONE</span>
+      </div>
+      <!-- Bank selector — same bank, different bureau -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .12s both;opacity:0">CONNECT SAME BANK FOR EQUIFAX</span>
+      <div class="bank-grid" style="animation:fadeSlideUp .4s .12s both;opacity:0">
+        <div class="bank-tile sel" onclick="selectBank(this)"><div class="bank-logo" style="background:#006a4d">🏦</div><div class="bank-name">Lloyds</div></div>
+        <div class="bank-tile" onclick="selectBank(this)"><div class="bank-logo" style="background:#00aeef">🏦</div><div class="bank-name">Barclays</div></div>
+        <div class="bank-tile" onclick="selectBank(this)"><div class="bank-logo" style="background:#db0011">🏦</div><div class="bank-name">HSBC</div></div>
+        <div class="bank-tile" onclick="selectBank(this)"><div class="bank-logo" style="background:#42145f">🏦</div><div class="bank-name">NatWest</div></div>
+        <div class="bank-tile" onclick="selectBank(this)"><div class="bank-logo" style="background:#ff3464">🏦</div><div class="bank-name">Monzo</div></div>
+        <div class="bank-tile" onclick="selectBank(this)"><div class="bank-logo" style="background:#6935d3">🏦</div><div class="bank-name">Starling</div></div>
+      </div>
+      <div style="padding:14px 22px 0;animation:fadeSlideUp .4s .18s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('eq-result')">Run Equifax crosscheck →</button>
+      </div>
+      <div style="text-align:center;font-size:10px;color:var(--text-faint);padding:8px 22px">Soft search only · does not affect your credit score</div>
+    </div><!-- /eq-bank -->
+
+    <!-- ===== SCREEN: EQ-RESULT – EQUIFAX RESULTS + TWO-BUREAU SUMMARY ===== -->
+    <div class="screen eq-result">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px"><div class="eyebrow-dot"></div>TWO-BUREAU VERIFIED</div></div>
+        <span class="nav-right">Done</span>
+      </div>
+      <!-- All clear -->
+      <div style="margin:8px 22px 0;background:linear-gradient(135deg,#166534,#15803d);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div style="font-size:24px">✅</div>
+        <div><div style="font-size:14px;font-weight:800;color:white">Two-bureau check passed</div><div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px">Experian + Equifax · both clear</div></div>
+        <div style="margin-left:auto;font-size:9px;font-weight:800;background:rgba(255,255,255,.2);color:white;border-radius:100px;padding:4px 10px">PLATINUM</div>
+      </div>
+      <!-- Side-by-side comparison -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .1s both;opacity:0">CREDIT FILE COMPARISON</span>
+      <div class="bureau-row" style="animation:fadeSlideUp .4s .1s both;opacity:0">
+        <div class="bureau-card active-b">
+          <div class="bureau-name">EXPERIAN</div>
+          <div class="bureau-score">821</div>
+          <div class="bureau-band excellent">Excellent</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">CCJs <span style="color:var(--success);float:right">None</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Defaults <span style="color:var(--success);float:right">None</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Utilisation <span style="color:var(--navy);float:right">18%</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Hard searches <span style="color:var(--navy);float:right">2</span></div>
+          </div>
+        </div>
+        <div class="bureau-card active-b">
+          <div class="bureau-name" style="color:var(--amber-dark)">EQUIFAX</div>
+          <div class="bureau-score">794</div>
+          <div class="bureau-band good">Very Good</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">CCJs <span style="color:var(--success);float:right">None</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Defaults <span style="color:var(--success);float:right">None</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Utilisation <span style="color:var(--navy);float:right">21%</span></div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-soft)">Hard searches <span style="color:var(--navy);float:right">3</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Combined verdict -->
+      <div style="margin:12px 22px 0;background:white;border:2px solid var(--teal);border-radius:16px;padding:16px;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:var(--teal-dark);margin-bottom:10px">COMBINED LENDER VIEW</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:10px">
+          <div style="flex:1"><div style="font-size:12px;color:var(--text-soft);font-weight:700">Average score</div><div style="font-size:22px;font-weight:800;color:var(--navy)">808 <span style="font-size:11px;color:var(--success)">Excellent</span></div></div>
+          <div style="text-align:center;background:var(--teal);border-radius:12px;padding:8px 14px"><div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.6)">LENDER</div><div style="font-size:12px;font-weight:800;color:white;margin-top:1px">HIGH CONF.</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-soft);line-height:1.5;padding-top:10px;border-top:1px solid var(--line-soft)">Both bureaus show no adverse history. Scores are consistent. Lenders using either or both bureaus will see a strong, clean profile.</div>
+      </div>
+      <!-- Upgrade to passport -->
+      <div style="margin:12px 22px 0;background:linear-gradient(135deg,var(--navy-paler),var(--teal-paler));border:1px solid var(--teal-pale);border-radius:14px;padding:14px;display:flex;gap:12px;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <div style="font-size:20px">🏅</div>
+        <div><div style="font-size:13px;font-weight:800;color:var(--navy)">Platinum credential issued</div><div style="font-size:11px;color:var(--text-soft);margin-top:3px;line-height:1.4">Your Equifax data has been added to your passport. You are now a Platinum verified buyer.</div></div>
+      </div>
+      <div style="padding:14px 22px;animation:fadeSlideUp .4s .25s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('badge')">View my updated passport →</button>
+      </div>
+    </div><!-- /eq-result -->
+
+    <!-- ===== SCREEN: SEND-AGENT – NAMED SEND FLOW ===== -->
+    <div class="screen send-agent">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre" style="font-size:14px;font-weight:800;color:var(--navy)">Share with Agent</div>
+        <span class="nav-right" onclick="goScreen('badge')">Done</span>
+      </div>
+      <!-- Scope reminder -->
+      <div class="scope-panel" style="margin-top:10px">
+        <div class="scope-title">📋 THEY WILL SEE</div>
+        <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>ID Verified (Onfido / DVS)</div>
+        <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Budget · Proof of deposit · AML clear</div>
+        <div class="scope-row"><div class="scope-check"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Chain free · Solicitor instructed</div>
+        <div class="scope-hidden">🔒 Not shared: account numbers, full DOB, credit score, personal address</div>
+      </div>
+      <!-- Agent list -->
+      <span class="sec-label">SELECT AGENT</span>
+      <div class="recipient-card">
+        <div class="recipient-row" id="sa-row-jc">
+          <div class="avatar" style="background:var(--teal)">JC</div>
+          <div style="flex:1"><div style="font-size:12px;font-weight:800;color:var(--navy)">Savills – Notting Hill</div><div style="font-size:11px;color:var(--text-soft)">James Cooper</div></div>
+          <button class="send-btn" id="sa-btn-jc" onclick="agentSend('jc')">⤴ Send</button>
+        </div>
+        <div class="recipient-row" id="sa-row-sm">
+          <div class="avatar" style="background:var(--navy)">SM</div>
+          <div style="flex:1"><div style="font-size:12px;font-weight:800;color:var(--navy)">Knight Frank</div><div style="font-size:11px;color:var(--text-soft)">Sarah Mitchell</div></div>
+          <button class="send-btn" id="sa-btn-sm" onclick="agentSend('sm')">⤴ Send</button>
+        </div>
+        <div class="recipient-row" id="sa-row-dc">
+          <div class="avatar" style="background:var(--navy)">DC</div>
+          <div style="flex:1"><div style="font-size:12px;font-weight:800;color:var(--navy)">Foxtons</div><div style="font-size:11px;color:var(--text-soft)">David Chen</div></div>
+          <button class="send-btn" id="sa-btn-dc" onclick="agentSend('dc')">⤴ Send</button>
+        </div>
+      </div>
+      <!-- Confirmation area (hidden until sent) -->
+      <div id="sa-confirm" style="display:none;animation:fadeSlideUp .35s ease both;margin-top:14px">
+        <div class="sent-confirm">
+          <div style="font-size:36px;margin-bottom:8px">✅</div>
+          <div style="font-size:15px;font-weight:800;color:#166534;margin-bottom:4px">Passport sent!</div>
+          <div style="font-size:12px;color:#166534;opacity:.8" id="sa-confirm-name">James Cooper at Savills has been notified.</div>
+          <div style="font-size:11px;color:#166534;opacity:.6;margin-top:4px">They'll receive a secure link to view your verified credentials.</div>
+        </div>
+        <div style="padding:12px 22px 0">
+          <button class="cta-btn outline" onclick="goScreen('badge')" style="font-size:13px;padding:13px">Back to my passport</button>
+        </div>
+      </div>
+      <!-- Add another agent -->
+      <div style="padding:12px 22px 0;font-size:12px;font-weight:700;color:var(--teal-dark);text-align:center;cursor:pointer">+ Add another agent</div>
+    </div><!-- /send-agent -->
+
+    <!-- ===== SCREEN: PDF-VIEW – PDF PREVIEW + DOWNLOAD ===== -->
+    <div class="screen pdf-view">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre" style="font-size:14px;font-weight:800;color:var(--navy)">Passport PDF</div>
+        <span class="nav-right" onclick="goScreen('sign-doc')">✍️ Sign</span>
+      </div>
+      <!-- PDF document render -->
+      <div style="padding:10px 0 0;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div class="pdf-doc">
+          <!-- PDF header -->
+          <div class="pdf-header">
+            <div class="pdf-header-title">UMU BUYER PASSPORT · VERIFIED DOCUMENT</div>
+            <div class="pdf-header-name">Alexandria Quinn</div>
+            <div class="pdf-header-ref">Ref: AQ2024 · Issued: 13 May 2026 · Valid 30 days</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:10px">
+              <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:3px 9px;color:white">🪪 ID Verified</span>
+              <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:3px 9px;color:white">£400K Funds</span>
+              <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:3px 9px;color:white">Chain free</span>
+              <span style="font-size:9px;font-weight:700;border:1px solid rgba(255,255,255,.3);border-radius:100px;padding:3px 9px;color:white">★ Platinum</span>
+            </div>
+          </div>
+          <!-- Section: Identity -->
+          <div class="pdf-section">
+            <div class="pdf-section-title">IDENTITY</div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Full name</span><span class="pdf-cred-value">Alexandria Quinn</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">ID document</span><span class="pdf-cred-value">UK/EU Passport</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Verified by</span><span class="pdf-pill">Onfido · DVS ✓</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">AML status</span><span class="pdf-pill">Clear ✓</span></div>
+          </div>
+          <!-- Section: Financial -->
+          <div class="pdf-section">
+            <div class="pdf-section-title">FINANCIAL CREDENTIALS</div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Proof of deposit</span><span class="pdf-cred-value">£82,400</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Source of funds</span><span class="pdf-pill">AML clear ✓</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Max purchase</span><span class="pdf-cred-value">£400,000</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Affordability</span><span class="pdf-cred-value">82/100 · Low risk</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Verified by</span><span class="pdf-pill">Armalytix ✓</span></div>
+          </div>
+          <!-- Section: Credit -->
+          <div class="pdf-section">
+            <div class="pdf-section-title">CREDIT FILE</div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Experian score</span><span class="pdf-cred-value">821 · Excellent</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Equifax score</span><span class="pdf-cred-value">794 · Very Good</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">CCJs / defaults</span><span class="pdf-pill">None ✓</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Hard searches (6m)</span><span class="pdf-cred-value">2 (Exp) · 3 (Eq)</span></div>
+          </div>
+          <!-- Section: Purchase intent -->
+          <div class="pdf-section">
+            <div class="pdf-section-title">PURCHASE PROFILE</div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Chain position</span><span class="pdf-cred-value">Chain free</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Timeline</span><span class="pdf-cred-value">1–3 months</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Property type</span><span class="pdf-cred-value">Flat</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Solicitor</span><span class="pdf-cred-value">Fletcher &amp; Hart</span></div>
+            <div class="pdf-cred-row"><span class="pdf-cred-label">Solicitor status</span><span class="pdf-pill">Instructed · Law Society ✓</span></div>
+          </div>
+          <!-- Signature area -->
+          <div class="pdf-section" id="pdf-sig-area">
+            <div class="pdf-section-title">DIGITAL SIGNATURE</div>
+            <div id="pdf-sig-placeholder" style="background:var(--bg);border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--text-faint)" onclick="goScreen('sign-doc')">
+              ✍️ Tap to add your digital signature
+            </div>
+            <div id="pdf-sig-done" style="display:none;background:var(--teal-paler);border:1.5px solid var(--teal);border-radius:10px;padding:12px">
+              <div style="font-size:13px;font-weight:800;color:var(--teal-dark);margin-bottom:4px">✅ Digitally signed</div>
+              <div style="font-family:Georgia,serif;font-size:18px;color:var(--navy);font-style:italic;margin-bottom:6px">Alexandria Quinn</div>
+              <div style="font-size:10px;color:var(--text-faint)">Signed 13 May 2026 · 09:41 · UMU verified</div>
+            </div>
+          </div>
+          <div class="pdf-watermark">Issued by UMU · umu.co/passport/AQ2024 · PDTF conformant · Verify at umu.co/verify</div>
+        </div>
+      </div>
+      <!-- Download / sign actions -->
+      <div style="padding:14px 22px;display:flex;flex-direction:column;gap:8px;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <button class="cta-btn" onclick="downloadPDF(this)">📄 Download PDF</button>
+        <button class="cta-btn outline" onclick="goScreen('sign-doc')" id="sign-cta-btn" style="font-size:13px;padding:13px">✍️ Add digital signature first</button>
+      </div>
+    </div><!-- /pdf-view -->
+
+    <!-- ===== SCREEN: SIGN-DOC – DIGITAL SIGNATURE ===== -->
+    <div class="screen sign-doc">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre" style="font-size:14px;font-weight:800;color:var(--navy)">Sign your Passport</div>
+        <span class="nav-right" id="sig-clear-btn" onclick="clearSig()" style="color:var(--red)">Clear</span>
+      </div>
+      <div style="padding:10px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5">Sign below to confirm this passport is accurate and you authorise its sharing. Your signature will be embedded in the PDF.</p>
+      </div>
+      <!-- Document summary -->
+      <div style="margin:12px 22px 0;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;animation:fadeSlideUp .4s .08s both;opacity:0">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.8px;color:var(--text-faint);margin-bottom:8px">SIGNING</div>
+        <div style="font-size:13px;font-weight:800;color:var(--navy)">UMU Buyer Passport — Alexandria Quinn</div>
+        <div style="font-size:11px;color:var(--text-soft);margin-top:2px">Ref: AQ2024 · 13 May 2026 · Passport + Financial Credentials</div>
+      </div>
+      <!-- Signature pad -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .1s both;opacity:0">DRAW YOUR SIGNATURE</span>
+      <div class="sig-pad" id="sig-pad" style="animation:fadeSlideUp .4s .1s both;opacity:0">
+        <canvas class="sig-canvas" id="sig-canvas"></canvas>
+        <div class="sig-placeholder" id="sig-placeholder">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-faint)"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <span style="font-size:12px;font-weight:700;color:var(--text-faint)">Draw your signature here</span>
+        </div>
+      </div>
+      <!-- Or type name -->
+      <div style="margin:12px 22px 0;animation:fadeSlideUp .4s .15s both;opacity:0">
+        <div style="font-size:11px;font-weight:700;color:var(--text-faint);text-align:center;margin-bottom:8px">— or type your name instead —</div>
+        <input type="text" id="sig-name-input" placeholder="Alexandria Quinn" style="width:100%;border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;font-family:'Plus Jakarta Sans',sans-serif;font-size:18px;font-style:italic;color:var(--navy);outline:none;text-align:center" oninput="typeNameSig(this.value)">
+      </div>
+      <!-- Legal note -->
+      <div style="margin:10px 22px 0;padding:10px 12px;background:var(--navy-paler);border-radius:10px;font-size:10.5px;color:var(--text-soft);line-height:1.4;animation:fadeSlideUp .4s .18s both;opacity:0">
+        By signing you confirm this passport is accurate. Your digital signature is timestamp-verified by UMU and embedded in the PDF as a legally recognised electronic signature under eIDAS regulation.
+      </div>
+      <div style="padding:12px 22px;animation:fadeSlideUp .4s .22s both;opacity:0">
+        <button class="cta-btn" id="apply-sig-btn" onclick="applySig()" style="opacity:.5;pointer-events:none">Apply signature →</button>
+      </div>
+    </div><!-- /sign-doc -->
+
+    <!-- ===== SCREEN: SIGN-DONE – SIGNATURE CONFIRMED ===== -->
+    <div class="screen sign-done">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div style="padding:48px 22px 0;text-align:center">
+        <div style="font-size:56px;margin-bottom:14px;animation:pop .5s ease-out .05s both;display:inline-block">✍️</div>
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px;animation:fadeSlideUp .4s .15s both;opacity:0">Passport signed</h2>
+        <p style="font-size:13px;color:var(--text-soft);line-height:1.5;animation:fadeSlideUp .4s .2s both;opacity:0">Your digital signature has been embedded. The PDF is now ready to share or download.</p>
+      </div>
+      <!-- Signed doc preview -->
+      <div style="margin:24px 22px 0;background:white;border:2px solid var(--teal);border-radius:16px;padding:16px;animation:fadeSlideUp .4s .25s both;opacity:0">
+        <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--teal-dark);margin-bottom:10px">SIGNED DOCUMENT</div>
+        <div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:4px">UMU Buyer Passport — Alexandria Quinn</div>
+        <div style="font-family:Georgia,serif;font-size:20px;font-style:italic;color:var(--navy);padding:10px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);margin:8px 0">Alexandria Quinn</div>
+        <div style="font-size:10px;color:var(--text-faint)">Signed 13 May 2026 · 09:41 GMT · eIDAS compliant · UMU ref: AQ2024-SIG</div>
+        <div style="margin-top:10px;background:var(--teal-paler);border-radius:8px;padding:8px 10px;font-size:9.5px;font-family:monospace;color:var(--teal-dark);word-break:break-all">sig:sha256·umu·AQ2024·20260513T0941Z·eidas·verified</div>
+      </div>
+      <div style="padding:16px 22px;display:flex;flex-direction:column;gap:8px;animation:fadeSlideUp .4s .3s both;opacity:0">
+        <button class="cta-btn" onclick="downloadSignedPDF(this)">📄 Download signed PDF</button>
+        <button class="cta-btn outline" onclick="goScreen('send-agent')" style="font-size:13px;padding:13px">⤴ Share with agent</button>
+        <button onclick="goScreen('badge')" style="background:none;border:none;font-family:inherit;font-size:12px;font-weight:700;color:var(--text-soft);cursor:pointer;padding:8px">Back to my passport</button>
+      </div>
+    </div><!-- /sign-done -->
+
+    <!-- ===== SCREEN: S2BANK – BANK SELECTOR ===== -->
+    <div class="screen s2bank">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">OPEN BANKING</div></div>
+        <span class="nav-right"></span>
+      </div>
+      <!-- Armalytix branding -->
+      <div style="padding:16px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--navy);border-radius:14px;padding:10px 18px;margin-bottom:14px">
+          <span style="font-size:13px;font-weight:800;color:white;letter-spacing:.5px">armalytix</span>
+          <span style="font-size:9px;font-weight:700;background:var(--teal);color:white;border-radius:100px;padding:2px 7px">FCA REGULATED</span>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Connect your bank</h2>
+        <p style="font-size:12px;color:var(--text-soft);line-height:1.5">Read-only access. We verify your source of funds, proof of deposit, and affordability — no account numbers stored.</p>
+      </div>
+      <!-- What we check -->
+      <div style="margin:14px 22px 0;background:var(--teal-paler);border:1px solid var(--teal-pale);border-radius:14px;padding:12px 14px;animation:fadeSlideUp .4s .08s both;opacity:0">
+        <div style="font-size:10px;font-weight:800;color:var(--teal-dark);letter-spacing:.8px;margin-bottom:8px">ARMALYTIX WILL VERIFY</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--navy)"><div style="width:18px;height:18px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Source of funds — where your deposit money came from</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--navy)"><div style="width:18px;height:18px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Proof of deposit — balance confirmed at point of verification</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--navy)"><div style="width:18px;height:18px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>Affordability — income, outgoings, stress-tested capacity</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--navy)"><div style="width:18px;height:18px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></div>AML — source of deposit checks for gifted funds</div>
+        </div>
+      </div>
+      <!-- Bank grid -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .12s both;opacity:0">SELECT YOUR BANK</span>
+      <div class="bank-grid" style="animation:fadeSlideUp .4s .12s both;opacity:0">
+        <div class="bank-tile sel" id="bank-lloyds" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#006a4d">🏦</div>
+          <div class="bank-name">Lloyds</div>
+        </div>
+        <div class="bank-tile" id="bank-barclays" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#00aeef">🏦</div>
+          <div class="bank-name">Barclays</div>
+        </div>
+        <div class="bank-tile" id="bank-hsbc" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#db0011">🏦</div>
+          <div class="bank-name">HSBC</div>
+        </div>
+        <div class="bank-tile" id="bank-natwest" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#42145f">🏦</div>
+          <div class="bank-name">NatWest</div>
+        </div>
+        <div class="bank-tile" id="bank-monzo" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#ff3464">🏦</div>
+          <div class="bank-name">Monzo</div>
+        </div>
+        <div class="bank-tile" id="bank-starling" onclick="selectBank(this)">
+          <div class="bank-logo" style="background:#6935d3">🏦</div>
+          <div class="bank-name">Starling</div>
+        </div>
+      </div>
+      <div style="padding:14px 22px 0;animation:fadeSlideUp .4s .18s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s2processing')">Connect securely →</button>
+      </div>
+      <div style="text-align:center;font-size:10px;color:var(--text-faint);padding:8px 22px">🔒 Read-only · FCA regulated · PSD2 compliant · Data not stored after verification</div>
+    </div><!-- /s2bank -->
+
+    <!-- ===== SCREEN: S2PROCESSING – ARMALYTIX PROCESSING ===== -->
+    <div class="screen s2processing">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <div style="width:36px"></div>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px">VERIFYING</div></div>
+        <span class="nav-right"></span>
+      </div>
+      <div style="padding:18px 22px 0;text-align:center;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--navy);border-radius:12px;padding:8px 16px;margin-bottom:16px">
+          <span style="font-size:12px;font-weight:800;color:white">armalytix</span>
+          <div class="pulse-dot" style="background:var(--teal-bright)"></div>
+        </div>
+        <h2 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:6px">Analysing your finances</h2>
+        <p style="font-size:12px;color:var(--text-soft)">Usually takes 20–30 seconds</p>
+      </div>
+      <!-- Progress bar -->
+      <div style="padding:16px 22px 0;animation:fadeSlideUp .4s .08s both;opacity:0">
+        <div style="height:8px;background:var(--line);border-radius:100px;overflow:hidden">
+          <div id="armalytix-progress" style="height:100%;width:15%;background:linear-gradient(90deg,var(--teal),var(--teal-bright));border-radius:100px;transition:width 1.8s ease"></div>
+        </div>
+        <div id="armalytix-status" style="font-size:11px;color:var(--text-soft);font-weight:700;margin-top:8px;text-align:center">Connecting to Lloyds Bank…</div>
+      </div>
+      <!-- Process steps -->
+      <div style="margin:16px 22px 0;background:white;border:1.5px solid var(--line);border-radius:16px;padding:8px 16px;animation:fadeSlideUp .4s .12s both;opacity:0">
+        <div class="process-step">
+          <div class="ps-icon done">✓</div>
+          <div style="flex:1"><div class="ps-title">Bank connection</div><div class="ps-sub">Lloyds Bank · PSD2 secured</div></div>
+          <span class="ps-badge done">Done</span>
+        </div>
+        <div class="process-step">
+          <div class="ps-icon running">💰</div>
+          <div style="flex:1"><div class="ps-title">Source of funds</div><div class="ps-sub">Analysing 12 months of transactions</div></div>
+          <span class="ps-badge running">Running</span>
+        </div>
+        <div class="process-step">
+          <div class="ps-icon pending">🏦</div>
+          <div style="flex:1"><div class="ps-title">Proof of deposit</div><div class="ps-sub">Confirming available balance</div></div>
+          <span class="ps-badge pending">Pending</span>
+        </div>
+        <div class="process-step">
+          <div class="ps-icon pending">📊</div>
+          <div style="flex:1"><div class="ps-title">Affordability</div><div class="ps-sub">Income vs outgoings stress test</div></div>
+          <span class="ps-badge pending">Pending</span>
+        </div>
+        <div class="process-step">
+          <div class="ps-icon pending">🛡️</div>
+          <div style="flex:1"><div class="ps-title">AML check</div><div class="ps-sub">Source of deposit cleared</div></div>
+          <span class="ps-badge pending">Pending</span>
+        </div>
+        <div class="process-step">
+          <div class="ps-icon pending">📋</div>
+          <div style="flex:1"><div class="ps-title">Credit file</div><div class="ps-sub">Experian · soft search only</div></div>
+          <span class="ps-badge pending">Pending</span>
+        </div>
+      </div>
+      <div style="padding:14px 22px 0;animation:fadeSlideUp .4s .18s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s2result')">View results →</button>
+      </div>
+    </div><!-- /s2processing -->
+
+    <!-- ===== SCREEN: S2RESULT – ARMALYTIX RESULTS ===== -->
+    <div class="screen s2result">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre"><div class="eyebrow-pill" style="font-size:10px"><div class="eyebrow-dot"></div>VERIFIED</div></div>
+        <span class="nav-right">Done</span>
+      </div>
+      <!-- All clear banner -->
+      <div style="margin:8px 22px 0;background:linear-gradient(135deg,#166534,#15803d);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div style="font-size:24px">✅</div>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:white">All checks passed</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.75);margin-top:2px">Verified by Armalytix · <span id="verify-date">13 May 2026</span></div>
+        </div>
+        <div style="margin-left:auto;font-size:9px;font-weight:800;background:rgba(255,255,255,.2);color:white;border-radius:100px;padding:4px 10px">AML CLEAR</div>
+      </div>
+      <!-- Main funds cards -->
+      <div style="margin:12px 22px 0;display:flex;gap:10px;animation:fadeSlideUp .4s .08s both;opacity:0">
+        <div class="result-card" style="flex:1;margin:0">
+          <div class="result-label">PROOF OF DEPOSIT</div>
+          <div class="result-value">£82,400</div>
+          <div class="result-sub">Confirmed in Lloyds account</div>
+          <div class="result-source">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+            Armalytix · Lloyds Bank
+          </div>
+        </div>
+        <div class="result-card" style="flex:1;margin:0">
+          <div class="result-label">MAX PURCHASE</div>
+          <div class="result-value">£400K</div>
+          <div class="result-sub">Funds + borrowing capacity</div>
+          <div class="result-source">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+            Armalytix verified
+          </div>
+        </div>
+      </div>
+      <!-- Source of funds breakdown -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .12s both;opacity:0">SOURCE OF FUNDS</span>
+      <div style="margin:0 22px;background:white;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;animation:fadeSlideUp .4s .12s both;opacity:0">
+        <div class="doc-row" style="border-bottom:1px solid var(--line-soft)">
+          <div class="doc-icon">💼</div>
+          <div class="doc-body"><div class="doc-title">Salary / employment income</div><div class="doc-meta">Regular credits from employer — 24 months verified</div></div>
+          <div class="doc-right"><span class="risk-pill clear">✓ CLEAR</span></div>
+        </div>
+        <div class="doc-row" style="border-bottom:1px solid var(--line-soft)">
+          <div class="doc-icon">🏠</div>
+          <div class="doc-body"><div class="doc-title">Property sale proceeds</div><div class="doc-meta">Previous sale — solicitor disbursement confirmed</div></div>
+          <div class="doc-right"><span class="risk-pill clear">✓ CLEAR</span></div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon">🎁</div>
+          <div class="doc-body"><div class="doc-title">Gifted deposit — £15,000</div><div class="doc-meta">Family gift · declaration completed · AML cleared</div></div>
+          <div class="doc-right"><span class="risk-pill ok">✓ AML OK</span></div>
+        </div>
+      </div>
+      <!-- Affordability -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .16s both;opacity:0">AFFORDABILITY</span>
+      <div style="margin:0 22px;animation:fadeSlideUp .4s .16s both;opacity:0" class="result-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div class="result-label">AFFORDABILITY SCORE</div>
+            <div class="result-value" style="font-size:28px;color:var(--success)">82<span style="font-size:14px;color:var(--text-soft)">/100</span></div>
+            <div class="result-sub">Strong — comfortably within stress-test limits</div>
+          </div>
+          <div style="font-size:9px;font-weight:800;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:100px;padding:4px 10px;white-space:nowrap">LOW RISK</div>
+        </div>
+        <div class="afford-bar-track">
+          <div class="afford-bar-marker" style="left:82%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:9px;font-weight:700;color:var(--text-faint)"><span>High risk</span><span>Low risk</span></div>
+        <div style="display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)">
+          <div><div style="font-size:10px;color:var(--text-soft);font-weight:700">Net monthly income</div><div style="font-size:14px;font-weight:800;color:var(--navy)">£4,850</div></div>
+          <div><div style="font-size:10px;color:var(--text-soft);font-weight:700">Monthly outgoings</div><div style="font-size:14px;font-weight:800;color:var(--navy)">£1,920</div></div>
+          <div><div style="font-size:10px;color:var(--text-soft);font-weight:700">Surplus</div><div style="font-size:14px;font-weight:800;color:var(--success)">£2,930</div></div>
+        </div>
+      </div>
+      <!-- Credit file -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .2s both;opacity:0">CREDIT FILE</span>
+      <div style="margin:0 22px;background:white;border:1.5px solid var(--line);border-radius:16px;padding:16px;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:800;color:var(--text-soft);letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">EXPERIAN CREDIT SCORE</div>
+            <div style="font-size:28px;font-weight:800;color:var(--navy)">821 <span style="font-size:12px;color:var(--success);font-weight:700">Excellent</span></div>
+          </div>
+          <div style="text-align:center;background:var(--navy);border-radius:12px;padding:8px 14px">
+            <div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.8px">EXPERIAN</div>
+            <div style="font-size:11px;font-weight:800;color:white;margin-top:1px">soft search</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--teal-paler);border-radius:10px;padding:10px">
+            <div style="font-size:10px;color:var(--teal-dark);font-weight:700;margin-bottom:2px">Payment history</div>
+            <div style="font-size:13px;font-weight:800;color:var(--navy)">✓ Excellent</div>
+          </div>
+          <div style="background:var(--teal-paler);border-radius:10px;padding:10px">
+            <div style="font-size:10px;color:var(--teal-dark);font-weight:700;margin-bottom:2px">CCJs / defaults</div>
+            <div style="font-size:13px;font-weight:800;color:var(--navy)">✓ None</div>
+          </div>
+          <div style="background:var(--teal-paler);border-radius:10px;padding:10px">
+            <div style="font-size:10px;color:var(--teal-dark);font-weight:700;margin-bottom:2px">Credit utilisation</div>
+            <div style="font-size:13px;font-weight:800;color:var(--navy)">18% — low</div>
+          </div>
+          <div style="background:var(--amber-pale);border-radius:10px;padding:10px">
+            <div style="font-size:10px;color:var(--amber-dark);font-weight:700;margin-bottom:2px">Hard searches (6m)</div>
+            <div style="font-size:13px;font-weight:800;color:var(--navy)">2 — normal</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text-faint);margin-top:10px;text-align:center">Soft search only · does not affect your credit score · Experian data</div>
+      </div>
+      <!-- Equifax note -->
+      <div style="margin:10px 22px 0;padding:12px 14px;background:var(--navy-paler);border:1px solid #ddd8f0;border-radius:12px;display:flex;align-items:center;gap:10px;animation:fadeSlideUp .4s .24s both;opacity:0">
+        <div style="width:32px;height:32px;border-radius:9px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;flex-shrink:0">EQ</div>
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--navy)">Equifax cross-check</div>
+          <div style="font-size:11px;color:var(--text-soft)">Add Equifax for a second-bureau view — lenders often check both</div>
+        </div>
+        <span style="font-size:11px;font-weight:800;color:var(--teal-dark);white-space:nowrap;cursor:pointer" onclick="goScreen('eq-bank')">+ Add →</span>
+      </div>
+      <!-- Credential issued notice -->
+      <div style="margin:14px 22px 0;background:linear-gradient(135deg,var(--navy-paler),var(--teal-paler));border:1px solid var(--teal-pale);border-radius:14px;padding:14px;display:flex;gap:12px;animation:fadeSlideUp .4s .26s both;opacity:0">
+        <div style="font-size:20px">🏅</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--navy)">Verified financial credential issued</div>
+          <div style="font-size:11px;color:var(--text-soft);margin-top:3px;line-height:1.4">A cryptographically signed credential has been added to your passport. Lenders and conveyancers can independently verify this without contacting Armalytix.</div>
+        </div>
+      </div>
+      <div style="padding:14px 22px;animation:fadeSlideUp .4s .3s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('s3')">Add to passport &amp; continue →</button>
+      </div>
+    </div><!-- /s2result -->
+
+    <!-- ===== SCREEN: LENDER-REQ – LENDER ACCESS REQUEST ===== -->
+    <div class="screen lender-req">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div class="top-nav">
+        <button class="back-btn" onclick="goBack()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="nav-centre" style="font-size:14px;font-weight:800;color:var(--navy)">Access Request</div>
+        <span class="nav-right"></span>
+      </div>
+      <!-- Notification header -->
+      <div style="padding:8px 22px 0;animation:fadeSlideUp .4s .05s both;opacity:0">
+        <div class="notif-card">
+          <div class="notif-header">
+            <div class="notif-logo">🏦</div>
+            <div style="flex:1">
+              <div class="notif-title">Lloyds Bank</div>
+              <div class="notif-sub">Mortgage division · FCA authorised</div>
+            </div>
+            <div class="notif-badge">NEW REQUEST</div>
+          </div>
+          <div style="background:var(--bg);border-radius:10px;padding:12px;font-size:12px;color:var(--navy);font-weight:600;line-height:1.5;border:1px solid var(--line)">
+            "We'd like to access your verified financial data to speed up your mortgage application. You control exactly what we can see — approve or decline below."
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <div style="background:var(--teal-paler);border-radius:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--teal-dark)">⏱ Request expires in 48h</div>
+            <div style="background:var(--navy-paler);border-radius:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--navy-soft)">🔒 Read-only access</div>
+            <div style="background:var(--teal-paler);border-radius:8px;padding:6px 10px;font-size:10px;font-weight:700;color:var(--teal-dark)">30 day max</div>
+          </div>
+        </div>
+      </div>
+      <!-- What they're asking for -->
+      <span class="sec-label" style="animation:fadeSlideDown .4s .12s both;opacity:0">THEY ARE REQUESTING</span>
+      <div style="margin:0 22px;background:white;border:2px solid var(--navy);border-radius:14px;padding:8px 16px;animation:fadeSlideUp .4s .12s both;opacity:0">
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Identity verification</div><div class="scope-approve-sub">DVS-certified · Onfido</div></div>
+          <button class="scope-toggle" id="tog-identity" onclick="toggleScope(this)"></button>
+        </div>
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Proof of deposit</div><div class="scope-approve-sub">£82,400 confirmed · Armalytix</div></div>
+          <button class="scope-toggle" id="tog-deposit" onclick="toggleScope(this)"></button>
+        </div>
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Source of funds</div><div class="scope-approve-sub">AML cleared · Armalytix</div></div>
+          <button class="scope-toggle" id="tog-sof" onclick="toggleScope(this)"></button>
+        </div>
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Affordability report</div><div class="scope-approve-sub">Income, outgoings, stress test · Armalytix</div></div>
+          <button class="scope-toggle" id="tog-afford" onclick="toggleScope(this)"></button>
+        </div>
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Credit file summary</div><div class="scope-approve-sub">Experian score 821 · soft search</div></div>
+          <button class="scope-toggle" id="tog-credit" onclick="toggleScope(this)"></button>
+        </div>
+        <div class="scope-approve-row">
+          <div style="flex:1"><div class="scope-approve-title">Personal story</div><div class="scope-approve-sub">Optional note you wrote</div></div>
+          <button class="scope-toggle off" id="tog-story" onclick="toggleScope(this)"></button>
+        </div>
+      </div>
+      <div style="margin:10px 22px 0;font-size:11px;color:var(--text-faint);text-align:center">You can revoke access at any time from your passport</div>
+      <!-- Actions -->
+      <div style="padding:12px 22px 0;display:flex;flex-direction:column;gap:8px;animation:fadeSlideUp .4s .2s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('lender-approve')">Approve selected access →</button>
+        <button class="cta-btn outline" style="font-size:13px;padding:13px">Decline request</button>
+      </div>
+    </div><!-- /lender-req -->
+
+    <!-- ===== SCREEN: LENDER-APPROVE – CONFIRMATION ===== -->
+    <div class="screen lender-approve">
+      <div class="status-bar"><span class="status-time">9:41</span><div class="status-right"><svg width="17" height="12" viewBox="0 0 17 12" fill="none"><rect x="0" y="7" width="3" height="5" rx="1" fill="#231d45"/><rect x="4.5" y="4.5" width="3" height="7.5" rx="1" fill="#231d45"/><rect x="9" y="2" width="3" height="10" rx="1" fill="#231d45"/></svg><svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x=".5" y=".5" width="21" height="11" rx="3.5" stroke="#231d45" stroke-opacity=".35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#231d45"/><path d="M23 4v4a2 2 0 0 0 0-4z" fill="#231d45" opacity=".4"/></svg></div></div>
+      <div style="padding:40px 22px 0;text-align:center">
+        <div style="font-size:56px;margin-bottom:14px;animation:pop .5s ease-out .05s both;display:inline-block">🔓</div>
+        <h2 style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:6px;animation:fadeSlideUp .4s .15s both;opacity:0">Access granted</h2>
+        <p style="font-size:13px;color:var(--text-soft);animation:fadeSlideUp .4s .2s both;opacity:0">Lloyds Bank can now read your selected financial data. Access expires in 30 days.</p>
+      </div>
+      <!-- Token card -->
+      <div style="margin:24px 22px 0;background:var(--navy);border-radius:16px;padding:16px;animation:fadeSlideUp .4s .25s both;opacity:0">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1.2px;color:rgba(255,255,255,.4);margin-bottom:8px">CONSENT TOKEN ISSUED</div>
+        <div style="font-family:monospace;font-size:10px;color:#5eead4;word-break:break-all;line-height:1.6;background:rgba(0,0,0,.25);border-radius:8px;padding:10px">umu_consent_LBM_2026_AQ2024_<br>scope:identity,deposit,sof,<br>afford,credit · exp:2026-06-12</div>
+        <div style="margin-top:10px;font-size:10px;color:rgba(255,255,255,.45)">This token allows Lloyds to call the OpenProperty API on your behalf. It cannot be shared or escalated.</div>
+      </div>
+      <!-- What was shared -->
+      <span class="sec-label" style="color:var(--text-soft);animation:fadeSlideDown .4s .3s both;opacity:0">DATA SHARED WITH LLOYDS</span>
+      <div style="margin:0 22px;background:white;border:1.5px solid var(--line);border-radius:14px;overflow:hidden;animation:fadeSlideUp .4s .3s both;opacity:0">
+        <div class="doc-row"><div class="doc-icon">🪪</div><div class="doc-body"><div class="doc-title">Identity</div><div class="doc-meta">DVS-certified · Onfido</div></div><span class="risk-pill clear">✓ SHARED</span></div>
+        <div class="doc-row"><div class="doc-icon">🏦</div><div class="doc-body"><div class="doc-title">Proof of deposit</div><div class="doc-meta">£82,400 · Armalytix</div></div><span class="risk-pill clear">✓ SHARED</span></div>
+        <div class="doc-row"><div class="doc-icon">🛡️</div><div class="doc-body"><div class="doc-title">Source of funds</div><div class="doc-meta">AML clear · Armalytix</div></div><span class="risk-pill clear">✓ SHARED</span></div>
+        <div class="doc-row"><div class="doc-icon">📊</div><div class="doc-body"><div class="doc-title">Affordability</div><div class="doc-meta">Score 82/100 · Armalytix</div></div><span class="risk-pill clear">✓ SHARED</span></div>
+        <div class="doc-row"><div class="doc-icon">📋</div><div class="doc-body"><div class="doc-title">Credit file</div><div class="doc-meta">Experian 821 · soft search</div></div><span class="risk-pill clear">✓ SHARED</span></div>
+      </div>
+      <div style="padding:14px 22px;display:flex;flex-direction:column;gap:8px;animation:fadeSlideUp .4s .35s both;opacity:0">
+        <button class="cta-btn" onclick="goScreen('badge')">Back to my passport</button>
+        <button class="cta-btn outline" style="font-size:13px;padding:13px" onclick="goScreen('share')">Manage all access →</button>
+      </div>
+    </div><!-- /lender-approve -->
+
+    <!-- ===== SCREEN: LENDER-PORTAL – LENDER DASHBOARD ===== -->
+    <div class="screen lender-portal">
+      <div class="portal-screen">
+        <!-- Portal header -->
+        <div class="portal-header">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:15px">🏦</div>
+            <div>
+              <div class="portal-title">Lloyds Bank · Mortgage Portal</div>
+              <div class="portal-sub">OpenProperty API · Buyer verification dashboard</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+            <span class="portal-scope-pill">identity</span>
+            <span class="portal-scope-pill">proof_of_deposit</span>
+            <span class="portal-scope-pill">source_of_funds</span>
+            <span class="portal-scope-pill">affordability</span>
+            <span class="portal-scope-pill">credit_file</span>
+          </div>
+        </div>
+        <!-- Portal body -->
+        <div class="portal-body">
+          <!-- Buyer summary -->
+          <div class="portal-card">
+            <div class="portal-card-title">BUYER — VERIFIED RECORD</div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🪪</div>
+              <div class="portal-cred-label">Name</div>
+              <div class="portal-cred-value">Alexandria Quinn</div>
+              <span class="portal-verified">DVS ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">📅</div>
+              <div class="portal-cred-label">DOB</div>
+              <div class="portal-cred-value">Verified (not disclosed)</div>
+              <span class="portal-verified">DVS ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🛂</div>
+              <div class="portal-cred-label">ID document</div>
+              <div class="portal-cred-value">UK Passport</div>
+              <span class="portal-verified">Onfido ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🛡️</div>
+              <div class="portal-cred-label">AML status</div>
+              <div class="portal-cred-value">Clear</div>
+              <span class="portal-verified">Armalytix ✓</span>
+            </div>
+          </div>
+          <!-- Financial credentials -->
+          <div class="portal-card">
+            <div class="portal-card-title">FINANCIAL CREDENTIALS</div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🏦</div>
+              <div class="portal-cred-label">Proof of deposit</div>
+              <div class="portal-cred-value">£82,400</div>
+              <span class="portal-verified">Armalytix ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">💼</div>
+              <div class="portal-cred-label">Source of funds</div>
+              <div class="portal-cred-value">Employment + sale</div>
+              <span class="portal-verified">AML clear ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🎁</div>
+              <div class="portal-cred-label">Gifted deposit</div>
+              <div class="portal-cred-value">£15,000 declared</div>
+              <span class="portal-verified">AML clear ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">📊</div>
+              <div class="portal-cred-label">Affordability score</div>
+              <div class="portal-cred-value">82 / 100</div>
+              <span class="portal-verified">Low risk ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">💰</div>
+              <div class="portal-cred-label">Monthly surplus</div>
+              <div class="portal-cred-value">£2,930</div>
+              <span class="portal-verified">Armalytix ✓</span>
+            </div>
+          </div>
+          <!-- Credit file -->
+          <div class="portal-card">
+            <div class="portal-card-title">CREDIT FILE — EXPERIAN</div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">📋</div>
+              <div class="portal-cred-label">Credit score</div>
+              <div class="portal-cred-value">821 — Excellent</div>
+              <span class="portal-verified">Experian ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">⚖️</div>
+              <div class="portal-cred-label">CCJs / defaults</div>
+              <div class="portal-cred-value">None</div>
+              <span class="portal-verified">Clear ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">💳</div>
+              <div class="portal-cred-label">Credit utilisation</div>
+              <div class="portal-cred-value">18%</div>
+              <span class="portal-verified">Low ✓</span>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🔍</div>
+              <div class="portal-cred-label">Hard searches (6m)</div>
+              <div class="portal-cred-value">2</div>
+              <span class="portal-unverified">Monitor</span>
+            </div>
+            <div style="margin-top:10px;padding:8px;background:rgba(255,255,255,.05);border-radius:8px;font-size:10px;color:rgba(255,255,255,.4)">Equifax cross-check: not yet connected · buyer can add via passport</div>
+          </div>
+          <!-- API response sample -->
+          <div class="portal-card">
+            <div class="portal-card-title">OPENproperty API RESPONSE</div>
+            <div class="portal-api-block"><span class="portal-api-key">"passport_id"</span>: <span class="portal-api-str">"192a94a4-3311..."</span>,
+<span class="portal-api-key">"buyer_ref"</span>: <span class="portal-api-str">"AQ2024"</span>,
+<span class="portal-api-key">"consent_scope"</span>: [<span class="portal-api-str">"identity"</span>,
+  <span class="portal-api-str">"proof_of_deposit"</span>,
+  <span class="portal-api-str">"source_of_funds"</span>,
+  <span class="portal-api-str">"affordability"</span>,
+  <span class="portal-api-str">"credit_file"</span>],
+<span class="portal-api-key">"pdtf_conformant"</span>: <span class="portal-api-str">true</span>,
+<span class="portal-api-key">"proof_of_deposit"</span>: {
+  <span class="portal-api-key">"amount_gbp"</span>: <span class="portal-api-num">82400</span>,
+  <span class="portal-api-key">"verified_by"</span>: <span class="portal-api-str">"armalytix"</span>,
+  <span class="portal-api-key">"aml_status"</span>: <span class="portal-api-str">"clear"</span>
+},
+<span class="portal-api-key">"credit_score"</span>: {
+  <span class="portal-api-key">"bureau"</span>: <span class="portal-api-str">"experian"</span>,
+  <span class="portal-api-key">"score"</span>: <span class="portal-api-num">821</span>,
+  <span class="portal-api-key">"band"</span>: <span class="portal-api-str">"excellent"</span>
+},
+<span class="portal-api-key">"token_expires"</span>: <span class="portal-api-str">"2026-06-12"</span></div>
+          </div>
+          <!-- Access control -->
+          <div class="portal-card">
+            <div class="portal-card-title">ACCESS CONTROL</div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">🔑</div>
+              <div class="portal-cred-label">Granted by</div>
+              <div class="portal-cred-value" style="font-size:11px">Alexandria Quinn</div>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">⏱</div>
+              <div class="portal-cred-label">Expires</div>
+              <div class="portal-cred-value">12 Jun 2026</div>
+            </div>
+            <div class="portal-cred-row">
+              <div class="portal-cred-icon">📝</div>
+              <div class="portal-cred-label">Access type</div>
+              <div class="portal-cred-value">Read-only</div>
+              <span class="portal-verified">OAuth 2.0</span>
+            </div>
+            <div style="margin-top:10px;padding:8px 10px;background:rgba(199,62,54,.15);border:1px solid rgba(199,62,54,.25);border-radius:8px;font-size:10px;color:#fca5a5;text-align:center;cursor:pointer">Buyer can revoke this access at any time via their passport</div>
+          </div>
+        </div>
+        <!-- Portal tab bar -->
+        <div class="portal-tab-bar">
+          <button class="portal-tab active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 10h.01M16 14h.01M12 10h.01M12 14h.01M8 10h.01M8 14h.01"/></svg>
+            <span>Buyer</span>
+          </button>
+          <button class="portal-tab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Docs</span>
+          </button>
+          <button class="portal-tab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Pipeline</span>
+          </button>
+          <button class="portal-tab">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+            <span>API</span>
+          </button>
+        </div>
+      </div>
+    </div><!-- /lender-portal -->
+
+  </div><!-- /body -->
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button onclick="goScreen('badge')" class="tab-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Search</span>
+    </button>
+    <button onclick="goScreen('badge')" class="tab-item" id="tab-passport-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M16 10h.01M16 14h.01M12 10h.01M12 14h.01M8 10h.01M8 14h.01"/></svg>
+      <span>Passport</span>
+    </button>
+    <button class="tab-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Messages</span>
+    </button>
+    <button class="tab-item">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Account</span>
+    </button>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+const prevMap = {intro:null,s1:'intro',s1modal:'s1',s2:'s1modal',s2bank:'s2',s2processing:'s2bank',s2result:'s2processing',s3:'s2result',s4:'s3',s5:'s4',complete:'s5',badge:'complete',share:'badge','lender-req':'badge','lender-approve':'lender-req','lender-portal':null,'eq-bank':'s2result','eq-result':'eq-bank','send-agent':'complete','pdf-view':'complete','sign-doc':'pdf-view','sign-done':'sign-doc'};
+let _selectedTier = 'verified';
+
+function goScreen(id) {
+  document.body.setAttribute('data-screen', id);
+  document.getElementById('phoneBody').scrollTop = 0;
+  document.querySelectorAll('.screen-btn').forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+  // Update passport tab active state
+  const passportScreens = ['badge','share','complete'];
+  document.getElementById('tab-passport-btn').classList.toggle('active', passportScreens.includes(id));
+  // back buttons
+  document.querySelectorAll('.back-btn').forEach(btn => {
+    btn.style.visibility = prevMap[id] ? 'visible' : 'hidden';
+  });
+  if (id === 'badge') {
+    setTimeout(() => {
+      const fill = document.querySelector('.passport-pb-fill');
+      if (fill) fill.style.width = '90%';
+    }, 200);
+  }
+  if (id === 's2processing') {
+    setTimeout(animateProcessing, 300);
+  }
+  if (id === 'sign-doc') {
+    setTimeout(_initCanvas, 200);
+  }
+}
+
+function goBack() {
+  const cur = document.body.getAttribute('data-screen');
+  const prev = prevMap[cur];
+  if (prev) goScreen(prev);
+}
+
+function selectOpt(el, group) {
+  document.querySelectorAll('[data-group="'+group+'"]').forEach(o => o.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function selectChip(el, group) {
+  document.querySelectorAll('[data-chipgroup="'+group+'"]').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function aiDraft() {
+  const ta = document.getElementById('story-ta');
+  ta.value = '';
+  const text = "We're a young professional looking to put down roots somewhere we truly love. Chain-free and financially ready with proof of funds in place. Flexible on completion — ready to move when the right home comes along. We'd love to make this property our long-term home.";
+  let i = 0;
+  const interval = setInterval(() => { ta.value += text[i++]; if(i>=text.length) clearInterval(interval); }, 18);
+}
+
+function setShareTab(btn, tab) {
+  document.querySelectorAll('.share-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['people','active','link','pdf'].forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+function setShareTabByName(tab) {
+  const btns = document.querySelectorAll('.share-tab-btn');
+  const tabs = ['people','active','link','pdf'];
+  btns.forEach((b,i) => {
+    b.classList.toggle('active', tabs[i]===tab);
+  });
+  tabs.forEach(t => {
+    const el = document.getElementById('tab-'+t);
+    if(el) el.style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+function markSent(btn, id) {
+  btn.textContent = '✓ Sent';
+  btn.style.background = 'var(--success)';
+  btn.style.opacity = '0.8';
+  btn.disabled = true;
+  // show in active tab
+  if(id==='SM') { const el=document.getElementById('active-sm'); if(el) el.style.display='flex'; }
+  if(id==='DC') { const el=document.getElementById('active-dc'); if(el) el.style.display='flex'; }
+  // switch to active tab after brief delay
+  setTimeout(() => setShareTabByName('active'), 700);
+}
+
+function revokeShare(btn) {
+  const entry = btn.closest('.share-entry');
+  btn.textContent = 'Revoked';
+  btn.style.background = '#f0f0f0';
+  btn.style.color = 'var(--text-faint)';
+  btn.style.borderColor = 'var(--line)';
+  btn.disabled = true;
+  entry.style.opacity = '0.4';
+}
+
+function showAml(el) {
+  const note = document.getElementById('aml-note');
+  if(!note) return;
+  note.style.display = el.querySelector('.opt-title').textContent.includes('Gifted') ? 'block' : 'none';
+}
+
+function selectBank(el) {
+  document.querySelectorAll('.bank-tile').forEach(t => t.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+function toggleScope(btn) {
+  btn.classList.toggle('off');
+}
+
+// Tier selection
+function selectTier(tier) {
+  _selectedTier = tier;
+  document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('tier-' + tier);
+  if (card) card.classList.add('active');
+  const btn = document.getElementById('tier-btn');
+  if (!btn) return;
+  if (tier === 'basic') {
+    btn.textContent = 'Continue with Basic →';
+  } else if (tier === 'verified') {
+    btn.textContent = 'Continue with Verified →';
+  } else {
+    btn.textContent = 'Continue with Platinum →';
+  }
+}
+
+function advanceTier() {
+  if (_selectedTier === 'basic') {
+    goScreen('s3'); // skip financial verification
+  } else {
+    goScreen('s2bank'); // open banking flow for verified + premium
+  }
+}
+
+// Named agent send confirmation
+function agentSend(id) {
+  const btn = document.getElementById('sa-btn-' + id);
+  if (!btn) return;
+  btn.textContent = '✓ Sent';
+  btn.style.background = 'var(--success)';
+  btn.style.color = '#fff';
+  btn.style.opacity = '0.9';
+  btn.disabled = true;
+  // show a brief confirmation note below the row
+  const row = btn.closest('.share-entry') || btn.parentElement;
+  const existing = row.querySelector('.sent-confirm');
+  if (!existing) {
+    const note = document.createElement('div');
+    note.className = 'sent-confirm';
+    note.style.cssText = 'font-size:12px;color:var(--success);font-weight:600;margin-top:4px;padding:0 2px';
+    note.textContent = '✓ Passport link sent — they have 7-day view access';
+    row.appendChild(note);
+  }
+}
+
+// PDF download simulation
+function downloadPDF(btn) {
+  if (!btn) btn = document.querySelector('[data-screen="pdf-view"] .cta-btn, .screen.pdf-view .cta-btn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Preparing PDF…'; btn.style.opacity = '0.7'; btn.disabled = true; }
+  setTimeout(() => {
+    if (btn) { btn.textContent = '✓ Downloaded'; btn.style.background = 'var(--success)'; btn.style.opacity = '1'; }
+    setTimeout(() => {
+      if (btn) { btn.textContent = orig || '📄 Download PDF'; btn.style.background = ''; btn.style.opacity = ''; btn.disabled = false; }
+    }, 2500);
+  }, 1200);
+}
+
+function downloadSignedPDF(btn) {
+  if (!btn) btn = document.querySelector('.screen.sign-done .cta-btn');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Preparing signed PDF…'; btn.style.opacity = '0.7'; btn.disabled = true; }
+  setTimeout(() => {
+    if (btn) { btn.textContent = '✓ Signed PDF downloaded'; btn.style.background = 'var(--success)'; btn.style.opacity = '1'; }
+    setTimeout(() => {
+      if (btn) { btn.textContent = orig || '📄 Download signed PDF'; btn.style.background = ''; btn.style.opacity = ''; btn.disabled = false; }
+    }, 2500);
+  }, 1200);
+}
+
+// Signature pad
+let _isDrawing = false;
+let _sigCanvas = null;
+let _sigCtx = null;
+
+function _initCanvas() {
+  if (_sigCanvas) return;
+  _sigCanvas = document.getElementById('sig-canvas');
+  if (!_sigCanvas) return;
+  _sigCtx = _sigCanvas.getContext('2d');
+  _sigCtx.strokeStyle = '#231d45';
+  _sigCtx.lineWidth = 2.5;
+  _sigCtx.lineCap = 'round';
+  _sigCtx.lineJoin = 'round';
+
+  function getPos(e) {
+    const rect = _sigCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+  function startDraw(e) { e.preventDefault(); _isDrawing = true; const p = getPos(e); _sigCtx.beginPath(); _sigCtx.moveTo(p.x, p.y); _enableApply(); }
+  function draw(e) { e.preventDefault(); if (!_isDrawing) return; const p = getPos(e); _sigCtx.lineTo(p.x, p.y); _sigCtx.stroke(); }
+  function endDraw(e) { e.preventDefault(); _isDrawing = false; }
+
+  _sigCanvas.addEventListener('mousedown', startDraw);
+  _sigCanvas.addEventListener('mousemove', draw);
+  _sigCanvas.addEventListener('mouseup', endDraw);
+  _sigCanvas.addEventListener('mouseleave', endDraw);
+  _sigCanvas.addEventListener('touchstart', startDraw, {passive:false});
+  _sigCanvas.addEventListener('touchmove', draw, {passive:false});
+  _sigCanvas.addEventListener('touchend', endDraw, {passive:false});
+}
+
+function _enableApply() {
+  const btn = document.getElementById('apply-sig-btn');
+  if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+  const placeholder = document.querySelector('.sig-placeholder');
+  if (placeholder) placeholder.style.display = 'none';
+}
+
+function clearSig() {
+  if (_sigCtx && _sigCanvas) {
+    _sigCtx.clearRect(0, 0, _sigCanvas.width, _sigCanvas.height);
+  }
+  const placeholder = document.querySelector('.sig-placeholder');
+  if (placeholder) placeholder.style.display = 'flex';
+  const btn = document.getElementById('apply-sig-btn');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+  const nameInput = document.getElementById('sig-name-input');
+  if (nameInput) nameInput.value = '';
+}
+
+function typeNameSig(value) {
+  if (value.trim().length > 1) {
+    _enableApply();
+    // show italic preview in placeholder area
+    const placeholder = document.querySelector('.sig-placeholder');
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+      placeholder.innerHTML = '<span style="font-size:26px;font-style:italic;font-weight:600;color:var(--navy);letter-spacing:0.5px">' + value + '</span>';
+    }
+  } else {
+    const placeholder = document.querySelector('.sig-placeholder');
+    if (placeholder) { placeholder.style.display = 'flex'; placeholder.innerHTML = '<span style="color:var(--text-faint);font-size:13px">Draw your signature above</span>'; }
+    const btn = document.getElementById('apply-sig-btn');
+    if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+  }
+}
+
+function applySig() {
+  // Capture the signature image from canvas (or typed name) and apply to pdf-view
+  let sigHTML = '';
+  const nameInput = document.getElementById('sig-name-input');
+  if (nameInput && nameInput.value.trim()) {
+    sigHTML = '<span style="font-size:22px;font-style:italic;font-weight:600;color:var(--navy)">' + nameInput.value.trim() + '</span>';
+  } else if (_sigCanvas) {
+    const dataURL = _sigCanvas.toDataURL();
+    sigHTML = '<img src="' + dataURL + '" style="height:38px;max-width:100%" alt="signature">';
+  }
+  // Inject into pdf-view signature area
+  const placeholder = document.getElementById('pdf-sig-placeholder');
+  const done = document.getElementById('pdf-sig-done');
+  if (placeholder) placeholder.style.display = 'none';
+  if (done) {
+    done.style.display = 'block';
+    if (sigHTML) {
+      const sigEl = done.querySelector('.pdf-sig-render');
+      if (sigEl) sigEl.innerHTML = sigHTML;
+      else {
+        const nameEl = done.querySelector('div[style*="font-family:Georgia"]');
+        if (nameEl && nameInput && nameInput.value.trim()) nameEl.textContent = nameInput.value.trim();
+      }
+    }
+    const d = new Date();
+    const dateEl = done.querySelector('div[style*="font-size:10px"]');
+    if (dateEl) dateEl.textContent = 'Signed ' + d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) + ' · ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) + ' · UMU verified';
+  }
+  // Update sign CTA to reflect signed state
+  const signBtn = document.getElementById('sign-cta-btn');
+  if (signBtn) { signBtn.textContent = '✅ Signed — view signature'; signBtn.style.borderColor = 'var(--teal)'; signBtn.style.color = 'var(--teal)'; signBtn.onclick = () => goScreen('sign-done'); }
+  // Navigate to sign-done
+  goScreen('sign-done');
+}
+
+// Animate Armalytix processing bar when screen loads
+function animateProcessing() {
+  const bar = document.getElementById('armalytix-progress');
+  const status = document.getElementById('armalytix-status');
+  if (!bar) return;
+  bar.style.width = '15%';
+  const steps = [
+    [600,  '45%',  'Retrieving 12 months of transactions…'],
+    [1400, '65%',  'Analysing source of funds…'],
+    [2200, '78%',  'Verifying proof of deposit…'],
+    [3000, '88%',  'Running affordability stress test…'],
+    [3800, '94%',  'AML check — source of deposit…'],
+    [4600, '100%', 'Pulling Experian credit file…'],
+  ];
+  steps.forEach(([delay, width, text]) => {
+    setTimeout(() => { bar.style.width = width; if(status) status.textContent = text; }, delay);
+  });
+}
+
+// Init
+document.body.setAttribute('data-screen','intro');
+document.querySelector('[data-screen="intro"]').classList.add('active');
+</script>
+</body>
+</html>

@@ -347,11 +347,19 @@ export class RunningCostsService {
     const savings = buildSavings(p, energy.total, potentialFactor);
 
     // ── Council tax ──────────────────────────────────────────
+    // Prefer the exact figure from counciltaxfinder.com (persisted on the
+    // Property row by the enrichment pass). Falls back to band-average when
+    // the API key isn't set or the upstream is geo-blocked.
     const band = (p.councilTaxBand || 'D').toUpperCase();
-    const councilTaxCost = COUNCIL_TAX_BAND_AVG[band] ?? COUNCIL_TAX_BAND_AVG.D;
+    const councilTaxCost =
+      typeof (p as any).councilTaxAnnual === 'number' &&
+      (p as any).councilTaxAnnual > 0
+        ? Math.round((p as any).councilTaxAnnual)
+        : (COUNCIL_TAX_BAND_AVG[band] ?? COUNCIL_TAX_BAND_AVG.D);
 
-    // Best-effort council name from city.
-    const council = councilFromCity(p.city);
+    // Prefer real council label from the API; fall back to city-derived guess.
+    const council =
+      (p as any).councilTaxCouncilName || councilFromCity(p.city);
 
     // ── Water ────────────────────────────────────────────────
     // Postcode-area-driven lookup of the dominant water+sewerage supplier

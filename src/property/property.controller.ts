@@ -137,6 +137,14 @@ export class PropertyController {
     return data;
   }
 
+  // Debug: per-source health for the enrichment pipeline. Reports which
+  // upstream APIs returned data, were empty, or errored. Includes which
+  // env-var keys are present without leaking values.
+  @Get(':id/enrichment/debug')
+  async getEnrichmentDebug(@Param('id') id: string): Promise<any> {
+    return this.propertyService.getEnrichmentDebug(id);
+  }
+
   @Post(':id/homescore')
   @UseGuards(JwtAuthGuard)
   async saveHomeScore(@Param('id') id: string, @Request() req: any, @Body() body: any) {
