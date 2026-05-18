@@ -41,7 +41,10 @@ export class PropertyController {
       return { items: [], total: 0 };
     }
     const off = parseInt(offset ?? '0') || 0;
-    const lim = Math.min(parseInt(limit ?? '10') || 10, 50);
+    // Default bumped 10 → 25 — UK postcodes typically have 10–30 properties so
+    // a single page covers most queries without forcing infinite scroll.
+    // Caller can still pass a smaller limit; max stays at 50.
+    const lim = Math.min(parseInt(limit ?? '25') || 25, 50);
     const r = radius ? parseFloat(radius) : undefined;
     const radiusMiles =
       r && !isNaN(r) && r > 0 && r <= 25 ? r : undefined;
@@ -241,6 +244,16 @@ export class PropertyController {
   async getNeighbourhood(@Param('id') id: string) {
     return this.propertyService.getNeighbourhoodStats(id);
   }
+
+  // Aggregate market stats for an area (postcode-sector level by default).
+  // Used by the "Market pulse" card on the explore home. Returns only the
+  // figures we can actually compute from Land Registry + Passport tables —
+  // the frontend hides any field that comes back null.
+  @Get('market-pulse')
+  async getMarketPulse(@Query('postcode') postcode?: string) {
+    return this.propertyService.getMarketPulse(postcode);
+  }
+
 
   @Get(':id/running-costs')
   async getRunningCosts(@Param('id') id: string) {
