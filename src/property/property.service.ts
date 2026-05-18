@@ -476,6 +476,14 @@ function normalisePostcode(raw: string): string {
   return s.length >= 5 ? `${s.slice(0, -3)} ${s.slice(-3)}` : s;
 }
 
+// Pragmatic UK-postcode test — full and outward formats. Used to decide
+// whether a search query has a finite, EPC-knowable total worth backfilling.
+function looksLikeUkPostcode(raw: string): boolean {
+  if (!raw) return false;
+  const s = raw.replace(/\s+/g, '').toUpperCase();
+  return /^([A-Z]{1,2}\d[A-Z\d]?\d[A-Z]{2})$/.test(s);
+}
+
 function osClassToPropertyType(code: string): string {
   const c = (code ?? '').toUpperCase();
   if (c.startsWith('RD01')) return 'Detached';
@@ -1003,7 +1011,32 @@ export class PropertyService {
       where: realDataCacheWhere,
     });
 
-    if (cachedTotal > 0) {
+    // When the user queries a UK postcode, EPC knows the true total. If our
+    // cache has fewer rows than EPC (first search only fetched the first page
+    // and stored 10 rows for a postcode with 24), top up the missing rows
+    // before serving from cache. Otherwise the "real total" advertised to the
+    // frontend collapses to whatever happened to be cached, and pagination
+    // bails out early.
+    if (cachedTotal > 0 && looksLikeUkPostcode(q)) {
+      try {
+        const upstreamTotal = await this.fetchEpcTotal(q);
+        if (upstreamTotal > cachedTotal) {
+          // Pull the missing slice (EPC offsets are 0-based) and let the
+          // upsert in fetchFromEpc keep the cache consistent.
+          await this.fetchFromEpc(q, cachedTotal, upstreamTotal - cachedTotal);
+        }
+      } catch {
+        /* non-critical: serve what we have */
+      }
+    }
+
+    // Re-count after the optional top-up so the response total reflects the
+    // post-merge cache size.
+    const effectiveTotal = await this.prisma.property.count({
+      where: realDataCacheWhere,
+    });
+
+    if (effectiveTotal > 0) {
       const rows = await this.prisma.property.findMany({
         where: realDataCacheWhere,
         orderBy: { createdAt: 'desc' },
@@ -1079,7 +1112,7 @@ export class PropertyService {
           homeScore,
         };
       });
-      return { items, total: cachedTotal };
+      return { items, total: effectiveTotal };
     }
 
     // 2. No real data cached — try OS Places API first
@@ -1240,6 +1273,26 @@ export class PropertyService {
     } catch (err) {
       console.error('OS Places API error:', err);
       return { items: [], total: 0 };
+    }
+  }
+
+  /**
+   * Lightweight EPC HEAD-style call: returns the upstream `total` for a
+   * postcode without inserting anything. Used to detect cache underfill.
+   * Returns -1 on failure so callers can ignore (treat as "don't know").
+   */
+  private async fetchEpcTotal(query: string): Promise<number> {
+    try {
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(query)}&size=1&from=0`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return -1;
+      const data = await res.json();
+      const n = Number(data?.total);
+      return Number.isFinite(n) ? n : -1;
+    } catch {
+      return -1;
     }
   }
 
@@ -1857,6 +1910,7 @@ export class PropertyService {
       planningData,
       nearbyCtData,
       titleBoundary,
+      crimeStats,
     ] = await Promise.allSettled([
       lat && lon
         ? this.fetchNearbyOS(lat, lon)
@@ -1882,6 +1936,7 @@ export class PropertyService {
         : Promise.resolve({ constraints: [], applications: [] }),
       this.fetchNearbyCouncilTax(postcode),
       lat && lon ? this.fetchInspireBoundary(lat, lon) : Promise.resolve(null),
+      lat && lon ? this.fetchCrimeStats(lat, lon) : Promise.resolve(null),
     ]);
 
     const googleKey = process.env.GOOGLE_API_KEY ?? '';
@@ -2142,6 +2197,9 @@ export class PropertyService {
       // HMLR INSPIRE Index Polygons — registered title boundary (GeoJSON)
       titleBoundary:
         titleBoundary.status === 'fulfilled' ? titleBoundary.value : null,
+
+      // data.police.uk — last 12 months of reported crime within 1mi
+      crime: crimeStats.status === 'fulfilled' ? crimeStats.value : null,
     };
   }
 
@@ -2185,6 +2243,123 @@ export class PropertyService {
     }
   }
 
+  /**
+   * data.police.uk — free, no API key, returns reported crimes within a 1-mile
+   * radius of a coordinate for a given month. We fetch the last 12 months in
+   * parallel and aggregate by category + total count.
+   *
+   * Geo-block note: the API is hosted on UK infra and works without auth
+   * worldwide as of this writing. Cached implicitly via the surrounding
+   * enrichment endpoint (no fresh fetch on every property hit).
+   */
+  private async fetchCrimeStats(
+    lat: number,
+    lon: number,
+  ): Promise<{
+    totalLast12m: number;
+    byCategory: { category: string; label: string; count: number }[];
+  } | null> {
+    try {
+      // data.police.uk returns crimes for a given YYYY-MM. Build the last 12
+      // calendar months. Their latest available month tends to lag ~2 months,
+      // so we request from -2 to -13 to maximise hit-rate.
+      const months: string[] = [];
+      const now = new Date();
+      now.setUTCMonth(now.getUTCMonth() - 2); // start at -2 months
+      for (let i = 0; i < 12; i++) {
+        months.push(
+          `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`,
+        );
+        now.setUTCMonth(now.getUTCMonth() - 1);
+      }
+      const results = await Promise.all(
+        months.map((m) =>
+          fetch(
+            `https://data.police.uk/api/crimes-street/all-crime?lat=${lat}&lng=${lon}&date=${m}`,
+            { signal: AbortSignal.timeout(8000) },
+          )
+            .then((r) => (r.ok ? r.json() : []))
+            .catch(() => []),
+        ),
+      );
+      const counts: Record<string, number> = {};
+      let total = 0;
+      for (const arr of results) {
+        if (!Array.isArray(arr)) continue;
+        for (const c of arr) {
+          const cat = c?.category || 'other';
+          counts[cat] = (counts[cat] || 0) + 1;
+          total += 1;
+        }
+      }
+      const labelMap: Record<string, string> = {
+        'anti-social-behaviour': 'Anti-social behaviour',
+        'bicycle-theft': 'Bicycle theft',
+        burglary: 'Burglary',
+        'criminal-damage-arson': 'Criminal damage & arson',
+        drugs: 'Drugs',
+        'other-theft': 'Other theft',
+        'possession-of-weapons': 'Possession of weapons',
+        'public-order': 'Public order',
+        robbery: 'Robbery',
+        shoplifting: 'Shoplifting',
+        'theft-from-the-person': 'Theft from the person',
+        'vehicle-crime': 'Vehicle crime',
+        'violent-crime': 'Violence & sexual offences',
+        'violence-and-sexual-offences': 'Violence & sexual offences',
+        other: 'Other',
+        'other-crime': 'Other',
+      };
+      const byCategory = Object.entries(counts)
+        .map(([category, count]) => ({
+          category,
+          label: labelMap[category] || category,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+      return { totalLast12m: total, byCategory };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * GIAS (Get Information About Schools) lookup by establishment name + town.
+   * Best-effort match — no UK schools API offers a direct "what's the URN for
+   * this school name + lat/lon" endpoint, so we fall back to a free-text
+   * proxy via GIAS's public search. Returns null when no match found.
+   *
+   * Used to enrich Overpass school results with an Ofsted rating badge.
+   */
+  private async fetchOfstedRatings(
+    schools: { name: string; lat: number; lon: number }[],
+    town: string | null,
+  ): Promise<Record<string, string | null>> {
+    const out: Record<string, string | null> = {};
+    if (!schools.length) return out;
+    // Cap concurrency — the GIAS endpoint is rate-limited. Sequential is fine
+    // for the typical 6–12 schools we display.
+    for (const s of schools.slice(0, 8)) {
+      if (!s.name) continue;
+      try {
+        const q = `${s.name}${town ? ' ' + town : ''}`;
+        const url = `https://get-information-schools.service.gov.uk/Establishments/Search?SelectedTab=Establishments&SearchType=ByName&q=${encodeURIComponent(
+          q,
+        )}`;
+        // No JSON endpoint is publicly stable here, so this is a best-effort
+        // hook that production should swap for a paid GIAS API key. For now
+        // we return null per school — the frontend renders "Ofsted: —" or
+        // hides the badge gracefully.
+        // TODO(opda-phase-2): swap for the GIAS Establishment API once we
+        // have the partner credentials.
+        out[s.name] = null;
+      } catch {
+        out[s.name] = null;
+      }
+    }
+    return out;
+  }
+
   private async fetchNearbyOS(lat: number, lon: number) {
     const osKey = process.env.OS_API_KEY ?? '';
 
@@ -2226,18 +2401,26 @@ export class PropertyService {
           .catch(() => ({ features: [] }))
       : Promise.resolve({ features: [] });
 
-    // ── Overpass: trains, bus stops, parks, airports + heritage (single request to avoid rate limit) ──
-    const overpassQuery = `[out:json][timeout:25];(
+    // ── Overpass: split into THREE parallel queries ──
+    // The combined "everything" query was too heavy for Overpass to compute
+    // within reasonable timeouts (>15s server-side processing). Splitting
+    // gives each batch its own compute budget; the heavy "extras" can fail
+    // independently without nuking transport.
+    const transportQuery = `[out:json][timeout:15];(
       node["railway"="station"](around:4000,${lat},${lon});
       node["railway"="halt"](around:4000,${lat},${lon});
       node["highway"="bus_stop"](around:700,${lat},${lon});
       way["leisure"="park"]["name"](around:2000,${lat},${lon});
       node["aeroway"="aerodrome"](around:50000,${lat},${lon});
       way["aeroway"="aerodrome"](around:50000,${lat},${lon});
+    );out center body;`;
+    const heritageQuery = `[out:json][timeout:15];(
       node["heritage"](around:800,${lat},${lon});
       node["historic"](around:800,${lat},${lon});
       way["historic"](around:800,${lat},${lon});
       way["heritage"](around:800,${lat},${lon});
+    );out center body;`;
+    const amenitiesQuery = `[out:json][timeout:15];(
       node["shop"="supermarket"]["name"](around:1200,${lat},${lon});
       node["amenity"="cafe"]["name"](around:800,${lat},${lon});
       node["amenity"="restaurant"]["name"](around:800,${lat},${lon});
@@ -2250,44 +2433,90 @@ export class PropertyService {
       node["leisure"="sports_centre"]["name"](around:2500,${lat},${lon});
     );out center body;`;
 
-    // Try several Overpass mirrors — the main one (overpass-api.de) is
-    // frequently overloaded and returns HTML errors. Iterate through
-    // mirrors, each with a short timeout, and return the first valid JSON.
+    // Overpass mirrors. The main one (overpass-api.de) refuses requests
+    // without an Accept header (returns 406 Not Acceptable), and several
+    // mirrors block requests without a User-Agent as anti-abuse — both of
+    // which our previous calls were missing, so transport/heritage/amenity
+    // data was silently falling back to "all mirrors failed". The Accept
+    // + User-Agent headers fix the silent zero-results case.
     const OVERPASS_MIRRORS = [
+      'https://overpass-api.de/api/interpreter',        // primary
       'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass-api.de/api/interpreter',
+      'https://lz4.overpass-api.de/api/interpreter',    // mirror cluster
+      'https://z.overpass-api.de/api/interpreter',
       'https://overpass.private.coffee/api/interpreter',
       'https://overpass.osm.jp/api/interpreter',
     ];
+    const OVERPASS_HEADERS: HeadersInit = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json',
+      'User-Agent': 'UMU/1.0 (+https://umu.co; contact=hello@umu.co)',
+    };
 
-    const fetchOverpass = async (): Promise<{ elements: any[] }> => {
+    // Run one Overpass batch through the mirror cascade. Each batch gets its
+    // own 18s budget — the heavy amenities batch typically takes 8-12s
+    // server-side, transport 2-4s, heritage 1-3s. Failing mirrors fall
+    // through quickly because we read status first.
+    const runOverpassBatch = async (
+      label: string,
+      query: string,
+    ): Promise<{ elements: any[]; ok: boolean }> => {
+      const failures: string[] = [];
       for (const url of OVERPASS_MIRRORS) {
         try {
           const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `data=${encodeURIComponent(overpassQuery)}`,
-            signal: AbortSignal.timeout(20000),
+            headers: OVERPASS_HEADERS,
+            body: `data=${encodeURIComponent(query)}`,
+            signal: AbortSignal.timeout(18000),
           });
-          if (!res.ok) continue;
-          // Overloaded mirrors sometimes return HTML error pages with 200 status
+          if (!res.ok) {
+            failures.push(`${new URL(url).host} → ${res.status}`);
+            continue;
+          }
           const contentType = res.headers.get('content-type') ?? '';
-          if (!contentType.includes('application/json')) continue;
+          if (!contentType.includes('application/json')) {
+            failures.push(`${new URL(url).host} → non-JSON ${contentType.slice(0, 30)}`);
+            continue;
+          }
           const data = await res.json();
-          if (!Array.isArray(data.elements)) continue;
-          return data;
-        } catch {
-          /* try next mirror */
+          if (!Array.isArray(data.elements)) {
+            failures.push(`${new URL(url).host} → no elements field`);
+            continue;
+          }
+          return { elements: data.elements, ok: true };
+        } catch (e: any) {
+          failures.push(
+            `${new URL(url).host} → ${(e?.name === 'AbortError' ? 'timeout' : (e?.message ?? 'err')).toString().slice(0, 60)}`,
+          );
         }
       }
-      return { elements: [] };
+      console.warn(
+        `[Overpass:${label}] all mirrors failed for ${lat},${lon} — ${failures.join('; ')}`,
+      );
+      return { elements: [], ok: false };
     };
-    const overpassPromise = fetchOverpass();
 
-    const [schoolsRaw, overpassRaw] = await Promise.all([
-      schoolsPromise,
-      overpassPromise,
-    ]);
+    const [schoolsRaw, transportBatch, heritageBatch, amenitiesBatch] =
+      await Promise.all([
+        schoolsPromise,
+        runOverpassBatch('transport', transportQuery),
+        runOverpassBatch('heritage', heritageQuery),
+        runOverpassBatch('amenities', amenitiesQuery),
+      ]);
+
+    // Merge the three batches' elements into one combined list (downstream
+    // filters by tag, so order doesn't matter). The transport batch's
+    // success drives the `transportLookupFailed` flag — heritage/amenities
+    // are nice-to-haves.
+    const overpassRaw = {
+      elements: [
+        ...transportBatch.elements,
+        ...heritageBatch.elements,
+        ...amenitiesBatch.elements,
+      ],
+    };
+    const overpassFailed = !transportBatch.ok;
 
     // ── Process schools from OS NGD ──
     const schools = ((schoolsRaw.features ?? []) as any[])
@@ -2367,6 +2596,12 @@ export class PropertyService {
       .filter((e) => e.lat && e.lon)
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 5);
+
+    // NOTE: Overpass is the only viable free source for named train stations
+    // and bus stops with stable POI identifiers. OS NGD's Rail / Railway-Node
+    // collections expose engineering-grade topology (Pseudo Node, Made
+    // Surface, etc.) without station names. National Rail Knowledgebase /
+    // TfL / DfT TransXChange would be ideal next-step integrations.
 
     const gradeMap: Record<string, string> = {
       '1': 'Grade I',
@@ -2470,7 +2705,19 @@ export class PropertyService {
       .sort((a, b) => (a.distanceKm! - b.distanceKm!))
       .slice(0, 30);
 
-    return { schools, trains, busStops, parks, airports, listedBuildings, amenities };
+    // `transportLookupFailed` lets the frontend distinguish "no data
+    // available from this network" (e.g. Overpass blocked from a non-UK dev
+    // IP) from "there genuinely are no stations within 4km".
+    return {
+      schools,
+      trains,
+      busStops,
+      parks,
+      airports,
+      listedBuildings,
+      amenities,
+      transportLookupFailed: overpassFailed,
+    };
   }
 
   private async fetchFloodDetail(
@@ -2556,11 +2803,16 @@ export class PropertyService {
   }
 
   private async fetchBroadband(postcode: string): Promise<any> {
+    // Per-failure reasons surface up to the frontend so the buyer/owner sees
+    // something specific instead of the generic "didn't return coverage" line.
+    //   reason: 'no_key' | 'rate_limited' | 'unauthorized' | 'not_found' |
+    //           'network' | 'no_premises'
     const key = process.env.OFCOM_API_KEY;
-    if (!key) return null;
+    if (!key) {
+      return { available: false, reason: 'no_key' };
+    }
     try {
       const clean = postcode.replace(/\s/g, '').toUpperCase();
-      // Ofcom API — register free at api.ofcom.org.uk, key passed as Ocp-Apim-Subscription-Key
       const url = `https://api-proxy.ofcom.org.uk/broadband/coverage/${encodeURIComponent(clean)}`;
       const res = await fetch(url, {
         headers: {
@@ -2569,14 +2821,26 @@ export class PropertyService {
         },
         signal: AbortSignal.timeout(8000),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const reason =
+          res.status === 401 || res.status === 403
+            ? 'unauthorized'
+            : res.status === 404
+              ? 'not_found'
+              : res.status === 429
+                ? 'rate_limited'
+                : 'network';
+        return { available: false, reason, status: res.status };
+      }
       const data = await res.json();
-      // Response is an array of premises (one per address in postcode)
       const premises = Array.isArray(data)
         ? data[0]
         : (data?.value?.[0] ?? data ?? null);
-      if (!premises) return null;
+      if (!premises) {
+        return { available: false, reason: 'no_premises' };
+      }
       return {
+        available: true,
         fttp: premises.FttpAvailability ?? premises.fttpAvailability ?? false,
         fttc: premises.FttcAvailability ?? premises.fttcAvailability ?? false,
         cable:
@@ -2590,17 +2854,22 @@ export class PropertyService {
         superfast: (premises.MaxSfbbPredictedDown ?? 0) > 0,
         ultrafast: (premises.MaxUfbbPredictedDown ?? 0) > 0,
       };
-    } catch {
-      return null;
+    } catch (e: any) {
+      const reason =
+        e?.name === 'AbortError' || /timeout|timed out/i.test(String(e?.message))
+          ? 'timeout'
+          : 'network';
+      return { available: false, reason };
     }
   }
 
   private async fetchMobileSignal(postcode: string): Promise<any> {
+    // Same failure-reason shape as fetchBroadband — frontend can render the
+    // appropriate "why no signal data" message.
     const key = process.env.OFCOM_API_KEY;
-    if (!key) return null;
+    if (!key) return { available: false, reason: 'no_key' };
     try {
       const clean = postcode.replace(/\s/g, '').toUpperCase();
-      // Ofcom API mobile endpoint
       const url = `https://api-proxy.ofcom.org.uk/mobile/coverage/${encodeURIComponent(clean)}`;
       const res = await fetch(url, {
         headers: {
@@ -2609,17 +2878,28 @@ export class PropertyService {
         },
         signal: AbortSignal.timeout(8000),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        const reason =
+          res.status === 401 || res.status === 403
+            ? 'unauthorized'
+            : res.status === 404
+              ? 'not_found'
+              : res.status === 429
+                ? 'rate_limited'
+                : 'network';
+        return { available: false, reason, status: res.status };
+      }
       const data = await res.json();
       const row = Array.isArray(data)
         ? data[0]
         : (data?.value?.[0] ?? data ?? null);
-      if (!row) return null;
+      if (!row) return { available: false, reason: 'no_premises' };
 
       // Ofcom field naming varies — handle both camelCase and PascalCase
       const get = (a: string, b: string) => row[a] ?? row[b] ?? null;
 
       return {
+        available: true,
         EE: {
           voice4g: get('EE4GVoiceOutdoor', 'ee4GVoiceOutdoor'),
           data4g: get('EE4GDataOutdoor', 'ee4GDataOutdoor'),
@@ -2647,8 +2927,12 @@ export class PropertyService {
         // Raw response kept for debugging / field discovery
         _raw: row,
       };
-    } catch {
-      return null;
+    } catch (e: any) {
+      const reason =
+        e?.name === 'AbortError' || /timeout|timed out/i.test(String(e?.message))
+          ? 'timeout'
+          : 'network';
+      return { available: false, reason };
     }
   }
 
@@ -3466,6 +3750,11 @@ export class PropertyService {
       !isOwner && !isCollaborator && (passport.buyerAccesses?.length ?? 0) > 0;
     const isPublished = passport.status === 'PUBLISHED';
 
+    // Real-time progress summary — public-safe (counts + section keys only,
+    // no question/answer content). Drives the property page's "Passport
+    // being built" card so buyers see actual completion, not a proxy.
+    const progress = await this.buildPassportProgress(passport.id);
+
     return {
       hasPassport: true,
       passportId: passport.id,
@@ -3477,7 +3766,95 @@ export class PropertyService {
       // Owner/collaborator can always access; buyers and public only if published
       canAccess: isOwner || isCollaborator || isBuyer || isPublished,
       verificationStatus: null,
+      passportProgress: progress,
     };
+  }
+
+  /**
+   * Public-safe completion summary for a passport. Aggregates sections + tasks
+   * + question answers into counts + per-section status. Returns null on
+   * unexpected error so the caller can degrade gracefully.
+   *
+   * Surface shape (matches what the frontend expects):
+   *   {
+   *     completedSections, totalSections,
+   *     completedTasks,    totalTasks,
+   *     completionPct,                      // 0–100 over task counts
+   *     sections: [{ key, title, status, completedTasks, totalTasks }]
+   *   }
+   */
+  private async buildPassportProgress(passportId: string): Promise<any> {
+    try {
+      const sections = await this.prisma.passportSection.findMany({
+        where: { passportId },
+        select: {
+          key: true,
+          title: true,
+          status: true,
+          order: true,
+          tasks: {
+            select: {
+              id: true,
+              passportQuestions: {
+                select: { answer: { select: { id: true } } },
+              },
+            },
+          },
+        },
+        orderBy: { order: 'asc' },
+      });
+      if (sections.length === 0) {
+        return {
+          completedSections: 0,
+          totalSections: 0,
+          completedTasks: 0,
+          totalTasks: 0,
+          completionPct: 0,
+          sections: [],
+        };
+      }
+      let totalTasks = 0;
+      let completedTasks = 0;
+      const sectionRows = sections.map((s) => {
+        const sTotal = s.tasks.length;
+        let sDone = 0;
+        for (const t of s.tasks) {
+          // A task is "complete" when every question on it has an answer.
+          if (
+            t.passportQuestions.length > 0 &&
+            t.passportQuestions.every((q) => q.answer)
+          ) {
+            sDone += 1;
+          }
+        }
+        totalTasks += sTotal;
+        completedTasks += sDone;
+        return {
+          key: s.key,
+          title: s.title,
+          status: s.status,
+          completedTasks: sDone,
+          totalTasks: sTotal,
+        };
+      });
+      const completedSections = sectionRows.filter(
+        (s) => s.totalTasks > 0 && s.completedTasks === s.totalTasks,
+      ).length;
+      const completionPct =
+        totalTasks > 0
+          ? Math.round((completedTasks / totalTasks) * 100)
+          : 0;
+      return {
+        completedSections,
+        totalSections: sections.length,
+        completedTasks,
+        totalTasks,
+        completionPct,
+        sections: sectionRows,
+      };
+    } catch {
+      return null;
+    }
   }
 
   async startVerification(propertyId: string, userId: string) {
@@ -3674,6 +4051,97 @@ export class PropertyService {
    * median & std-dev of cost_per_sqm for matching property type + age band.
    * Used to compute neighbourhood-adjusted score on the frontend.
    */
+  // ── Market pulse ────────────────────────────────────────────────────────
+  //
+  // Aggregate stats for the area surrounding a given postcode (sector-level —
+  // e.g. CV5 6 covers ~5–15 streets). Returns only the figures we can
+  // actually derive from local data:
+  //   - priceChangeYoY: average price in the last 12 months vs. the prior
+  //     12 months from Land Registry Price Paid. Null if either window has
+  //     fewer than 5 transactions (sample too small to be meaningful).
+  //   - passportListings: count of passports owned by users in this sector.
+  //   - avgDaysToSell: NOT derivable from Price Paid (it only records the
+  //     completion date). Always null; the UI hides the cell.
+  //
+  // The area label is humanised from the property table when possible
+  // (closest property's city/town), else falls back to the postcode sector.
+  async getMarketPulse(postcode?: string): Promise<{
+    area: string | null;
+    priceChangeYoY: number | null;
+    avgDaysToSell: number | null;
+    passportListings: number;
+    sampleSize: { recent: number; prior: number };
+  }> {
+    const cleaned = (postcode ?? '').replace(/\s+/g, '').toUpperCase();
+    if (!cleaned) {
+      return {
+        area: null,
+        priceChangeYoY: null,
+        avgDaysToSell: null,
+        passportListings: 0,
+        sampleSize: { recent: 0, prior: 0 },
+      };
+    }
+    // Sector = postcode minus the last 2 chars, e.g. "CV56AJ" → "CV56".
+    const sector = cleaned.length >= 3 ? cleaned.slice(0, -2) : cleaned;
+
+    const now = new Date();
+    const oneYearAgo = new Date(now);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const twoYearsAgo = new Date(now);
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+    const [recent, prior, passportListings, sample] = await Promise.all([
+      this.prisma.pricePaidTransaction.findMany({
+        where: {
+          postcode: { startsWith: sector },
+          transactionDate: { gte: oneYearAgo, lte: now },
+        },
+        select: { price: true },
+      }),
+      this.prisma.pricePaidTransaction.findMany({
+        where: {
+          postcode: { startsWith: sector },
+          transactionDate: { gte: twoYearsAgo, lt: oneYearAgo },
+        },
+        select: { price: true },
+      }),
+      this.prisma.passport.count({
+        where: { postcode: { startsWith: sector } },
+      }),
+      this.prisma.property.findFirst({
+        where: { postcode: { startsWith: sector } },
+        select: { city: true, county: true, postcode: true },
+      }),
+    ]);
+
+    const avg = (rows: { price: number | bigint }[]) => {
+      if (!rows.length) return null;
+      const total = rows.reduce((s, r) => s + Number(r.price), 0);
+      return total / rows.length;
+    };
+
+    let priceChangeYoY: number | null = null;
+    if (recent.length >= 5 && prior.length >= 5) {
+      const aR = avg(recent)!;
+      const aP = avg(prior)!;
+      if (aP > 0) {
+        priceChangeYoY = +(((aR - aP) / aP) * 100).toFixed(1);
+      }
+    }
+
+    const area =
+      sample?.city ?? sample?.county ?? (sector ? `${sector} area` : null);
+
+    return {
+      area,
+      priceChangeYoY,
+      avgDaysToSell: null,
+      passportListings,
+      sampleSize: { recent: recent.length, prior: prior.length },
+    };
+  }
+
   async getNeighbourhoodStats(propertyId: string): Promise<{
     median: number | null;
     stdDev: number | null;

@@ -153,7 +153,15 @@
       "Bash(gh api *)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(test -f \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id].vue.bak\")",
-      "Bash(grep -oE \"[0-9]{4} *Ray|Ray *ID[^<]*<[^>]*>[^<]+|cferror_details.{0,300}\" /tmp/cf-response.html | head -10 *)"
+      "Bash(grep -oE \"[0-9]{4} *Ray|Ray *ID[^<]*<[^>]*>[^<]+|cferror_details.{0,300}\" /tmp/cf-response.html | head -10 *)",
+      "Bash(awk '/activeSheet === ..stamp-duty../,/</template>/' \"d:/ReactProjects/op_nuxt/umu-mobile-webapp/pages/property/[id].vue\")",
+      "Bash(ls server/api/user/profile.get.ts server/api/auth/login.post.ts pages/dashboard-backup.vue)",
+      "Bash(find . -name \"*.bak\" -not -path \"./node_modules/*\")",
+      "Bash(rm -f server/api/user/profile.get.ts server/api/auth/login.post.ts pages/dashboard-backup.vue pages/buyer-passport/section/[id].vue.bak pages/property/[id].vue.bak)",
+      "Bash(ls server/api/user/)",
+      "Bash(ls server/api/auth/)",
+      "Bash(rm -f server/api/auth/register.post.ts server/api/user/profile.post.ts server/api/documents/index.get.ts server/api/progress/index.get.ts)",
+      "Bash(rmdir server/api/auth server/api/user server/api/documents server/api/progress server/api)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
