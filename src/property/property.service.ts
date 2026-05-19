@@ -2427,13 +2427,18 @@ export class PropertyService {
     // within reasonable timeouts (>15s server-side processing). Splitting
     // gives each batch its own compute budget; the heavy "extras" can fail
     // independently without nuking transport.
+    // Airport radius bumped from 50km → 150km so we catch major UK hubs
+    // (Heathrow, Birmingham, Manchester, Edinburgh, etc.) from any UK
+    // property — most of the country is within 150km of at least one hub.
+    // The post-process below ranks "international/major" airports above
+    // tiny local aerodromes regardless of which is technically closer.
     const transportQuery = `[out:json][timeout:15];(
       node["railway"="station"](around:4000,${lat},${lon});
       node["railway"="halt"](around:4000,${lat},${lon});
       node["highway"="bus_stop"](around:700,${lat},${lon});
       way["leisure"="park"]["name"](around:2000,${lat},${lon});
-      node["aeroway"="aerodrome"](around:50000,${lat},${lon});
-      way["aeroway"="aerodrome"](around:50000,${lat},${lon});
+      node["aeroway"="aerodrome"](around:150000,${lat},${lon});
+      way["aeroway"="aerodrome"](around:150000,${lat},${lon});
     );out center body;`;
     const heritageQuery = `[out:json][timeout:15];(
       node["heritage"](around:800,${lat},${lon});
@@ -2540,16 +2545,58 @@ export class PropertyService {
     const overpassFailed = !transportBatch.ok;
 
     // ── Process schools from OS NGD ──
+    // OS NGD's `oslandusetierb` is the sub-categorisation under "Education".
+    // We map its raw values to a short, user-friendly phase chip so the
+    // Schools sheet reads "St John's · Primary · 0.6 km" rather than the
+    // verbose OS string. Fall back to inspecting `description` when tierb
+    // is missing or non-specific.
+    type SchoolPhase =
+      | 'Pre-Primary'
+      | 'Primary'
+      | 'Secondary'
+      | 'Further Education'
+      | 'Higher Education'
+      | 'Specialist'
+      | 'School';
+    function classifySchool(p: any): {
+      phase: SchoolPhase;
+      category: string;
+    } {
+      const raw =
+        (p.oslandusetierb?.[0] ?? p.description ?? '').toString().trim();
+      const haystack = `${raw} ${p.description ?? ''}`.toLowerCase();
+      let phase: SchoolPhase;
+      // Order matters: "Pre-Primary" must beat "Primary"; "Further Education"
+      // and "Higher Education" must beat the generic "education" sweep.
+      if (/(pre[\s-]?primary|nursery|early[\s-]?year)/.test(haystack)) {
+        phase = 'Pre-Primary';
+      } else if (/(further[\s-]?education|sixth[\s-]?form|college)/.test(haystack)) {
+        phase = 'Further Education';
+      } else if (/(higher[\s-]?education|university)/.test(haystack)) {
+        phase = 'Higher Education';
+      } else if (/(secondary|high[\s-]?school|academy)/.test(haystack)) {
+        phase = 'Secondary';
+      } else if (/(specialist|special[\s-]?education|sen)/.test(haystack)) {
+        phase = 'Specialist';
+      } else if (/primary/.test(haystack)) {
+        phase = 'Primary';
+      } else {
+        phase = 'School';
+      }
+      // `category` retained for back-compat with any older clients reading it.
+      return { phase, category: raw || phase };
+    }
+
     const schools = ((schoolsRaw.features ?? []) as any[])
       .filter((f: any) => f.properties?.name1_text)
       .map((f: any) => {
         const [flon, flat] = centroid(f.geometry);
         const p = f.properties;
+        const { phase, category } = classifySchool(p);
         return {
           name: p.name1_text as string,
-          category: (p.oslandusetierb?.[0] ??
-            p.description ??
-            'School') as string,
+          phase, // "Primary" | "Secondary" | "Further Education" | …
+          category, // raw OS value, kept for back-compat
           description: p.description as string,
           lat: flat,
           lon: flon,
@@ -2602,21 +2649,89 @@ export class PropertyService {
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 6);
 
-    const airports = elements
+    // Major UK passenger airports (IATA). When present, we always surface
+    // at least the nearest 2 of these even if a small private aerodrome
+    // happens to be physically closer — users care about flights, not
+    // grass strips.
+    const UK_MAJOR_HUB_IATAS = new Set([
+      'LHR', 'LGW', 'MAN', 'STN', 'LTN', 'BHX', 'EDI', 'GLA',
+      'BRS', 'NCL', 'LPL', 'LCY', 'EMA', 'BFS', 'ABZ', 'CWL',
+      'SOU', 'EXT', 'NWI', 'BHD', 'INV', 'JER', 'GCI', 'IOM',
+      'BLK', 'HUY', 'DSA',
+    ]);
+
+    type AirportRow = {
+      name: string;
+      iata: string | null;
+      icao: string | null;
+      lat: number;
+      lon: number;
+      distanceKm: number;
+      isMajor: boolean;
+    };
+
+    const allAirports: AirportRow[] = elements
       .filter((e) => e.tags?.aeroway === 'aerodrome' && e.tags?.name)
-      // Only commercial/public airports: must have an IATA code or "Airport" in name
-      .filter((e) => e.tags?.iata || /airport/i.test(e.tags?.name ?? ''))
-      .map((e) => ({
-        name: e.tags.name as string,
-        iata: e.tags?.iata ?? null,
-        icao: e.tags?.icao ?? null,
-        lat: e.center?.lat ?? e.lat,
-        lon: e.center?.lon ?? e.lon,
-        distanceKm: distKm(e.center?.lat ?? e.lat, e.center?.lon ?? e.lon),
-      }))
-      .filter((e) => e.lat && e.lon)
+      // Commercial/public airports only — must have an IATA code, an
+      // explicit international flag, OR "Airport" in the name. Excludes
+      // private aerodromes / glider clubs / military fields.
+      .filter(
+        (e) =>
+          e.tags?.iata ||
+          e.tags?.['aerodrome:type'] === 'international' ||
+          e.tags?.aerodrome === 'international' ||
+          /airport/i.test(e.tags?.name ?? ''),
+      )
+      .map((e) => {
+        const iata: string | null = e.tags?.iata ?? null;
+        const isOsmInternational =
+          e.tags?.['aerodrome:type'] === 'international' ||
+          e.tags?.aerodrome === 'international';
+        const isMajor =
+          (iata && UK_MAJOR_HUB_IATAS.has(iata.toUpperCase())) ||
+          isOsmInternational;
+        return {
+          name: e.tags.name as string,
+          iata,
+          icao: e.tags?.icao ?? null,
+          lat: e.center?.lat ?? e.lat,
+          lon: e.center?.lon ?? e.lon,
+          distanceKm: distKm(e.center?.lat ?? e.lat, e.center?.lon ?? e.lon),
+          isMajor,
+        };
+      })
+      .filter((e) => e.lat && e.lon);
+
+    // De-dupe (a few airports appear as both node and way in OSM, e.g.
+    // Birmingham International). Key on rounded coordinates because OSM
+    // node/way pairs share centroids to 4 decimal places.
+    const seenAirports = new Set<string>();
+    const dedupedAirports = allAirports
       .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 5);
+      .filter((a) => {
+        const key = `${a.iata ?? a.name}@${a.lat.toFixed(3)},${a.lon.toFixed(3)}`;
+        if (seenAirports.has(key)) return false;
+        seenAirports.add(key);
+        return true;
+      });
+
+    // Two-tier final list: always include the nearest 2 major hubs (for
+    // air-travel relevance), then fill the rest from the distance-sorted
+    // pool. Cap at 6.
+    const majors = dedupedAirports.filter((a) => a.isMajor).slice(0, 2);
+    const majorIds = new Set(majors.map((a) => `${a.lat},${a.lon}`));
+    const fillers = dedupedAirports.filter(
+      (a) => !majorIds.has(`${a.lat},${a.lon}`),
+    );
+    const airports = [...majors, ...fillers]
+      .sort((a, b) => {
+        // Within the merged list, sort majors first then by distance —
+        // a user 60km from Birmingham (major) and 5km from a local strip
+        // should see Birmingham first.
+        if (a.isMajor !== b.isMajor) return a.isMajor ? -1 : 1;
+        return a.distanceKm - b.distanceKm;
+      })
+      .slice(0, 6);
 
     // NOTE: Overpass is the only viable free source for named train stations
     // and bus stops with stable POI identifiers. OS NGD's Rail / Railway-Node
