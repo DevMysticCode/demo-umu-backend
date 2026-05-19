@@ -476,6 +476,24 @@ function normalisePostcode(raw: string): string {
   return s.length >= 5 ? `${s.slice(0, -3)} ${s.slice(-3)}` : s;
 }
 
+// Natural address-line sort: orders rows so a postcode lookup reads
+// "1 Woodfield Rd, 2 Woodfield Rd, 9 Woodfield Rd, 10 Woodfield Rd, …"
+// rather than the lexical "1, 10, 11, 2, 3, …" you'd get from
+// String.localeCompare without `numeric:true`. Falls back gracefully for
+// addresses without leading numerics (e.g. "Flat 3, …", "The Cottage").
+function naturalSortByAddress<T extends { addressLine1?: string | null }>(
+  items: T[],
+): T[] {
+  return [...items].sort((a, b) => {
+    const aa = (a.addressLine1 ?? '').trim();
+    const bb = (b.addressLine1 ?? '').trim();
+    return aa.localeCompare(bb, 'en-GB', {
+      numeric: true,
+      sensitivity: 'base',
+    });
+  });
+}
+
 // Pragmatic UK-postcode test — full and outward formats. Used to decide
 // whether a search query has a finite, EPC-knowable total worth backfilling.
 function looksLikeUkPostcode(raw: string): boolean {
@@ -1039,7 +1057,10 @@ export class PropertyService {
     if (effectiveTotal > 0) {
       const rows = await this.prisma.property.findMany({
         where: realDataCacheWhere,
-        orderBy: { createdAt: 'desc' },
+        // Order by addressLine1 ASC so pagination is deterministic. The JS
+        // pass below (`naturalSortByAddress`) re-orders the page so that
+        // "9 Woodfield Rd" comes before "10 Woodfield Rd" rather than after.
+        orderBy: { addressLine1: 'asc' },
         skip: offset,
         take: limit,
         include: {
@@ -1112,7 +1133,7 @@ export class PropertyService {
           homeScore,
         };
       });
-      return { items, total: effectiveTotal };
+      return { items: naturalSortByAddress(items), total: effectiveTotal };
     }
 
     // 2. No real data cached — try OS Places API first
@@ -1131,11 +1152,11 @@ export class PropertyService {
     if (mockTotal > 0) {
       const items = await this.prisma.property.findMany({
         where: mockWhere,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { addressLine1: 'asc' },
         skip: offset,
         take: limit,
       });
-      return { items, total: mockTotal };
+      return { items: naturalSortByAddress(items), total: mockTotal };
     }
 
     // 5. Nothing at all — generate mocks as last resort (offset 0 only)
@@ -1171,7 +1192,7 @@ export class PropertyService {
       }
 
       const mocks = await this.generateAndSaveMockProperties(q, postcodeInfo);
-      return { items: mocks, total: mocks.length };
+      return { items: naturalSortByAddress(mocks), total: mocks.length };
     }
 
     return { items: [], total: 0 };
@@ -1269,7 +1290,7 @@ export class PropertyService {
         }
       }
 
-      return { items: saved, total };
+      return { items: naturalSortByAddress(saved), total };
     } catch (err) {
       console.error('OS Places API error:', err);
       return { items: [], total: 0 };
@@ -1403,7 +1424,7 @@ export class PropertyService {
         }
       }
 
-      return { items: saved, total: epcTotal };
+      return { items: naturalSortByAddress(saved), total: epcTotal };
     } catch (err) {
       console.error('EPC API error:', err);
       return { items: [], total: 0 };
