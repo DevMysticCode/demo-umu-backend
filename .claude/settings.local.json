@@ -161,7 +161,9 @@
       "Bash(ls server/api/user/)",
       "Bash(ls server/api/auth/)",
       "Bash(rm -f server/api/auth/register.post.ts server/api/user/profile.post.ts server/api/documents/index.get.ts server/api/progress/index.get.ts)",
-      "Bash(rmdir server/api/auth server/api/user server/api/documents server/api/progress server/api)"
+      "Bash(rmdir server/api/auth server/api/user server/api/documents server/api/progress server/api)",
+      "Bash(find d:/ReactProjects -name \"explore-rebuilt_4.html\" 2>/dev/null | head -5)",
+      "Read(//d/ReactProjects/**)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",

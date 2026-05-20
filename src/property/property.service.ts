@@ -2422,23 +2422,37 @@ export class PropertyService {
           .catch(() => ({ features: [] }))
       : Promise.resolve({ features: [] });
 
-    // ── Overpass: split into THREE parallel queries ──
+    // ── Overpass: split into FOUR parallel queries ──
     // The combined "everything" query was too heavy for Overpass to compute
     // within reasonable timeouts (>15s server-side processing). Splitting
     // gives each batch its own compute budget; the heavy "extras" can fail
     // independently without nuking transport.
-    // Airport radius bumped from 50km → 150km so we catch major UK hubs
-    // (Heathrow, Birmingham, Manchester, Edinburgh, etc.) from any UK
-    // property — most of the country is within 150km of at least one hub.
-    // The post-process below ranks "international/major" airports above
-    // tiny local aerodromes regardless of which is technically closer.
+    //
+    // Airports are isolated from trains/buses/parks because the 150 km
+    // aerodrome scan is by far the heaviest query — folding it in with the
+    // ~4 km station/bus search blows the timeout on the whole batch, so a
+    // failed airports lookup used to drop trains and buses with it. With
+    // its own batch, the airports query can fail or time out without
+    // taking station/bus data down.
     const transportQuery = `[out:json][timeout:15];(
       node["railway"="station"](around:4000,${lat},${lon});
       node["railway"="halt"](around:4000,${lat},${lon});
       node["highway"="bus_stop"](around:700,${lat},${lon});
       way["leisure"="park"]["name"](around:2000,${lat},${lon});
-      node["aeroway"="aerodrome"](around:150000,${lat},${lon});
-      way["aeroway"="aerodrome"](around:150000,${lat},${lon});
+    );out center body;`;
+    // Airports — own batch, 150 km radius so we catch major UK hubs
+    // (Heathrow, Birmingham, Manchester, Edinburgh, etc.) from anywhere in
+    // the country. Filtered server-side with an OSM regex so we never even
+    // download the thousand private grass strips that bloat the response.
+    // The post-process ranks "international/major" airports above tiny
+    // local aerodromes regardless of which is technically closer.
+    const airportsQuery = `[out:json][timeout:25];(
+      node["aeroway"="aerodrome"]["iata"](around:150000,${lat},${lon});
+      way["aeroway"="aerodrome"]["iata"](around:150000,${lat},${lon});
+      node["aeroway"="aerodrome"]["aerodrome:type"="international"](around:150000,${lat},${lon});
+      way["aeroway"="aerodrome"]["aerodrome:type"="international"](around:150000,${lat},${lon});
+      node["aeroway"="aerodrome"]["name"~"[Aa]irport"](around:150000,${lat},${lon});
+      way["aeroway"="aerodrome"]["name"~"[Aa]irport"](around:150000,${lat},${lon});
     );out center body;`;
     const heritageQuery = `[out:json][timeout:15];(
       node["heritage"](around:800,${lat},${lon});
@@ -2523,26 +2537,35 @@ export class PropertyService {
       return { elements: [], ok: false };
     };
 
-    const [schoolsRaw, transportBatch, heritageBatch, amenitiesBatch] =
-      await Promise.all([
-        schoolsPromise,
-        runOverpassBatch('transport', transportQuery),
-        runOverpassBatch('heritage', heritageQuery),
-        runOverpassBatch('amenities', amenitiesQuery),
-      ]);
+    const [
+      schoolsRaw,
+      transportBatch,
+      airportsBatch,
+      heritageBatch,
+      amenitiesBatch,
+    ] = await Promise.all([
+      schoolsPromise,
+      runOverpassBatch('transport', transportQuery),
+      runOverpassBatch('airports', airportsQuery),
+      runOverpassBatch('heritage', heritageQuery),
+      runOverpassBatch('amenities', amenitiesQuery),
+    ]);
 
-    // Merge the three batches' elements into one combined list (downstream
-    // filters by tag, so order doesn't matter). The transport batch's
-    // success drives the `transportLookupFailed` flag — heritage/amenities
-    // are nice-to-haves.
+    // Merge all batches' elements into one combined list (downstream
+    // filters by tag, so order doesn't matter). Two independent failure
+    // flags now exist: `transportLookupFailed` for trains/buses/parks and
+    // `airportsLookupFailed` for the airports list. Heritage/amenities
+    // are nice-to-haves — their failure is silent.
     const overpassRaw = {
       elements: [
         ...transportBatch.elements,
+        ...airportsBatch.elements,
         ...heritageBatch.elements,
         ...amenitiesBatch.elements,
       ],
     };
     const overpassFailed = !transportBatch.ok;
+    const airportsFailed = !airportsBatch.ok;
 
     // ── Process schools from OS NGD ──
     // OS NGD's `oslandusetierb` is the sub-categorisation under "Education".
@@ -2841,9 +2864,10 @@ export class PropertyService {
       .sort((a, b) => (a.distanceKm! - b.distanceKm!))
       .slice(0, 30);
 
-    // `transportLookupFailed` lets the frontend distinguish "no data
-    // available from this network" (e.g. Overpass blocked from a non-UK dev
-    // IP) from "there genuinely are no stations within 4km".
+    // `transportLookupFailed` and `airportsLookupFailed` let the frontend
+    // distinguish "no data available from this network" (e.g. Overpass
+    // blocked from a non-UK dev IP, or the airports batch timed out on its
+    // 150 km radius) from "there genuinely are no stations within 4 km".
     return {
       schools,
       trains,
@@ -2853,6 +2877,7 @@ export class PropertyService {
       listedBuildings,
       amenities,
       transportLookupFailed: overpassFailed,
+      airportsLookupFailed: airportsFailed,
     };
   }
 
