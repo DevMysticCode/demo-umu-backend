@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UMU · Explore — rebuilt (distance + filters)</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+:root {
+  --navy: #231d45;
+  --navy-2: #1a1535;
+  --navy-3: #110d28;
+  --navy-soft: #4a4566;
+  --navy-faint: #6e6985;
+  --teal: #00a19a;
+  --teal-bright: #00b6ae;
+  --teal-dark: #007e78;
+  --teal-deep: #00514d;
+  --teal-light: #6BD4CD;
+  --teal-pale: #E5F4F2;
+  --teal-paler: #F2FAF8;
+  --text: #231d45;
+  --text-soft: #6b6783;
+  --text-faint: #9c98ad;
+  --line: #E6EDEC;
+  --line-soft: #F1F6F5;
+  --bg: #F9FBFA;
+  --canvas: #F9FBFA;
+  --gold: #C18A38;
+  --gold-deep: #8A5F1F;
+  --gold-light: #E5C794;
+  --muted: #6b6783;
+  --white: #FFFFFF;
+  --stage: #131820;
+}
+html, body { font-family: 'Plus Jakarta Sans', sans-serif; }
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,161,154,0.08), transparent 60%),
+    var(--stage);
+  min-height: 100vh;
+  padding: 50px 16px 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+
+.stage-caption { text-align: center; color: rgba(255,255,255,0.6); max-width: 720px; font-size: 13.5px; font-weight: 500; line-height: 1.6; }
+.stage-caption .label { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; display: block; font-weight: 700; }
+.stage-caption .head { font-size: 30px; color: white; line-height: 1.1; margin-bottom: 10px; font-weight: 700; letter-spacing: -0.8px; }
+
+.screen-switcher {
+  display: inline-flex;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 100px;
+  padding: 5px;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+.screen-btn {
+  font-family: inherit;
+  font-size: 12px; font-weight: 800;
+  color: rgba(255,255,255,0.7);
+  background: transparent;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  letter-spacing: -0.05px;
+  transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.screen-btn:hover { color: white; background: rgba(255,255,255,0.06); }
+.screen-btn.active {
+  background: var(--teal);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0,161,154,0.4);
+}
+.dev-only-tag {
+  font-size: 9px; font-weight: 800;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.layout { display: flex; gap: 36px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+.phone {
+  width: 380px; height: 820px;
+  background: var(--white);
+  border-radius: 42px;
+  overflow: hidden;
+  box-shadow: 0 35px 90px rgba(0,0,0,0.55), 0 0 0 8px #0a0d12, 0 0 0 9px rgba(255,255,255,0.06), inset 0 0 0 1px rgba(255,255,255,0.6);
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.phone::before { content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 105px; height: 27px; background: #0a0d12; border-radius: 100px; z-index: 30; }
+
+.status-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px 8px; font-size: 14px; font-weight: 700; color: var(--text); position: relative; z-index: 11; }
+.status-bar .right { display: flex; gap: 5px; align-items: center; }
+.signal-bars { display: flex; gap: 2px; align-items: flex-end; }
+.signal-bars i { width: 3px; background: currentColor; border-radius: 1px; display: block; }
+.signal-bars i:nth-child(1) { height: 4px; }
+.signal-bars i:nth-child(2) { height: 6px; }
+.signal-bars i:nth-child(3) { height: 8px; }
+.signal-bars i:nth-child(4) { height: 10px; }
+.battery { width: 24px; height: 11px; border: 1px solid currentColor; border-radius: 3px; position: relative; padding: 1.5px; }
+.battery::after { content: ''; position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 1.5px; height: 5px; background: currentColor; border-radius: 0 1px 1px 0; }
+.battery i { height: 100%; width: 75%; background: currentColor; border-radius: 1px; display: block; }
+
+.body { flex: 1; overflow-y: auto; }
+.body::-webkit-scrollbar { width: 0; }
+
+/* ════ HEADER ════ */
+.exp-header {
+  padding: 14px 22px 4px;
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.exp-greet {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  margin-bottom: 2px;
+  display: flex; align-items: center; gap: 6px;
+}
+.exp-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+.exp-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; padding-top: 4px; }
+.exp-icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-soft);
+  transition: all 0.15s;
+}
+.exp-icon-btn:hover { color: var(--navy); border-color: var(--text-faint); }
+.exp-icon-btn svg { width: 16px; height: 16px; }
+
+/* ════ THE ONE SEARCH ════ */
+.exp-search-block {
+  padding: 14px 22px 6px;
+}
+.exp-search {
+  display: flex; align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1.5px solid var(--line);
+  border-radius: 100px;
+  padding: 4px 4px 4px 14px;
+  transition: all 0.15s;
+}
+.exp-search:focus-within {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 4px rgba(0,161,154,0.10);
+}
+.exp-search-icon {
+  width: 18px; height: 18px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.exp-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px 4px;
+  font-family: inherit;
+  font-size: 14px; font-weight: 600;
+  color: var(--navy);
+  letter-spacing: -0.1px;
+  min-width: 0;
+}
+.exp-search-input:focus { outline: none; }
+.exp-search-input::placeholder { color: var(--text-faint); font-weight: 500; }
+
+/* Distance dropdown pill (compact, only opens when needed) */
+.exp-dist-btn {
+  display: inline-flex; align-items: center;
+  gap: 4px;
+  font-family: inherit;
+  font-size: 11.5px; font-weight: 800;
+  color: var(--navy);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 7px 11px;
+  cursor: pointer;
+  letter-spacing: -0.05px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  position: relative;
+}
+.exp-dist-btn:hover { background: var(--teal-paler); border-color: var(--teal-pale); color: var(--teal-dark); }
+.exp-dist-btn .arrow { font-size: 8px; color: var(--text-faint); transition: transform 0.2s; }
+.exp-dist-btn.has-filters {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+.exp-dist-btn.has-filters .arrow { color: rgba(255,255,255,0.7); }
+.exp-dist-btn .filter-dot {
+  width: 6px; height: 6px;
+  background: var(--gold-light);
+  border-radius: 50%;
+  margin-left: 2px;
+  display: none;
+}
+.exp-dist-btn.has-filters .filter-dot { display: block; }
+
+.exp-search-go {
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-family: inherit;
+  font-size: 13px; font-weight: 800;
+  padding: 9px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.exp-search-go:hover { background: var(--teal-bright); }
+
+.exp-search-sub {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  margin-top: 10px;
+  padding-left: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.exp-search-sub svg { width: 12px; height: 12px; color: var(--teal); flex-shrink: 0; }
+.exp-search-sub strong { color: var(--navy); font-weight: 800; }
+
+/* Active-filter summary chip row (only shows once user applies) */
+.filter-summary {
+  display: none;
+  padding: 8px 22px 0;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-summary.visible { display: flex; }
+.fs-chip {
+  display: inline-flex; align-items: center;
+  gap: 5px;
+  font-size: 11px; font-weight: 800;
+  color: var(--teal-dark);
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  border-radius: 100px;
+  padding: 5px 10px;
+  letter-spacing: -0.05px;
+}
+.fs-chip .x {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  cursor: pointer;
+  margin-left: 2px;
+}
+.fs-clear {
+  font-size: 11px; font-weight: 800;
+  color: var(--text-soft);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  letter-spacing: -0.05px;
+  font-family: inherit;
+  margin-left: 4px;
+}
+
+/* ════ SECTION HEADERS ════ */
+.section-h-row {
+  display: flex; align-items: baseline;
+  justify-content: space-between;
+  padding: 22px 22px 10px;
+  gap: 10px;
+}
+.section-h {
+  font-size: 14px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+}
+.section-action {
+  font-size: 12px; font-weight: 800;
+  color: var(--gold-deep);
+  cursor: pointer;
+  letter-spacing: -0.05px;
+}
+.section-sub {
+  font-size: 11.5px; font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  padding: 0 22px 12px;
+  margin-top: -4px;
+  line-height: 1.45;
+}
+
+/* ════ NEW USER · feature cards ════ */
+.feature-card {
+  margin: 0 22px 12px;
+  padding: 16px 18px;
+  background: white;
+  border: 1px solid var(--teal-pale);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.feature-card:hover {
+  border-color: var(--teal);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,161,154,0.10);
+}
+.fc-row {
+  display: flex; align-items: flex-start;
+  gap: 14px;
+}
+.fc-icon-tile {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.fc-icon-tile.teal { background: var(--teal); color: white; }
+.fc-icon-tile.navy { background: var(--navy); color: white; }
+.fc-icon-tile svg { width: 22px; height: 22px; }
+
+.fc-body { flex: 1; min-width: 0; }
+.fc-row-top {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.fc-eyebrow {
+  font-size: 9.5px; font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+.fc-eyebrow.teal { color: var(--teal-dark); }
+.fc-eyebrow.navy { color: var(--navy); }
+.fc-pill {
+  display: inline-block;
+  font-size: 9.5px; font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 100px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.fc-pill.free { background: var(--teal-pale); color: var(--teal-dark); }
+.fc-pill.solicitor { background: rgba(35,29,69,0.06); color: var(--navy); }
+.fc-headline {
+  font-size: 15px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.fc-sub {
+  font-size: 12px; font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.fc-cta {
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 12.5px; font-weight: 800;
+  color: white;
+  background: var(--teal);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 100px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: all 0.15s;
+}
+.fc-cta:hover { background: var(--teal-bright); }
+.fc-cta.outline {
+  background: white;
+  border: 1.5px solid var(--navy);
+  color: var(--navy);
+}
+.fc-cta.outline:hover { background: var(--navy); color: white; }
+.fc-cta svg { width: 11px; height: 11px; opacity: 0.85; }
+
+/* ════ RETURNING USER · pick up where you left off ════ */
+.recent-row {
+  display: flex; gap: 10px;
+  padding: 0 22px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin-bottom: 8px;
+}
+.recent-row::-webkit-scrollbar { display: none; }
+
+.recent-card {
+  flex: 0 0 200px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: all 0.18s;
+}
+.recent-card:hover { border-color: var(--teal-pale); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,161,154,0.08); }
+.recent-eyebrow {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.recent-eyebrow svg { width: 10px; height: 10px; color: var(--teal); }
+.recent-addr {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.recent-postcode {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  margin-bottom: 12px;
+}
+.recent-meta-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.recent-score-num {
+  font-size: 22px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.5px;
+  font-feature-settings: 'tnum';
+  line-height: 1;
+}
+.recent-score-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.recent-arrow {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--teal-paler);
+  color: var(--teal-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Empty / saved-search prompt */
+.saved-search-prompt {
+  margin: 0 22px 14px;
+  padding: 14px 16px;
+  background: var(--teal-paler);
+  border: 1px dashed var(--teal-pale);
+  border-radius: 14px;
+  display: flex; align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.saved-search-prompt:hover { background: white; border-color: var(--teal); border-style: solid; }
+.ssp-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid var(--teal-pale);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.ssp-icon svg { width: 14px; height: 14px; }
+.ssp-body { flex: 1; min-width: 0; }
+.ssp-title {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  margin-bottom: 1px;
+}
+.ssp-sub {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  line-height: 1.4;
+}
+.ssp-arrow {
+  font-size: 16px;
+  color: var(--teal-dark);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ════ VERIFIED PASSPORT PROPERTIES ════ */
+.props-row {
+  display: flex; gap: 12px;
+  padding: 0 22px 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.props-row::-webkit-scrollbar { display: none; }
+
+.prop-card {
+  flex: 0 0 256px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: all 0.18s;
+}
+.prop-card:hover {
+  border-color: var(--teal-pale);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(35,29,69,0.10);
+}
+.prop-photo {
+  height: 130px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+}
+.prop-photo svg { width: 100%; height: 100%; display: block; }
+.prop-photo-pill {
+  position: absolute;
+  top: 10px; left: 10px;
+  display: inline-flex; align-items: center;
+  gap: 5px;
+  font-size: 10px; font-weight: 800;
+  color: white;
+  background: rgba(35,29,69,0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 5px 9px;
+  border-radius: 100px;
+  letter-spacing: 0.4px;
+}
+.prop-photo-pill .dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--gold-light);
+}
+.prop-info { padding: 12px 14px 14px; }
+.prop-addr {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+.prop-postcode {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-soft);
+  margin-bottom: 10px;
+}
+.prop-pills {
+  display: flex; gap: 5px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.prop-pill {
+  font-size: 10px; font-weight: 700;
+  color: var(--navy);
+  background: var(--teal-paler);
+  border: 1px solid var(--teal-pale);
+  padding: 3px 8px;
+  border-radius: 100px;
+  letter-spacing: -0.05px;
+}
+.prop-meta-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.prop-hs {
+  display: flex; align-items: baseline; gap: 5px;
+}
+.prop-hs-num {
+  font-size: 16px; font-weight: 800;
+  color: var(--teal);
+  letter-spacing: -0.4px;
+  font-feature-settings: 'tnum';
+}
+.prop-hs-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.prop-epc {
+  display: flex; align-items: center; gap: 5px;
+}
+.prop-epc-letter {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: #93C949;
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800;
+}
+.prop-epc-label {
+  font-size: 9px; font-weight: 800;
+  color: var(--text-faint);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+/* Screen visibility */
+.screen { display: none; }
+body[data-screen="new"] .screen.new,
+body[data-screen="returning"] .screen.returning { display: block; }
+
+/* ════════════════════════════════════════════════════════════
+   BOTTOM SHEET · distance + filters
+   ════════════════════════════════════════════════════════════ */
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17,13,40,0);
+  z-index: 40;
+  pointer-events: none;
+  transition: background 0.25s ease;
+}
+.sheet-backdrop.open {
+  background: rgba(17,13,40,0.55);
+  pointer-events: auto;
+}
+.sheet {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  z-index: 41;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex; flex-direction: column;
+  max-height: 92%;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.18);
+}
+.sheet.open { transform: translateY(0); }
+
+.sheet-grabber-wrap {
+  display: flex; justify-content: center;
+  padding: 10px 0 4px;
+  cursor: grab;
+}
+.sheet-grabber {
+  width: 38px; height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+}
+.sheet-head {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 6px 22px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.sheet-title {
+  font-size: 16px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+}
+.sheet-reset {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 12px; font-weight: 800;
+  color: var(--text-soft);
+  cursor: pointer;
+  letter-spacing: -0.05px;
+  padding: 4px 0;
+}
+.sheet-reset:hover { color: var(--navy); }
+.sheet-reset:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0 12px;
+}
+.sheet-body::-webkit-scrollbar { width: 0; }
+
+.sheet-section {
+  padding: 16px 22px 4px;
+}
+.sheet-section-h {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.sheet-section-title {
+  font-size: 11px; font-weight: 800;
+  color: var(--text-soft);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.sheet-section-value {
+  font-size: 12px; font-weight: 800;
+  color: var(--teal-dark);
+  letter-spacing: -0.05px;
+  font-feature-settings: 'tnum';
+}
+
+/* Distance — radio list rows */
+.dist-list {
+  display: flex; flex-direction: column;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 4px;
+}
+.dist-row {
+  display: flex; align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dist-row:hover { background: white; }
+.dist-row.active { background: white; box-shadow: 0 1px 4px rgba(35,29,69,0.06); }
+.dist-radio {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--text-faint);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.dist-row.active .dist-radio {
+  border-color: var(--teal);
+  background: var(--teal);
+}
+.dist-radio::after {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: white;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.dist-row.active .dist-radio::after { opacity: 1; }
+.dist-label-wrap { flex: 1; min-width: 0; }
+.dist-label {
+  font-size: 13.5px; font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.15px;
+  line-height: 1.2;
+}
+.dist-hint {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-soft);
+  margin-top: 1px;
+  letter-spacing: -0.05px;
+}
+.dist-row.active .dist-label { color: var(--teal-dark); }
+
+/* Filter chip groups */
+.chip-group {
+  display: flex; flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  font-family: inherit;
+  font-size: 12px; font-weight: 700;
+  color: var(--navy);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 8px 13px;
+  cursor: pointer;
+  letter-spacing: -0.05px;
+  transition: all 0.15s;
+}
+.chip:hover { background: var(--teal-paler); border-color: var(--teal-pale); }
+.chip.active {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+  box-shadow: 0 2px 6px rgba(0,161,154,0.25);
+}
+.chip.epc-chip {
+  display: inline-flex; align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+}
+.chip .epc-tile {
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  font-size: 10px; font-weight: 800;
+  color: white;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.chip.active .epc-tile {
+  background: rgba(255,255,255,0.25) !important;
+}
+
+/* Slider */
+.slider-row {
+  padding: 4px 4px 0;
+}
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 100px;
+  background: var(--line);
+  outline: none;
+  margin: 12px 0 6px;
+}
+.slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 100px;
+  background: linear-gradient(to right, var(--teal) 0%, var(--teal) var(--fill, 50%), var(--line) var(--fill, 50%), var(--line) 100%);
+}
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--line);
+}
+.slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 100px;
+  background: var(--teal);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid var(--teal);
+  cursor: pointer;
+  margin-top: -8px;
+  box-shadow: 0 2px 6px rgba(0,161,154,0.25);
+}
+.slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid var(--teal);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,161,154,0.25);
+}
+.slider-scale {
+  display: flex; justify-content: space-between;
+  font-size: 10px; font-weight: 700;
+  color: var(--text-faint);
+  margin-top: 2px;
+  letter-spacing: 0.4px;
+}
+
+/* Toggle row */
+.toggle-row {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.toggle-row .tr-text {
+  flex: 1;
+  min-width: 0;
+}
+.toggle-row .tr-title {
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.15px;
+  margin-bottom: 2px;
+}
+.toggle-row .tr-sub {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-soft);
+  letter-spacing: -0.05px;
+  line-height: 1.3;
+}
+.toggle {
+  width: 38px; height: 22px;
+  border-radius: 100px;
+  background: var(--line);
+  position: relative;
+  transition: background 0.18s;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+.toggle.on { background: var(--teal); }
+.toggle.on::after { transform: translateX(16px); }
+
+/* Sticky apply footer */
+.sheet-foot {
+  padding: 14px 22px 24px;
+  border-top: 1px solid var(--line-soft);
+  background: white;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.sheet-cancel {
+  font-family: inherit;
+  font-size: 13px; font-weight: 800;
+  color: var(--navy);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 12px 18px;
+  cursor: pointer;
+  letter-spacing: -0.05px;
+  transition: all 0.15s;
+}
+.sheet-cancel:hover { background: white; border-color: var(--text-faint); }
+.sheet-apply {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px; font-weight: 800;
+  color: white;
+  background: var(--teal);
+  border: none;
+  border-radius: 100px;
+  padding: 13px 18px;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px;
+}
+.sheet-apply:hover { background: var(--teal-bright); }
+.sheet-apply .count {
+  background: rgba(255,255,255,0.22);
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 100px;
+  font-weight: 800;
+  font-feature-settings: 'tnum';
+}
+
+/* Notes */
+.notes-panel {
+  width: 320px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 24px 26px;
+  color: rgba(255,255,255,0.72);
+  flex-shrink: 0;
+}
+.notes-panel h3 { font-size: 20px; color: white; margin-bottom: 14px; font-weight: 700; letter-spacing: -0.3px; }
+.notes-panel .stage-tag { font-size: 10px; font-weight: 800; color: var(--teal); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.notes-panel .note-block { margin-bottom: 14px; padding-left: 22px; position: relative; }
+.notes-panel .note-block::before { content: ''; position: absolute; left: 0; top: 9px; width: 12px; height: 1px; background: var(--teal); }
+.notes-panel .note-name { font-size: 13px; font-weight: 800; color: white; letter-spacing: -0.2px; margin-bottom: 4px; }
+.notes-panel .note-text { font-size: 12px; font-weight: 500; line-height: 1.6; }
+.notes-panel .note-text b { color: white; font-weight: 700; }
+
+.toast-host { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--navy); color: white; padding: 12px 22px; border-radius: 12px; font-size: 13px; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 2000; }
+
+@media (max-width: 800px) {
+  .layout { flex-direction: column; align-items: center; }
+  .notes-panel { width: 100%; max-width: 380px; }
+}
+</style>
+</head>
+<body data-screen="new">
+
+<div class="stage-caption">
+  <span class="label">UMU · Explore · distance + filters</span>
+  <div class="head">Tap "Exact ▾" to open.</div>
+  <div>The "Exact ▾" pill in the search bar now opens a bottom sheet with a distance picker on top and filter chips below. Apply updates the pill label and reveals a summary row above the page content. Tap the backdrop, grabber, or Cancel to dismiss.</div>
+</div>
+
+<div>
+  <div class="dev-only-tag">For review only</div>
+  <div class="screen-switcher">
+    <button class="screen-btn active" data-screen="new" onclick="openScreen('new')">New user</button>
+    <button class="screen-btn" data-screen="returning" onclick="openScreen('returning')">Returning user</button>
+  </div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><polyline points="13,5 19,12 13,19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.5" r="0.8" fill="currentColor"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5L6 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 21h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="currentColor"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 4h8l4 4v12H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><line x1="10" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="18" x2="14" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6l8-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="12,6 12,12 16,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M7 3h10v18l-5-3.5L7 21z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 22s8-7 8-13a8 8 0 1 0-16 0c0 6 8 13 8 13z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 12h2v8h14v-8h2L12 3 3 12z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="layout">
+
+  <div class="phone">
+    <div class="status-bar">
+      <span>9:41</span>
+      <div class="right">
+        <div class="signal-bars"><i></i><i></i><i></i><i></i></div>
+        <span style="font-size:11px;font-weight:600;">5G</span>
+        <div class="battery"><i></i></div>
+      </div>
+    </div>
+
+    <div class="body" id="phoneBody">
+
+      <!-- Header — same on both states -->
+      <div class="exp-header">
+        <div>
+          <div class="exp-greet">Good afternoon <span style="font-size:14px;">👋</span></div>
+          <div class="exp-title">Explore</div>
+        </div>
+        <div class="exp-actions">
+          <button class="exp-icon-btn" onclick="t('Help')"><svg><use href="#i-help"/></svg></button>
+          <button class="exp-icon-btn" onclick="t('Saved')"><svg><use href="#i-bookmark"/></svg></button>
+        </div>
+      </div>
+
+      <!-- THE ONE SEARCH -->
+      <div class="exp-search-block">
+        <div class="exp-search">
+          <svg class="exp-search-icon"><use href="#i-search"/></svg>
+          <input class="exp-search-input" type="text" placeholder="Search any UK address" value="CV5 6AJ" />
+          <button class="exp-dist-btn" id="distBtn" onclick="openSheet()">
+            <span id="distBtnLabel">Exact</span>
+            <span class="filter-dot"></span>
+            <span class="arrow">▾</span>
+          </button>
+          <button class="exp-search-go" onclick="runSearch()">Search</button>
+        </div>
+        <div class="exp-search-sub">
+          <svg><use href="#i-spark"/></svg>
+          <span>Free <strong>HealthScore</strong> in 60 seconds. Verified <strong>Passport</strong> if there is one.</span>
+        </div>
+      </div>
+
+      <!-- Active-filter summary row (appears after Apply with filters set) -->
+      <div class="filter-summary" id="filterSummary"></div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           NEW USER STATE
+           ════════════════════════════════════════════════════════════ -->
+      <div class="screen new">
+
+        <div class="section-h-row">
+          <div class="section-h">What you can do here</div>
+        </div>
+
+        <div class="feature-card" onclick="t('Open HealthScore explainer')">
+          <div class="fc-row">
+            <div class="fc-icon-tile teal"><svg><use href="#i-spark"/></svg></div>
+            <div class="fc-body">
+              <div class="fc-row-top">
+                <div class="fc-eyebrow teal">HealthScore™</div>
+                <span class="fc-pill free">Free</span>
+              </div>
+              <div class="fc-headline">Every property has a story.</div>
+              <div class="fc-sub">Run a free check on any UK address — bills, value, comparisons, energy rating. Know before you commit.</div>
+              <button class="fc-cta" onclick="event.stopPropagation(); t('Run a HealthScore')">
+                Run a HealthScore
+                <svg><use href="#i-arrow-right"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-card" onclick="t('Open Passport explainer')">
+          <div class="fc-row">
+            <div class="fc-icon-tile navy"><svg><use href="#i-doc"/></svg></div>
+            <div class="fc-body">
+              <div class="fc-row-top">
+                <div class="fc-eyebrow navy">Property Passport</div>
+                <span class="fc-pill solicitor">Solicitor-grade</span>
+              </div>
+              <div class="fc-headline">Every property has a history.</div>
+              <div class="fc-sub">Title deeds, planning, surveys, fittings — all verified, all in one place. Buyers ready, sellers in control.</div>
+              <button class="fc-cta outline" onclick="event.stopPropagation(); t('See a sample Passport')">
+                See a sample
+                <svg><use href="#i-arrow-right"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-h-row">
+          <div class="section-h">Verified Passport properties</div>
+          <a class="section-action" onclick="t('See all')">See all</a>
+        </div>
+        <div class="section-sub">Sellers who've already done the work. Full records, fewer surprises.</div>
+
+        <div class="props-row">
+          <div class="prop-card" onclick="t('Open: 11 Woodfield Road')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#C7E8E4"/>
+                <path d="M0 90 L256 90 L256 130 L0 130 Z" fill="#A8D5D1"/>
+                <polygon points="40,55 80,30 120,55" fill="#231d45"/>
+                <rect x="50" y="55" width="60" height="45" fill="#FAFAFA"/>
+                <rect x="60" y="68" width="14" height="14" fill="#6BD4CD"/>
+                <rect x="86" y="68" width="14" height="14" fill="#6BD4CD"/>
+                <rect x="74" y="84" width="12" height="16" fill="#231d45"/>
+                <polygon points="130,60 168,38 206,60" fill="#231d45"/>
+                <rect x="138" y="60" width="60" height="40" fill="#FAFAFA"/>
+                <rect x="146" y="73" width="14" height="11" fill="#6BD4CD"/>
+                <rect x="172" y="73" width="14" height="11" fill="#6BD4CD"/>
+                <rect x="160" y="86" width="12" height="14" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">11 Woodfield Road</div>
+              <div class="prop-postcode">Coventry · CV5 6AJ</div>
+              <div class="prop-pills">
+                <span class="prop-pill">2 bed</span>
+                <span class="prop-pill">Semi-Detached</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">72</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #2EAB55;">B</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prop-card" onclick="t('Open: 47 Oakfield Drive')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#E8E4D0"/>
+                <path d="M0 90 L256 90 L256 130 L0 130 Z" fill="#C9C5A8"/>
+                <polygon points="60,40 128,20 196,40" fill="#231d45"/>
+                <rect x="80" y="40" width="96" height="60" fill="#FAFAFA"/>
+                <rect x="92" y="55" width="20" height="20" fill="#6BD4CD"/>
+                <rect x="144" y="55" width="20" height="20" fill="#6BD4CD"/>
+                <rect x="120" y="78" width="16" height="22" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">47 Oakfield Drive</div>
+              <div class="prop-postcode">Birmingham · B17 9LR</div>
+              <div class="prop-pills">
+                <span class="prop-pill">3 bed</span>
+                <span class="prop-pill">Detached</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">81</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #008060;">A</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="prop-card" onclick="t('Open: 22 Holland Park')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#D5C7C2"/>
+                <path d="M0 95 L256 95 L256 130 L0 130 Z" fill="#A38B83"/>
+                <rect x="40" y="35" width="180" height="65" fill="#FAFAFA"/>
+                <rect x="40" y="35" width="180" height="8" fill="#231d45"/>
+                <rect x="55" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="85" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="115" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="145" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="175" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="120" y="75" width="14" height="20" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">22 Holland Park</div>
+              <div class="prop-postcode">London · W11 3RD</div>
+              <div class="prop-pills">
+                <span class="prop-pill">4 bed</span>
+                <span class="prop-pill">Period flat</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">68</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #93C949;">C</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           RETURNING USER STATE
+           ════════════════════════════════════════════════════════════ -->
+      <div class="screen returning">
+
+        <div class="saved-search-prompt" onclick="t('Set up saved search')">
+          <div class="ssp-icon"><svg><use href="#i-pin"/></svg></div>
+          <div class="ssp-body">
+            <div class="ssp-title">Set up your search</div>
+            <div class="ssp-sub">Tell us your area, budget and must-haves — we'll alert you when something fits.</div>
+          </div>
+          <div class="ssp-arrow">›</div>
+        </div>
+
+        <div class="section-h-row">
+          <div class="section-h">Pick up where you left off</div>
+          <a class="section-action" onclick="t('See all activity')">See all</a>
+        </div>
+
+        <div class="recent-row">
+          <div class="recent-card" onclick="t('Open: 14 Linden Avenue')">
+            <div class="recent-eyebrow"><svg><use href="#i-clock"/></svg>Yesterday</div>
+            <div class="recent-addr">14 Linden Avenue</div>
+            <div class="recent-postcode">Coventry · CV5 7BT</div>
+            <div class="recent-meta-row">
+              <div>
+                <div class="recent-score-num">76</div>
+                <div class="recent-score-label">HealthScore</div>
+              </div>
+              <div class="recent-arrow">›</div>
+            </div>
+          </div>
+          <div class="recent-card" onclick="t('Open: 38 Park Crescent')">
+            <div class="recent-eyebrow"><svg><use href="#i-clock"/></svg>3 days ago</div>
+            <div class="recent-addr">38 Park Crescent</div>
+            <div class="recent-postcode">Solihull · B91 2NP</div>
+            <div class="recent-meta-row">
+              <div>
+                <div class="recent-score-num">82</div>
+                <div class="recent-score-label">HealthScore</div>
+              </div>
+              <div class="recent-arrow">›</div>
+            </div>
+          </div>
+          <div class="recent-card" onclick="t('Open: 5 Ridgeway Close')">
+            <div class="recent-eyebrow"><svg><use href="#i-clock"/></svg>Last week</div>
+            <div class="recent-addr">5 Ridgeway Close</div>
+            <div class="recent-postcode">Coventry · CV4 8FG</div>
+            <div class="recent-meta-row">
+              <div>
+                <div class="recent-score-num">64</div>
+                <div class="recent-score-label">HealthScore</div>
+              </div>
+              <div class="recent-arrow">›</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-h-row">
+          <div class="section-h">Verified Passport properties</div>
+          <a class="section-action" onclick="t('See all')">See all</a>
+        </div>
+        <div class="section-sub">Sellers who've already done the work. Full records, fewer surprises.</div>
+
+        <div class="props-row">
+          <div class="prop-card" onclick="t('Open: 11 Woodfield Road')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#C7E8E4"/>
+                <path d="M0 90 L256 90 L256 130 L0 130 Z" fill="#A8D5D1"/>
+                <polygon points="40,55 80,30 120,55" fill="#231d45"/>
+                <rect x="50" y="55" width="60" height="45" fill="#FAFAFA"/>
+                <rect x="60" y="68" width="14" height="14" fill="#6BD4CD"/>
+                <rect x="86" y="68" width="14" height="14" fill="#6BD4CD"/>
+                <rect x="74" y="84" width="12" height="16" fill="#231d45"/>
+                <polygon points="130,60 168,38 206,60" fill="#231d45"/>
+                <rect x="138" y="60" width="60" height="40" fill="#FAFAFA"/>
+                <rect x="146" y="73" width="14" height="11" fill="#6BD4CD"/>
+                <rect x="172" y="73" width="14" height="11" fill="#6BD4CD"/>
+                <rect x="160" y="86" width="12" height="14" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">11 Woodfield Road</div>
+              <div class="prop-postcode">Coventry · CV5 6AJ</div>
+              <div class="prop-pills">
+                <span class="prop-pill">2 bed</span>
+                <span class="prop-pill">Semi-Detached</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">72</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #2EAB55;">B</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="prop-card" onclick="t('Open: 47 Oakfield Drive')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#E8E4D0"/>
+                <path d="M0 90 L256 90 L256 130 L0 130 Z" fill="#C9C5A8"/>
+                <polygon points="60,40 128,20 196,40" fill="#231d45"/>
+                <rect x="80" y="40" width="96" height="60" fill="#FAFAFA"/>
+                <rect x="92" y="55" width="20" height="20" fill="#6BD4CD"/>
+                <rect x="144" y="55" width="20" height="20" fill="#6BD4CD"/>
+                <rect x="120" y="78" width="16" height="22" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">47 Oakfield Drive</div>
+              <div class="prop-postcode">Birmingham · B17 9LR</div>
+              <div class="prop-pills">
+                <span class="prop-pill">3 bed</span>
+                <span class="prop-pill">Detached</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">81</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #008060;">A</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="prop-card" onclick="t('Open: 22 Holland Park')">
+            <div class="prop-photo">
+              <svg viewBox="0 0 256 130" preserveAspectRatio="xMidYMid slice">
+                <rect width="256" height="130" fill="#D5C7C2"/>
+                <path d="M0 95 L256 95 L256 130 L0 130 Z" fill="#A38B83"/>
+                <rect x="40" y="35" width="180" height="65" fill="#FAFAFA"/>
+                <rect x="40" y="35" width="180" height="8" fill="#231d45"/>
+                <rect x="55" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="85" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="115" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="145" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="175" y="50" width="20" height="40" fill="#6BD4CD"/>
+                <rect x="120" y="75" width="14" height="20" fill="#231d45"/>
+              </svg>
+              <div class="prop-photo-pill"><span class="dot"></span>Passport · 100%</div>
+            </div>
+            <div class="prop-info">
+              <div class="prop-addr">22 Holland Park</div>
+              <div class="prop-postcode">London · W11 3RD</div>
+              <div class="prop-pills">
+                <span class="prop-pill">4 bed</span>
+                <span class="prop-pill">Period flat</span>
+              </div>
+              <div class="prop-meta-row">
+                <div class="prop-hs">
+                  <span class="prop-hs-num">68</span>
+                  <span class="prop-hs-label">HS™</span>
+                </div>
+                <div class="prop-epc">
+                  <span class="prop-epc-letter" style="background: #93C949;">C</span>
+                  <span class="prop-epc-label">EPC</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════
+         BOTTOM SHEET · distance + filters
+         ════════════════════════════════════════════════════════════ -->
+    <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Distance and filters">
+
+      <div class="sheet-grabber-wrap" onclick="closeSheet()"><div class="sheet-grabber"></div></div>
+
+      <div class="sheet-head">
+        <div class="sheet-title">Distance &amp; filters</div>
+        <button class="sheet-reset" id="sheetReset" onclick="resetDraft()">Reset</button>
+      </div>
+
+      <div class="sheet-body">
+
+        <!-- DISTANCE -->
+        <div class="sheet-section">
+          <div class="sheet-section-h">
+            <div class="sheet-section-title">Search radius</div>
+            <div class="sheet-section-value" id="distValue">Just this address</div>
+          </div>
+          <div class="dist-list" id="distList">
+            <div class="dist-row" data-dist="0">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Exact address only</span>
+                <span class="dist-hint">Score just this property</span>
+              </span>
+            </div>
+            <div class="dist-row" data-dist="0.5">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Within 0.5 miles</span>
+                <span class="dist-hint">Same street &amp; immediate neighbours</span>
+              </span>
+            </div>
+            <div class="dist-row" data-dist="1">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Within 1 mile</span>
+                <span class="dist-hint">Roughly the same neighbourhood</span>
+              </span>
+            </div>
+            <div class="dist-row" data-dist="2">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Within 2 miles</span>
+                <span class="dist-hint">Whole side of town</span>
+              </span>
+            </div>
+            <div class="dist-row" data-dist="5">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Within 5 miles</span>
+                <span class="dist-hint">Across the city</span>
+              </span>
+            </div>
+            <div class="dist-row" data-dist="10">
+              <span class="dist-radio"></span>
+              <span class="dist-label-wrap">
+                <span class="dist-label">Within 10 miles</span>
+                <span class="dist-hint">Wider catchment</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROPERTY TYPE -->
+        <div class="sheet-section">
+          <div class="sheet-section-h">
+            <div class="sheet-section-title">Property type</div>
+          </div>
+          <div class="chip-group" data-multi="true" data-key="ptype">
+            <button class="chip" data-value="any">Any</button>
+            <button class="chip" data-value="detached">Detached</button>
+            <button class="chip" data-value="semi">Semi</button>
+            <button class="chip" data-value="terraced">Terraced</button>
+            <button class="chip" data-value="flat">Flat</button>
+            <button class="chip" data-value="bungalow">Bungalow</button>
+          </div>
+        </div>
+
+        <!-- BEDS -->
+        <div class="sheet-section">
+          <div class="sheet-section-h">
+            <div class="sheet-section-title">Bedrooms (min)</div>
+          </div>
+          <div class="chip-group" data-multi="false" data-key="beds">
+            <button class="chip" data-value="any">Any</button>
+            <button class="chip" data-value="1">1+</button>
+            <button class="chip" data-value="2">2+</button>
+            <button class="chip" data-value="3">3+</button>
+            <button class="chip" data-value="4">4+</button>
+            <button class="chip" data-value="5">5+</button>
+          </div>
+        </div>
+
+        <!-- EPC -->
+        <div class="sheet-section">
+          <div class="sheet-section-h">
+            <div class="sheet-section-title">EPC rating (min)</div>
+          </div>
+          <div class="chip-group" data-multi="false" data-key="epc">
+            <button class="chip" data-value="any">Any</button>
+            <button class="chip epc-chip" data-value="A"><span class="epc-tile" style="background:#008060;">A</span>A</button>
+            <button class="chip epc-chip" data-value="B"><span class="epc-tile" style="background:#2EAB55;">B</span>B+</button>
+            <button class="chip epc-chip" data-value="C"><span class="epc-tile" style="background:#93C949;">C</span>C+</button>
+            <button class="chip epc-chip" data-value="D"><span class="epc-tile" style="background:#F4D63A;">D</span>D+</button>
+          </div>
+        </div>
+
+        <!-- HEALTHSCORE SLIDER -->
+        <div class="sheet-section">
+          <div class="sheet-section-h">
+            <div class="sheet-section-title">HealthScore™ (min)</div>
+            <div class="sheet-section-value" id="hsValue">Any</div>
+          </div>
+          <div class="slider-row">
+            <input class="slider" id="hsSlider" type="range" min="0" max="90" step="5" value="0" oninput="onHsInput(this)" />
+            <div class="slider-scale"><span>Any</span><span>30</span><span>50</span><span>70</span><span>90</span></div>
+          </div>
+        </div>
+
+        <!-- PASSPORT TOGGLE -->
+        <div class="sheet-section">
+          <div class="toggle-row" id="passportRow" onclick="togglePassport()">
+            <div class="tr-text">
+              <div class="tr-title">Verified Passport only</div>
+              <div class="tr-sub">Show only properties with a full solicitor-grade Passport.</div>
+            </div>
+            <div class="toggle" id="passportToggle"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="sheet-foot">
+        <button class="sheet-cancel" onclick="closeSheet()">Cancel</button>
+        <button class="sheet-apply" onclick="applyDraft()">
+          <span>Apply</span>
+          <span class="count" id="applyCount" style="display:none;">0</span>
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Notes -->
+  <div class="notes-panel">
+    <div class="stage-tag">What's new</div>
+    <h3>Distance picker + filters.</h3>
+
+    <div class="note-block">
+      <div class="note-name">One sheet for everything</div>
+      <div class="note-text">Tap <b>Exact ▾</b> in the search bar to open a single bottom sheet. Distance lives on top (the primary affordance, since it's what the pill claims), and the rest of the filter controls sit below. No separate filter screen, no chrome creep on the home page.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Distance as a proper picker</div>
+      <div class="note-text">Six options as a radio list: Exact, 0.5, 1, 2, 5, 10 miles. Each row has a one-line hint ("Same street &amp; immediate neighbours" etc.) so the choice means something — instead of a row of bare numbers.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Filters that earn their place</div>
+      <div class="note-text">Property type (multi-select chips), bedrooms (min), EPC band (min, with the official band colours), HealthScore minimum (slider, snaps in fives), and a "Verified Passport only" toggle. No price, no listing-status pills, no clutter.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Draft state — Apply commits</div>
+      <div class="note-text">All changes inside the sheet are a draft. <b>Apply</b> commits them (updates the pill label, shows the count badge, and reveals a summary chip row above results). <b>Cancel</b> or backdrop tap discards. <b>Reset</b> clears the draft back to defaults.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Feedback on the pill</div>
+      <div class="note-text">When filters are active the "Exact ▾" pill turns teal, shows the new distance label (e.g. "1 mi") and a small gold dot to signal that filters are layered on top of distance. A summary chip row appears under the search so the user can remove individual filters without re-opening the sheet.</div>
+    </div>
+
+    <div class="note-block">
+      <div class="note-name">Try it</div>
+      <div class="note-text">Tap <b>Exact ▾</b>. Pick a distance. Toggle a few filter chips. Drag the HealthScore slider. Tap <b>Apply</b>. Then look at the pill label and the summary row. Tap an "x" on a summary chip to remove just that filter. Tap the pill again — your selections are remembered.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast-host" id="toast"></div>
+
+<script>
+function t(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(window._tt);
+  window._tt = setTimeout(() => { el.style.opacity = '0'; }, 1800);
+}
+
+function openScreen(screen) {
+  document.body.dataset.screen = screen;
+  document.querySelectorAll('.screen-btn').forEach(b => b.classList.toggle('active', b.dataset.screen === screen));
+  const phoneBody = document.getElementById('phoneBody');
+  if (phoneBody) phoneBody.scrollTop = 0;
+}
+
+// Drag-to-scroll for horizontal rows
+document.querySelectorAll('.props-row, .recent-row').forEach(row => {
+  let isDown = false, startX, scrollLeft;
+  row.addEventListener('mousedown', (e) => {
+    isDown = true;
+    row.style.cursor = 'grabbing';
+    startX = e.pageX - row.offsetLeft;
+    scrollLeft = row.scrollLeft;
+  });
+  row.addEventListener('mouseleave', () => { isDown = false; row.style.cursor = 'grab'; });
+  row.addEventListener('mouseup', () => { isDown = false; row.style.cursor = 'grab'; });
+  row.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - row.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    row.scrollLeft = scrollLeft - walk;
+  });
+  row.style.cursor = 'grab';
+});
+
+/* ════════════════════════════════════════════════════════════
+   DISTANCE + FILTERS · state, sheet, apply
+   ════════════════════════════════════════════════════════════ */
+
+const defaultState = () => ({
+  distance: 0,            // 0 = exact, otherwise miles
+  ptype: ['any'],         // multi-select
+  beds: 'any',            // single
+  epc: 'any',             // single
+  hs: 0,                  // healthscore min, 0 = any
+  passport: false
+});
+
+// committed state (what the page reflects)
+let committed = defaultState();
+// draft (what's in the sheet right now)
+let draft = defaultState();
+
+function openSheet() {
+  draft = JSON.parse(JSON.stringify(committed));
+  paintSheet();
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('sheetBackdrop').classList.add('open');
+}
+function closeSheet() {
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheetBackdrop').classList.remove('open');
+}
+
+function paintSheet() {
+  // distance
+  document.querySelectorAll('#distList .dist-row').forEach(r => {
+    const v = parseFloat(r.dataset.dist);
+    r.classList.toggle('active', v === draft.distance);
+  });
+  document.getElementById('distValue').textContent = distLabelLong(draft.distance);
+
+  // chip groups
+  document.querySelectorAll('.chip-group').forEach(group => {
+    const key = group.dataset.key;
+    const multi = group.dataset.multi === 'true';
+    group.querySelectorAll('.chip').forEach(c => {
+      const val = c.dataset.value;
+      const active = multi
+        ? (draft[key] || []).includes(val)
+        : draft[key] === val;
+      c.classList.toggle('active', active);
+    });
+  });
+
+  // slider
+  const hs = document.getElementById('hsSlider');
+  hs.value = draft.hs;
+  document.getElementById('hsValue').textContent = draft.hs === 0 ? 'Any' : draft.hs + '+';
+  hs.style.setProperty('--fill', (draft.hs / 90 * 100) + '%');
+
+  // passport toggle
+  document.getElementById('passportToggle').classList.toggle('on', draft.passport);
+
+  // reset disabled state
+  document.getElementById('sheetReset').disabled = isDefault(draft);
+
+  // apply count badge
+  const n = countNonDefaults(draft);
+  const cnt = document.getElementById('applyCount');
+  cnt.style.display = n > 0 ? 'inline-flex' : 'none';
+  cnt.textContent = n;
+}
+
+function distLabelLong(d) {
+  if (d === 0) return 'Just this address';
+  if (d === 0.5) return 'Within ½ mile';
+  return 'Within ' + d + ' miles';
+}
+function distLabelShort(d) {
+  if (d === 0) return 'Exact';
+  if (d === 0.5) return '½ mi';
+  return d + ' mi';
+}
+
+// distance rows
+document.querySelectorAll('#distList .dist-row').forEach(r => {
+  r.addEventListener('click', () => {
+    draft.distance = parseFloat(r.dataset.dist);
+    paintSheet();
+  });
+});
+
+// chip group clicks
+document.querySelectorAll('.chip-group').forEach(group => {
+  const key = group.dataset.key;
+  const multi = group.dataset.multi === 'true';
+  group.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => {
+      const val = c.dataset.value;
+      if (multi) {
+        let cur = draft[key] || [];
+        if (val === 'any') {
+          cur = ['any'];
+        } else {
+          cur = cur.filter(v => v !== 'any');
+          if (cur.includes(val)) {
+            cur = cur.filter(v => v !== val);
+            if (cur.length === 0) cur = ['any'];
+          } else {
+            cur.push(val);
+          }
+        }
+        draft[key] = cur;
+      } else {
+        draft[key] = val;
+      }
+      paintSheet();
+    });
+  });
+});
+
+// slider
+function onHsInput(el) {
+  draft.hs = parseInt(el.value, 10);
+  el.style.setProperty('--fill', (draft.hs / 90 * 100) + '%');
+  document.getElementById('hsValue').textContent = draft.hs === 0 ? 'Any' : draft.hs + '+';
+  paintSheet();
+}
+
+// passport toggle
+function togglePassport() {
+  draft.passport = !draft.passport;
+  paintSheet();
+}
+
+function resetDraft() {
+  draft = defaultState();
+  paintSheet();
+}
+
+function isDefault(s) {
+  return s.distance === 0
+    && Array.isArray(s.ptype) && s.ptype.length === 1 && s.ptype[0] === 'any'
+    && s.beds === 'any'
+    && s.epc === 'any'
+    && s.hs === 0
+    && s.passport === false;
+}
+
+function countNonDefaults(s) {
+  let n = 0;
+  if (s.distance !== 0) n++;
+  if (!(s.ptype.length === 1 && s.ptype[0] === 'any')) n += s.ptype.length;
+  if (s.beds !== 'any') n++;
+  if (s.epc !== 'any') n++;
+  if (s.hs !== 0) n++;
+  if (s.passport) n++;
+  return n;
+}
+
+function applyDraft() {
+  committed = JSON.parse(JSON.stringify(draft));
+  paintCommitted();
+  closeSheet();
+  const n = countNonDefaults(committed);
+  if (n === 0) {
+    t('Filters cleared');
+  } else {
+    t('Filters applied · ' + n);
+  }
+}
+
+const PTYPE_LABELS = {
+  any: 'Any type', detached: 'Detached', semi: 'Semi',
+  terraced: 'Terraced', flat: 'Flat', bungalow: 'Bungalow'
+};
+
+function paintCommitted() {
+  // pill
+  const btn = document.getElementById('distBtn');
+  const lbl = document.getElementById('distBtnLabel');
+  lbl.textContent = distLabelShort(committed.distance);
+
+  const filterCount = countNonDefaults(committed) - (committed.distance !== 0 ? 1 : 0);
+  // pill teal if any non-default (distance or filters)
+  btn.classList.toggle('has-filters', !isDefault(committed));
+
+  // summary row
+  const sum = document.getElementById('filterSummary');
+  sum.innerHTML = '';
+  const chips = [];
+  if (committed.distance !== 0) chips.push({ label: distLabelShort(committed.distance), key: 'distance' });
+  if (!(committed.ptype.length === 1 && committed.ptype[0] === 'any')) {
+    committed.ptype.forEach(v => chips.push({ label: PTYPE_LABELS[v] || v, key: 'ptype:' + v }));
+  }
+  if (committed.beds !== 'any') chips.push({ label: committed.beds + '+ beds', key: 'beds' });
+  if (committed.epc !== 'any') chips.push({ label: 'EPC ' + committed.epc + '+', key: 'epc' });
+  if (committed.hs !== 0) chips.push({ label: 'HS ' + committed.hs + '+', key: 'hs' });
+  if (committed.passport) chips.push({ label: 'Passport only', key: 'passport' });
+
+  if (chips.length === 0) {
+    sum.classList.remove('visible');
+    return;
+  }
+  sum.classList.add('visible');
+  chips.forEach(c => {
+    const el = document.createElement('span');
+    el.className = 'fs-chip';
+    el.innerHTML = '<span>' + c.label + '</span><span class="x" data-key="' + c.key + '">×</span>';
+    sum.appendChild(el);
+  });
+  const clear = document.createElement('button');
+  clear.className = 'fs-clear';
+  clear.textContent = 'Clear all';
+  clear.onclick = () => { committed = defaultState(); paintCommitted(); t('Filters cleared'); };
+  sum.appendChild(clear);
+
+  sum.querySelectorAll('.x').forEach(x => {
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const k = x.dataset.key;
+      if (k === 'distance') committed.distance = 0;
+      else if (k.startsWith('ptype:')) {
+        const v = k.slice(6);
+        committed.ptype = committed.ptype.filter(p => p !== v);
+        if (committed.ptype.length === 0) committed.ptype = ['any'];
+      }
+      else if (k === 'beds') committed.beds = 'any';
+      else if (k === 'epc') committed.epc = 'any';
+      else if (k === 'hs') committed.hs = 0;
+      else if (k === 'passport') committed.passport = false;
+      paintCommitted();
+    });
+  });
+}
+
+function runSearch() {
+  const inp = document.querySelector('.exp-search-input');
+  const q = (inp.value || '').trim() || '<empty>';
+  const parts = ['Search: ' + q];
+  parts.push(distLabelShort(committed.distance));
+  const n = countNonDefaults(committed) - (committed.distance !== 0 ? 1 : 0);
+  if (n > 0) parts.push('+' + n + ' filter' + (n === 1 ? '' : 's'));
+  t(parts.join(' · '));
+}
+
+// initial paint
+paintCommitted();
+</script>
+
+</body>
+</html>
