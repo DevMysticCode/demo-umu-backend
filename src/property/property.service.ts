@@ -1066,6 +1066,10 @@ export class PropertyService {
         include: {
           passports: {
             where: { type: 'SELLER' },
+            // Newest first so the de-dup below picks the freshest passport
+            // when historical data has duplicates (a now-fixed bug used to
+            // create two passports per claim).
+            orderBy: { createdAt: 'desc' },
             select: {
               id: true,
               status: true,
@@ -1102,7 +1106,12 @@ export class PropertyService {
       }
 
       const items = rows.map(({ passports, ...p }) => {
-        const passport = (passports as any[])?.[0] ?? null;
+        // Pick a PUBLISHED passport when one exists, even if an older
+        // in-progress duplicate sits alongside it. Keeps search badges
+        // consistent with the detail page (which uses the same rule).
+        const list = (passports as any[]) ?? [];
+        const passport =
+          list.find((x) => x?.status === 'PUBLISHED') ?? list[0] ?? null;
         const isPublished = passport?.status === 'PUBLISHED';
         let passportCompletion: number | null = null;
         if (passport && isPublished) {
@@ -1746,9 +1755,16 @@ export class PropertyService {
     // Normalise casing for properties already in DB with incorrect casing.
     // We surface the seller passport as "the" passport because the public
     // property view is buyer-facing — landlord passports are private to the
-    // landlord and should never be exposed here.
+    // landlord and should never be exposed here. When more than one SELLER
+    // passport exists for a property (legacy duplicates from the old
+    // double-create bug), pick the PUBLISHED one over any in-progress
+    // sibling so the badge state matches the search dropdown.
     const { passports, ...rest } = property as any;
-    const sellerPassport = (passports as any[])?.find((p) => p.type === 'SELLER') ?? null;
+    const sellerPassports = (passports as any[])?.filter((p) => p.type === 'SELLER') ?? [];
+    const sellerPassport =
+      sellerPassports.find((p) => p.status === 'PUBLISHED') ??
+      sellerPassports[0] ??
+      null;
     const normalised = {
       ...rest,
       addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
@@ -4033,6 +4049,13 @@ export class PropertyService {
   }
 
   async completeVerification(propertyId: string, userId: string) {
+    // Mark ownership verified. We DELIBERATELY do NOT create a passport
+    // here — that would silently default to type=SELLER even when the user
+    // is claiming a LANDLORD passport, producing two passports per property
+    // (one SELLER from this path + one LANDLORD from the frontend's
+    // subsequent claimPassport call). The frontend's claimPassport(),
+    // called immediately after this, owns passport creation and knows the
+    // user's chosen type.
     await this.prisma.ownershipVerification.upsert({
       where: { propertyId_userId: { propertyId, userId } },
       update: { status: 'VERIFIED', verifiedAt: new Date() },
@@ -4049,19 +4072,7 @@ export class PropertyService {
     });
     if (!property) throw new Error('Property not found');
 
-    const { passportId } = await this.passportService.createPassport(
-      userId,
-      property.addressLine1,
-      property.postcode,
-      property.id,
-    );
-
-    await this.prisma.ownershipVerification.update({
-      where: { propertyId_userId: { propertyId, userId } },
-      data: { passportId },
-    });
-
-    return { passportId };
+    return { ok: true };
   }
 
   private async generateAndSaveMockProperties(
