@@ -1648,6 +1648,41 @@ export class PropertyService {
       }
     }
 
+    // Recovery: if the property already has a persisted `epcLmkKey` from a
+    // previous enrichment but `epcRecommendations` is still empty (e.g. the
+    // recommendations call failed back then), retry the recommendations
+    // fetch on its own — independent of whether THIS enrichment cycle's
+    // address/UPRN lookup succeeded.
+    const persistedLmk = (property as any).epcLmkKey;
+    const persistedHasRecs =
+      Array.isArray((property as any).epcRecommendations) &&
+      (property as any).epcRecommendations.length > 0;
+    if (persistedLmk && !persistedHasRecs) {
+      console.log(
+        `[Enrich] Retrying recommendations for stored LMK ${persistedLmk}`,
+      );
+      try {
+        const recs = await this.fetchEpcRecommendations(persistedLmk);
+        if (recs.length > 0) {
+          try {
+            const updated = await this.prisma.property.update({
+              where: { id: property.id },
+              data: { epcRecommendations: recs as any },
+            });
+            console.log(
+              `[Enrich] Recovered ${recs.length} recommendations from LMK`,
+            );
+            property = updated;
+          } catch (err) {
+            console.error(`[Enrich] Failed to persist recovered recs:`, err);
+            (property as any).epcRecommendations = recs;
+          }
+        }
+      } catch (err) {
+        console.error(`[Enrich] Recommendations recovery failed:`, err);
+      }
+    }
+
     // Generate titleNumber even if no EPC data found
     if (!property.titleNumber) {
       const titleNumber = this.generateTitleNumber(property);
@@ -1738,6 +1773,111 @@ export class PropertyService {
       property.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) %
       1000000;
     return `${postcode}${hash.toString().padStart(6, '0')}`;
+  }
+
+  /**
+   * Force a fresh EPC enrichment, ignoring the "already has EPC fields"
+   * early-return. Used when the persisted recommendations array is empty
+   * but the property has clearly been seen by the EPC Register before.
+   * Returns the updated property row.
+   */
+  async refreshEpc(id: string): Promise<any | null> {
+    const property = await this.prisma.property.findUnique({
+      where: { id },
+    });
+    if (!property) return null;
+
+    console.log(
+      `[Enrich][force] Refreshing EPC for property ${id} (${property.addressLine1}, ${property.postcode})`,
+    );
+
+    // Try UPRN first, then address fallback. Mirrors the normal enrichment
+    // flow but is unconditional — even already-enriched properties get a
+    // fresh round-trip to the EPC Register.
+    let epcData: any = null;
+    if (property.uprn) {
+      epcData = await this.fetchEpcData(property.uprn);
+    }
+    if (!epcData && property.postcode && property.addressLine1) {
+      epcData = await this.fetchEpcDataByAddress(
+        property.postcode,
+        property.addressLine1,
+      );
+    }
+
+    const updateData: any = {};
+    const fresh = epcData;
+    const lmkKey = fresh?.lmkKey || (property as any).epcLmkKey || null;
+
+    if (fresh) {
+      if (fresh.epcRating) updateData.epcRating = fresh.epcRating;
+      if (fresh.epcScore != null) updateData.epcScore = fresh.epcScore;
+      if (fresh.lmkKey) updateData.epcLmkKey = fresh.lmkKey;
+      if (fresh.potentialRating) updateData.epcRatingPotential = fresh.potentialRating;
+      if (fresh.potentialScore != null) updateData.epcScorePotential = fresh.potentialScore;
+      if (fresh.wallsEnergyEff) updateData.wallsEnergyEff = fresh.wallsEnergyEff;
+      if (fresh.wallsDescription) updateData.wallsDescription = fresh.wallsDescription;
+      if (fresh.roofEnergyEff) updateData.roofEnergyEff = fresh.roofEnergyEff;
+      if (fresh.roofDescription) updateData.roofDescription = fresh.roofDescription;
+      if (fresh.floorEnergyEff) updateData.floorEnergyEff = fresh.floorEnergyEff;
+      if (fresh.floorDescription) updateData.floorDescription = fresh.floorDescription;
+      if (fresh.windowsEnergyEff) updateData.windowsEnergyEff = fresh.windowsEnergyEff;
+      if (fresh.windowsDescription) updateData.windowsDescription = fresh.windowsDescription;
+      if (fresh.mainheatEnergyEff) updateData.mainheatEnergyEff = fresh.mainheatEnergyEff;
+      if (fresh.mainheatDescription) updateData.mainheatDescription = fresh.mainheatDescription;
+      if (fresh.mainheatcEnergyEff) updateData.mainheatcEnergyEff = fresh.mainheatcEnergyEff;
+      if (fresh.mainheatcontDescription) updateData.mainheatcontDescription = fresh.mainheatcontDescription;
+      if (fresh.hotWaterEnergyEff) updateData.hotWaterEnergyEff = fresh.hotWaterEnergyEff;
+      if (fresh.hotwaterDescription) updateData.hotwaterDescription = fresh.hotwaterDescription;
+      if (fresh.lightingEnergyEff) updateData.lightingEnergyEff = fresh.lightingEnergyEff;
+      if (fresh.lowEnergyLighting != null) updateData.lowEnergyLighting = fresh.lowEnergyLighting;
+      if (fresh.heatingCostCurrent != null) updateData.heatingCostCurrent = fresh.heatingCostCurrent;
+      if (fresh.hotWaterCostCurrent != null) updateData.hotWaterCostCurrent = fresh.hotWaterCostCurrent;
+      if (fresh.lightingCostCurrent != null) updateData.lightingCostCurrent = fresh.lightingCostCurrent;
+      if (fresh.heatingCostPotential != null) updateData.heatingCostPotential = fresh.heatingCostPotential;
+      if (fresh.hotWaterCostPotential != null) updateData.hotWaterCostPotential = fresh.hotWaterCostPotential;
+      if (fresh.lightingCostPotential != null) updateData.lightingCostPotential = fresh.lightingCostPotential;
+      if (fresh.co2Emissions != null) updateData.co2Emissions = fresh.co2Emissions;
+      if (fresh.co2EmissionsPotential != null) updateData.co2EmissionsPotential = fresh.co2EmissionsPotential;
+    }
+
+    // Always pull recommendations if we have a key — this is the bit the
+    // normal flow often misses because the recs call is nested inside
+    // `if (epcData)`. Here we run it unconditionally as long as we have
+    // the LMK key (either fresh or persisted).
+    if (lmkKey) {
+      try {
+        const recs = await this.fetchEpcRecommendations(lmkKey);
+        if (recs.length > 0) updateData.epcRecommendations = recs as any;
+        console.log(
+          `[Enrich][force] Recommendations fetched for LMK ${lmkKey}: ${recs.length} rows`,
+        );
+      } catch (err) {
+        console.error(`[Enrich][force] Recs fetch failed:`, err);
+      }
+    } else {
+      console.log(`[Enrich][force] No LMK key available for property ${id}`);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      console.log(`[Enrich][force] No fields to update for property ${id}`);
+      return property;
+    }
+
+    updateData.epcEnrichedAt = new Date();
+    try {
+      const updated = await this.prisma.property.update({
+        where: { id },
+        data: updateData,
+      });
+      console.log(
+        `[Enrich][force] Updated property ${id} with ${Object.keys(updateData).length} fields`,
+      );
+      return updated;
+    } catch (err) {
+      console.error(`[Enrich][force] DB update failed:`, err);
+      return { ...property, ...updateData };
+    }
   }
 
   async getPropertyById(id: string): Promise<any | null> {
