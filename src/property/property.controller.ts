@@ -148,6 +148,17 @@ export class PropertyController {
     return this.propertyService.getEnrichmentDebug(id);
   }
 
+  // Force re-fetch of the EPC certificate + recommendations from the EPC
+  // Register, bypassing any "already enriched" early-return. Used by the
+  // homescore page when `epcRecommendations` is empty on the row so we can
+  // recover from a previously-failed enrichment.
+  @Post(':id/epc-refresh')
+  async refreshEpc(@Param('id') id: string): Promise<any> {
+    const data = await this.propertyService.refreshEpc(id);
+    if (!data) throw new NotFoundException('Property not found');
+    return data;
+  }
+
   @Post(':id/homescore')
   @UseGuards(JwtAuthGuard)
   async saveHomeScore(@Param('id') id: string, @Request() req: any, @Body() body: any) {
