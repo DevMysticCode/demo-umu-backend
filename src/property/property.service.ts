@@ -1552,14 +1552,22 @@ export class PropertyService {
    */
   private async fetchEpcTotal(query: string): Promise<number> {
     try {
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(query)}&size=1&from=0`;
+      // The current EPC API ("opendatacommunities") no longer returns a
+      // `total` field — it just returns the requested page. Ask for a
+      // large page (a single UK postcode is always far below 200) and
+      // count returned rows. Falls back to whatever `data.total` is if
+      // a future revision restores the field.
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(query)}&size=200&from=0`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
       if (!res.ok) return -1;
       const data = await res.json();
-      const n = Number(data?.total);
-      return Number.isFinite(n) ? n : -1;
+      if (typeof data?.total === 'number' && Number.isFinite(data.total)) {
+        return data.total;
+      }
+      const rows: any[] = Array.isArray(data?.rows) ? data.rows : [];
+      return rows.length;
     } catch {
       return -1;
     }
