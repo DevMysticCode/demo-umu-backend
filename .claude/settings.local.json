@@ -181,7 +181,8 @@
       "Bash(python -c \"import cairosvg; print\\('cairosvg OK'\\)\")",
       "Bash(python -c \"import cairosvg; print\\('ok'\\)\")",
       "Bash(python)",
-      "Bash(file *.png)"
+      "Bash(file *.png)",
+      "WebFetch(domain:find-energy-certificate.service.gov.uk)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",

@@ -104,19 +104,37 @@ export interface EpcRecommendation {
 /** Map one row of the EPC recommendations API → our canonical shape. */
 function mapEpcRecommendationRow(row: any): EpcRecommendation | null {
   if (!row) return null;
-  const id = String(row['improvement-id'] ?? row['improvement-item'] ?? '').trim();
+  // The EPC opendatacommunities API uses `improvement-item` for the
+  // sequence number (1, 2, 3 …) and `improvement-id` for the category id.
+  // Either is a valid ordering key. Fall back to a hash of the title if
+  // both are absent so a valid row isn't dropped purely on id matching.
+  const id = String(
+    row['improvement-item'] ?? row['improvement-id'] ?? '',
+  ).trim();
+  // The description field is `improvement-descr-text` (no "description"),
+  // not `improvement-description-text`. Older datasets occasionally also
+  // expose the full name, so we try both. Title alias precedence: human-
+  // readable summary → category text → long description.
   const title = String(
-    row['improvement-id-text'] ??
-      row['improvement-summary-text'] ??
+    row['improvement-summary-text'] ??
+      row['improvement-id-text'] ??
+      row['improvement-descr-text'] ??
       row['improvement-description-text'] ??
       '',
   ).trim();
-  if (!id || !title) return null;
+  // A row needs SOME identifiable title — without it the quiz can't
+  // render. But we accept rows with no `id`/`item` and fall back to a
+  // synthesised id (the recs endpoint preserves array order anyway).
+  if (!title) return null;
   return {
-    id,
+    id: id || `rec-${Math.abs(hashCode(title))}`,
     title,
     description:
-      String(row['improvement-description-text'] ?? '').trim() || null,
+      String(
+        row['improvement-descr-text'] ??
+          row['improvement-description-text'] ??
+          '',
+      ).trim() || null,
     costRange: String(row['indicative-cost'] ?? '').trim() || null,
     typicalSaving: parseSavingValue(row['typical-saving']),
     resultingSap: parseIntOrNull(row['energy-performance-rating-improvement']),
@@ -127,6 +145,15 @@ function mapEpcRecommendationRow(row: any): EpcRecommendation | null {
       String(row['improvement-type'] ?? row['improvement-item'] ?? '').trim() ||
       null,
   };
+}
+
+function hashCode(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h << 5) - h + s.charCodeAt(i);
+    h |= 0;
+  }
+  return h;
 }
 
 /** "39" → 39, "39 - 50" → 44 (midpoint), "" → null. */
@@ -496,6 +523,177 @@ function naturalSortByAddress<T extends { addressLine1?: string | null }>(
 
 // Pragmatic UK-postcode test — full and outward formats. Used to decide
 // whether a search query has a finite, EPC-knowable total worth backfilling.
+/**
+ * Find the cert detail-page URL on find-energy-certificate.service.gov.uk
+ * for a property whose address-line-1 we know. The site renders postcode
+ * search results as rows containing `<a href="/energy-certificate/…">`
+ * elements with the visible address text. We look for any anchor whose
+ * text starts with the property's number+street prefix.
+ *
+ * Returns the href (e.g. "/energy-certificate/9100-6241-0722-3698-3463")
+ * or null if no row matched.
+ */
+function findCertHrefForAddress(
+  html: string,
+  addressLine1: string,
+): string | null {
+  if (!html || !addressLine1) return null;
+  const prefix = addressLine1.trim().toLowerCase().split(',')[0].trim();
+  if (!prefix) return null;
+  // Capture every anchor that links to a cert page along with its
+  // visible text. The regex is intentionally lenient about whitespace
+  // between attributes and text content.
+  const anchorRe =
+    /<a\s+[^>]*href="(\/energy-certificate\/[^"#]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = anchorRe.exec(html))) {
+    const href = m[1];
+    const text = m[2]
+      .replace(/<[^>]+>/g, ' ') // strip nested tags
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    if (!text) continue;
+    // Accept any anchor whose visible text starts with the address
+    // prefix (case-insensitive). The site usually renders the full
+    // address as the link text so a strict equality would be too
+    // brittle ("3 Austen Road" vs "3 AUSTEN ROAD, ERITH, DA8 1YA").
+    if (text.startsWith(prefix) || text.includes(prefix)) {
+      return href;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse the "Steps you could take to save energy" block out of a
+ * find-energy-certificate.service.gov.uk cert detail page.
+ *
+ * The page uses GOV.UK design-system markup so each step looks roughly:
+ *   <h3>Step 1: Floor insulation (suspended floor)</h3>
+ *   <dl class="…">
+ *     <dt>Typical installation cost</dt><dd>£800 - £1,200</dd>
+ *     <dt>Typical yearly saving</dt><dd>£122</dd>
+ *     <dt>Potential rating after completing step 1</dt><dd>53 E</dd>
+ *   </dl>
+ *
+ * Some pages render rows as a table instead. We try the dl form first,
+ * then fall back to scanning for `<h3>Step N: …</h3>` followed by the
+ * first `Typical installation cost` / `Typical yearly saving` /
+ * `Potential rating after` text fragments that follow it.
+ */
+function parseRecommendationsFromCertHtml(html: string): EpcRecommendation[] {
+  if (!html) return [];
+
+  // Restrict to the "Steps you could take" section by anchoring on the
+  // actual <h2> heading (not the nav anchor at the top of the page,
+  // which also contains the same text and would otherwise win the
+  // regex match).
+  let section = html;
+  const sectionMatch = html.match(
+    /<h2[^>]*>\s*Steps you could take to save energy\s*<\/h2>([\s\S]*?)(?=<h2|<footer|<\/main>|$)/i,
+  );
+  if (sectionMatch) section = sectionMatch[1];
+
+  const recs: EpcRecommendation[] = [];
+  // Capture every `Step N: <title>` heading and everything up to the
+  // next step heading (or end of section). We then extract the cost,
+  // saving and resulting-rating from that slice.
+  const stepRe =
+    /<h3[^>]*>\s*Step\s+(\d+)\s*:\s*([\s\S]*?)<\/h3>([\s\S]*?)(?=<h3[^>]*>\s*Step\s+\d+|<h2|$)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = stepRe.exec(section))) {
+    const stepNum = m[1];
+    const titleRaw = m[2]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const body = m[3];
+
+    const cost = extractDdValue(body, /typical\s+installation\s+cost/i);
+    const saving = extractDdValue(body, /typical\s+yearly\s+saving/i);
+    const rating = extractDdValue(body, /potential\s+rating\s+after/i);
+
+    let savingNum: number | null = null;
+    if (saving) {
+      const numMatch = saving.replace(/[,£]/g, '').match(/(\d+)/);
+      if (numMatch) savingNum = parseInt(numMatch[1], 10);
+    }
+    let resultingSap: number | null = null;
+    if (rating) {
+      const sapMatch = rating.match(/(\d+)/);
+      if (sapMatch) resultingSap = parseInt(sapMatch[1], 10);
+    }
+
+    if (!titleRaw) continue;
+    recs.push({
+      id: stepNum || String(recs.length + 1),
+      title: titleRaw,
+      description: null,
+      costRange: cost || null,
+      typicalSaving: savingNum,
+      resultingSap,
+      resultingEnvRating: null,
+      improvementType: null,
+    });
+  }
+  return recs;
+}
+
+/**
+ * Within an HTML fragment that contains GOV.UK summary-list rows, find
+ * the first `<dd>` whose preceding `<dt>` text matches `labelRe` and
+ * return its trimmed text content (with SVG / nested tags stripped).
+ *
+ * The page uses this shape:
+ *   <div class="govuk-summary-list__row">
+ *     <dt class="govuk-summary-list__key …">Typical installation cost</dt>
+ *     <dd class="govuk-summary-list__value …">£15</dd>
+ *   </div>
+ *
+ * Some values are wrapped in SVG (potential rating shows as
+ * `<svg>…<text>76 C</text></svg>`); stripping tags surfaces the text.
+ */
+function extractDdValue(html: string, labelRe: RegExp): string | null {
+  const dlRe = /<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = dlRe.exec(html))) {
+    const labelText = m[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (labelRe.test(labelText)) {
+      return m[2]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&pound;/gi, '£')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+  // Fallback: <p>label</p><p>value</p> or table-row shape.
+  const blockRe =
+    /<(?:p|th|td)[^>]*>([\s\S]*?)<\/(?:p|th|td)>\s*<(?:p|td)[^>]*>([\s\S]*?)<\/(?:p|td)>/gi;
+  while ((m = blockRe.exec(html))) {
+    const labelText = m[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (labelRe.test(labelText)) {
+      return m[2]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&pound;/gi, '£')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+  return null;
+}
+
 function looksLikeUkPostcode(raw: string): boolean {
   if (!raw) return false;
   const s = raw.replace(/\s+/g, '').toUpperCase();
@@ -1055,14 +1253,27 @@ export class PropertyService {
     });
 
     if (effectiveTotal > 0) {
+      // When the user queries a UK postcode the result count is small
+      // (typically <50 deliveries per postcode) AND it's the one case where
+      // pagination consistency matters most — the user scrolls through one
+      // street and expects "1, 2, 3, …, 50" as a single ascending sequence.
+      //
+      // The DB can only sort `addressLine1` lexically ("10" before "2"), so
+      // applying `skip + take` on that lexical order and then re-sorting in
+      // JS produces batches that look fine in isolation but aren't
+      // continuous across page boundaries.
+      //
+      // Fix: for postcode queries, fetch all matching rows in one go,
+      // natural-sort the full list, then slice the requested window. For
+      // broader queries we keep DB pagination (the upstream APIs already
+      // pre-filter, so the visible result set stays small).
+      const isPostcodeQuery = looksLikeUkPostcode(q);
       const rows = await this.prisma.property.findMany({
         where: realDataCacheWhere,
-        // Order by addressLine1 ASC so pagination is deterministic. The JS
-        // pass below (`naturalSortByAddress`) re-orders the page so that
-        // "9 Woodfield Rd" comes before "10 Woodfield Rd" rather than after.
+        // Order by addressLine1 ASC so the lexical fetch is deterministic;
+        // the JS natural-sort below promotes "9 Woodfield Rd" above "10".
         orderBy: { addressLine1: 'asc' },
-        skip: offset,
-        take: limit,
+        ...(isPostcodeQuery ? {} : { skip: offset, take: limit }),
         include: {
           passports: {
             where: { type: 'SELLER' },
@@ -1142,10 +1353,38 @@ export class PropertyService {
           homeScore,
         };
       });
-      return { items: naturalSortByAddress(items), total: effectiveTotal };
+      const sorted = naturalSortByAddress(items);
+      // For postcode queries we fetched the whole result set above so we
+      // can take the requested window from the post-sort list. This is
+      // what guarantees a contiguous "1, 2, 3 …" sequence as the user
+      // scrolls into batch 2, batch 3, etc.
+      const windowed = isPostcodeQuery
+        ? sorted.slice(offset, offset + limit)
+        : sorted;
+      return { items: windowed, total: effectiveTotal };
     }
 
-    // 2. No real data cached — try OS Places API first
+    // 2. No real data cached — try OS Places API first.
+    //    For postcode queries we eagerly fetch the WHOLE result set from
+    //    the upstream so batch 1 / 2 / 3 form a continuous natural order
+    //    once they're sliced. Otherwise the first batch is whatever
+    //    lexical window the upstream returned, and the second batch
+    //    (served from the now-populated cache) won't align with it.
+    const isPostcodeQueryFresh = looksLikeUkPostcode(q);
+    if (isPostcodeQueryFresh) {
+      try {
+        const upstreamTotal = await this.fetchEpcTotal(q);
+        if (upstreamTotal > 0) {
+          // Fetch and persist ALL rows for the postcode, then re-enter the
+          // cache path so the slicing uses the post-sort window.
+          await this.fetchFromEpc(q, 0, upstreamTotal);
+          return this.searchProperties(q, offset, limit);
+        }
+      } catch {
+        /* fall through to existing per-batch behaviour */
+      }
+    }
+
     const osResult = await this.fetchFromOsPlaces(q, offset, limit);
     if (osResult.total > 0) return osResult;
 
@@ -1369,6 +1608,13 @@ export class PropertyService {
       const saved: Property[] = [];
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+        // Use the full cert mapper so we capture EVERY EPC field — most
+        // importantly the lmk-key. Without persisting the lmk-key on
+        // first insert, downstream enrichment has no way to fetch
+        // recommendations for THIS cert and ends up matching a different
+        // (or no) certificate via UPRN/address fallback, which is why
+        // properties were ending up with the wrong scores + empty quiz.
+        const cert = epcRowToCert(row);
         const mapped = epcRowToProperty(row);
         const globalIndex = offset + i;
         const udprn = mapped.uprn
@@ -1386,20 +1632,89 @@ export class PropertyService {
         const pricePerSqm = areaInfo.basePricek * 12;
         const estimatedPrice =
           Math.round((floorM2 * pricePerSqm) / 1000) * 1000;
+
+        // Fetch recommendations for THIS cert up-front using its real
+        // lmk-key. This locks the property to the correct certificate
+        // from the moment of insert, so subsequent enrichment never
+        // overrides it with a wrong-cert match.
+        //
+        // The opendatacommunities recs API is being retired and 404s on
+        // many certs now, so fall back to scraping the consumer site
+        // when the API returns nothing — same data, different source.
+        let recs: any[] = [];
+        if (cert.lmkKey) {
+          try {
+            recs = await this.fetchEpcRecommendations(cert.lmkKey);
+          } catch {
+            /* leave empty — fallback below */
+          }
+        }
+        if (recs.length === 0 && mapped.postcode && mapped.addressLine1) {
+          try {
+            recs = await this.scrapeRecommendationsFromGovSite(
+              mapped.postcode,
+              mapped.addressLine1,
+            );
+          } catch {
+            /* leave empty — recovery path will retry on next load */
+          }
+        }
+
+        const fullEpcFields = {
+          epcRating: cert.epcRating,
+          epcScore: cert.epcScore,
+          epcRatingPotential: cert.potentialRating,
+          epcScorePotential: cert.potentialScore,
+          epcLmkKey: cert.lmkKey,
+          epcEnrichedAt: new Date(),
+          floorAreaSqm: cert.floorAreaSqm,
+          sqft: cert.sqft,
+          bedrooms: cert.bedrooms,
+          tenure: cert.tenure,
+          yearBuilt: cert.yearBuilt,
+          heatingType: cert.heatingType,
+          propertyType: cert.propertyType,
+          constructionAgeBand: cert.constructionAgeBand,
+          builtForm: cert.builtForm,
+          lodgementDate: cert.lodgementDate,
+          heatingCostCurrent: cert.heatingCostCurrent,
+          hotWaterCostCurrent: cert.hotWaterCostCurrent,
+          lightingCostCurrent: cert.lightingCostCurrent,
+          heatingCostPotential: cert.heatingCostPotential,
+          hotWaterCostPotential: cert.hotWaterCostPotential,
+          lightingCostPotential: cert.lightingCostPotential,
+          co2Emissions: cert.co2Emissions,
+          co2EmissionsPotential: cert.co2EmissionsPotential,
+          wallsEnergyEff: cert.wallsEnergyEff,
+          wallsDescription: cert.wallsDescription,
+          roofEnergyEff: cert.roofEnergyEff,
+          roofDescription: cert.roofDescription,
+          floorEnergyEff: cert.floorEnergyEff,
+          floorDescription: cert.floorDescription,
+          windowsEnergyEff: cert.windowsEnergyEff,
+          windowsDescription: cert.windowsDescription,
+          glazedArea: cert.glazedArea,
+          multiGlazeProportion: cert.multiGlazeProportion,
+          mainheatEnergyEff: cert.mainheatEnergyEff,
+          mainheatDescription: cert.mainheatDescription,
+          mainheatcEnergyEff: cert.mainheatcEnergyEff,
+          hotWaterEnergyEff: cert.hotWaterEnergyEff,
+          hotwaterDescription: cert.hotwaterDescription,
+          secondheatDescription: cert.secondheatDescription,
+          mainheatcontDescription: cert.mainheatcontDescription,
+          mechanicalVentilation: cert.mechanicalVentilation,
+          lightingEnergyEff: cert.lightingEnergyEff,
+          lowEnergyLighting: cert.lowEnergyLighting,
+          ...(cert.councilTaxBand ? { councilTaxBand: cert.councilTaxBand } : {}),
+          ...(recs.length > 0 ? { epcRecommendations: recs as any } : {}),
+        };
+
         try {
           const prop = await this.prisma.property.upsert({
             where: { udprn },
-            update: {
-              epcRating: mapped.epcRating,
-              epcScore: mapped.epcScore,
-              floorAreaSqm: mapped.floorAreaSqm,
-              heatingType: mapped.heatingType,
-              co2Emissions: mapped.co2Emissions,
-              ...(mapped.councilTaxBand
-                ? { councilTaxBand: mapped.councilTaxBand }
-                : {}),
-              epcEnrichedAt: new Date(),
-            },
+            // Overwrite with the fresh cert so older rows that were
+            // stored before the V2 fields existed get the full data.
+            update: fullEpcFields,
             create: {
               udprn,
               uprn: mapped.uprn,
@@ -1411,20 +1726,9 @@ export class PropertyService {
               postcode: mapped.postcode || query.toUpperCase(),
               latitude: jLat,
               longitude: jLon,
-              propertyType: mapped.propertyType,
-              bedrooms: mapped.bedrooms,
-              sqft: mapped.sqft,
-              floorAreaSqm: mapped.floorAreaSqm,
-              epcRating: mapped.epcRating,
-              epcScore: mapped.epcScore,
-              tenure: mapped.tenure,
-              yearBuilt: mapped.yearBuilt,
-              heatingType: mapped.heatingType,
-              co2Emissions: mapped.co2Emissions,
-              councilTaxBand: mapped.councilTaxBand,
               estimatedPrice,
               imageUrl: null,
-              epcEnrichedAt: new Date(),
+              ...fullEpcFields,
             },
           });
           saved.push(prop);
@@ -1791,23 +2095,53 @@ export class PropertyService {
       `[Enrich][force] Refreshing EPC for property ${id} (${property.addressLine1}, ${property.postcode})`,
     );
 
-    // Try UPRN first, then address fallback. Mirrors the normal enrichment
-    // flow but is unconditional — even already-enriched properties get a
-    // fresh round-trip to the EPC Register.
+    // Re-fetch strategy.
+    //
+    // KNOWN OPEN DATA COMMUNITIES API BUG: the `/api/v1/domestic/search`
+    // endpoint silently ignores `?lmk-key=X` and returns an arbitrary
+    // first row, NOT the cert with that key. So we can never use the
+    // search endpoint to verify a persisted key — doing so swaps the
+    // cert under us and corrupts the property (this happened to 3
+    // Austen Road).
+    //
+    // Rules:
+    //   1. If we ALREADY have a persisted `epcLmkKey`, trust it. Don't
+    //      re-fetch the cert. Only use the key to top up missing recs.
+    //   2. If we DON'T have a persisted key, try UPRN → address lookup
+    //      once. Store whatever cert comes back as the canonical match.
+    //   3. Never overwrite `epcLmkKey` once set. The key is the
+    //      identity of the cert; if it changes, we have a different
+    //      property's data and that's worse than stale data.
+    const persistedLmk = (property as any).epcLmkKey || null;
     let epcData: any = null;
-    if (property.uprn) {
-      epcData = await this.fetchEpcData(property.uprn);
-    }
-    if (!epcData && property.postcode && property.addressLine1) {
-      epcData = await this.fetchEpcDataByAddress(
-        property.postcode,
-        property.addressLine1,
-      );
+
+    if (!persistedLmk) {
+      if (property.uprn) {
+        epcData = await this.fetchEpcData(property.uprn);
+        if (epcData) {
+          console.log(
+            `[Enrich][force] UPRN lookup hit (lmk=${epcData.lmkKey})`,
+          );
+        }
+      }
+      if (!epcData && property.postcode && property.addressLine1) {
+        epcData = await this.fetchEpcDataByAddress(
+          property.postcode,
+          property.addressLine1,
+        );
+        if (epcData) {
+          console.log(
+            `[Enrich][force] Address lookup hit (lmk=${epcData.lmkKey})`,
+          );
+        }
+      }
     }
 
     const updateData: any = {};
     const fresh = epcData;
-    const lmkKey = fresh?.lmkKey || (property as any).epcLmkKey || null;
+    // The lmk key we use for recs is ALWAYS the persisted one when set.
+    // Only when no key was persisted do we accept a freshly-discovered one.
+    const lmkKey = persistedLmk || fresh?.lmkKey || null;
 
     if (fresh) {
       if (fresh.epcRating) updateData.epcRating = fresh.epcRating;
@@ -1847,13 +2181,44 @@ export class PropertyService {
     // the LMK key (either fresh or persisted).
     if (lmkKey) {
       try {
-        const recs = await this.fetchEpcRecommendations(lmkKey);
-        if (recs.length > 0) updateData.epcRecommendations = recs as any;
+        let recs = await this.fetchEpcRecommendations(lmkKey);
         console.log(
-          `[Enrich][force] Recommendations fetched for LMK ${lmkKey}: ${recs.length} rows`,
+          `[Enrich][force] Recommendations from API for LMK ${lmkKey}: ${recs.length} rows`,
         );
+        // The opendatacommunities recs endpoint 404s for many certs as
+        // the dataset is being retired. Fall back to scraping the
+        // consumer site, which still renders the same recommendations.
+        if (
+          recs.length === 0 &&
+          property.postcode &&
+          property.addressLine1
+        ) {
+          recs = await this.scrapeRecommendationsFromGovSite(
+            property.postcode,
+            property.addressLine1,
+          );
+          console.log(
+            `[Enrich][force] Recommendations from gov scrape: ${recs.length} rows`,
+          );
+        }
+        if (recs.length > 0) updateData.epcRecommendations = recs as any;
       } catch (err) {
         console.error(`[Enrich][force] Recs fetch failed:`, err);
+      }
+    } else if (property.postcode && property.addressLine1) {
+      // No LMK key on file — still try the gov-site scrape using the
+      // address. Often gets us recs even when the API never matched.
+      try {
+        const recs = await this.scrapeRecommendationsFromGovSite(
+          property.postcode,
+          property.addressLine1,
+        );
+        console.log(
+          `[Enrich][force] Recommendations from gov scrape (no LMK): ${recs.length} rows`,
+        );
+        if (recs.length > 0) updateData.epcRecommendations = recs as any;
+      } catch (err) {
+        console.error(`[Enrich][force] Gov scrape failed:`, err);
       }
     } else {
       console.log(`[Enrich][force] No LMK key available for property ${id}`);
@@ -3338,6 +3703,95 @@ export class PropertyService {
   }
 
   /**
+   * Scrape "Steps you could take to save energy" from the consumer-facing
+   * find-energy-certificate.service.gov.uk site, using the property's
+   * postcode + address as the lookup key.
+   *
+   * Used as a fallback when the opendatacommunities recommendations API
+   * 404s (it returned 404 for some certs in Dec 2025+ as the dataset is
+   * being retired). The consumer site renders the same recommendations
+   * from a different backend and is still live.
+   */
+  private async scrapeRecommendationsFromGovSite(
+    postcode: string,
+    addressLine1: string,
+  ): Promise<EpcRecommendation[]> {
+    if (!postcode || !addressLine1) return [];
+    try {
+      // Step 1: find the consumer-site cert URL for this address.
+      const searchUrl = `https://find-energy-certificate.service.gov.uk/find-a-certificate/search-by-postcode?postcode=${encodeURIComponent(postcode)}`;
+      const searchRes = await fetch(searchUrl, {
+        headers: { Accept: 'text/html', 'User-Agent': 'umu-homescore/1.0' },
+      });
+      if (!searchRes.ok) {
+        console.log(`[EPC][scrape] Postcode search HTTP ${searchRes.status}`);
+        return [];
+      }
+      const searchHtml = await searchRes.text();
+
+      // Find the anchor whose visible text contains the property's
+      // address line. The consumer site renders rows roughly as:
+      //   <a href="/energy-certificate/XXXX-XXXX-...">3 Austen Road, Erith, DA8 1YA</a>
+      // We accept any anchor that links to /energy-certificate/ AND
+      // whose link text starts with the property's number+street prefix.
+      const certHref = findCertHrefForAddress(searchHtml, addressLine1);
+      if (!certHref) {
+        console.log(
+          `[EPC][scrape] No cert link found for "${addressLine1}" in postcode ${postcode}`,
+        );
+        return [];
+      }
+      const certUrl = certHref.startsWith('http')
+        ? certHref
+        : `https://find-energy-certificate.service.gov.uk${certHref}`;
+      console.log(`[EPC][scrape] Matched cert URL: ${certUrl}`);
+
+      // Step 2: fetch the cert detail page (which contains the Steps).
+      const certRes = await fetch(certUrl, {
+        headers: { Accept: 'text/html', 'User-Agent': 'umu-homescore/1.0' },
+      });
+      if (!certRes.ok) {
+        console.log(`[EPC][scrape] Cert page HTTP ${certRes.status}`);
+        return [];
+      }
+      const certHtml = await certRes.text();
+
+      // Step 3: parse the steps out of the HTML.
+      const recs = parseRecommendationsFromCertHtml(certHtml);
+      console.log(`[EPC][scrape] Parsed ${recs.length} steps from cert page`);
+      return recs;
+    } catch (err) {
+      console.error(`[EPC][scrape] Failed:`, err);
+      return [];
+    }
+  }
+
+  /**
+   * Look up a single EPC certificate by its LMK key. Used when we already
+   * know which cert a property maps to (because we stored the key during
+   * an earlier search) — avoids the UPRN/address ambiguity that can
+   * return a sibling property's certificate.
+   */
+  private async fetchEpcByLmkKey(lmkKey: string): Promise<EpcCert | null> {
+    if (!lmkKey) return null;
+    try {
+      // The EPC search endpoint supports filtering on `lmk-key` directly,
+      // which returns the single row for that certificate.
+      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?lmk-key=${encodeURIComponent(lmkKey)}&size=1`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const row = data?.rows?.[0];
+      if (!row) return null;
+      return epcRowToCert(row);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Pull the EPC Register's improvement recommendations for a single
    * certificate (identified by its LMK key). Each row is reshaped into our
    * canonical shape used by the simulator's improvement cards. Returns an
@@ -3348,23 +3802,58 @@ export class PropertyService {
     lmkKey: string,
   ): Promise<EpcRecommendation[]> {
     if (!lmkKey) return [];
-    try {
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/recommendations?lmk-key=${encodeURIComponent(lmkKey)}`;
-      const res = await fetch(url, {
-        headers: {
-          Authorization: epcAuthHeader(),
-          Accept: 'application/json',
-        },
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      const rows: any[] = Array.isArray(data?.rows) ? data.rows : [];
-      return rows
-        .map((r) => mapEpcRecommendationRow(r))
-        .filter((r): r is EpcRecommendation => !!r);
-    } catch {
-      return [];
+
+    // Try TWO URL shapes — opendatacommunities exposes both, but at
+    // different points in their API life-cycle one or the other has
+    // been the working path. We try the path-based form first because
+    // it's more explicit about scoping to a single cert; fall back to
+    // the query-string filter form if that 404s.
+    const urls = [
+      `https://epc.opendatacommunities.org/api/v1/domestic/certificate/${encodeURIComponent(lmkKey)}/recommendations`,
+      `https://epc.opendatacommunities.org/api/v1/domestic/recommendations?lmk-key=${encodeURIComponent(lmkKey)}`,
+    ];
+
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          headers: {
+            Authorization: epcAuthHeader(),
+            Accept: 'application/json',
+          },
+        });
+        if (!res.ok) {
+          console.log(
+            `[EPC][recs] HTTP ${res.status} for ${url}: ${await res.text().catch(() => '')}`,
+          );
+          continue;
+        }
+        const data = await res.json();
+        const rows: any[] = Array.isArray(data?.rows)
+          ? data.rows
+          : Array.isArray(data)
+            ? data
+            : [];
+        const mapped = rows
+          .map((r) => mapEpcRecommendationRow(r))
+          .filter((r): r is EpcRecommendation => !!r);
+        console.log(
+          `[EPC][recs] ${url} → ${rows.length} raw rows → ${mapped.length} mapped recs`,
+        );
+        if (rows.length > 0 && mapped.length === 0) {
+          // Surface the first row's keys so we can see what shape EPC is
+          // returning when the mapper is filtering everything out.
+          console.log(
+            `[EPC][recs] First raw row keys: ${Object.keys(rows[0]).join(', ')}`,
+          );
+          console.log(`[EPC][recs] First raw row: ${JSON.stringify(rows[0])}`);
+        }
+        if (mapped.length > 0) return mapped;
+      } catch (err) {
+        console.error(`[EPC][recs] Fetch error for ${url}:`, err);
+      }
     }
+
+    return [];
   }
 
   /**
