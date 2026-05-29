@@ -1128,6 +1128,98 @@ function normaliseAuthority(name: string): string {
     .trim();
 }
 
+/**
+ * Water & sewerage — there is no free per-property water-bill API (water
+ * companies are regional monopolies and don't expose one). The best free
+ * signal is each company's published 2024/25 AVERAGE combined bill
+ * (Discover Water / Ofwat). We map the property to its water company by
+ * postcode area (the first 1-2 letters) and return that company's average.
+ * This is a regional average, NOT a metered reading — flagged as such in
+ * the UI.
+ */
+const WATER_COMPANY_BY_AREA: Record<string, string> = {
+  // Severn Trent — Midlands
+  CV: 'severn-trent', B: 'severn-trent', DY: 'severn-trent', WV: 'severn-trent',
+  WS: 'severn-trent', DE: 'severn-trent', NG: 'severn-trent', LE: 'severn-trent',
+  ST: 'severn-trent', TF: 'severn-trent', WR: 'severn-trent', HR: 'severn-trent',
+  GL: 'severn-trent', SY: 'severn-trent',
+  // Thames Water — London & Thames Valley
+  E: 'thames', EC: 'thames', N: 'thames', NW: 'thames', SE: 'thames',
+  SW: 'thames', W: 'thames', WC: 'thames', RG: 'thames', OX: 'thames',
+  SL: 'thames', HA: 'thames', UB: 'thames', TW: 'thames', KT: 'thames',
+  SM: 'thames', CR: 'thames', GU: 'thames',
+  // United Utilities — North West
+  M: 'united-utilities', L: 'united-utilities', PR: 'united-utilities',
+  BB: 'united-utilities', BL: 'united-utilities', WN: 'united-utilities',
+  WA: 'united-utilities', SK: 'united-utilities', OL: 'united-utilities',
+  CW: 'united-utilities', CA: 'united-utilities', LA: 'united-utilities',
+  // Yorkshire Water
+  LS: 'yorkshire', BD: 'yorkshire', HX: 'yorkshire', HD: 'yorkshire',
+  WF: 'yorkshire', S: 'yorkshire', YO: 'yorkshire', HU: 'yorkshire',
+  DN: 'yorkshire',
+  // Anglian Water — East
+  NR: 'anglian', IP: 'anglian', CB: 'anglian', PE: 'anglian', CO: 'anglian',
+  CM: 'anglian', SS: 'anglian', LN: 'anglian',
+  // Southern Water
+  BN: 'southern', PO: 'southern', SO: 'southern', CT: 'southern',
+  ME: 'southern', TN: 'southern', RH: 'southern',
+  // South West Water
+  EX: 'south-west', PL: 'south-west', TQ: 'south-west', TR: 'south-west',
+  // Wessex Water
+  BA: 'wessex', BS: 'wessex', DT: 'wessex', SP: 'wessex', TA: 'wessex',
+  // Northumbrian Water
+  NE: 'northumbrian', SR: 'northumbrian', DH: 'northumbrian', DL: 'northumbrian',
+  TS: 'northumbrian',
+  // Welsh Water (Dwr Cymru)
+  CF: 'welsh', SA: 'welsh', NP: 'welsh', LL: 'welsh', LD: 'welsh',
+};
+
+// 2024/25 average combined water + sewerage bill (£/yr), Discover Water.
+const WATER_AVG_BILL_2024: Record<string, number> = {
+  'severn-trent': 448,
+  thames: 471,
+  'united-utilities': 472,
+  yorkshire: 460,
+  anglian: 529,
+  southern: 478,
+  'south-west': 533,
+  wessex: 548,
+  northumbrian: 422,
+  welsh: 580,
+};
+
+function estimateWaterCost(postcode?: string | null): {
+  annual: number;
+  company: string | null;
+  source: string;
+} {
+  const ENGLAND_AVG = 473; // Ofwat England & Wales average 2024/25
+  if (!postcode) {
+    return { annual: ENGLAND_AVG, company: null, source: 'England & Wales average 2024/25' };
+  }
+  const area = postcode.trim().toUpperCase().match(/^[A-Z]{1,2}/)?.[0] ?? '';
+  // Try 2-letter then 1-letter prefix.
+  const company =
+    WATER_COMPANY_BY_AREA[area] ??
+    WATER_COMPANY_BY_AREA[area.slice(0, 1)] ??
+    null;
+  if (company && WATER_AVG_BILL_2024[company]) {
+    const names: Record<string, string> = {
+      'severn-trent': 'Severn Trent', thames: 'Thames Water',
+      'united-utilities': 'United Utilities', yorkshire: 'Yorkshire Water',
+      anglian: 'Anglian Water', southern: 'Southern Water',
+      'south-west': 'South West Water', wessex: 'Wessex Water',
+      northumbrian: 'Northumbrian Water', welsh: 'Dŵr Cymru Welsh Water',
+    };
+    return {
+      annual: WATER_AVG_BILL_2024[company],
+      company: names[company] ?? company,
+      source: `${names[company] ?? company} 2024/25 average`,
+    };
+  }
+  return { annual: ENGLAND_AVG, company: null, source: 'England & Wales average 2024/25' };
+}
+
 function estimateCouncilTaxAmount(
   band: string,
   councilName?: string | null,
@@ -1174,6 +1266,20 @@ export class PropertyService {
     private prisma: PrismaService,
     private passportService: PassportService,
   ) {}
+
+  // In-memory enrichment cache. The /enrichment endpoint aggregates ~10 live
+  // external APIs (Overpass, OS, Land Registry, Ofcom…), some of which are
+  // slow or intermittently empty. We cache the last successful aggregate per
+  // property and MERGE empty sections from a fresh fetch with the cached
+  // non-empty values, so schools/transport/sales stop flickering on/off.
+  private enrichmentCache = new Map<string, { data: any; ts: number }>();
+  private static readonly ENRICHMENT_TTL_MS = 24 * 60 * 60 * 1000; // 24h fresh
+
+  // Overpass (OpenStreetMap) circuit breaker. When every mirror fails we skip
+  // Overpass entirely for a cooldown window instead of burning ~60-70s on dead
+  // mirror cascades on every request. OS-sourced data (schools) is unaffected.
+  private overpassDownUntil = 0;
+  private static readonly OVERPASS_COOLDOWN_MS = 5 * 60 * 1000; // 5 min
 
   async searchProperties(
     query: string,
@@ -2438,7 +2544,75 @@ export class PropertyService {
     };
   }
 
+  // Public entry point. Serves a cached aggregate when available (instantly,
+  // refreshing stale data in the background) so the buyer report doesn't wait
+  // ~60-70s on live external APIs, and so intermittently-empty sections
+  // (schools, transport, sales) stop flickering between loads.
   async getPropertyEnrichment(propertyId: string) {
+    const cached = this.enrichmentCache.get(propertyId);
+    const age = cached ? Date.now() - cached.ts : Infinity;
+
+    if (cached && age < PropertyService.ENRICHMENT_TTL_MS) {
+      return cached.data; // fresh enough — serve as-is
+    }
+
+    if (cached) {
+      // Stale: serve cached immediately, refresh in the background. Merge so
+      // any section the refresh can't fetch keeps its last good value.
+      this.computeEnrichment(propertyId)
+        .then((fresh) => {
+          if (!fresh) return;
+          const merged = this.mergeEnrichment(cached.data, fresh);
+          this.enrichmentCache.set(propertyId, { data: merged, ts: Date.now() });
+        })
+        .catch(() => {});
+      return cached.data;
+    }
+
+    // Cold: compute synchronously, then cache.
+    const fresh = await this.computeEnrichment(propertyId);
+    if (fresh) this.enrichmentCache.set(propertyId, { data: fresh, ts: Date.now() });
+    return fresh;
+  }
+
+  // Backfill empty sections of a fresh aggregate from the previous good one.
+  // `fresh` wins whenever it has data; `prev` only fills the gaps. This is
+  // what stops schools/transport/sales toggling to empty when an upstream API
+  // returns nothing on a given request.
+  private mergeEnrichment(prev: any, fresh: any): any {
+    if (!prev) return fresh;
+    if (!fresh) return prev;
+    const out = { ...fresh };
+
+    const prevNearby = prev.nearby || {};
+    const freshNearby = fresh.nearby || {};
+    const mergedNearby: any = { ...freshNearby };
+    for (const key of ['schools', 'trains', 'busStops', 'parks', 'airports', 'amenities', 'listedBuildings']) {
+      const f = Array.isArray(freshNearby[key]) ? freshNearby[key] : [];
+      const p = Array.isArray(prevNearby[key]) ? prevNearby[key] : [];
+      mergedNearby[key] = f.length ? f : p;
+    }
+    out.nearby = mergedNearby;
+
+    const fSales = fresh.salesHistory || {};
+    const pSales = prev.salesHistory || {};
+    out.salesHistory = {
+      thisProperty: (fSales.thisProperty?.length ? fSales.thisProperty : pSales.thisProperty) || [],
+      nearbySales: (fSales.nearbySales?.length ? fSales.nearbySales : pSales.nearbySales) || [],
+    };
+
+    // Scalars / objects: keep fresh when present, else fall back.
+    for (const key of ['broadband', 'mobileSignal', 'floodRisk', 'landRegistryEstimate', 'listedBuildings']) {
+      if (out[key] == null && prev[key] != null) out[key] = prev[key];
+    }
+    // Crime: a non-null object with zero total is effectively "no data this
+    // fetch" — fall back to the last good crime figures if we have them.
+    const freshCrimeEmpty = !out.crime || !(out.crime.totalLast12m > 0);
+    if (freshCrimeEmpty && prev.crime?.totalLast12m > 0) out.crime = prev.crime;
+    return out;
+  }
+
+  private async computeEnrichment(propertyId: string) {
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
     });
@@ -2741,6 +2915,10 @@ export class PropertyService {
       // Council tax from DB (populated when available)
       councilTax,
 
+      // Water & sewerage — regional average by water company (Discover
+      // Water 2024/25). No per-property metered API exists for free.
+      water: estimateWaterCost(property.postcode),
+
       // planning.data.gov.uk — constraints + applications
       planningHistory: planning,
 
@@ -2808,6 +2986,9 @@ export class PropertyService {
   ): Promise<{
     totalLast12m: number;
     byCategory: { category: string; label: string; count: number }[];
+    monthlyTrend: { month: string; count: number }[];
+    trendDirection: 'up' | 'down' | 'flat';
+    yoyChangePct: number | null;
   } | null> {
     try {
       // data.police.uk returns crimes for a given YYYY-MM. Build the last 12
@@ -2822,25 +3003,62 @@ export class PropertyService {
         );
         now.setUTCMonth(now.getUTCMonth() - 1);
       }
-      const results = await Promise.all(
-        months.map((m) =>
-          fetch(
-            `https://data.police.uk/api/crimes-street/all-crime?lat=${lat}&lng=${lon}&date=${m}`,
-            { signal: AbortSignal.timeout(8000) },
-          )
-            .then((r) => (r.ok ? r.json() : []))
-            .catch(() => []),
-        ),
-      );
+      // data.police.uk rate-limits bursts (429s come back as empty), so firing
+      // all 12 months at once intermittently yields zero crime. Fetch in small
+      // sequential chunks and track how many months actually succeeded.
+      let okMonths = 0;
+      const results: any[] = [];
+      const CHUNK = 3;
+      for (let i = 0; i < months.length; i += CHUNK) {
+        const chunk = months.slice(i, i + CHUNK);
+        const chunkRes = await Promise.all(
+          chunk.map((m) =>
+            fetch(
+              `https://data.police.uk/api/crimes-street/all-crime?lat=${lat}&lng=${lon}&date=${m}`,
+              { signal: AbortSignal.timeout(8000) },
+            )
+              .then((r) => {
+                if (!r.ok) return null; // 429 / 5xx → distinguish from genuine empty
+                return r.json();
+              })
+              .catch(() => null),
+          ),
+        );
+        results.push(...chunkRes);
+      }
+      // If every month failed to fetch, treat as "no data" (null) so the
+      // enrichment cache keeps the last good crime figures instead of showing
+      // a spurious zero.
+      for (const r of results) if (Array.isArray(r)) okMonths += 1;
+      if (okMonths === 0) return null;
+
       const counts: Record<string, number> = {};
       let total = 0;
-      for (const arr of results) {
+      // Per-month totals (results[] is newest→oldest, mirroring `months`).
+      const perMonth: { month: string; count: number }[] = [];
+      for (let i = 0; i < results.length; i++) {
+        const arr = results[i];
+        const monthCount = Array.isArray(arr) ? arr.length : 0;
+        perMonth.push({ month: months[i], count: monthCount });
         if (!Array.isArray(arr)) continue;
         for (const c of arr) {
           const cat = c?.category || 'other';
           counts[cat] = (counts[cat] || 0) + 1;
           total += 1;
         }
+      }
+      // Chronological order (oldest→newest) for the trend chart.
+      const monthlyTrend = [...perMonth].reverse();
+      // Year-on-year direction: compare the most recent 6 months vs the
+      // prior 6 months (the 12-month window we already fetched).
+      const recent6 = monthlyTrend.slice(6).reduce((s, m) => s + m.count, 0);
+      const prior6 = monthlyTrend.slice(0, 6).reduce((s, m) => s + m.count, 0);
+      let trendDirection: 'up' | 'down' | 'flat' = 'flat';
+      let yoyChangePct: number | null = null;
+      if (prior6 > 0) {
+        yoyChangePct = Math.round(((recent6 - prior6) / prior6) * 100);
+        if (yoyChangePct > 5) trendDirection = 'up';
+        else if (yoyChangePct < -5) trendDirection = 'down';
       }
       const labelMap: Record<string, string> = {
         'anti-social-behaviour': 'Anti-social behaviour',
@@ -2867,7 +3085,7 @@ export class PropertyService {
           count,
         }))
         .sort((a, b) => b.count - a.count);
-      return { totalLast12m: total, byCategory };
+      return { totalLast12m: total, byCategory, monthlyTrend, trendDirection, yoyChangePct };
     } catch {
       return null;
     }
@@ -3030,14 +3248,21 @@ export class PropertyService {
       label: string,
       query: string,
     ): Promise<{ elements: any[]; ok: boolean }> => {
+      // Circuit breaker: if Overpass was recently found fully down, skip the
+      // mirror cascade entirely so we don't add ~60-70s to every request.
+      if (Date.now() < this.overpassDownUntil) {
+        return { elements: [], ok: false };
+      }
       const failures: string[] = [];
-      for (const url of OVERPASS_MIRRORS) {
+      // Only try the first 3 mirrors with a tight 7s budget each. A dead
+      // Overpass now costs at most ~21s for this batch instead of 6×18s.
+      for (const url of OVERPASS_MIRRORS.slice(0, 3)) {
         try {
           const res = await fetch(url, {
             method: 'POST',
             headers: OVERPASS_HEADERS,
             body: `data=${encodeURIComponent(query)}`,
-            signal: AbortSignal.timeout(18000),
+            signal: AbortSignal.timeout(7000),
           });
           if (!res.ok) {
             failures.push(`${new URL(url).host} → ${res.status}`);
@@ -3095,6 +3320,18 @@ export class PropertyService {
     };
     const overpassFailed = !transportBatch.ok;
     const airportsFailed = !airportsBatch.ok;
+
+    // If every Overpass batch failed, Overpass is effectively down — trip the
+    // breaker so the next few minutes of requests skip it and stay fast.
+    if (
+      !transportBatch.ok &&
+      !airportsBatch.ok &&
+      !heritageBatch.ok &&
+      !amenitiesBatch.ok
+    ) {
+      this.overpassDownUntil =
+        Date.now() + PropertyService.OVERPASS_COOLDOWN_MS;
+    }
 
     // ── Process schools from OS NGD ──
     // OS NGD's `oslandusetierb` is the sub-categorisation under "Education".
@@ -4098,6 +4335,19 @@ export class PropertyService {
         id: 'ancient-woodland',
         label: 'Ancient Woodland',
         category: 'environment',
+      },
+      // Ground-stability signals. There's no free Coal Authority point API,
+      // but planning.data.gov.uk exposes these national datasets which give
+      // partial ground-risk coverage.
+      {
+        id: 'contaminated-land',
+        label: 'Contaminated Land',
+        category: 'ground',
+      },
+      {
+        id: 'mineral-safeguarding-area',
+        label: 'Mineral Safeguarding Area',
+        category: 'ground',
       },
     ];
 
@@ -5677,6 +5927,12 @@ export class PropertyService {
     yourEpcRating: string | null;
     epcDistribution: { letter: string; count: number }[];
     avgEpcScore: number | null;
+    neighbours: {
+      label: string;
+      cost: number;
+      epcRating: string | null;
+      isYou: boolean;
+    }[];
   }> {
     const self: any = await this.prisma.property.findUnique({
       where: { id: propertyId },
@@ -5699,6 +5955,7 @@ export class PropertyService {
         yourEpcRating: null,
         epcDistribution: [],
         avgEpcScore: null,
+        neighbours: [],
       };
     }
 
@@ -5713,6 +5970,7 @@ export class PropertyService {
         yourEpcRating: self.epcRating ?? null,
         epcDistribution: [],
         avgEpcScore: null,
+        neighbours: [],
       };
     }
 
@@ -5732,6 +5990,7 @@ export class PropertyService {
       },
       select: {
         id: true,
+        addressLine1: true,
         epcRating: true,
         epcScore: true,
         heatingCostCurrent: true,
@@ -5760,10 +6019,19 @@ export class PropertyService {
       .sort((a, b) => a.letter.localeCompare(b.letter));
     const avgEpcScore = epcScoreN > 0 ? Math.round(epcScoreSum / epcScoreN) : null;
 
+    // Short street-label from an address line, e.g. "9, Woodfield Road" → "No. 9".
+    const shortLabel = (addr: string | null, isSelf: boolean): string => {
+      if (isSelf) return 'You';
+      const m = (addr || '').match(/^(\d+[A-Za-z]?)/);
+      return m ? `No. ${m[1]}` : (addr || 'Neighbour').split(',')[0].slice(0, 10);
+    };
+
     // Total annual cost per home; drop zero-cost rows (missing data).
     const ranked = neighbours
       .map((n) => ({
         id: n.id as string,
+        addressLine1: (n as any).addressLine1 as string | null,
+        epcRating: n.epcRating as string | null,
         cost:
           Number(n.heatingCostCurrent ?? 0) +
           Number(n.hotWaterCostCurrent ?? 0) +
@@ -5771,6 +6039,22 @@ export class PropertyService {
       }))
       .filter((r) => r.cost > 0)
       .sort((a, b) => a.cost - b.cost); // ascending = cheapest first
+
+    // Per-neighbour list for the Street tab bars. Caps at 12 so the chart
+    // stays readable; always keeps the user's own row in.
+    const buildNeighbourList = () => {
+      const selfRow = ranked.find((r) => r.id === self.id);
+      const others = ranked.filter((r) => r.id !== self.id).slice(0, 11);
+      const list = selfRow ? [selfRow, ...others] : others;
+      return list
+        .sort((a, b) => a.cost - b.cost)
+        .map((r) => ({
+          label: shortLabel(r.addressLine1, r.id === self.id),
+          cost: Math.round(r.cost),
+          epcRating: r.epcRating ?? null,
+          isYou: r.id === self.id,
+        }));
+    };
 
     if (ranked.length < 3) {
       return {
@@ -5782,6 +6066,7 @@ export class PropertyService {
         yourEpcRating: self.epcRating ?? null,
         epcDistribution,
         avgEpcScore,
+        neighbours: buildNeighbourList(),
       };
     }
 
@@ -5808,6 +6093,7 @@ export class PropertyService {
       yourEpcRating: self.epcRating ?? null,
       epcDistribution,
       avgEpcScore,
+      neighbours: buildNeighbourList(),
     };
   }
 

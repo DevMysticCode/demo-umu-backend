@@ -182,7 +182,8 @@
       "Bash(python -c \"import cairosvg; print\\('ok'\\)\")",
       "Bash(python)",
       "Bash(file *.png)",
-      "WebFetch(domain:find-energy-certificate.service.gov.uk)"
+      "WebFetch(domain:find-energy-certificate.service.gov.uk)",
+      "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId=8612\")"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
