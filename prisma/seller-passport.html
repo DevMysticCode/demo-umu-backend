@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UMU · Seller Passport</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-font-smoothing:antialiased; }
+:root {
+  --primary:#231D45; --primary-2:#352D5C;
+  --accent:#00A19A; --accent-dark:#008A84; --accent-light:#00B8B0;
+  --accent-pale:#E5F4F2; --accent-paler:#F2FAF8;
+  --gold:#D9A441; --gold-dark:#A9761C;
+  --bg:#F5F6FA; --page:#F0F2F8; --card:#FFFFFF;
+  --text:#231D45; --text-secondary:#6B7089; --text-faint:#A8A9AD;
+  --border:#E4E5ED; --border-soft:#F0F1F5;
+  --warning:#F5A623; --warning-pale:#FDF3E0; --warning-deep:#7A5500;
+  --error:#E74C5E; --stage:#0e1216;
+  --shadow-card:0 2px 8px rgba(35,29,69,0.05);
+}
+html,body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body { background:radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,161,154,0.08), transparent 60%), var(--stage); min-height:100vh; padding:50px 16px 80px; display:flex; flex-direction:column; align-items:center; gap:24px; }
+.stage-caption { text-align:center; color:rgba(255,255,255,0.6); max-width:760px; font-size:13px; font-weight:500; line-height:1.6; }
+.stage-caption .label { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px; display:block; font-weight:700; }
+.stage-caption .head { font-size:28px; color:white; line-height:1.1; margin-bottom:10px; font-weight:800; letter-spacing:-0.6px; }
+.stage-caption a { color:#5EEAD4; text-decoration:none; font-weight:700; border-bottom:1px dashed rgba(94,234,212,0.4); }
+
+.phone { width:420px; height:880px; background:var(--page); border-radius:44px; overflow:hidden; box-shadow:0 25px 80px rgba(35,29,69,0.2),0 4px 20px rgba(35,29,69,0.08),0 0 0 8px #0a0d12,0 0 0 9px rgba(255,255,255,0.06),inset 0 0 0 1px rgba(255,255,255,0.6); display:flex; flex-direction:column; position:relative; isolation:isolate; }
+.phone::before { content:''; position:absolute; top:11px; left:50%; transform:translateX(-50%); width:118px; height:30px; background:#0a0d12; border-radius:100px; z-index:30; }
+.status-bar { display:flex; justify-content:space-between; align-items:center; padding:14px 28px 8px; font-size:14px; font-weight:700; color:var(--text); background:var(--page); flex-shrink:0; z-index:5; }
+.status-bar .right { display:flex; gap:5px; align-items:center; }
+.signal-bars { display:flex; gap:2px; align-items:flex-end; }
+.signal-bars i { width:3px; background:currentColor; border-radius:1px; display:block; }
+.signal-bars i:nth-child(1){height:4px;} .signal-bars i:nth-child(2){height:6px;} .signal-bars i:nth-child(3){height:8px;} .signal-bars i:nth-child(4){height:10px;}
+.battery { width:24px; height:11px; border:1px solid currentColor; border-radius:3px; position:relative; padding:1.5px; }
+.battery::after { content:''; position:absolute; right:-3px; top:50%; transform:translateY(-50%); width:1.5px; height:5px; background:currentColor; border-radius:0 1px 1px 0; }
+.battery i { height:100%; width:75%; background:currentColor; border-radius:1px; display:block; }
+.body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:var(--page); position:relative; padding-bottom:24px; }
+.body::-webkit-scrollbar { width:0; }
+
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+.anim-1{animation:fadeSlideUp .35s .05s cubic-bezier(.22,1,.36,1) both;}
+.anim-2{animation:fadeSlideUp .35s .14s cubic-bezier(.22,1,.36,1) both;}
+.anim-3{animation:fadeSlideUp .35s .24s cubic-bezier(.22,1,.36,1) both;}
+
+.app-header { display:flex; align-items:center; gap:12px; padding:16px 20px 12px; background:var(--page); }
+.back-btn { width:34px; height:34px; border-radius:10px; background:var(--card); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); font-size:18px; font-weight:800; flex-shrink:0; text-decoration:none; }
+.app-header-title { flex:1; text-align:center; font-size:16px; font-weight:800; color:var(--text); letter-spacing:-0.3px; }
+.app-header-share { font-size:13px; font-weight:800; color:var(--accent-dark); cursor:pointer; }
+
+/* Passport hero — gold seller theme */
+.pp-hero { margin:6px 20px 0; padding:18px; background:linear-gradient(140deg,#C99A3C 0%,#A9761C 55%,#7A540F 100%); border-radius:18px; color:white; display:flex; gap:16px; box-shadow:0 16px 36px -10px rgba(169,118,28,0.40); position:relative; overflow:hidden; }
+.pp-hero::after { content:''; position:absolute; top:-40%; right:-15%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,0.16),transparent 65%); }
+.pp-hero > * { position:relative; z-index:1; }
+.pp-cover { width:96px; height:130px; flex-shrink:0; background:linear-gradient(160deg,#B98A30,#caa24a); border-radius:8px; box-shadow:0 10px 24px rgba(0,0,0,0.25),inset 0 0 0 1px rgba(255,255,255,0.18); padding:14px 10px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; }
+.pp-cover::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; background:rgba(255,255,255,0.25); border-radius:0 2px 2px 0; }
+.pp-cover-eyebrow { font-size:7px; font-weight:800; letter-spacing:1px; color:rgba(255,255,255,0.75); text-transform:uppercase; }
+.pp-cover-logo { font-size:38px; margin:14px 0 10px; line-height:1; }
+.pp-cover-addr { font-size:9px; font-weight:800; line-height:1.3; }
+.pp-cover-pc { font-size:8px; font-weight:600; color:rgba(255,255,255,0.78); margin-top:2px; }
+.pp-hero-body { flex:1; min-width:0; }
+.pp-hero-eyebrow { font-size:9.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color:rgba(255,255,255,0.78); margin-bottom:3px; }
+.pp-hero-addr { font-size:20px; font-weight:800; letter-spacing:-0.5px; line-height:1.1; }
+.pp-hero-pc { font-size:12px; font-weight:600; color:rgba(255,255,255,0.85); margin-bottom:12px; }
+.pp-hero-stats { display:flex; gap:14px; margin-bottom:12px; }
+.pp-hero-stat-num { font-size:24px; font-weight:800; letter-spacing:-0.6px; line-height:1; }
+.pp-hero-stat-num small { font-size:13px; font-weight:700; color:rgba(255,255,255,0.7); }
+.pp-hero-stat-label { font-size:8.5px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; color:rgba(255,255,255,0.7); margin-top:3px; }
+.pp-progress-label { display:flex; justify-content:space-between; font-size:9px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; color:rgba(255,255,255,0.85); margin-bottom:5px; }
+.pp-progress-track { height:7px; background:rgba(255,255,255,0.20); border-radius:100px; position:relative; margin-bottom:4px; }
+.pp-progress-fill { height:100%; background:linear-gradient(90deg,#fff,#ffe9bf); border-radius:100px; transition:width 1.3s cubic-bezier(.22,1,.36,1); }
+.pp-walker { position:absolute; top:-13px; font-size:13px; transition:left 1.3s cubic-bezier(.22,1,.36,1); transform:translateX(-50%); }
+.pp-hero-status { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; }
+.pp-hero-status .dot { width:8px; height:8px; border-radius:50%; background:#5EEAD4; box-shadow:0 0 0 3px rgba(94,234,212,0.3); }
+
+/* Matched buyers banner */
+.match-banner { display:flex; align-items:center; gap:12px; margin:12px 20px 0; padding:14px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent-pale); border-radius:14px; cursor:pointer; transition:all .15s; }
+.match-banner:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,161,154,0.12); border-color:var(--accent); }
+.match-banner-ico { width:38px; height:38px; border-radius:11px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; box-shadow:0 4px 10px rgba(0,161,154,0.30); }
+.match-banner-body { flex:1; min-width:0; }
+.match-banner-title { font-size:13px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.match-banner-title b { color:var(--accent-dark); }
+.match-banner-sub { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; line-height:1.4; }
+.match-banner-arrow { font-size:18px; color:var(--accent-dark); font-weight:800; }
+.match-banner-avatars { display:flex; }
+.match-banner-avatars span { width:24px; height:24px; border-radius:50%; border:2px solid var(--card); margin-left:-8px; background:linear-gradient(135deg,var(--accent-light),var(--accent-dark)); color:white; font-size:9px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.match-banner-avatars span:first-child { margin-left:0; }
+
+/* Publish banner */
+.publish-banner { display:flex; align-items:center; gap:12px; margin:12px 20px 0; padding:15px 16px; background:linear-gradient(135deg,#C99A3C,#A9761C); border-radius:14px; color:white; cursor:pointer; box-shadow:0 10px 26px -8px rgba(169,118,28,0.40); transition:filter .15s; }
+.publish-banner:hover { filter:brightness(1.05); }
+.publish-ico { width:40px; height:40px; border-radius:11px; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+.publish-body { flex:1; }
+.publish-title { font-size:15px; font-weight:800; letter-spacing:-0.3px; }
+.publish-sub { font-size:11.5px; font-weight:600; color:rgba(255,255,255,0.85); margin-top:2px; }
+.publish-arrow { font-size:20px; font-weight:800; }
+.publish-banner.published { background:linear-gradient(135deg,#0F8A6E,#0C6E58); box-shadow:0 10px 26px -8px rgba(15,138,110,0.42); cursor:default; }
+/* publish modal */
+.pub-list { padding:4px 22px 0; display:flex; flex-direction:column; gap:10px; }
+.pub-row { display:flex; gap:12px; align-items:flex-start; }
+.pub-ico { width:34px; height:34px; border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.pub-ico.on { background:var(--accent-pale); }
+.pub-row-t { font-size:13px; font-weight:800; color:var(--text); }
+.pub-row-s { font-size:11.5px; font-weight:600; color:var(--text-secondary); line-height:1.5; margin-top:1px; }
+.pub-tip { margin:14px 22px 0; padding:11px 13px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:11px; font-size:11.5px; font-weight:600; color:var(--text-secondary); line-height:1.5; }
+.pub-tip b { color:var(--accent-dark); font-weight:800; }
+
+.section-h { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1.4px; text-transform:uppercase; padding:18px 20px 8px; }
+
+/* Section card (seller style — no icon box) */
+.sp-item { margin:0 20px 12px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); overflow:hidden; transition:box-shadow .15s,border-color .15s; }
+.sp-item.open { box-shadow:0 8px 20px rgba(35,29,69,0.10); border-color:var(--accent-pale); }
+.sp-head { display:flex; align-items:flex-start; gap:14px; padding:16px 16px 12px; cursor:pointer; }
+.sp-ico { width:58px; height:58px; display:flex; align-items:center; justify-content:center; font-size:42px; flex-shrink:0; filter:drop-shadow(0 4px 7px rgba(35,29,69,0.16)); }
+.sp-info { flex:1; min-width:0; }
+.sp-title { font-size:16px; font-weight:800; color:var(--text); letter-spacing:-0.3px; line-height:1.2; }
+.sp-points { font-size:11.5px; font-weight:800; color:var(--accent-dark); margin-top:3px; }
+.sp-points.pending { color:var(--text-faint); }
+.sp-pills { display:flex; gap:8px; margin-top:9px; flex-wrap:wrap; }
+.sp-pill { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:5px 11px; border-radius:100px; }
+.sp-pill.docs { background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); }
+.sp-pill.docs.pending { background:var(--bg); color:var(--text-faint); border-color:var(--border); }
+.sp-pill.q { background:var(--bg); color:var(--text-secondary); border:1px solid var(--border); }
+.sp-pill.q .qm { color:var(--error); font-weight:900; }
+.sp-help { margin-left:auto; width:24px; height:24px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--text-secondary); cursor:pointer; flex-shrink:0; align-self:flex-start; }
+.sp-help:hover { background:var(--accent-paler); border-color:var(--accent-pale); color:var(--accent-dark); }
+.sp-item.open .sp-help { background:var(--accent); border-color:var(--accent); color:white; }
+.sp-chev { font-size:16px; color:var(--text-faint); font-weight:800; align-self:center; flex-shrink:0; }
+.sp-bar-row { display:flex; align-items:center; gap:10px; margin:2px 16px 14px; }
+.sp-bar { flex:1; height:6px; background:var(--border-soft); border-radius:100px; overflow:hidden; }
+.sp-bar-fill { height:100%; border-radius:100px; transition:width 1s cubic-bezier(.22,1,.36,1); }
+.sp-bar-fill.done { background:linear-gradient(90deg,var(--accent),var(--accent-light)); }
+.sp-bar-fill.pending { background:var(--border); }
+.sp-pct { font-size:12.5px; font-weight:800; color:var(--accent-dark); flex-shrink:0; }
+.sp-pct.pending { color:var(--text-faint); }
+.sp-help-body { max-height:0; overflow:hidden; transition:max-height .35s cubic-bezier(.22,1,.36,1); }
+.sp-item.open .sp-help-body { max-height:360px; }
+.sp-help-inner { margin:0 16px 14px; padding:13px 15px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:12px; font-size:12px; font-weight:500; color:var(--text); line-height:1.55; }
+.sp-help-inner b { font-weight:800; }
+
+/* Modal shell */
+.modal-overlay { position:absolute; inset:0; background:rgba(35,29,69,0.55); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:100; display:none; align-items:flex-end; justify-content:center; }
+.modal-overlay.open { display:flex; animation:fadeOv .25s ease; }
+@keyframes fadeOv { from{opacity:0;} to{opacity:1;} }
+@keyframes slideSheet { from{transform:translateY(100%);} to{transform:translateY(0);} }
+.modal-sheet { width:100%; background:var(--card); border-radius:22px 22px 0 0; box-shadow:0 -8px 30px rgba(35,29,69,0.25); animation:slideSheet .35s cubic-bezier(.22,1,.36,1); max-height:90%; overflow-y:auto; }
+.modal-sheet::-webkit-scrollbar { width:0; }
+.modal-grip { width:42px; height:4px; background:var(--border); border-radius:100px; margin:10px auto 0; }
+.modal-head { padding:14px 22px 6px; }
+.modal-eyebrow { font-size:10px; font-weight:800; color:var(--accent-dark); letter-spacing:1.4px; text-transform:uppercase; margin-bottom:6px; }
+.modal-title { font-size:20px; font-weight:800; color:var(--text); letter-spacing:-0.4px; line-height:1.2; margin-bottom:4px; }
+.modal-sub { font-size:12.5px; font-weight:500; color:var(--text-secondary); line-height:1.5; }
+.modal-cta-row { padding:18px 22px 10px; display:flex; gap:8px; }
+.modal-btn { flex:1; padding:14px; font-family:inherit; font-size:13.5px; font-weight:800; border-radius:12px; cursor:pointer; border:none; }
+.modal-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; box-shadow:0 4px 14px rgba(0,161,154,0.30); }
+.modal-btn.secondary { background:var(--card); border:1.5px solid var(--border); color:var(--text-secondary); }
+.drop-zone { margin:14px 22px 0; padding:26px 18px; background:var(--accent-paler); border:2px dashed var(--accent); border-radius:14px; text-align:center; cursor:pointer; }
+.drop-zone:hover { background:var(--accent-pale); }
+.drop-zone-icon { font-size:36px; margin-bottom:8px; }
+.drop-zone-title { font-size:14px; font-weight:800; color:var(--accent-dark); margin-bottom:4px; }
+.drop-zone-sub { font-size:11.5px; font-weight:500; color:var(--text-secondary); }
+
+/* Matched buyers sheet */
+.match-hero { display:flex; align-items:center; gap:14px; margin:14px 22px 0; padding:16px 18px; background:linear-gradient(140deg,#2D2466,#231D45 60%,#15102E); border-radius:16px; color:white; box-shadow:0 12px 30px -8px rgba(35,29,69,0.40); }
+.match-hero-num { font-size:40px; font-weight:900; letter-spacing:-1.5px; color:#5EEAD4; line-height:1; }
+.match-hero-text { font-size:13px; font-weight:700; line-height:1.4; }
+.match-card { display:flex; align-items:center; gap:12px; margin:10px 22px 0; padding:13px 14px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); cursor:pointer; transition:transform .12s, box-shadow .15s, border-color .15s; }
+.match-card:hover { transform:translateY(-1px); border-color:var(--accent-pale); box-shadow:0 8px 20px rgba(35,29,69,0.10); }
+.match-card:active { transform:scale(0.99); }
+.match-card.top { border:1.5px solid var(--accent); box-shadow:0 6px 18px rgba(0,161,154,0.14); }
+
+/* Buyer detail sheet */
+.bd-hero { display:flex; align-items:center; gap:14px; margin:14px 22px 0; padding:16px; background:linear-gradient(140deg,#2D2466,#231D45 60%,#15102E); border-radius:16px; color:white; }
+.bd-hero-avatar { width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg,var(--accent-light),var(--accent-dark)); display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; }
+.bd-hero-info { flex:1; min-width:0; }
+.bd-hero-name { font-size:17px; font-weight:800; letter-spacing:-0.3px; }
+.bd-hero-sub { font-size:11.5px; font-weight:600; color:rgba(255,255,255,0.72); margin-top:2px; }
+.bd-hero-score { text-align:center; flex-shrink:0; }
+.bd-hero-score-num { font-size:24px; font-weight:900; color:#5EEAD4; letter-spacing:-0.6px; line-height:1; }
+.bd-hero-score-lbl { font-size:8.5px; font-weight:800; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase; margin-top:2px; }
+.bd-sec-h { font-size:10px; font-weight:800; color:var(--text-faint); letter-spacing:1.2px; text-transform:uppercase; margin:16px 22px 8px; }
+.bd-crit { display:flex; flex-wrap:wrap; gap:8px; margin:0 22px; }
+.bd-crit-tile { flex:1; min-width:44%; padding:11px 12px; background:var(--bg); border:1px solid var(--border-soft); border-radius:12px; }
+.bd-crit-label { font-size:9.5px; font-weight:800; color:var(--text-faint); letter-spacing:0.5px; text-transform:uppercase; }
+.bd-crit-val { font-size:13px; font-weight:800; color:var(--text); margin-top:3px; }
+.bd-factor { display:flex; align-items:flex-start; gap:10px; margin:0 22px; padding:9px 0; }
+.bd-factor + .bd-factor { border-top:1px dashed var(--border-soft); }
+.bd-factor-ico { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:white; flex-shrink:0; }
+.bd-factor-ico.ok { background:var(--accent); }
+.bd-factor-ico.warn { background:var(--warning); }
+.bd-factor-ico.no { background:var(--text-faint); }
+.bd-factor-body { flex:1; }
+.bd-factor-title { font-size:12.5px; font-weight:800; color:var(--text); }
+.bd-factor-sub { font-size:11px; font-weight:500; color:var(--text-secondary); margin-top:1px; line-height:1.4; }
+.bd-ready { display:flex; flex-wrap:wrap; gap:6px; margin:0 22px; }
+.bd-ready-chip { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:6px 11px; border-radius:100px; }
+.bd-ready-chip.yes { background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); }
+.bd-ready-chip.no { background:var(--bg); color:var(--text-faint); border:1px solid var(--border); }
+.bd-activity { margin:12px 22px 0; padding:11px 13px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:12px; font-size:11.5px; font-weight:600; color:var(--text-secondary); line-height:1.5; }
+.bd-activity b { color:var(--text); font-weight:800; }
+.bd-cta-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:16px 22px 6px; }
+.bd-cta { padding:13px; font-family:inherit; font-size:12.5px; font-weight:800; border-radius:12px; cursor:pointer; border:1.5px solid var(--border); background:var(--card); color:var(--text); transition:all .15s; }
+.bd-cta:hover { border-color:var(--accent-pale); background:var(--accent-paler); color:var(--accent-dark); }
+.bd-cta.primary { grid-column:1 / -1; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; border:none; box-shadow:0 4px 14px rgba(0,161,154,0.30); }
+.match-avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,var(--accent-light),var(--accent-dark)); color:white; font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,161,154,0.25); }
+.match-info { flex:1; min-width:0; }
+.match-name { font-size:14px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.match-verified { font-size:9.5px; font-weight:800; padding:2px 7px; background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); border-radius:100px; letter-spacing:0.3px; }
+.match-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+.match-tags { display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+.match-tag { font-size:9.5px; font-weight:800; padding:3px 8px; background:var(--bg); border:1px solid var(--border); border-radius:100px; color:var(--text-secondary); letter-spacing:0.2px; }
+.match-tag.watch { background:var(--accent-paler); color:var(--accent-dark); border-color:var(--accent-pale); }
+.match-score { text-align:center; flex-shrink:0; }
+.match-score-num { font-size:18px; font-weight:900; color:var(--accent-dark); letter-spacing:-0.4px; line-height:1; }
+/* ring-gauge barometer around the match % */
+.match-gauge { position:relative; width:52px; height:52px; flex-shrink:0; }
+.match-gauge svg { width:100%; height:100%; }
+.match-gauge .mg-track { stroke:var(--accent-pale); }
+.match-gauge .mg-fill { transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1); filter:drop-shadow(0 0 4px rgba(0,161,154,0.30)); }
+.match-gauge-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:900; color:var(--accent-dark); letter-spacing:-0.4px; }
+.match-gauge-num small { font-size:8px; font-weight:800; margin-left:1px; }
+/* ring-gauge inside the buyer detail hero (dark bg) */
+.bd-hero-gauge { position:relative; width:58px; height:58px; flex-shrink:0; }
+.bd-hero-gauge svg { width:100%; height:100%; }
+.bd-hero-gauge .bg-track { stroke:rgba(255,255,255,0.16); }
+.bd-hero-gauge .bg-fill { transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1); filter:drop-shadow(0 0 5px rgba(94,234,212,0.55)); }
+.bd-hero-gauge-num { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.bd-hero-gauge-num b { font-size:16px; font-weight:900; color:#5EEAD4; line-height:1; letter-spacing:-0.4px; }
+.bd-hero-gauge-num span { font-size:7px; font-weight:800; color:rgba(255,255,255,0.6); letter-spacing:0.5px; text-transform:uppercase; margin-top:2px; }
+.match-score-lbl { font-size:8.5px; font-weight:800; color:var(--text-faint); letter-spacing:0.4px; text-transform:uppercase; margin-top:2px; }
+.match-how { margin:14px 22px 0; padding:13px 15px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:12px; }
+.match-how-h { font-size:9.5px; font-weight:800; color:var(--accent-dark); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+.match-how-v { font-size:11.5px; font-weight:600; color:var(--text-secondary); line-height:1.55; }
+.match-how-v b { color:var(--text); font-weight:800; }
+
+/* Choose passport */
+.choose-opt { display:flex; gap:14px; align-items:flex-start; margin:14px 22px 0; padding:16px; background:var(--card); border:1.5px solid var(--border); border-radius:16px; cursor:pointer; transition:all .15s; }
+.choose-opt:hover { border-color:var(--accent-pale); }
+.choose-opt.sel { border-color:var(--accent); box-shadow:0 6px 18px rgba(0,161,154,0.14); background:var(--accent-paler); }
+.choose-ico { width:54px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:24px; color:white; flex-shrink:0; box-shadow:0 6px 14px rgba(35,29,69,0.18); }
+.choose-ico.seller { background:linear-gradient(135deg,#D9A441,#A9761C); }
+.choose-ico.landlord { background:linear-gradient(135deg,#2C7A5A,#16513A); }
+.choose-body { flex:1; min-width:0; }
+.choose-title { font-size:16px; font-weight:800; color:var(--text); letter-spacing:-0.3px; }
+.choose-eyebrow { font-size:10px; font-weight:800; color:#A9761C; letter-spacing:0.8px; text-transform:uppercase; margin-top:2px; }
+.choose-opt.landlord .choose-eyebrow { color:#2C7A5A; }
+.choose-list { margin-top:10px; }
+.choose-list-item { font-size:12px; font-weight:600; color:var(--text-secondary); line-height:1.6; }
+.choose-radio { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; position:relative; }
+.choose-opt.sel .choose-radio { border-color:var(--accent); }
+.choose-opt.sel .choose-radio::after { content:''; position:absolute; inset:4px; border-radius:50%; background:var(--accent); }
+
+/* Toast */
+.toast { position:absolute; left:16px; right:16px; bottom:24px; z-index:200; background:var(--primary); color:white; padding:13px 16px; border-radius:14px; box-shadow:0 12px 30px rgba(35,29,69,0.35); font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(20px); pointer-events:none; transition:opacity .3s, transform .3s; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast-ico { font-size:18px; flex-shrink:0; }
+
+/* ===== App-screen recreation (matches built app) ===== */
+/* Header */
+.app-header { padding:14px 18px 10px; }
+.back-btn { width:auto; height:auto; background:none; border:none; color:var(--accent-dark); font-size:15px; font-weight:800; display:flex; align-items:center; gap:3px; }
+.app-header-title { font-size:18px; color:var(--text); }
+.hdr-helps { display:flex; gap:8px; align-items:center; }
+.hdr-help { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; cursor:pointer; flex-shrink:0; }
+.hdr-help.light { background:var(--accent-pale); color:var(--accent-dark); }
+.hdr-help.dark { background:radial-gradient(circle at 35% 30%,#2C4A6E,#0E2A47); color:#fff; box-shadow:0 4px 10px rgba(14,42,71,0.35); }
+
+/* Buyer/Seller segmented toggle */
+.bs-seg { display:flex; margin:2px 18px 4px; background:var(--accent-pale); border-radius:100px; padding:4px; gap:4px; }
+.bs-opt { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; padding:11px; border-radius:100px; font-size:15px; font-weight:800; color:var(--accent-dark); cursor:pointer; transition:all .18s; }
+.bs-opt.on { background:var(--accent); color:#fff; box-shadow:0 4px 12px rgba(0,161,154,0.30); }
+.bs-ico { font-size:15px; }
+
+/* Light passport hero (override gold block) */
+.pp-hero { background:var(--card); border:1px solid var(--border); border-radius:20px; color:var(--text); box-shadow:0 4px 14px rgba(35,29,69,0.06); padding:16px; gap:14px; }
+.pp-hero::after { display:none; }
+.pp-cover { width:92px; height:124px; background:linear-gradient(155deg,#13B3A8,#00897F 60%,#00736B); box-shadow:0 10px 22px -6px rgba(0,137,127,0.5),inset 0 0 0 1px rgba(255,255,255,0.2); }
+.pp-cover::before { background:rgba(255,255,255,0.28); }
+.pp-cover-eyebrow { color:rgba(255,255,255,0.85); }
+.pp-cover-logo { font-size:34px; margin:16px 0 12px; }
+.pp-hero-eyebrow { color:var(--accent-dark); }
+.pp-hero-addr { color:var(--text); }
+.pp-hero-pc { color:var(--text-secondary); }
+.pp-chev-down { position:absolute; top:14px; right:14px; width:28px; height:28px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--text-secondary); cursor:pointer; z-index:2; }
+.pp-stats2 { display:flex; align-items:center; margin:2px 0 12px; }
+.pp-stat2 { flex:1; text-align:center; }
+.pp-stat2 + .pp-stat2 { border-left:1px solid var(--border); }
+.pp-stat2-num { font-size:23px; font-weight:900; color:var(--text); letter-spacing:-0.6px; line-height:1; }
+.pp-stat2-num small { font-size:12px; font-weight:800; color:var(--text-secondary); }
+.pp-stat2-lbl { font-size:8.5px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; color:var(--text-faint); margin-top:4px; }
+.pp-progress-label { color:var(--text-secondary); }
+.pp-progress-label #progPct { color:var(--accent-dark); }
+.pp-progress-track { background:var(--border-soft); }
+.pp-progress-fill { background:linear-gradient(90deg,var(--accent),var(--accent-light)); }
+.pp-hero-status { color:var(--text-secondary); }
+.pp-hero-status .dot { background:var(--accent); box-shadow:0 0 0 3px rgba(0,161,154,0.18); }
+
+/* Match + Publish action buttons */
+.action-row { display:flex; gap:12px; margin:14px 18px 0; }
+.act-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:9px; padding:16px 12px; border-radius:16px; font-family:inherit; font-size:16px; font-weight:800; cursor:pointer; border:none; transition:all .15s; }
+.act-btn:active { transform:scale(0.98); }
+.act-btn svg { width:20px; height:20px; flex-shrink:0; }
+.act-btn.match { background:var(--card); border:1px solid var(--border); color:var(--accent-dark); box-shadow:0 2px 8px rgba(35,29,69,0.05); }
+.act-btn.match:hover { border-color:var(--accent); }
+.act-btn.publish { background:var(--accent); color:#fff; box-shadow:0 8px 18px -6px rgba(0,161,154,0.5); }
+.act-btn.publish:hover { filter:brightness(1.05); }
+.act-btn.publish.published { background:#0F8A6E; }
+.act-badge { background:var(--accent); color:#fff; font-size:13px; font-weight:900; min-width:24px; height:24px; padding:0 7px; border-radius:100px; display:flex; align-items:center; justify-content:center; }
+.act-btn.match .act-badge { box-shadow:0 2px 6px rgba(0,161,154,0.35); }
+
+/* Collaborators row */
+.collab-row { display:flex; align-items:center; gap:13px; margin:12px 18px 0; padding:15px 16px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.collab-row:hover { border-color:var(--accent-pale); }
+.collab-add { width:40px; height:40px; border-radius:50%; background:var(--accent-pale); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; flex-shrink:0; }
+.collab-txt { flex:1; font-size:16px; font-weight:800; color:var(--text); }
+.collab-arrow { font-size:20px; color:var(--text-faint); font-weight:800; }
+
+/* Tabs (Sections / Street / Vault) */
+.tabs { display:flex; margin:14px 18px 0; padding:5px; background:var(--card); border:1px solid var(--border); border-radius:16px; gap:4px; box-shadow:var(--shadow-card); }
+.tab { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:12px 6px; border-radius:12px; font-size:14px; font-weight:800; color:var(--text-secondary); cursor:pointer; transition:all .15s; }
+.tab .tb-ico { font-size:15px; }
+.tab.on { background:var(--accent); color:#fff; box-shadow:0 4px 10px rgba(0,161,154,0.28); }
+.tab-badge { background:var(--accent); color:#fff; font-size:11px; font-weight:900; min-width:20px; height:20px; padding:0 6px; border-radius:100px; display:flex; align-items:center; justify-content:center; }
+.tab.on .tab-badge { background:rgba(255,255,255,0.25); }
+
+/* List/Map sub-toggle */
+.listmap { display:flex; margin:14px 18px 0; padding:5px; background:var(--accent-pale); border-radius:100px; gap:4px; }
+.lm-opt { flex:1; display:flex; align-items:center; justify-content:center; gap:7px; padding:12px; border-radius:100px; font-size:15px; font-weight:800; color:var(--accent-dark); cursor:pointer; transition:all .15s; }
+.lm-opt.on { background:var(--accent); color:#fff; box-shadow:0 4px 10px rgba(0,161,154,0.28); }
+
+/* Resume banner */
+.resume { display:flex; align-items:center; gap:14px; margin:14px 18px 4px; padding:16px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); border-radius:16px; color:#fff; cursor:pointer; box-shadow:0 10px 24px -8px rgba(0,161,154,0.45); }
+.resume-ico { width:46px; height:46px; border-radius:13px; background:rgba(255,255,255,0.18); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.resume-body { flex:1; }
+.resume-t { font-size:16px; font-weight:800; letter-spacing:-0.2px; }
+.resume-t b { font-weight:900; }
+.resume-s { font-size:12.5px; font-weight:600; color:rgba(255,255,255,0.85); margin-top:2px; }
+.resume-arrow { font-size:22px; font-weight:800; }
+
+/* Section card → circular chevron (app style) */
+.sp-go { width:48px; height:48px; border-radius:50%; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:var(--text-secondary); flex-shrink:0; align-self:center; background:var(--card); transition:all .15s; }
+.sp-item:hover .sp-go { border-color:var(--accent); color:var(--accent-dark); }
+.sp-points.zero { color:var(--accent-dark); }
+
+/* Panels */
+.panel { display:none; }
+.panel.on { display:block; }
+.placeholder { margin:16px 18px; padding:30px 20px; background:var(--card); border:1px solid var(--border); border-radius:16px; text-align:center; box-shadow:var(--shadow-card); }
+.placeholder-ico { font-size:40px; margin-bottom:10px; }
+.placeholder-t { font-size:16px; font-weight:800; color:var(--text); margin-bottom:5px; }
+.placeholder-s { font-size:12.5px; font-weight:600; color:var(--text-secondary); line-height:1.5; }
+.vault-row { display:flex; align-items:center; gap:12px; margin:0 18px 10px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.vault-ico { width:40px; height:40px; border-radius:11px; background:var(--accent-pale); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.vault-info { flex:1; min-width:0; }
+.vault-name { font-size:14px; font-weight:800; color:var(--text); }
+.vault-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:1px; }
+.vault-badge { font-size:10px; font-weight:800; color:var(--accent-dark); background:var(--accent-paler); border:1px solid var(--accent-pale); padding:4px 9px; border-radius:100px; }
+/* Vault visibility control */
+.vault-legend { margin:16px 18px 6px; padding:12px 14px; background:var(--bg); border:1px solid var(--border); border-radius:13px; }
+.vault-legend-t { font-size:10px; font-weight:800; letter-spacing:0.8px; text-transform:uppercase; color:var(--text-faint); margin-bottom:8px; }
+.vault-legend-row { display:flex; align-items:flex-start; gap:9px; font-size:11px; font-weight:600; color:var(--text-secondary); line-height:1.45; }
+.vault-legend-row + .vault-legend-row { margin-top:7px; }
+.vault-legend-ico { width:20px; height:20px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; flex-shrink:0; }
+.vault-legend-ico.private { background:#6B7089; }
+.vault-legend-ico.public { background:var(--accent); }
+.vault-legend-row b { color:var(--text); font-weight:800; }
+.vault-row { align-items:flex-start; }
+.vault-vis-meta { font-size:10.5px; font-weight:700; margin-top:3px; line-height:1.35; }
+.vault-row.private .vault-vis-meta { color:var(--text-secondary); }
+.vault-row.public .vault-vis-meta { color:var(--accent-dark); }
+/* two-state Private | Public pill */
+.vis-seg { display:flex; gap:2px; background:var(--bg); border:1px solid var(--border); border-radius:100px; padding:3px; flex-shrink:0; align-self:center; }
+.vis-opt { display:flex; align-items:center; gap:4px; padding:6px 11px; border-radius:100px; font-size:11px; font-weight:800; color:var(--text-secondary); cursor:pointer; transition:all .12s; }
+.vis-opt:hover { color:var(--text); }
+.vis-opt.on { color:#fff; }
+.vis-opt.on.private { background:#6B7089; }
+.vis-opt.on.public { background:var(--accent); }
+
+/* ===== 4-tab fit + Timeline tab ===== */
+.tabs .tab { font-size:12.5px; padding:11px 3px; gap:4px; }
+.tabs .tab .tb-ico { font-size:14px; }
+.tabs .tab-badge { font-size:10px; min-width:18px; height:18px; padding:0 5px; }
+
+/* Timeline intro */
+.tl-intro { margin:16px 18px 0; padding:13px 15px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:13px; font-size:12px; font-weight:600; color:var(--text-secondary); line-height:1.55; display:flex; gap:9px; align-items:flex-start; }
+.tl-intro .lockico { font-size:16px; flex-shrink:0; }
+.tl-intro b { color:var(--accent-dark); font-weight:800; }
+
+/* Transaction stage stepper */
+.tl-stage { margin:14px 18px 0; padding:16px 14px 12px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); }
+.tl-stage-h { font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); margin-bottom:14px; }
+.tl-steps { display:flex; align-items:flex-start; }
+.tl-step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+.tl-step::before { content:''; position:absolute; top:9px; left:-50%; width:100%; height:2.5px; background:var(--border); z-index:0; }
+.tl-step:first-child::before { display:none; }
+.tl-step.done::before, .tl-step.now::before { background:var(--accent); }
+.tl-dot { width:20px; height:20px; border-radius:50%; background:var(--card); border:2.5px solid var(--border); z-index:1; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; color:var(--text-faint); }
+.tl-step.done .tl-dot { background:var(--accent); border-color:var(--accent); color:#fff; }
+.tl-step.now .tl-dot { border-color:var(--accent); color:var(--accent-dark); box-shadow:0 0 0 4px var(--accent-pale); }
+.tl-step.now .tl-dot::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--accent); }
+.tl-step-lbl { font-size:9px; font-weight:800; color:var(--text-faint); margin-top:7px; text-align:center; line-height:1.2; letter-spacing:0.2px; }
+.tl-step.done .tl-step-lbl, .tl-step.now .tl-step-lbl { color:var(--text); }
+
+/* Ledger */
+.tl-list-h { padding:18px 20px 6px; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); }
+.tl-item { display:flex; gap:12px; margin:0 18px; padding:4px 0; position:relative; }
+.tl-rail { display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
+.tl-rail-dot { width:34px; height:34px; border-radius:11px; background:var(--accent-pale); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; z-index:1; }
+.tl-rail-line { width:2px; flex:1; background:var(--border); margin:4px 0; min-height:14px; }
+.tl-item:last-child .tl-rail-line { display:none; }
+.tl-card { flex:1; min-width:0; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); padding:12px 14px; margin-bottom:12px; }
+.tl-card-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.tl-title { font-size:13.5px; font-weight:800; color:var(--text); letter-spacing:-0.2px; line-height:1.25; }
+.tl-time { font-size:10px; font-weight:700; color:var(--text-faint); white-space:nowrap; flex-shrink:0; }
+.tl-who { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+.tl-stamp { display:inline-flex; align-items:center; gap:6px; margin-top:9px; padding:5px 9px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:8px; }
+.tl-stamp-lock { font-size:11px; }
+.tl-stamp-txt { font-family:'SFMono-Regular',Menlo,Consolas,monospace; font-size:10px; font-weight:700; color:var(--accent-dark); letter-spacing:0.3px; }
+.tl-stamp-verif { font-size:9px; font-weight:800; color:var(--accent-dark); letter-spacing:0.4px; text-transform:uppercase; margin-left:2px; }
+@keyframes tlIn { from{opacity:0;transform:translateY(-8px);} to{opacity:1;transform:translateY(0);} }
+.tl-item.new .tl-card { animation:tlIn .4s cubic-bezier(.22,1,.36,1) both; }
+
+/* Section verifications */
+.sv-card { margin:14px 18px 0; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); overflow:hidden; }
+.sv-head { display:flex; justify-content:space-between; align-items:center; padding:14px 16px 10px; }
+.sv-head-t { font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-faint); }
+.sv-count { font-size:11px; font-weight:900; color:var(--accent-dark); background:var(--accent-paler); border:1px solid var(--accent-pale); padding:3px 9px; border-radius:100px; }
+.sv-row { display:flex; align-items:center; gap:11px; padding:10px 16px; border-top:1px solid var(--border-soft); }
+.sv-ico { width:30px; height:30px; border-radius:9px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.sv-row.stamped .sv-ico { background:var(--accent-pale); }
+.sv-body { flex:1; min-width:0; }
+.sv-name { font-size:13px; font-weight:800; color:var(--text); letter-spacing:-0.2px; line-height:1.2; }
+.sv-row.pending .sv-name { color:var(--text-secondary); }
+.sv-sub { font-size:10px; font-weight:700; margin-top:2px; display:flex; align-items:center; gap:5px; }
+.sv-row.stamped .sv-sub { color:var(--accent-dark); }
+.sv-row.pending .sv-sub { color:var(--text-faint); }
+.sv-hash { font-family:'SFMono-Regular',Menlo,Consolas,monospace; font-size:9.5px; font-weight:700; }
+.sv-mark { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; }
+.sv-row.stamped .sv-mark { background:var(--accent); color:#fff; }
+.sv-row.pending .sv-mark { background:var(--bg); border:1.5px dashed var(--border); color:var(--text-faint); }
+</style>
+</head>
+<body>
+
+<div class="stage-caption">
+  <span class="label">UMU · SELLER PASSPORT</span>
+  <div class="head">Seller Passport.</div>
+  TA6 / TA10 / TA7, certificates &amp; history — verified upfront, then matched to ready buyers. <a href="homescore-v6.html">← Back to HomeScore</a> · <a href="landlord-passport.html">Landlord Passport →</a>
+</div>
+
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><div class="right"><div class="signal-bars"><i></i><i></i><i></i><i></i></div><div class="battery"><i></i></div></div></div>
+  <div class="body" id="phoneBody">
+
+    <div class="app-header">
+      <a class="back-btn" href="homescore-v6.html">‹ Back</a>
+      <div class="app-header-title">Passport</div>
+      <div class="hdr-helps">
+        <span class="hdr-help light" onclick="showToast('💬','Need a hand? Tap any section for guidance, or chat to our move team.')">?</span>
+        <span class="hdr-help dark" onclick="showToast('🎧','Concierge support — we can walk you through your Passport step by step.')">?</span>
+      </div>
+    </div>
+
+    <!-- Buyer / Seller toggle -->
+    <div class="bs-seg">
+      <div class="bs-opt" onclick="window.location.href='homescore-v6.html'"><span class="bs-ico">🔑</span> Buyer</div>
+      <div class="bs-opt on"><span class="bs-ico">💼</span> Seller</div>
+    </div>
+
+    <!-- Hero -->
+    <div class="pp-hero anim-1">
+      <span class="pp-chev-down" onclick="showToast('🏠','7 Woodfield Road · CV5 6AJ — Detached, 116m². HomeScore 61.')">⌄</span>
+      <div class="pp-cover">
+        <div class="pp-cover-eyebrow">Property Passport</div>
+        <div class="pp-cover-logo">⌂</div>
+        <div class="pp-cover-addr">7, Woodfield Road</div>
+        <div class="pp-cover-pc">CV5 6AJ</div>
+      </div>
+      <div class="pp-hero-body">
+        <div class="pp-hero-eyebrow">Property Passport</div>
+        <div class="pp-hero-addr">7, Woodfield Road</div>
+        <div class="pp-hero-pc">CV5 6AJ</div>
+        <div class="pp-stats2">
+          <div class="pp-stat2"><div class="pp-stat2-num">61</div><div class="pp-stat2-lbl">HS</div></div>
+          <div class="pp-stat2"><div class="pp-stat2-num" id="statDocs">0</div><div class="pp-stat2-lbl">Docs</div></div>
+          <div class="pp-stat2"><div class="pp-stat2-num" id="statSec">0<small>/17</small></div><div class="pp-stat2-lbl">Sections</div></div>
+        </div>
+        <div class="pp-progress-label"><span>Passport progress</span><span id="progPct">0%</span></div>
+        <div class="pp-progress-track"><div class="pp-progress-fill" id="progFill" style="width:0%;"></div><span class="pp-walker" id="walker" style="left:0%;">🚶</span></div>
+        <div class="pp-hero-status"><span class="dot"></span> Passport issued</div>
+      </div>
+    </div>
+
+    <!-- shared gauge gradient -->
+    <svg width="0" height="0" style="position:absolute;" aria-hidden="true"><defs>
+      <linearGradient id="sgGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00B8B0"/><stop offset="1" stop-color="#008A84"/>
+      </linearGradient>
+    </defs></svg>
+
+    <!-- Match (private, contact first) + Publish (go live) -->
+    <div class="action-row anim-2">
+      <button class="act-btn match" onclick="openMatch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H9M17 7v8"/><path d="M3 7l4-4M3 7l4 4" opacity="0.5"/></svg>
+        Match to Buyers <span class="act-badge">3</span>
+      </button>
+      <button class="act-btn publish" id="publishBtn" onclick="openPublish()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
+        <span id="publishLabel">Publish</span>
+      </button>
+    </div>
+
+    <!-- Collaborators -->
+    <div class="collab-row anim-2" onclick="showToast('👥','Invite a partner, agent or solicitor to help complete this Passport.')">
+      <div class="collab-add">+</div>
+      <div class="collab-txt">0 Collaborators</div>
+      <span class="collab-arrow">›</span>
+    </div>
+
+    <!-- Sections / Street / Vault / Timeline tabs -->
+    <div class="tabs anim-3">
+      <div class="tab on" id="tabSections" onclick="showTab('sections')"><span class="tb-ico">☰</span> Sections</div>
+      <div class="tab" id="tabStreet" onclick="showTab('street')"><span class="tb-ico">🗺️</span> Street</div>
+      <div class="tab" id="tabVault" onclick="showTab('vault')"><span class="tb-ico">🗄️</span> Vault</div>
+      <div class="tab" id="tabTimeline" onclick="showTab('timeline')"><span class="tb-ico">🔗</span> Timeline <span class="tab-badge" id="tlBadge">0</span></div>
+    </div>
+
+    <!-- ===== SECTIONS panel ===== -->
+    <div class="panel on" id="panelSections">
+
+      <div class="listmap">
+        <div class="lm-opt on" id="lmList" onclick="showView('list')"><span>☰</span> List</div>
+        <div class="lm-opt" id="lmMap" onclick="showView('map')"><span>🗺️</span> Map</div>
+      </div>
+
+      <div id="secList">
+
+        <!-- Resume -->
+        <div class="resume" onclick="openItemAction(document.querySelector('.sp-item'))">
+          <div class="resume-ico">↩️</div>
+          <div class="resume-body">
+            <div class="resume-t">Pick up <b>where you left off</b></div>
+            <div class="resume-s">Ownership Profile · Notes</div>
+          </div>
+          <span class="resume-arrow">›</span>
+        </div>
+
+        <!-- 17 TA6 / TA10 / TA7 sections -->
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">📖</div><div class="sp-info"><div class="sp-title">Ownership Profile</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/4 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🏡</div><div class="sp-info"><div class="sp-title">Boundaries</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/7 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">📋</div><div class="sp-info"><div class="sp-title">Disputes and Complaints</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/3 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">📨</div><div class="sp-info"><div class="sp-title">Notices and Proposals</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/1 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/5 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">📐</div><div class="sp-info"><div class="sp-title">Alterations, Planning &amp; Building Control</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/4 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/8 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🛡️</div><div class="sp-info"><div class="sp-title">Guarantees and Warranties</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/3 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/4 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">☂️</div><div class="sp-info"><div class="sp-title">Insurance</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/1 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/3 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🌍</div><div class="sp-info"><div class="sp-title">Environmental Matters</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/6 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🔑</div><div class="sp-info"><div class="sp-title">Rights and Informal Arrangements</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/5 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🚗</div><div class="sp-info"><div class="sp-title">Parking</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/2 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">💷</div><div class="sp-info"><div class="sp-title">Other Charges</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/3 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">👥</div><div class="sp-info"><div class="sp-title">Occupiers</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/2 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🔌</div><div class="sp-info"><div class="sp-title">Services &amp; Connections</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/1 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/5 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🌿</div><div class="sp-info"><div class="sp-title">Energy (EPC)</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/1 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/1 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">📑</div><div class="sp-info"><div class="sp-title">Transaction Information</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/4 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🛋️</div><div class="sp-info"><div class="sp-title">Fixtures &amp; Fittings (TA10)</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/0 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/6 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+        <div class="sp-item">
+          <div class="sp-head"><div class="sp-ico">🏢</div><div class="sp-info"><div class="sp-title">Leasehold Information (TA7)</div><div class="sp-points zero">0 points earned so far</div><div class="sp-pills"><span class="sp-pill docs pending">📎 0/2 docs</span><span class="sp-pill q"><span class="qm">?</span> 0/4 questions</span></div></div><span class="sp-go">›</span></div>
+          <div class="sp-bar-row"><div class="sp-bar"><div class="sp-bar-fill pending" data-w="0"></div></div><span class="sp-pct pending">0%</span></div>
+        </div>
+
+      </div><!-- /secList -->
+
+      <div id="secMap" style="display:none;">
+        <div class="placeholder"><div class="placeholder-ico">🗺️</div><div class="placeholder-t">Sections on a map</div><div class="placeholder-s">A room-by-room view of the home, with each Passport section pinned to where it applies. Tap a room to jump to its questions.</div></div>
+      </div>
+
+    </div><!-- /panelSections -->
+
+    <!-- ===== STREET panel ===== -->
+    <div class="panel" id="panelStreet">
+      <div class="placeholder"><div class="placeholder-ico">🏘️</div><div class="placeholder-t">Your street</div><div class="placeholder-s">See how 7 Woodfield Road sits on the street — recent sold prices, EPC bands and other Passports nearby.</div></div>
+    </div>
+
+    <!-- ===== VAULT panel ===== -->
+    <div class="panel" id="panelVault">
+      <div id="vaultList"></div>
+    </div>
+
+    <!-- ===== TIMELINE panel ===== -->
+    <div class="panel" id="panelTimeline">
+      <div class="tl-intro"><span class="lockico">🔐</span><div>An <b>immutable, time-stamped record</b> of every step — so everyone in the chain can see exactly where the sale is, and trust nothing has been altered.</div></div>
+
+      <div class="tl-stage">
+        <div class="tl-stage-h">Where this sale is</div>
+        <div class="tl-steps" id="tlSteps"></div>
+      </div>
+
+      <div class="tl-list-h">Verified activity</div>
+      <div class="tl-list" id="tlList"></div>
+    </div>
+
+    <div style="height:12px;"></div>
+  </div><!-- /body -->
+
+  <!-- Upload modal -->
+  <div class="modal-overlay" id="uploadModal" onclick="if(event.target===this)closeUpload()">
+    <div class="modal-sheet">
+      <div class="modal-grip"></div>
+      <div class="modal-head">
+        <div class="modal-eyebrow">📎 Add to passport</div>
+        <div class="modal-title" id="uploadName">Section</div>
+        <div class="modal-sub">Upload the documents or answer the questions for this section.</div>
+      </div>
+      <div class="drop-zone" onclick="confirmUpload()">
+        <div class="drop-zone-icon">📄</div>
+        <div class="drop-zone-title">Tap to upload / answer</div>
+        <div class="drop-zone-sub">PDF · JPG · PNG, or fill the TA questions in-app</div>
+      </div>
+      <div class="modal-cta-row">
+        <button class="modal-btn secondary" onclick="closeUpload()">Cancel</button>
+        <button class="modal-btn primary" onclick="confirmUpload()">Mark complete</button>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Matched buyers -->
+  <div class="modal-overlay" id="matchModal" onclick="if(event.target===this)closeMatch()">
+    <div class="modal-sheet">
+      <div class="modal-grip"></div>
+      <div class="modal-head">
+        <div class="modal-eyebrow">🤝 Matched buyers</div>
+        <div class="modal-title">Buyers are already waiting for this home.</div>
+        <div class="modal-sub">As your Passport fills out, we match it to verified buyers. Reach out privately and gauge interest first — then publish when you're ready to go public.</div>
+      </div>
+      <div style="padding:4px 22px 0;font-size:12px;font-weight:600;color:var(--text-secondary);">Tap any buyer to see how well they match your property.</div>
+      <div class="match-card" onclick="openBuyer('krishna')">
+        <div class="match-avatar">K</div>
+        <div class="match-info">
+          <div class="match-name">Krishna Y.</div>
+          <div class="match-meta">TW18 4RC · up to £200k · flexible timeline</div>
+          <div class="match-tags"><span class="match-tag">Possible match</span></div>
+        </div>
+        <div class="match-gauge">
+          <svg viewBox="0 0 80 80"><circle class="mg-track" cx="40" cy="40" r="32" stroke-width="7" fill="none"/><circle class="mg-fill" cx="40" cy="40" r="32" stroke="url(#sgGrad)" stroke-width="7" fill="none" stroke-dasharray="201.06" stroke-dashoffset="96.5" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+          <div class="match-gauge-num">52<small>%</small></div>
+        </div>
+      </div>
+      <div class="match-card" onclick="openBuyer('pradeep')">
+        <div class="match-avatar">P</div>
+        <div class="match-info">
+          <div class="match-name">Pradeep Y.</div>
+          <div class="match-meta">CV3 area · up to £350k · flexible timeline</div>
+          <div class="match-tags"><span class="match-tag">Possible match</span></div>
+        </div>
+        <div class="match-gauge">
+          <svg viewBox="0 0 80 80"><circle class="mg-track" cx="40" cy="40" r="32" stroke-width="7" fill="none"/><circle class="mg-fill" cx="40" cy="40" r="32" stroke="url(#sgGrad)" stroke-width="7" fill="none" stroke-dasharray="201.06" stroke-dashoffset="96.5" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+          <div class="match-gauge-num">52<small>%</small></div>
+        </div>
+      </div>
+      <div class="match-card" onclick="openBuyer('vivek')">
+        <div class="match-avatar">V</div>
+        <div class="match-info">
+          <div class="match-name">Vivek K.</div>
+          <div class="match-meta">CV5 area · up to £375k · flexible timeline</div>
+          <div class="match-tags"><span class="match-tag">Possible match</span></div>
+        </div>
+        <div class="match-gauge">
+          <svg viewBox="0 0 80 80"><circle class="mg-track" cx="40" cy="40" r="32" stroke-width="7" fill="none"/><circle class="mg-fill" cx="40" cy="40" r="32" stroke="url(#sgGrad)" stroke-width="7" fill="none" stroke-dasharray="201.06" stroke-dashoffset="96.5" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+          <div class="match-gauge-num">52<small>%</small></div>
+        </div>
+      </div>
+      <div class="match-how">
+        <div class="match-how-h">How matching works</div>
+        <div class="match-how-v">We match against <b>verified buyers</b> with a saved search near your home. The score rises as your Passport completes — and as buyers' criteria line up on location, price &amp; type. Tap a buyer to see exactly why.</div>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Publish passport -->
+  <div class="modal-overlay" id="publishModal" onclick="if(event.target===this)closePublish()">
+    <div class="modal-sheet">
+      <div class="modal-grip"></div>
+      <div class="modal-head">
+        <div class="modal-eyebrow">🚀 Publish your passport</div>
+        <div class="modal-title">Go public to every matching buyer.</div>
+        <div class="modal-sub">Right now your passport is private — you choose who sees it. Publishing lists it openly so any verified buyer searching CV5 can find and request it.</div>
+      </div>
+      <div class="pub-list">
+        <div class="pub-row"><span class="pub-ico on">🔒</span><div><div class="pub-row-t">Today — private</div><div class="pub-row-s">Only buyers you contact can see it. Good for testing interest first.</div></div></div>
+        <div class="pub-row"><span class="pub-ico">🌐</span><div><div class="pub-row-t">After publishing — public</div><div class="pub-row-s">Listed to all matching verified buyers. They can view &amp; request a viewing.</div></div></div>
+        <div class="pub-row"><span class="pub-ico">↩️</span><div><div class="pub-row-t">You stay in control</div><div class="pub-row-s">Unpublish any time. Your contact details stay hidden until you choose to share.</div></div></div>
+      </div>
+      <div class="pub-tip">💡 Tip: <b>match &amp; make contact first</b> — gauge interest privately, then publish to open it up to everyone.</div>
+      <div class="modal-cta-row">
+        <button class="modal-btn secondary" onclick="closePublish()">Not yet</button>
+        <button class="modal-btn primary" onclick="doPublish()">Publish now →</button>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Choose your passport -->
+  <div class="modal-overlay" id="chooseModal" onclick="if(event.target===this)closeChoose()">
+    <div class="modal-sheet">
+      <div class="modal-grip"></div>
+      <div class="modal-head">
+        <div class="modal-title">Choose your passport</div>
+        <div class="modal-sub">What kind of passport are you setting up for this property? We'll seed the right sections for you.</div>
+      </div>
+      <div class="choose-opt seller sel" id="chooseSeller" onclick="selectChoose('seller')">
+        <div class="choose-ico seller">&#x1F3E0;</div>
+        <div class="choose-body">
+          <div class="choose-title">Seller passport</div>
+          <div class="choose-eyebrow">For selling your home</div>
+          <div class="choose-list">
+            <div class="choose-list-item">Full TA6 / TA10 / TA7 forms</div>
+            <div class="choose-list-item">17 sections — boundaries, deeds, alterations, services</div>
+            <div class="choose-list-item">Buyer-shareable digital passport</div>
+          </div>
+        </div>
+        <div class="choose-radio"></div>
+      </div>
+      <div class="choose-opt landlord" id="chooseLandlord" onclick="selectChoose('landlord')">
+        <div class="choose-ico landlord">&#x1F6E1;&#xFE0F;</div>
+        <div class="choose-body">
+          <div class="choose-title">Landlord passport</div>
+          <div class="choose-eyebrow">For letting your property</div>
+          <div class="choose-list">
+            <div class="choose-list-item">Compliance docs — Gas, EICR, EPC, alarms, Legionella</div>
+            <div class="choose-list-item">Tenancy — AST, deposit, Right-to-Rent, How-to-Rent</div>
+            <div class="choose-list-item">Tenant-shareable doc bundle</div>
+          </div>
+        </div>
+        <div class="choose-radio"></div>
+      </div>
+      <div class="modal-cta-row">
+        <button class="modal-btn secondary" onclick="closeChoose()">Cancel</button>
+        <button class="modal-btn primary" onclick="confirmChoose()">Continue →</button>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Buyer detail sheet -->
+  <div class="modal-overlay" id="buyerModal" onclick="if(event.target===this)closeBuyer()">
+    <div class="modal-sheet">
+      <div class="modal-grip"></div>
+      <div class="modal-head">
+        <div class="modal-eyebrow">👤 Matched buyer</div>
+        <div class="modal-title" id="bdTitle">Buyer</div>
+        <div class="modal-sub" id="bdSub"></div>
+      </div>
+
+      <div class="bd-hero">
+        <div class="bd-hero-avatar" id="bdAvatar">K</div>
+        <div class="bd-hero-info">
+          <div class="bd-hero-name" id="bdName">Krishna Y.</div>
+          <div class="bd-hero-sub" id="bdVerified">✓ Verified buyer · UmovingU</div>
+        </div>
+        <div class="bd-hero-gauge">
+          <svg viewBox="0 0 80 80"><circle class="bg-track" cx="40" cy="40" r="32" stroke-width="7" fill="none"/><circle class="bg-fill" id="bdRing" cx="40" cy="40" r="32" stroke="#5EEAD4" stroke-width="7" fill="none" stroke-dasharray="201.06" stroke-dashoffset="96.5" stroke-linecap="round" transform="rotate(-90 40 40)"/></svg>
+          <div class="bd-hero-gauge-num"><b id="bdScore">52%</b><span>match</span></div>
+        </div>
+      </div>
+
+      <div class="bd-sec-h">What they're looking for</div>
+      <div class="bd-crit" id="bdCrit"></div>
+
+      <div class="bd-sec-h">Why this is a <span id="bdMatchword">possible</span> match</div>
+      <div id="bdFactors"></div>
+
+      <div class="bd-sec-h">How ready they are</div>
+      <div class="bd-ready" id="bdReady"></div>
+
+      <div class="bd-activity" id="bdActivity"></div>
+
+      <div class="bd-cta-grid">
+        <button class="bd-cta primary" onclick="buyerAction('invite')">📅 Invite to view</button>
+        <button class="bd-cta" onclick="buyerAction('share')">🔗 Share Passport</button>
+        <button class="bd-cta" onclick="buyerAction('message')">💬 Message</button>
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text-faint);line-height:1.5;padding:4px 24px 16px;">You stay anonymous until you invite or share. The buyer only sees the property.</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"><span class="toast-ico" id="toastIco">✓</span><span id="toastMsg"></span></div>
+
+</div><!-- /phone -->
+
+<script>
+/* Help drawers */
+function toggleHelp(item){ if(item) item.classList.toggle('open'); }
+
+/* Upload */
+var currentItem = null;
+function openItemAction(item){
+  if(item.classList.contains('done')){ showToast('📄','Opening this section — already complete &amp; verified.'); return; }
+  currentItem = item;
+  var t = item.querySelector('.sp-title');
+  document.getElementById('uploadName').textContent = t ? t.textContent : 'Section';
+  document.getElementById('uploadModal').classList.add('open');
+}
+function closeUpload(){ document.getElementById('uploadModal').classList.remove('open'); }
+function confirmUpload(){
+  var it = currentItem;
+  if(it){
+    it.classList.add('done');
+    var pts = it.querySelector('.sp-points'); if(pts){ pts.textContent='100 points earned so far'; pts.classList.remove('pending'); }
+    var docs = it.querySelector('.sp-pill.docs'); if(docs){ docs.classList.remove('pending'); docs.innerHTML='📎 ✓ docs'; }
+    var bar = it.querySelector('.sp-bar-fill'); if(bar){ bar.classList.remove('pending'); bar.classList.add('done'); bar.style.background=''; bar.setAttribute('data-w','100'); bar.style.width='100%'; }
+    var pct = it.querySelector('.sp-pct'); if(pct){ pct.textContent='100%'; pct.classList.remove('pending'); }
+    var name = it.querySelector('.sp-title') ? it.querySelector('.sp-title').textContent : 'Section';
+    SECTION_STAMPS[name] = {hash:stamp(), time:nowStamp()};
+    recompute();
+    logEvent('📎', name + ' completed & verified', 'You');
+    showToast('✓','Completed — ' + name + '. +100 pts');
+  }
+  closeUpload(); currentItem=null;
+}
+function recompute(){
+  var items = document.querySelectorAll('.sp-item');
+  var total = items.length, done = 0;
+  items.forEach(function(it){ if(it.classList.contains('done')){ done++; } });
+  var pct = total ? Math.round(done/total*100) : 0;
+  var $=function(id){return document.getElementById(id);};
+  if($('statSec')) $('statSec').innerHTML = done + '<small>/' + total + '</small>';
+  if($('statDocs')) $('statDocs').textContent = done;          // each completed section adds its verified docs
+  if($('progFill')) $('progFill').style.width = pct + '%';
+  if($('walker')) $('walker').style.left = pct + '%';
+  if($('progPct')) $('progPct').textContent = pct + '%';
+  if($('vaultBadge')) $('vaultBadge').textContent = done;
+  renderVault();
+}
+
+/* Matched buyers */
+function openMatch(){ document.getElementById('matchModal').classList.add('open'); }
+function closeMatch(){ document.getElementById('matchModal').classList.remove('open'); }
+
+/* Publish — separate from matching. Match & contact privately first, then go public. */
+var published = false;
+function openPublish(){ if(published) return; document.getElementById('publishModal').classList.add('open'); }
+function closePublish(){ document.getElementById('publishModal').classList.remove('open'); }
+function doPublish(){
+  published = true;
+  closePublish();
+  var btn = document.getElementById('publishBtn');
+  if(btn){ btn.classList.add('published'); }
+  var lbl = document.getElementById('publishLabel');
+  if(lbl){ lbl.textContent = 'Published'; }
+  var status = document.querySelector('.pp-hero-status');
+  if(status){ status.innerHTML = '<span class="dot"></span> Published · live to buyers'; }
+  if(stageIdx < 3) stageIdx = 3; // Published now done → Offer becomes current
+  logEvent('🚀','Passport published — live to buyers','You');
+  showToast('🚀','Passport published — now visible to all matching verified buyers in CV5.');
+}
+
+/* Tabs: Sections / Street / Vault / Timeline */
+function showTab(which){
+  ['sections','street','vault','timeline'].forEach(function(t){
+    var panel = document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1));
+    var tab = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(panel) panel.classList.toggle('on', t===which);
+    if(tab) tab.classList.toggle('on', t===which);
+  });
+  if(which==='vault') renderVault();
+  if(which==='timeline') renderTimeline();
+}
+/* List / Map sub-view inside Sections */
+function showView(v){
+  var list=document.getElementById('secList'), map=document.getElementById('secMap');
+  if(list) list.style.display = v==='map' ? 'none' : 'block';
+  if(map) map.style.display = v==='map' ? 'block' : 'none';
+  document.getElementById('lmList').classList.toggle('on', v==='list');
+  document.getElementById('lmMap').classList.toggle('on', v==='map');
+}
+/* Vault: documents from completed sections, each with a privacy level */
+var VAULT_VIS = {}; // title -> 'private' | 'public'
+var VIS_META = {
+  private: 'Verified · Private — only you. Not included when you publish.',
+  public:  'Verified · Public — published with your passport when you go live.'
+};
+function escId(s){ return s.replace(/'/g,"\\'"); }
+function renderVault(){
+  var wrap = document.getElementById('vaultList'); if(!wrap) return;
+  var done = document.querySelectorAll('.sp-item.done');
+  if(done.length===0){
+    wrap.innerHTML = '<div class="placeholder"><div class="placeholder-ico">🗄️</div><div class="placeholder-t">Your vault is empty</div><div class="placeholder-s">As you complete sections, the verified documents are stored here — and you choose which are private and which publish with your passport.</div></div>';
+    return;
+  }
+  var legend = '<div class="vault-legend"><div class="vault-legend-t">Private or public?</div>'+
+    '<div class="vault-legend-row"><span class="vault-legend-ico private">🔒</span><div><b>Private</b> — only you. Kept out of the passport when you publish — for personal documents you\'re not required to disclose.</div></div>'+
+    '<div class="vault-legend-row"><span class="vault-legend-ico public">🌐</span><div><b>Public</b> — published with your passport. Visible to everyone once you publish (it doesn\'t go to anyone before then).</div></div></div>';
+  var html = legend + '<div style="padding:6px 18px 4px;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-secondary);">'+done.length+' document'+(done.length>1?'s':'')+' stored</div>';
+  done.forEach(function(it){
+    var t = it.querySelector('.sp-title') ? it.querySelector('.sp-title').textContent : 'Document';
+    var ico = it.querySelector('.sp-ico') ? it.querySelector('.sp-ico').textContent : '📄';
+    var lvl = VAULT_VIS[t] || 'public';
+    var id = escId(t);
+    var seg = '<div class="vis-seg">'+
+      '<span class="vis-opt private'+(lvl==='private'?' on':'')+'" onclick="setVis(\''+id+'\',\'private\')">🔒 Private</span>'+
+      '<span class="vis-opt public'+(lvl==='public'?' on':'')+'" onclick="setVis(\''+id+'\',\'public\')">🌐 Public</span>'+
+      '</div>';
+    html += '<div class="vault-row '+lvl+'"><div class="vault-ico">'+ico+'</div><div class="vault-info"><div class="vault-name">'+t+'</div><div class="vault-vis-meta">'+VIS_META[lvl]+'</div></div>'+seg+'</div>';
+  });
+  wrap.innerHTML = html;
+}
+function setVis(title, level){
+  if(VAULT_VIS[title]===level){ return; }
+  VAULT_VIS[title]=level;
+  renderVault();
+  var wording = level==='private' ? title+' set to Private — kept out of your published passport'
+                                  : title+' set to Public — will publish with your passport';
+  var ico = level==='private' ? '🔒' : '🌐';
+  logEvent(ico, wording, 'You');
+  showToast(ico, wording + '.');
+}
+
+/* ===== Timeline ledger (tamper-evident activity record) ===== */
+var STAGES = ['Issued','Matched','Published','Offer','Exchange','Complete'];
+var stageIdx = 2; // Issued + Matched done; Published is the current step
+function renderStage(){
+  var wrap = document.getElementById('tlSteps'); if(!wrap) return;
+  wrap.innerHTML = STAGES.map(function(s,i){
+    var cls = i < stageIdx ? 'done' : (i===stageIdx ? 'now' : 'todo');
+    var inner = i < stageIdx ? '✓' : '';
+    return '<div class="tl-step '+cls+'"><div class="tl-dot">'+inner+'</div><div class="tl-step-lbl">'+s+'</div></div>';
+  }).join('');
+}
+function stamp(){ // pseudo block hash for the demo
+  var hex='0123456789abcdef', h='';
+  for(var i=0;i<4;i++) h+=hex[Math.floor(Math.random()*16)];
+  var h2=''; for(var j=0;j<2;j++) h2+=hex[Math.floor(Math.random()*16)];
+  return '0x'+h+'…'+h2;
+}
+function nowStamp(){
+  var d=new Date();
+  var hh=('0'+d.getHours()).slice(-2), mm=('0'+d.getMinutes()).slice(-2);
+  var day=d.getDate(), mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return day+' '+mon+' · '+hh+':'+mm;
+}
+// newest first; seeded with the events that created this passport
+var LEDGER = [
+  {ico:'🤝', title:'3 verified buyers matched', who:'UmovingU matching engine', time:'28 May · 10:02', hash:stamp(), isNew:false},
+  {ico:'🏅', title:'HomeScore verified — 61', who:'EPC Register · HM Land Registry', time:'28 May · 09:15', hash:stamp(), isNew:false},
+  {ico:'📕', title:'Property Passport issued', who:'UmovingU · 7 Woodfield Road', time:'28 May · 09:14', hash:stamp(), isNew:false}
+];
+function renderTimeline(){
+  var wrap = document.getElementById('tlList'); if(!wrap) return;
+  renderStage();
+  wrap.innerHTML = LEDGER.map(function(e){
+    return '<div class="tl-item'+(e.isNew?' new':'')+'">'+
+      '<div class="tl-rail"><div class="tl-rail-dot">'+e.ico+'</div><div class="tl-rail-line"></div></div>'+
+      '<div class="tl-card"><div class="tl-card-top"><div class="tl-title">'+e.title+'</div><div class="tl-time">'+e.time+'</div></div>'+
+      '<div class="tl-who">'+e.who+'</div>'+
+      '<div class="tl-stamp"><span class="tl-stamp-lock">🔒</span><span class="tl-stamp-txt">'+e.hash+'</span><span class="tl-stamp-verif">block-stamped</span></div>'+
+      '</div></div>';
+  }).join('');
+  var badge=document.getElementById('tlBadge'); if(badge) badge.textContent=LEDGER.length;
+}
+/* Hashes for completed sections, used to stamp their activity-feed entries */
+var SECTION_STAMPS = {}; // title -> {hash, time}
+function logEvent(ico,title,who){
+  LEDGER.unshift({ico:ico, title:title, who:who||'You', time:nowStamp(), hash:stamp(), isNew:true});
+  renderTimeline();
+  // clear the "new" flash after it plays
+  setTimeout(function(){ LEDGER.forEach(function(e){e.isNew=false;}); }, 600);
+}
+
+/* Buyer detail */
+var BUYERS = {
+  krishna: {
+    name:'Krishna Y.', initial:'K', score:52, matchword:'possible',
+    sub:'Searching since 2 Apr · 8 saved homes',
+    crit:[['Budget','up to £200,000'],['Area','TW18 (Staines)'],['Type','2–3 bed'],['Timeline','Flexible']],
+    factors:[
+      ['ok','Verified buyer','ID, funds &amp; identity all confirmed'],
+      ['ok','Timeline is flexible','Fits a chain-free or onward purchase'],
+      ['warn','Budget below your guide','Your home is ~£300k — above their £200k max'],
+      ['no','Searching a different area','TW18, not CV5 — would need to widen their search']
+    ],
+    ready:[['ID verified',1],['Proof of funds',1],['Mortgage AIP',1],['Chain-free',1],['Solicitor instructed',0]],
+    activity:'Saved <b>8 homes</b> in the last month · most are 2-bed flats. A nudge could widen their area to CV5.'
+  },
+  pradeep: {
+    name:'Pradeep Y.', initial:'P', score:52, matchword:'possible',
+    sub:'Searching since 18 Mar · 14 saved homes',
+    crit:[['Budget','up to £350,000'],['Area','CV3 (Coventry)'],['Type','3-bed house'],['Timeline','Flexible']],
+    factors:[
+      ['ok','Verified buyer','ID, funds &amp; identity all confirmed'],
+      ['ok','Budget fits your guide','£350k max comfortably covers ~£300k'],
+      ['ok','Wants a 3-bed house','Matches your property type'],
+      ['warn','One postcode away','Searching CV3 — your home is CV5, just outside their pin']
+    ],
+    ready:[['ID verified',1],['Proof of funds',1],['Mortgage AIP',1],['Chain-free',0],['Solicitor instructed',0]],
+    activity:'Saved <b>14 homes</b> · viewed 3 this week. Active &amp; serious — widening the radius would push this to a strong match.'
+  },
+  vivek: {
+    name:'Vivek K.', initial:'V', score:52, matchword:'possible',
+    sub:'Searching since 29 Mar · 5 saved homes',
+    crit:[['Budget','up to £375,000'],['Area','CV5 (Coventry)'],['Type','Detached / semi'],['Timeline','Flexible']],
+    factors:[
+      ['ok','Verified buyer','ID, funds &amp; identity all confirmed'],
+      ['ok','Searching your exact area','CV5 — same postcode as your home'],
+      ['ok','Budget fits comfortably','£375k max, well above your guide'],
+      ['warn','Passport only 0% complete','Match jumps once you add deeds, searches &amp; fittings']
+    ],
+    ready:[['ID verified',1],['Proof of funds',1],['Mortgage AIP',1],['Chain-free',1],['Solicitor instructed',1]],
+    activity:'<b>Most ready of the three</b> — CV5, budget fits, chain-free, solicitor already instructed. Completing your Passport would likely lift this match sharply.'
+  }
+};
+var currentBuyer = null;
+function openBuyer(id){
+  var b = BUYERS[id]; if(!b) return;
+  currentBuyer = id;
+  document.getElementById('bdTitle').textContent = b.name;
+  document.getElementById('bdSub').textContent = b.sub;
+  document.getElementById('bdAvatar').textContent = b.initial;
+  document.getElementById('bdName').textContent = b.name;
+  document.getElementById('bdScore').textContent = b.score + '%';
+  var ring = document.getElementById('bdRing');
+  if(ring){ var C=201.06; ring.setAttribute('stroke-dashoffset', (C*(1-b.score/100)).toFixed(1)); }
+  document.getElementById('bdMatchword').textContent = b.matchword;
+  document.getElementById('bdCrit').innerHTML = b.crit.map(function(c){
+    return '<div class="bd-crit-tile"><div class="bd-crit-label">'+c[0]+'</div><div class="bd-crit-val">'+c[1]+'</div></div>';
+  }).join('');
+  document.getElementById('bdFactors').innerHTML = b.factors.map(function(f){
+    var sym = f[0]==='ok' ? '✓' : (f[0]==='warn' ? '!' : '–');
+    return '<div class="bd-factor"><div class="bd-factor-ico '+f[0]+'">'+sym+'</div><div class="bd-factor-body"><div class="bd-factor-title">'+f[1]+'</div><div class="bd-factor-sub">'+f[2]+'</div></div></div>';
+  }).join('');
+  document.getElementById('bdReady').innerHTML = b.ready.map(function(r){
+    return '<span class="bd-ready-chip '+(r[1]?'yes':'no')+'">'+(r[1]?'✓':'○')+' '+r[0]+'</span>';
+  }).join('');
+  document.getElementById('bdActivity').innerHTML = '<b>Buyer activity:</b> ' + b.activity;
+  closeMatch();
+  var m = document.getElementById('buyerModal'); m.classList.add('open');
+}
+function closeBuyer(){ document.getElementById('buyerModal').classList.remove('open'); }
+function buyerAction(kind){
+  var name = currentBuyer && BUYERS[currentBuyer] ? BUYERS[currentBuyer].name : 'buyer';
+  closeBuyer();
+  if(kind==='invite'){ logEvent('📅','Viewing invite sent to '+name,'You'); showToast('📅','Viewing invite sent to ' + name + ' — they\'ll pick a slot. You stay anonymous until they confirm.'); }
+  else if(kind==='share'){ logEvent('🔗','Passport shared with '+name,'You'); showToast('🔗','Passport shared with ' + name + ' — they can now see your full verified pack.'); }
+  else { logEvent('💬','Message thread opened with '+name,'You'); showToast('💬','Chat opened with ' + name + ' — messages are anonymous until you choose to reveal.'); }
+}
+
+/* Choose */
+var chosen='seller';
+function openChoose(){ document.getElementById('chooseModal').classList.add('open'); }
+function closeChoose(){ document.getElementById('chooseModal').classList.remove('open'); }
+function selectChoose(w){ chosen=w; document.getElementById('chooseSeller').classList.toggle('sel',w==='seller'); document.getElementById('chooseLandlord').classList.toggle('sel',w==='landlord'); }
+function confirmChoose(){ closeChoose(); if(chosen==='landlord'){ window.location.href='landlord-passport.html'; } else { showToast('🏠','Seller passport — TA6 / TA10 / TA7 + 18 sections seeded.'); } }
+
+/* Toast */
+var toastTimer=null;
+function showToast(ico,msg){ var t=document.getElementById('toast'); if(!t)return; document.getElementById('toastIco').textContent=ico||'✓'; document.getElementById('toastMsg').textContent=msg||''; t.classList.add('show'); if(toastTimer)clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove('show');},3400); }
+
+/* Demo seed — a few sections already completed & block-stamped, so the Timeline shows the verified state */
+function markDoneSilently(title, hash, time){
+  document.querySelectorAll('.sp-item').forEach(function(it){
+    var t=it.querySelector('.sp-title'); if(!t || t.textContent!==title) return;
+    it.classList.add('done');
+    var pts=it.querySelector('.sp-points'); if(pts){ pts.textContent='100 points earned so far'; pts.classList.remove('zero'); pts.classList.remove('pending'); }
+    var docs=it.querySelector('.sp-pill.docs'); if(docs){ docs.classList.remove('pending'); docs.innerHTML='📎 ✓ docs'; }
+    var qp=it.querySelector('.sp-pill.q'); if(qp){ qp.className='sp-pill docs'; qp.innerHTML='✓ answered'; }
+    var bar=it.querySelector('.sp-bar-fill'); if(bar){ bar.classList.remove('pending'); bar.classList.add('done'); bar.setAttribute('data-w','100'); }
+    var pct=it.querySelector('.sp-pct'); if(pct){ pct.textContent='100%'; pct.classList.remove('pending'); }
+    SECTION_STAMPS[title]={hash:hash, time:time};
+  });
+}
+function seedDemo(){
+  var demo=[
+    ['Ownership Profile','29 May · 11:48'],
+    ['Boundaries','29 May · 11:52'],
+    ['Environmental Matters','29 May · 14:06'],
+    ['Energy (EPC)','29 May · 14:10'],
+    ['Insurance','29 May · 16:22']
+  ];
+  demo.forEach(function(d){ markDoneSilently(d[0], stamp(), d[1]); });
+  demo.forEach(function(d){
+    LEDGER.unshift({ico:'📎', title:d[0]+' completed & verified', who:'You', time:d[1], hash:SECTION_STAMPS[d[0]].hash, isNew:false});
+  });
+  // demo: most docs publish with the passport; a personal one kept private
+  VAULT_VIS['Insurance'] = 'private';  // personal — not required to disclose
+}
+
+/* Wire taps (delegation) */
+document.addEventListener('DOMContentLoaded', function(){
+  var pb = document.getElementById('phoneBody');
+  seedDemo();
+  pb.addEventListener('click', function(e){
+    var help = e.target.closest('.sp-help');
+    if(help){ toggleHelp(help.closest('.sp-item')); return; }
+    if(e.target.closest('.sp-help-body')) return;
+    var head = e.target.closest('.sp-head');
+    if(head){ openItemAction(head.closest('.sp-item')); }
+  });
+  // animate bars
+  document.querySelectorAll('.sp-bar-fill').forEach(function(b,i){ var w=b.getAttribute('data-w')||'0'; b.style.width='0%'; setTimeout(function(){ b.style.width=w+'%'; }, 150+i*60); });
+  // counters
+  setTimeout(recompute, 50);
+  renderTimeline();
+  openChoose();
+});
+</script>
+</body>
+</html>

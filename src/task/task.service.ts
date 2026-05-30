@@ -203,6 +203,14 @@ export class TaskService {
       sectionCompleted = true;
 
       const currentSection = task.passportSection;
+      // Record an immutable activity-ledger entry — surfaces on the Timeline tab.
+      await this.passportService.logActivity(currentSection.passportId, {
+        type: 'SECTION_COMPLETED',
+        title: `${currentSection.title} completed & verified`,
+        actor: 'You',
+        icon: '📎',
+        metadata: { sectionKey: currentSection.key },
+      });
       const nextSection = await this.prisma.passportSection.findFirst({
         where: {
           passportId: currentSection.passportId,

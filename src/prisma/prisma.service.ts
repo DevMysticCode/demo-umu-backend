@@ -50,6 +50,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.passport;
   }
 
+  get passportActivity() {
+    return this.prisma.passportActivity;
+  }
+
   get passportSection() {
     return this.prisma.passportSection;
   }
