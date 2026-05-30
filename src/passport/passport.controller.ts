@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Put,
+  Patch,
   Get,
   Delete,
   Body,
@@ -166,6 +167,42 @@ export class PassportController {
     @Request() req: any,
   ) {
     return this.passportService.unpublishPassport(passportId, req.user.id);
+  }
+
+  // Timeline / activity ledger — feeds the prototype's Timeline tab.
+  @Get(':id/timeline')
+  @UseGuards(JwtAuthGuard)
+  async getTimeline(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getPassportTimeline(passportId, req.user.id);
+  }
+
+  // Vault — read sections with their visibility (PUBLIC | PRIVATE).
+  @Get(':id/vault')
+  @UseGuards(JwtAuthGuard)
+  async getVault(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getPassportVault(passportId, req.user.id);
+  }
+
+  // Toggle a section's visibility (drives whether it's included when the
+  // Passport is published).
+  @Patch('section/:sectionId/visibility')
+  @UseGuards(JwtAuthGuard)
+  async setSectionVisibility(
+    @Param('sectionId') sectionId: string,
+    @Request() req: any,
+    @Body() body: { visibility: 'PUBLIC' | 'PRIVATE' },
+  ) {
+    return this.passportService.setSectionVisibility(
+      sectionId,
+      req.user.id,
+      body.visibility,
+    );
   }
 
   @Delete(':id')

@@ -330,6 +330,7 @@ model Passport {
   buyerAccesses   BuyerPassportAccess[]
   sharedLinks     SharedPassportLink[]
   buyerNotes      BuyerNote[]
+  activities      PassportActivity[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -418,6 +419,9 @@ model PassportSection {
   imageKey    String?
   order       Int
   status      SectionStatus         @default(LOCKED)
+  // Vault visibility — drives whether this section is included in the
+  // published Passport (PUBLIC) or kept private to the owner (PRIVATE).
+  visibility  SectionVisibility     @default(PUBLIC)
   createdAt   DateTime              @default(now())
   passport    Passport              @relation(fields: [passportId], references: [id], onDelete: Cascade)
   tasks       PassportSectionTask[]
@@ -441,6 +445,24 @@ model PassportSectionTask {
 
   @@unique([passportSectionId, key])
   @@index([passportSectionId])
+}
+
+// Immutable activity ledger for a Passport — drives the Timeline tab.
+// Each row records a verified event (issued, section completed, doc uploaded,
+// match, publish, …) with a pseudo block-hash for visual tamper-evidence.
+model PassportActivity {
+  id          String   @id @default(uuid())
+  passportId  String
+  type        String   // e.g. ISSUED, SECTION_COMPLETED, PUBLISHED, MATCHED…
+  title       String   // human-readable headline
+  actor       String   // "You", "UmovingU matching engine", agency name, etc.
+  icon        String?  // single emoji used in the prototype timeline rail
+  hash        String   // short pseudo block-hash for the verified stamp
+  metadata    Json?    // optional structured payload (sectionKey, etc.)
+  createdAt   DateTime @default(now())
+  passport    Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  @@index([passportId, createdAt])
 }
 
 model QuestionTemplate {
@@ -570,6 +592,11 @@ enum PassportStatus {
 enum PassportType {
   SELLER
   LANDLORD
+}
+
+enum SectionVisibility {
+  PUBLIC
+  PRIVATE
 }
 
 enum OwnershipVerificationStatus {

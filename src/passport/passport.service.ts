@@ -923,11 +923,18 @@ export class PassportService {
     if (passport.ownerId !== userId)
       throw new ForbiddenException('Only the owner can publish this passport');
 
-    return this.prisma.passport.update({
+    const updated = await this.prisma.passport.update({
       where: { id: passportId },
       data: { status: 'PUBLISHED' as any },
       select: { id: true, status: true },
     });
+    await this.logActivity(passportId, {
+      type: 'PUBLISHED',
+      title: 'Passport published — live to buyers',
+      actor: 'You',
+      icon: '🚀',
+    });
+    return updated;
   }
 
   async unpublishPassport(passportId: string, userId: string) {
@@ -940,11 +947,197 @@ export class PassportService {
         'Only the owner can unpublish this passport',
       );
 
-    return this.prisma.passport.update({
+    const updated = await this.prisma.passport.update({
       where: { id: passportId },
       data: { status: 'IN_PROGRESS' as any },
       select: { id: true, status: true },
     });
+    await this.logActivity(passportId, {
+      type: 'UNPUBLISHED',
+      title: 'Passport unpublished — back to private',
+      actor: 'You',
+      icon: '🔒',
+    });
+    return updated;
+  }
+
+  // ── Timeline / activity ledger ─────────────────────────────────────────
+  // Pseudo block-hash for the verified stamp — visual only (matches the
+  // prototype's "0x….." chip). Tamper-evidence in real terms comes from the
+  // immutable row + createdAt; the hash is for display.
+  private pseudoHash(): string {
+    const hex = '0123456789abcdef';
+    const rand = (n: number) =>
+      Array.from({ length: n }, () => hex[Math.floor(Math.random() * 16)]).join('');
+    return `0x${rand(4)}…${rand(2)}`;
+  }
+
+  /** Internal helper: write an event to the timeline. */
+  async logActivity(
+    passportId: string,
+    entry: {
+      type: string;
+      title: string;
+      actor: string;
+      icon?: string;
+      metadata?: any;
+    },
+  ): Promise<void> {
+    try {
+      await this.prisma.passportActivity.create({
+        data: {
+          passportId,
+          type: entry.type,
+          title: entry.title,
+          actor: entry.actor,
+          icon: entry.icon ?? null,
+          hash: this.pseudoHash(),
+          metadata: entry.metadata ?? undefined,
+        },
+      });
+    } catch {
+      // Best-effort — never block the parent action on a logging failure.
+    }
+  }
+
+  async getPassportTimeline(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: { collaborators: { where: { userId }, select: { id: true } } },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    const isCollab = (passport as any).collaborators?.length > 0;
+    const isPublished = (passport.status as any) === 'PUBLISHED';
+    if (!isOwner && !isCollab && !isPublished) {
+      throw new ForbiddenException('Not authorised to view this timeline');
+    }
+
+    let events = await this.prisma.passportActivity.findMany({
+      where: { passportId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Seed an "issued" event the first time we read the timeline so a brand-new
+    // passport doesn't show an empty ledger.
+    if (events.length === 0) {
+      await this.logActivity(passportId, {
+        type: 'ISSUED',
+        title: 'Property Passport issued',
+        actor: 'UmovingU',
+        icon: '📕',
+      });
+      events = await this.prisma.passportActivity.findMany({
+        where: { passportId },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // Stage tracker (prototype's "Where this sale is" stepper).
+    const STAGES = [
+      'Issued',
+      'Matched',
+      'Published',
+      'Offer',
+      'Exchange',
+      'Complete',
+    ];
+    let stageIdx = 0;
+    if (events.some((e) => e.type === 'ISSUED')) stageIdx = Math.max(stageIdx, 0);
+    if (events.some((e) => e.type === 'MATCHED')) stageIdx = Math.max(stageIdx, 1);
+    if (isPublished || events.some((e) => e.type === 'PUBLISHED')) {
+      stageIdx = Math.max(stageIdx, 2);
+    }
+    if (events.some((e) => e.type === 'OFFER')) stageIdx = Math.max(stageIdx, 3);
+    if (events.some((e) => e.type === 'EXCHANGE')) stageIdx = Math.max(stageIdx, 4);
+    if (events.some((e) => e.type === 'COMPLETE')) stageIdx = Math.max(stageIdx, 5);
+
+    return {
+      stages: STAGES,
+      stageIdx,
+      events: events.map((e) => ({
+        id: e.id,
+        type: e.type,
+        title: e.title,
+        actor: e.actor,
+        icon: e.icon,
+        hash: e.hash,
+        createdAt: e.createdAt,
+      })),
+    };
+  }
+
+  // ── Vault (section visibility) ─────────────────────────────────────────
+  async getPassportVault(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        collaborators: { where: { userId }, select: { id: true } },
+        sections: {
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            key: true,
+            title: true,
+            imageKey: true,
+            status: true,
+            visibility: true,
+          },
+        },
+      } as any,
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    const isCollab = (passport as any).collaborators?.length > 0;
+    if (!isOwner && !isCollab) {
+      throw new ForbiddenException('Not authorised to view this vault');
+    }
+    return { sections: (passport as any).sections };
+  }
+
+  async setSectionVisibility(
+    sectionId: string,
+    userId: string,
+    visibility: 'PUBLIC' | 'PRIVATE',
+  ) {
+    if (visibility !== 'PUBLIC' && visibility !== 'PRIVATE') {
+      throw new ForbiddenException('Invalid visibility value');
+    }
+    const section = await this.prisma.passportSection.findUnique({
+      where: { id: sectionId },
+      include: {
+        passport: {
+          select: {
+            id: true,
+            ownerId: true,
+            collaborators: { where: { userId }, select: { id: true } },
+          },
+        },
+      } as any,
+    });
+    if (!section) throw new ForbiddenException('Section not found');
+    const p: any = (section as any).passport;
+    const isOwner = p?.ownerId === userId;
+    const isCollab = p?.collaborators?.length > 0;
+    if (!isOwner && !isCollab) {
+      throw new ForbiddenException('Not authorised to change visibility');
+    }
+    const updated = await this.prisma.passportSection.update({
+      where: { id: sectionId },
+      data: { visibility: visibility as any },
+      select: { id: true, key: true, title: true, visibility: true },
+    });
+    await this.logActivity(p.id, {
+      type: visibility === 'PRIVATE' ? 'SECTION_PRIVATE' : 'SECTION_PUBLIC',
+      title:
+        visibility === 'PRIVATE'
+          ? `${updated.title} set to Private — kept out of the published Passport`
+          : `${updated.title} set to Public — will publish with the Passport`,
+      actor: 'You',
+      icon: visibility === 'PRIVATE' ? '🔒' : '🌐',
+      metadata: { sectionKey: updated.key },
+    });
+    return updated;
   }
 
   // ── Property Images ──────────────────────────────────────────────────────
