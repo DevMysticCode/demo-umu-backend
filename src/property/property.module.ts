@@ -7,9 +7,10 @@ import { BillParserService } from './bill-parser.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { PassportModule } from '../passport/passport.module';
+import { LandRegistryModule } from '../land-registry/land-registry.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, PassportModule],
+  imports: [PrismaModule, AuthModule, PassportModule, LandRegistryModule],
   controllers: [PropertyController],
   providers: [PropertyService, RunningCostsService, FloodRiskService, BillParserService],
   exports: [PropertyService, RunningCostsService, FloodRiskService, BillParserService],
