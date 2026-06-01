@@ -714,23 +714,6 @@ function osClassToPropertyType(code: string): string {
   return 'Residential';
 }
 
-// ── Fallback mock data (used when EPC API returns no results) ─────────────────
-
-const STREET_NAMES = [
-  'High Street',
-  'Maple Road',
-  'Oak Avenue',
-  'Church Lane',
-  'Victoria Road',
-  'Station Road',
-  'Park Avenue',
-  'The Green',
-  'Mill Lane',
-  'Woodland Drive',
-];
-const PROPERTY_TYPES = ['Detached', 'Semi-Detached', 'Terraced', 'Flat'];
-const TENURES = ['Freehold', 'Leasehold'];
-const EPC_RATINGS = ['A', 'B', 'C', 'D', 'E'];
 // Placeholder images removed — properties without a real image return imageUrl: null
 // and the frontend shows the UMU "no image" placeholder instead.
 
@@ -1501,57 +1484,12 @@ export class PropertyService {
     const epcResult = await this.fetchFromEpc(q, offset, limit);
     if (epcResult.total > 0) return epcResult;
 
-    // 4. EPC returned nothing — fall back to any existing mock data for this postcode
-    const mockWhere = {
-      AND: [searchCondition, { udprn: { startsWith: 'MOCK-' } }],
-    };
-    const mockTotal = await this.prisma.property.count({ where: mockWhere });
-    if (mockTotal > 0) {
-      const items = await this.prisma.property.findMany({
-        where: mockWhere,
-        orderBy: { addressLine1: 'asc' },
-        skip: offset,
-        take: limit,
-      });
-      return { items: naturalSortByAddress(items), total: mockTotal };
-    }
-
-    // 5. Nothing at all — generate mocks as last resort (offset 0 only)
-    if (offset === 0) {
-      let postcodeInfo: {
-        latitude: number;
-        longitude: number;
-        postcode: string;
-      } | null = null;
-      try {
-        const clean = q.replace(/\s/g, '').toUpperCase();
-        const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`);
-        if (res.ok) {
-          const data = await res.json();
-          postcodeInfo = data.result;
-        }
-      } catch {
-        /* ignore */
-      }
-
-      if (!postcodeInfo) {
-        try {
-          const res = await fetch(
-            `https://api.postcodes.io/postcodes?q=${encodeURIComponent(q)}&limit=1`,
-          );
-          if (res.ok) {
-            const data = await res.json();
-            if (data.result?.length > 0) postcodeInfo = data.result[0];
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-
-      const mocks = await this.generateAndSaveMockProperties(q, postcodeInfo);
-      return { items: naturalSortByAddress(mocks), total: mocks.length };
-    }
-
+    // No real data and no synthetic fallback — honest empty result.
+    // Mock-property generation used to live here, but it persisted fake
+    // addresses to the DB that looked indistinguishable from real OS/EPC
+    // rows in the UI and lingered after upstream came back online. Better
+    // to surface "no results" so the user knows the gov register has
+    // nothing for this postcode (or is currently unavailable).
     return { items: [], total: 0 };
   }
 
@@ -5140,84 +5078,6 @@ export class PropertyService {
         landRegistryRawResponse: { error: errorMessage } as any,
       },
     });
-  }
-
-  private async generateAndSaveMockProperties(
-    query: string,
-    postcodeInfo: {
-      latitude: number;
-      longitude: number;
-      postcode: string;
-    } | null,
-  ): Promise<Property[]> {
-    const areaInfo = getAreaInfo(query);
-    const lat = postcodeInfo?.latitude ?? areaInfo.lat;
-    const lon = postcodeInfo?.longitude ?? areaInfo.lon;
-    const basePostcode = postcodeInfo?.postcode ?? query.toUpperCase();
-
-    const count = 5;
-    const created: Property[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const seed = basePostcode.charCodeAt(0) * 100 + i * 37;
-      const streetIndex = Math.floor(seededRandom(seed) * STREET_NAMES.length);
-      const houseNumber = Math.floor(seededRandom(seed + 1) * 120) + 1;
-      const typeIndex = Math.floor(
-        seededRandom(seed + 2) * PROPERTY_TYPES.length,
-      );
-      const tenureIndex = Math.floor(seededRandom(seed + 3) * TENURES.length);
-      const epcIndex = Math.floor(seededRandom(seed + 4) * EPC_RATINGS.length);
-      const propType = PROPERTY_TYPES[typeIndex];
-      const bedrooms =
-        propType === 'Flat'
-          ? Math.floor(seededRandom(seed + 5) * 2) + 1
-          : Math.floor(seededRandom(seed + 5) * 3) + 2;
-      const sqft = bedrooms * 300 + Math.floor(seededRandom(seed + 6) * 400);
-      const priceVariance = 0.8 + seededRandom(seed + 7) * 0.8;
-      const price = Math.round(areaInfo.basePricek * priceVariance) * 1000;
-      const yearBuilt = 1960 + Math.floor(seededRandom(seed + 8) * 64);
-      const addressLine1 = `${houseNumber}, ${STREET_NAMES[streetIndex]}`;
-      const udprn = `MOCK-${basePostcode.replace(/\s/g, '')}-${i}`;
-      const jLat = lat + (seededRandom(seed + 9) - 0.5) * 0.01;
-      const jLon = lon + (seededRandom(seed + 10) - 0.5) * 0.01;
-
-      try {
-        const prop = await this.prisma.property.upsert({
-          where: { udprn },
-          update: {},
-          create: {
-            udprn,
-            addressLine1,
-            city: areaInfo.city,
-            county: areaInfo.county,
-            postcode: basePostcode,
-            latitude: jLat,
-            longitude: jLon,
-            propertyType: propType,
-            bedrooms,
-            sqft,
-            epcRating: EPC_RATINGS[epcIndex],
-            tenure: TENURES[tenureIndex],
-            yearBuilt,
-            estimatedPrice: price,
-            imageUrl: null,
-            titleNumber: `${basePostcode.replace(/\s/g, '').substring(0, 2)}${100000 + Math.floor(seededRandom(seed + 11) * 900000)}`,
-          },
-        });
-        created.push(prop);
-      } catch {
-        /* skip */
-      }
-    }
-
-    if (created.length === 0) {
-      return this.prisma.property.findMany({
-        where: { postcode: { contains: query, mode: 'insensitive' } },
-        take: 10,
-      });
-    }
-
-    return created;
   }
 
   // ── Wishlist ───────────────────────────────────────────────────────────────
