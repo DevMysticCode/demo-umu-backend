@@ -6145,26 +6145,39 @@ export class PropertyService {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const [today, thisMonth, allTime, distinctSessions, distinctUsers] =
-      await Promise.all([
-        this.prisma.propertySearchLog.count({
-          where: { propertyId, createdAt: { gte: startOfDay } },
-        }),
-        this.prisma.propertySearchLog.count({
-          where: { propertyId, createdAt: { gte: startOfMonth } },
-        }),
-        this.prisma.propertySearchLog.count({ where: { propertyId } }),
-        this.prisma.propertySearchLog.findMany({
-          where: { propertyId, sessionId: { not: null } },
-          select: { sessionId: true },
-          distinct: ['sessionId'],
-        }),
-        this.prisma.propertySearchLog.findMany({
-          where: { propertyId, userId: { not: null } },
-          select: { userId: true },
-          distinct: ['userId'],
-        }),
-      ]);
+    const [
+      today,
+      thisMonth,
+      allTime,
+      distinctSessions,
+      distinctUsers,
+      wishlistCount,
+      savedCount,
+    ] = await Promise.all([
+      this.prisma.propertySearchLog.count({
+        where: { propertyId, createdAt: { gte: startOfDay } },
+      }),
+      this.prisma.propertySearchLog.count({
+        where: { propertyId, createdAt: { gte: startOfMonth } },
+      }),
+      this.prisma.propertySearchLog.count({ where: { propertyId } }),
+      this.prisma.propertySearchLog.findMany({
+        where: { propertyId, sessionId: { not: null } },
+        select: { sessionId: true },
+        distinct: ['sessionId'],
+      }),
+      this.prisma.propertySearchLog.findMany({
+        where: { propertyId, userId: { not: null } },
+        select: { userId: true },
+        distinct: ['userId'],
+      }),
+      // Watchers = users who have this property on a list. Wishlist
+      // (❤️) and SavedProperty (🔖) are both treated as "watching" — they
+      // represent distinct UI affordances but the same intent ("notify
+      // me when this updates"), so we sum them.
+      this.prisma.userWishlist.count({ where: { propertyId } }),
+      this.prisma.userSavedProperty.count({ where: { propertyId } }),
+    ]);
 
     const distinctVisitors =
       (distinctSessions?.length ?? 0) + (distinctUsers?.length ?? 0);
@@ -6174,6 +6187,7 @@ export class PropertyService {
       thisMonth,
       allTime,
       distinctVisitors,
+      watchers: wishlistCount + savedCount,
     };
   }
 
