@@ -6,6 +6,7 @@ const PASSPORT_SELECT = {
   addressLine1: true,
   postcode: true,
   status: true,
+  type: true,
   createdAt: true,
   property: { select: { imageUrl: true } },
 };

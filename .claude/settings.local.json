@@ -185,7 +185,8 @@
       "WebFetch(domain:find-energy-certificate.service.gov.uk)",
       "PowerShell(Get-CimInstance Win32_Process -Filter \"ProcessId=8612\")",
       "Bash(git check-ignore *)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "PowerShell($email = \"itsbunty12398@gmail.com\"; $key = \"2b689e7dc70b0125bce979e51c08d6a1f954b7fc\"; $auth = \"Basic \" + [Convert]::ToBase64String\\([Text.Encoding]::ASCII.GetBytes\\(\"${email}:${key}\"\\)\\); $res = Invoke-RestMethod -Uri \"https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=NW2%204BJ&size=200\" -Headers @{ Authorization = $auth; Accept = \"application/json\" }; \"Total rows: $\\($res.rows.Count\\)\"; $res.rows | Select-Object address, postcode, 'lodgement-date', 'current-energy-rating' | Format-Table -AutoSize)"
     ],
     "additionalDirectories": [
       "d:\\ReactProjects\\op_nuxt\\umu-mobile-webapp\\pages",
