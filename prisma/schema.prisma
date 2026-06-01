@@ -254,6 +254,14 @@ model OwnershipVerification {
   submittedAt         DateTime                    @default(now())
   verifiedAt          DateTime?
   passportId          String?
+  // HM Land Registry — Online Owner Verification (Business Gateway) result.
+  // Persisted so we can replay decisions, show match details on the claim
+  // UI, and avoid re-charging HMLR for the same identity / property pair.
+  landRegistryMessageId    String?
+  landRegistryTitleNumber  String?
+  landRegistryMatchResult  String?  // SINGLE_MATCH | MULTIPLE_MATCHES | NO_MATCHES
+  landRegistryRawResponse  Json?    // full parsed OVResult / OVRejection
+  landRegistryCheckedAt    DateTime?
   property            Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([propertyId, userId])

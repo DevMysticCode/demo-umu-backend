@@ -81,6 +81,25 @@ export class PropertyController {
     return this.propertyService.completeVerification(id, req.user.id);
   }
 
+  // Run HM Land Registry Online Owner Verification for this property + the
+  // logged-in user. Persists the result on the OwnershipVerification row and
+  // returns a verdict the frontend can render directly. Body is optional —
+  // `messageId` lets the caller pin a specific test stub scenario
+  // (eoov-fm-1 etc.) when running against the BG test environment.
+  @Post(':id/land-registry-check')
+  @UseGuards(JwtAuthGuard)
+  async verifyOwnershipWithLandRegistry(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: { messageId?: string } | undefined,
+  ) {
+    return this.propertyService.verifyOwnershipWithLandRegistry(
+      id,
+      req.user.id,
+      { messageId: body?.messageId },
+    );
+  }
+
   // These must stay above @Get(':id') to avoid route conflict
   @Get('wishlist')
   @UseGuards(JwtAuthGuard)

@@ -19,7 +19,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "import:price-paid": "ts-node -r tsconfig-paths/register src/scripts/import-price-paid.ts"
+    "import:price-paid": "ts-node -r tsconfig-paths/register src/scripts/import-price-paid.ts",
+    "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
+    "hmlr:wsdl": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/fetch-hmlr-wsdl.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -35,6 +37,7 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "fast-xml-parser": "^5.8.0",
     "google-auth-library": "^10.6.1",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.3",

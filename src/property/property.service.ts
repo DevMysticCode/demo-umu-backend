@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportService } from '../passport/passport.service';
+import { LandRegistryService } from '../land-registry/land-registry.service';
+import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
 import { Property } from '@prisma/client';
 import { Resend } from 'resend';
 
@@ -1265,6 +1267,7 @@ export class PropertyService {
   constructor(
     private prisma: PrismaService,
     private passportService: PassportService,
+    private landRegistry: LandRegistryService,
   ) {}
 
   // In-memory enrichment cache. The /enrichment endpoint aggregates ~10 live
@@ -4960,6 +4963,183 @@ export class PropertyService {
     if (!property) throw new Error('Property not found');
 
     return { ok: true };
+  }
+
+  /**
+   * Run HM Land Registry Online Owner Verification for a (property, user)
+   * pair and persist the outcome on the OwnershipVerification row.
+   *
+   * Inputs come from the existing rows we already have:
+   *   - User.firstName / .lastName for the proprietor name on the title
+   *   - Property.titleNumber if known, otherwise addressLine1 + postcode
+   *
+   * Status mapping (HMLR TypeCode + MatchResult → our enum):
+   *   TypeCode 30 / SINGLE_MATCH / surname+forename MATCH / not historical
+   *                                               → VERIFIED
+   *   TypeCode 30 / SINGLE_MATCH / partial / historical / middle name mismatch
+   *                                               → ADDITIONAL_INFO_NEEDED
+   *   TypeCode 30 / MULTIPLE_MATCHES              → ADDITIONAL_INFO_NEEDED
+   *   TypeCode 30 / NO_MATCHES                    → FAILED
+   *   TypeCode 20 (rejection)                     → FAILED
+   *   TypeCode 10 (acknowledgement, queued)       → IN_PROGRESS
+   */
+  async verifyOwnershipWithLandRegistry(
+    propertyId: string,
+    userId: string,
+    opts?: { messageId?: string },
+  ) {
+    const [user, property] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId } }),
+      this.prisma.property.findUnique({ where: { id: propertyId } }),
+    ]);
+    if (!user) throw new NotFoundException('User not found');
+    if (!property) throw new NotFoundException('Property not found');
+    if (!user.firstName || !user.lastName) {
+      throw new BadRequestException(
+        'First name and surname are required on the user profile before ' +
+          'running a Land Registry ownership check.',
+      );
+    }
+    if (!property.postcode && !property.titleNumber) {
+      throw new BadRequestException(
+        'Property needs either a title number or a postcode for HMLR lookup.',
+      );
+    }
+
+    const subject = property.titleNumber
+      ? { titleNumber: property.titleNumber }
+      : {
+          address: {
+            buildingName: undefined,
+            buildingNumber: undefined,
+            streetName: property.addressLine1 ?? undefined,
+            cityName: property.city ?? undefined,
+            postcode: property.postcode ?? undefined,
+          },
+        };
+
+    // HMLR's test stub (`EOOV_StubService`) only responds to specific canned
+    // MessageIds (e.g. `eoov-fm-1`, `eoov-pi-1`); any other id is rejected
+    // with "Message ID or test specific data, not recognised for test
+    // service". Default to a full-match scenario when we hit the stub and the
+    // caller didn't pin a scenario explicitly. Production endpoint
+    // (`EOOV_SoapEngine`) accepts any unique MessageId, so we leave it alone.
+    const endpoint = process.env.HMLR_OV_ENDPOINT ?? '';
+    const isTestStub = endpoint.includes('EOOV_StubService') || endpoint === '';
+    const messageId =
+      opts?.messageId ?? (isTestStub ? 'eoov-fm-1' : undefined);
+
+    let result: VerifyOwnershipResult;
+    try {
+      result = await this.landRegistry.verifyOwnership({
+        reference: `UMU-${propertyId.slice(0, 8)}-${userId.slice(0, 8)}`,
+        forename: user.firstName,
+        surname: user.lastName,
+        subject,
+        options: { continueIfOutOfHours: true },
+        messageId,
+      });
+    } catch (e) {
+      const err = e as Error;
+      // Log the full stack server-side — the client only gets a sanitised
+      // message via BadRequestException below.
+      // eslint-disable-next-line no-console
+      console.error('[HMLR] verifyOwnership failed:', err);
+      // Persist the failure so the caller can see what happened — and so
+      // we don't silently flip the row to VERIFIED on a transport error.
+      await this.persistOvFailure(propertyId, userId, err.message);
+      throw new BadRequestException(
+        `HM Land Registry call failed: ${err.message}`,
+      );
+    }
+
+    const status = this.classifyOvResult(result);
+    const topMatch = result.result?.matches?.[0];
+
+    await this.prisma.ownershipVerification.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      update: {
+        status,
+        verifiedAt: status === 'VERIFIED' ? new Date() : null,
+        landRegistryMessageId: result.messageId,
+        landRegistryTitleNumber: topMatch?.titleNumber ?? null,
+        landRegistryMatchResult: result.result?.matchResult ?? null,
+        landRegistryRawResponse: this.ovResultToJson(result),
+        landRegistryCheckedAt: new Date(),
+      },
+      create: {
+        propertyId,
+        userId,
+        status,
+        verifiedAt: status === 'VERIFIED' ? new Date() : null,
+        landRegistryMessageId: result.messageId,
+        landRegistryTitleNumber: topMatch?.titleNumber ?? null,
+        landRegistryMatchResult: result.result?.matchResult ?? null,
+        landRegistryRawResponse: this.ovResultToJson(result),
+        landRegistryCheckedAt: new Date(),
+      },
+    });
+
+    return {
+      status,
+      typeCode: result.typeCode,
+      matchResult: result.result?.matchResult,
+      titleNumber: topMatch?.titleNumber,
+      ownership: topMatch?.info?.Ownership,
+      historical: topMatch?.info?.HistoricalMatch === 'true',
+      rejection: result.rejection,
+      acknowledgement: result.acknowledgement,
+      messageId: result.messageId,
+    };
+  }
+
+  private classifyOvResult(
+    r: VerifyOwnershipResult,
+  ): 'VERIFIED' | 'ADDITIONAL_INFO_NEEDED' | 'FAILED' | 'IN_PROGRESS' {
+    if (r.typeCode === 10) return 'IN_PROGRESS';
+    if (r.typeCode === 20) return 'FAILED';
+    if (r.typeCode !== 30 || !r.result) return 'FAILED';
+
+    const res = r.result;
+    if (res.matchResult === 'NO_MATCHES') return 'FAILED';
+    if (res.matchResult === 'MULTIPLE_MATCHES') return 'ADDITIONAL_INFO_NEEDED';
+
+    // SINGLE_MATCH — drill into the match types.
+    const m = res.matches[0];
+    if (!m) return 'FAILED';
+    const surnameOk = m.surnameMatch?.typeOfMatch === 'MATCH';
+    const forenameOk = m.forenameMatch?.typeOfMatch === 'MATCH';
+    const historical = m.info?.HistoricalMatch === 'true';
+    if (surnameOk && forenameOk && !historical) return 'VERIFIED';
+    return 'ADDITIONAL_INFO_NEEDED';
+  }
+
+  private ovResultToJson(r: VerifyOwnershipResult): any {
+    // Strip the giant raw XML; keep only the parsed structure for the row.
+    const { raw: _raw, ...rest } = r;
+    return rest as any;
+  }
+
+  private async persistOvFailure(
+    propertyId: string,
+    userId: string,
+    errorMessage: string,
+  ) {
+    await this.prisma.ownershipVerification.upsert({
+      where: { propertyId_userId: { propertyId, userId } },
+      update: {
+        status: 'FAILED',
+        landRegistryCheckedAt: new Date(),
+        landRegistryRawResponse: { error: errorMessage } as any,
+      },
+      create: {
+        propertyId,
+        userId,
+        status: 'FAILED',
+        landRegistryCheckedAt: new Date(),
+        landRegistryRawResponse: { error: errorMessage } as any,
+      },
+    });
   }
 
   private async generateAndSaveMockProperties(
