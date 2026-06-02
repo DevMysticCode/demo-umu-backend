@@ -17,6 +17,24 @@ import type {
 } from './land-registry.types'
 
 /**
+ * Pull a PEM blob from env vars. We accept either:
+ *   1. `<NAME>`     — raw PEM (`-----BEGIN ...\n...\n-----END ...`),
+ *                     useful for `.env` files where newlines are fine.
+ *   2. `<NAME>_B64` — base64-encoded PEM, the form that pastes cleanly
+ *                     into a managed-host (Railway / Fly / Heroku) env-var
+ *                     UI which often mangles multi-line input.
+ *
+ * Returns the decoded PEM string, or null when neither var is set.
+ */
+function readPemFromEnv(rawName: string, b64Name: string): string | null {
+  const raw = process.env[rawName]?.trim()
+  if (raw) return raw.includes('-----BEGIN') ? raw : Buffer.from(raw, 'base64').toString('utf8')
+  const b64 = process.env[b64Name]?.trim()
+  if (b64) return Buffer.from(b64, 'base64').toString('utf8')
+  return null
+}
+
+/**
  * HM Land Registry Business Gateway client — Online Owner Verification (OOV).
  *
  * Transport: SOAP 1.1 over mutual TLS. The SOAP envelope carries a WS-Security
@@ -65,6 +83,26 @@ export class LandRegistryService {
    *  --openssl-legacy-provider — the PEM path avoids that flag entirely. */
   private getAgent(): https.Agent {
     if (this.agent) return this.agent
+
+    // Preferred on managed hosts (Railway, Fly, Heroku) where the
+    // /secrets folder isn't deployed: PEM contents passed inline via
+    // env vars. Accept either raw PEM (newlines preserved) or base64
+    // — base64 is easier to paste into a single-line env-var box.
+    const certPem = readPemFromEnv('HMLR_CERT_PEM', 'HMLR_CERT_PEM_B64')
+    const keyPem = readPemFromEnv('HMLR_KEY_PEM', 'HMLR_KEY_PEM_B64')
+    if (certPem && keyPem) {
+      const caPem = readPemFromEnv('HMLR_CA_PEM', 'HMLR_CA_PEM_B64')
+      const caBundle: string[] = [...tls.rootCertificates]
+      if (caPem) caBundle.push(caPem)
+      this.agent = new https.Agent({
+        cert: certPem,
+        key: keyPem,
+        ca: caBundle,
+        passphrase: process.env.HMLR_KEY_PASSPHRASE ?? undefined,
+        keepAlive: true,
+      })
+      return this.agent
+    }
 
     const certPath = process.env.HMLR_CERT_PATH?.trim()
     const keyPath = process.env.HMLR_KEY_PATH?.trim()
