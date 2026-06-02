@@ -1,0 +1,11 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Electrical Safety (EICR)</title><desc>Freestanding lightning bolt emblem.</desc>
+<defs>
+<linearGradient id="boltF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd85a"/><stop offset="1" stop-color="#f5a623"/></linearGradient>
+</defs>
+<g transform="translate(-35 -11.5) scale(1.25)">
+<polygon points="130,86 108,124 122,124 112,152 144,106 128,106 138,86" fill="#dd9119"/>
+<polygon points="126,84 104,122 118,122 108,150 140,104 124,104 134,84" fill="url(#boltF)"/>
+<polygon points="126,84 104,122 118,122 108,150 140,104 124,104 134,84" fill="none" stroke="#e8961f" stroke-width="0.9" stroke-linejoin="round"/>
+</g>
+</svg>

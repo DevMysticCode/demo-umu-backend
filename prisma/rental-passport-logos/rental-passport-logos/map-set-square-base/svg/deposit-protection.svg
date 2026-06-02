@@ -1,0 +1,24 @@
+<svg width="100%" viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Deposit Protection</title><desc>3D isometric tile with a stack of gold coins and a pound symbol.</desc>
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece7de"/><stop offset="1" stop-color="#ddd7cc"/></linearGradient>
+<linearGradient id="coinTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe07a"/><stop offset="1" stop-color="#fcc63f"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="240" rx="88" ry="18" fill="#000000" opacity="0.10"/>
+<polygon points="42,165 120,204 120,230 42,191" fill="#c9c3b7"/>
+<polygon points="198,165 120,204 120,230 198,191" fill="#bdb7aa"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="url(#tile)"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="none" stroke="#efeae2" stroke-width="1" stroke-linejoin="round" opacity="0.7"/>
+<ellipse cx="66" cy="173" rx="9" ry="3" fill="#000000" opacity="0.10"/>
+<polygon points="59,162 73,162 71,174 61,174" fill="#cf7f4f"/>
+<ellipse cx="66" cy="162" rx="7" ry="2.4" fill="#dd8a57"/>
+<circle cx="62" cy="155" r="6" fill="#5cb85c"/><circle cx="70" cy="153" r="6" fill="#4aa64a"/><circle cx="66" cy="149" r="6.5" fill="#6cc46c"/>
+<ellipse cx="120" cy="176" rx="36" ry="11" fill="#000000" opacity="0.09"/>
+<path d="M88 132 v40 a32 13 0 0 0 64 0 v-40 z" fill="#e0a91f"/>
+<path d="M88 150 a32 13 0 0 0 64 0" fill="none" stroke="#c9941a" stroke-width="1.4"/>
+<path d="M88 162 a32 13 0 0 0 64 0" fill="none" stroke="#c9941a" stroke-width="1.4"/>
+<ellipse cx="120" cy="132" rx="32" ry="13" fill="url(#coinTop)"/>
+<ellipse cx="120" cy="132" rx="32" ry="13" fill="none" stroke="#e0a91f" stroke-width="1.2"/>
+<ellipse cx="120" cy="132" rx="22" ry="8.5" fill="none" stroke="#f0c247" stroke-width="1.4"/>
+<text x="120" y="139" text-anchor="middle" font-family="Georgia, serif" font-size="21" font-weight="700" fill="#9a6f12">&#163;</text>
+</svg>

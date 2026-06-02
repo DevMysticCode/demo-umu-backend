@@ -1,0 +1,10 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Legionella Risk Assessment</title><desc>Freestanding water droplet.</desc>
+<defs>
+<linearGradient id="dropG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#62c5ef"/><stop offset="1" stop-color="#1f93c8"/></linearGradient>
+</defs>
+<path d="M120 92 C 146 126, 158 148, 144 167 C 134 179, 106 179, 96 167 C 82 148, 94 126, 120 92 Z" fill="url(#dropG)"/>
+<path d="M120 92 C 146 126, 158 148, 144 167 C 134 179, 106 179, 96 167 C 82 148, 94 126, 120 92 Z" fill="none" stroke="#1684b8" stroke-width="1" stroke-linejoin="round"/>
+<path d="M106 148 C 104 158, 108 168, 118 172" stroke="#d6f0fb" stroke-width="5" fill="none" stroke-linecap="round"/>
+<ellipse cx="110" cy="124" rx="5" ry="9" fill="#cdeefb" opacity="0.85"/>
+</svg>

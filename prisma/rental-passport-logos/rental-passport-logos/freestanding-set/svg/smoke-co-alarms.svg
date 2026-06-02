@@ -1,0 +1,12 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Smoke and CO Alarms</title><desc>Freestanding round alarm detector with sound waves.</desc>
+<path d="M76 150 a44 22 0 0 0 88 0 l0 13 a44 22 0 0 1 -88 0 z" fill="#dfe1e6"/>
+<ellipse cx="120" cy="150" rx="44" ry="22" fill="#fbfbfd"/>
+<ellipse cx="120" cy="150" rx="44" ry="22" fill="none" stroke="#dcdee4" stroke-width="1"/>
+<ellipse cx="120" cy="150" rx="31" ry="15.5" fill="none" stroke="#ebedf1" stroke-width="2"/>
+<ellipse cx="98" cy="146" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="120" cy="140" rx="3" ry="1.6" fill="#e3e5ea"/>
+<ellipse cx="142" cy="146" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="108" cy="158" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="132" cy="158" rx="3" ry="1.6" fill="#e3e5ea"/>
+<circle cx="120" cy="150" r="6.5" fill="#3fb56b"/>
+<path d="M168 124 q11 18 0 36" stroke="#ffb52e" stroke-width="3" fill="none" stroke-linecap="round"/>
+<path d="M178 116 q16 26 0 52" stroke="#ffcf6b" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>

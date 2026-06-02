@@ -1,0 +1,11 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Energy Performance (EPC)</title><desc>Freestanding leaf emblem.</desc>
+<defs>
+<linearGradient id="leafG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ace6e"/><stop offset="1" stop-color="#48a84e"/></linearGradient>
+</defs>
+<g transform="translate(-33.4 -16.1) scale(1.3)">
+<path d="M118 88 C 142 96, 152 120, 138 146 C 114 152, 94 132, 100 106 C 110 122, 130 120, 118 88 Z" fill="#3f9e54"/>
+<path d="M118 98 C 136 104, 144 124, 132 144 C 113 149, 98 132, 104 112 C 113 126, 128 124, 118 98 Z" fill="url(#leafG)"/>
+<path d="M118 100 C 116 118, 119 134, 131 145" stroke="#3f9e54" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+</g>
+</svg>

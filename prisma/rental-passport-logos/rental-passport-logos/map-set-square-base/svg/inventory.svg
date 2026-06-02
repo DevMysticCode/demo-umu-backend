@@ -1,0 +1,25 @@
+<svg width="100%" viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Inventory and Schedule of Condition</title><desc>3D isometric tile with a clipboard and checklist.</desc>
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece7de"/><stop offset="1" stop-color="#ddd7cc"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="240" rx="88" ry="18" fill="#000000" opacity="0.10"/>
+<polygon points="42,165 120,204 120,230 42,191" fill="#c9c3b7"/>
+<polygon points="198,165 120,204 120,230 198,191" fill="#bdb7aa"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="url(#tile)"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="none" stroke="#efeae2" stroke-width="1" stroke-linejoin="round" opacity="0.7"/>
+<ellipse cx="66" cy="173" rx="9" ry="3" fill="#000000" opacity="0.10"/>
+<polygon points="59,162 73,162 71,174 61,174" fill="#cf7f4f"/>
+<ellipse cx="66" cy="162" rx="7" ry="2.4" fill="#dd8a57"/>
+<circle cx="62" cy="155" r="6" fill="#5cb85c"/><circle cx="70" cy="153" r="6" fill="#4aa64a"/><circle cx="66" cy="149" r="6.5" fill="#6cc46c"/>
+<ellipse cx="120" cy="166" rx="46" ry="12" fill="#000000" opacity="0.08"/>
+<polygon points="70,158 120,132 120,142 70,168" fill="#b6843f"/>
+<polygon points="170,158 120,132 120,142 170,168" fill="#a8773a"/>
+<polygon points="70,158 120,130 170,158 120,186" fill="#cf9a5b"/>
+<polygon points="86,158 120,140 154,158 120,176" fill="#fdfbf6"/>
+<polygon points="110,132 130,132 126,124 114,124" fill="#9aa0a6"/>
+<polygon points="94,158 100,155 106,158 100,161" fill="#1aa784"/>
+<polygon points="108,164 114,161 134,170 128,173" fill="#e2dccf"/>
+<polygon points="104,150 110,147 116,150 110,153" fill="#1aa784"/>
+<polygon points="118,156 124,153 142,162 136,165" fill="#e2dccf"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Landlord Insurance</title><desc>Freestanding protective shield with house emblem.</desc>
+<defs>
+<linearGradient id="shieldG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27b893"/><stop offset="1" stop-color="#148a6b"/></linearGradient>
+</defs>
+<path d="M124 90 L160 104 C160 140,144 162,124 174 C123 150,123 114,124 90 Z" fill="#0e7a60"/>
+<path d="M120 88 L156 102 C156 138,140 160,120 172 C100 160,84 138,84 102 Z" fill="url(#shieldG)"/>
+<path d="M120 88 L156 102 C156 138,140 160,120 172 C100 160,84 138,84 102 Z" fill="none" stroke="#0e7a60" stroke-width="1.2" stroke-linejoin="round"/>
+<polygon points="102,128 120,112 138,128" fill="#ffffff"/>
+<rect x="107" y="128" width="26" height="20" fill="#ffffff"/>
+<rect x="116" y="136" width="8" height="12" fill="#1aa784"/>
+<rect x="110" y="131" width="6" height="6" fill="#9fded0"/>
+<rect x="124" y="131" width="6" height="6" fill="#9fded0"/>
+</svg>

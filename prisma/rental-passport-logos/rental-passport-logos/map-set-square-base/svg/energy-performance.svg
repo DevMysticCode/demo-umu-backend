@@ -1,0 +1,30 @@
+<svg width="100%" viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Energy Performance (EPC)</title><desc>3D isometric tile with certificate, green seal and a leaf.</desc>
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece7de"/><stop offset="1" stop-color="#ddd7cc"/></linearGradient>
+<linearGradient id="leafG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ace6e"/><stop offset="1" stop-color="#48a84e"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="240" rx="88" ry="18" fill="#000000" opacity="0.10"/>
+<polygon points="42,165 120,204 120,230 42,191" fill="#c9c3b7"/>
+<polygon points="198,165 120,204 120,230 198,191" fill="#bdb7aa"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="url(#tile)"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="none" stroke="#efeae2" stroke-width="1" stroke-linejoin="round" opacity="0.7"/>
+<ellipse cx="66" cy="173" rx="9" ry="3" fill="#000000" opacity="0.10"/>
+<polygon points="59,162 73,162 71,174 61,174" fill="#cf7f4f"/>
+<ellipse cx="66" cy="162" rx="7" ry="2.4" fill="#dd8a57"/>
+<circle cx="62" cy="155" r="6" fill="#5cb85c"/><circle cx="70" cy="153" r="6" fill="#4aa64a"/><circle cx="66" cy="149" r="6.5" fill="#6cc46c"/>
+<ellipse cx="118" cy="160" rx="40" ry="11" fill="#000000" opacity="0.08"/>
+<polygon points="80,158 120,178 120,187 80,167" fill="#dcdce0"/>
+<polygon points="160,158 120,178 120,187 160,167" fill="#cfd0d5"/>
+<polygon points="80,158 120,138 160,158 120,178" fill="#ffffff"/>
+<polygon points="80,158 120,138 160,158 120,178" fill="none" stroke="#d7dade" stroke-width="1" stroke-linejoin="round"/>
+<line x1="98" y1="152" x2="120" y2="163" stroke="#7ace6e" stroke-width="2.6" stroke-linecap="round"/>
+<line x1="104" y1="150" x2="128" y2="162" stroke="#cddc59" stroke-width="2.6" stroke-linecap="round"/>
+<ellipse cx="116" cy="150" rx="16" ry="5" fill="#000000" opacity="0.12"/>
+<path d="M118 88 C 142 96, 152 120, 138 146 C 114 152, 94 132, 100 106 C 110 122, 130 120, 118 88 Z" fill="#3f9e54"/>
+<path d="M118 98 C 136 104, 144 124, 132 144 C 113 149, 98 132, 104 112 C 113 126, 128 124, 118 98 Z" fill="url(#leafG)"/>
+<path d="M118 100 C 116 118, 119 134, 131 145" stroke="#3f9e54" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+<ellipse cx="142" cy="168" rx="11" ry="6" fill="#2c7a3f"/>
+<circle cx="142" cy="164" r="9" fill="#48a84e"/><circle cx="142" cy="164" r="5" fill="#2c7a3f"/>
+<polygon points="136,170 136,180 142,176 148,180 148,170" fill="#357f44"/>
+</svg>

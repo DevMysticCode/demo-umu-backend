@@ -1,0 +1,25 @@
+<svg width="100%" viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Smoke and CO Alarms</title><desc>3D isometric tile with a round alarm detector and sound waves.</desc>
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece7de"/><stop offset="1" stop-color="#ddd7cc"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="240" rx="88" ry="18" fill="#000000" opacity="0.10"/>
+<polygon points="42,165 120,204 120,230 42,191" fill="#c9c3b7"/>
+<polygon points="198,165 120,204 120,230 198,191" fill="#bdb7aa"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="url(#tile)"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="none" stroke="#efeae2" stroke-width="1" stroke-linejoin="round" opacity="0.7"/>
+<ellipse cx="66" cy="173" rx="9" ry="3" fill="#000000" opacity="0.10"/>
+<polygon points="59,162 73,162 71,174 61,174" fill="#cf7f4f"/>
+<ellipse cx="66" cy="162" rx="7" ry="2.4" fill="#dd8a57"/>
+<circle cx="62" cy="155" r="6" fill="#5cb85c"/><circle cx="70" cy="153" r="6" fill="#4aa64a"/><circle cx="66" cy="149" r="6.5" fill="#6cc46c"/>
+<ellipse cx="120" cy="172" rx="46" ry="12" fill="#000000" opacity="0.09"/>
+<path d="M76 150 a44 22 0 0 0 88 0 l0 13 a44 22 0 0 1 -88 0 z" fill="#dfe1e6"/>
+<ellipse cx="120" cy="150" rx="44" ry="22" fill="#fbfbfd"/>
+<ellipse cx="120" cy="150" rx="44" ry="22" fill="none" stroke="#dcdee4" stroke-width="1"/>
+<ellipse cx="120" cy="150" rx="31" ry="15.5" fill="none" stroke="#ebedf1" stroke-width="2"/>
+<ellipse cx="98" cy="146" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="120" cy="140" rx="3" ry="1.6" fill="#e3e5ea"/>
+<ellipse cx="142" cy="146" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="108" cy="158" rx="3" ry="1.6" fill="#e3e5ea"/><ellipse cx="132" cy="158" rx="3" ry="1.6" fill="#e3e5ea"/>
+<circle cx="120" cy="150" r="6.5" fill="#3fb56b"/>
+<path d="M168 124 q11 18 0 36" stroke="#ffb52e" stroke-width="3" fill="none" stroke-linecap="round"/>
+<path d="M178 116 q16 26 0 52" stroke="#ffcf6b" stroke-width="3" fill="none" stroke-linecap="round"/>
+</svg>
