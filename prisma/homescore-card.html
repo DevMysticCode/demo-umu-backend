@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeScore card — 49 Woodfield Road</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#F2F1E8; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px 18px;
+  }
+  .card{
+    width:100%; max-width:560px; background:#C46A14; border-radius:22px; padding:26px 28px; color:#fff;
+    box-shadow:0 14px 40px rgba(150,84,16,.18);
+  }
+  .head{display:flex; align-items:flex-start; gap:13px;}
+  .ring{width:15px;height:15px;border-radius:50%;border:3px solid rgba(255,255,255,.85);margin-top:8px;flex:none;}
+  .addr{font-size:30px;font-weight:700;line-height:1.08;}
+  .meta{font-size:16px;color:rgba(255,255,255,.82);margin-top:5px;}
+  .divider{height:1px;background:rgba(255,255,255,.25);margin:20px 0;}
+
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .tile{background:rgba(255,255,255,.1);border:.5px solid rgba(255,255,255,.25);border-radius:14px;padding:16px;text-align:left;color:#fff;cursor:pointer;font-family:inherit;width:100%;transition:.15s;}
+  .tile:hover{background:rgba(255,255,255,.16);}
+  .tile-top{display:flex;justify-content:space-between;align-items:center;}
+  .tlabel{font-size:15px;color:rgba(255,255,255,.88);display:inline-flex;align-items:center;gap:6px;}
+  .epc-badge{background:#4D7C1F;color:#fff;font-size:14px;font-weight:600;width:27px;height:27px;border-radius:7px;display:flex;align-items:center;justify-content:center;}
+  .hs-num{font-size:15px;font-weight:600;}
+  .hs-num b{font-size:23px;font-weight:700;}
+  .hs-num span{color:rgba(255,255,255,.7);}
+  .tile-val{margin-top:12px;display:flex;align-items:baseline;min-height:32px;}
+  .bar{height:7px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden;margin:13px 0 11px;}
+  .bar i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:99px;transform-origin:left;animation:bargrow 1.1s cubic-bezier(.2,.8,.2,1) both;position:relative;overflow:hidden;}
+  .bar i::after{content:"";position:absolute;top:0;left:0;height:100%;width:45%;background:linear-gradient(90deg,transparent,rgba(196,106,20,.55),transparent);animation:shimmer 2.6s ease-in-out 1.1s infinite;}
+  @keyframes bargrow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+  @keyframes shimmer{0%{transform:translateX(-130%);}55%,100%{transform:translateX(330%);}}
+  .hook{font-size:14px;color:rgba(255,255,255,.92);}
+  .hook u{text-decoration:underline;}
+  .pill{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.18);color:#fff;text-decoration:none;cursor:pointer;}
+
+  .viewers{display:flex;align-items:center;gap:13px;background:rgba(255,255,255,.1);border:.5px solid rgba(255,255,255,.2);border-radius:14px;padding:14px 16px;margin-top:14px;}
+  .idstack{display:inline-flex;flex:none;}
+  .idc{width:29px;height:29px;border-radius:50%;border:2.5px solid #C46A14;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;}
+  .idc:nth-child(n+2){margin-left:-10px;}
+  .vtxt{font-size:16px;}
+  .vtxt b{font-weight:700;}
+  .vtxt span{color:rgba(255,255,255,.85);}
+
+  .watch{display:flex;align-items:center;gap:11px;margin-top:13px;padding-left:3px;}
+  .watch span{font-size:14.5px;color:rgba(255,255,255,.85);}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <span class="ring"></span>
+      <div>
+        <div class="addr">49 Woodfield Road</div>
+        <div class="meta">CV5 6AJ · House · 109m²</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="tiles">
+      <button class="tile">
+        <span class="tlabel">EPC rating</span>
+        <div class="tile-val"><span class="epc-badge">C</span></div>
+        <div class="bar"><i style="width:62%;"></i></div>
+        <div class="hook">Lower running costs</div>
+        <a class="pill">See the pathway →</a>
+      </button>
+
+      <button class="tile">
+        <span class="tlabel"><svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,.92)" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg> HomeScore</span>
+        <div class="tile-val"><span class="hs-num"><b>79</b><span>/100</span></span></div>
+        <div class="bar"><i style="width:79%;"></i></div>
+        <div class="hook">Above average</div>
+        <a class="pill">Take the quiz →</a>
+      </button>
+    </div>
+
+    <div class="viewers">
+      <span class="idstack">
+        <span class="idc" style="background:#9FE1CB;"><span style="width:11px;height:11px;background:#0F6E56;border-radius:2px;transform:rotate(45deg);"></span></span>
+        <span class="idc" style="background:#FAC775;"><span style="width:12px;height:12px;border:3px solid #633806;border-radius:50%;"></span></span>
+      </span>
+      <div class="vtxt"><b>2 people</b> <span>checked this HomeScore today</span></div>
+    </div>
+
+    <div class="viewers" style="margin-top:12px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      <div class="vtxt"><b>0 people</b> <span>are watching this property</span></div>
+    </div>
+  </div>
+</body>
+</html>

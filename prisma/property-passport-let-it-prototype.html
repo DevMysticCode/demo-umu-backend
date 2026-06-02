@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Passport — claim flow prototype</title>
+<style>
+  :root{
+    --navy:#2A2950; --teal:#129C8C; --teal-d:#0F6E56;
+    --ink:#2A2950; --muted:#7A7995; --line:#E7E6EF;
+    --surface:#F3F2F8; --green:#1D9E75; --amber:#BA7517;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#E9E8F1; color:var(--ink); line-height:1.45;
+    min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:24px 16px;
+  }
+  .phone{width:100%; max-width:430px; background:#fff; border-radius:30px; overflow:hidden;
+    box-shadow:0 18px 50px rgba(30,28,60,.22); border:1px solid #DCDBE8;}
+  .notch{height:26px; display:flex; align-items:center; justify-content:center;}
+  .notch span{width:90px; height:6px; border-radius:99px; background:#D7D6E2;}
+  .scroll{max-height:760px; overflow-y:auto; -webkit-overflow-scrolling:touch;}
+  .pad{padding:0 18px 20px;}
+
+  .eyebrow{font-size:11px; letter-spacing:1.6px; color:var(--muted); font-weight:600;}
+  h1{font-size:21px; font-weight:650; margin:6px 0 4px; line-height:1.2;}
+  .sub{font-size:13.5px; color:var(--muted); line-height:1.5;}
+
+  /* stepper (5 steps) */
+  .stepper{display:flex; align-items:center; justify-content:space-between; padding:14px 14px 6px;}
+  .step{display:flex; flex-direction:column; align-items:center; gap:5px; flex:none; cursor:pointer; background:none; border:none; font-family:inherit; width:54px;}
+  .dot{width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; background:#ECEBF2; color:#9897AD; transition:.2s;}
+  .step.done .dot{background:var(--teal); color:#fff;}
+  .step.active .dot{background:var(--navy); color:#fff; box-shadow:0 0 0 4px #DEDDEC;}
+  .step .lbl{font-size:10.5px; color:#9897AD; text-align:center;}
+  .step.active .lbl{color:var(--navy); font-weight:600;}
+  .step.done .lbl{color:var(--teal-d); font-weight:600;}
+  .seg{height:2px; background:#E7E6EF; flex:1; margin:0 2px 16px; border-radius:2px; min-width:8px;}
+  .seg.fill{background:var(--teal);}
+
+  .screen{display:none; animation:fade .25s ease;}
+  .screen.show{display:block;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px;}
+  .soft{background:var(--surface); border-radius:14px; padding:14px 16px;}
+  .row{display:flex; align-items:center; gap:12px;}
+  .pill{display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:5px 10px; border-radius:99px;}
+  .pill.teal{background:#E2F4EF; color:var(--teal-d);}
+  .pill.amber{background:#FBEFD9; color:var(--amber);}
+  .pill.navy{background:#E7E6F2; color:var(--navy);}
+
+  .btn{display:flex; align-items:center; justify-content:center; gap:8px; width:100%; border:none; border-radius:14px; padding:15px; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; transition:.15s;}
+  .btn:active{transform:scale(.985);}
+  .btn.primary{background:var(--teal); color:#fff;}
+  .btn.primary:disabled{background:#BFD9D3; cursor:not-allowed;}
+  .btn.ghost{background:#fff; color:var(--navy); border:1px solid #D9D8E4;}
+  .btn.dark{background:var(--navy); color:#fff;}
+
+  .ci{width:36px; height:36px; border-radius:9px; background:var(--surface); display:flex; align-items:center; justify-content:center; flex:none; font-size:17px;}
+  .tick{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;}
+  .spinner{width:18px;height:18px;border:2.5px solid #D7E9E4;border-top-color:var(--teal);border-radius:50%;animation:spin .7s linear infinite;flex:none;}
+
+  .vrow{display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid var(--line);}
+  .vrow:last-child{border-bottom:none;}
+  .vmeta{flex:1; min-width:0;}
+  .vmeta b{font-size:14px; font-weight:600;}
+  .vmeta small{display:block; font-size:12px; color:var(--muted);}
+  .vbtn{border:1px solid var(--teal); color:var(--teal); background:#fff; border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; flex:none;}
+  .vstate{font-size:12.5px; font-weight:600; display:inline-flex; align-items:center; gap:6px; flex:none;}
+  .vstate.ok{color:var(--green);}
+  .vstate.load{color:var(--muted);}
+
+  .progwrap{height:7px; background:#E7E6EF; border-radius:99px; overflow:hidden; margin:4px 0;}
+  .progbar{height:100%; background:var(--teal); width:0; transition:width .4s ease;}
+
+  .opt{border:1.5px solid var(--line); border-radius:16px; padding:16px; cursor:pointer; transition:.15s; background:#fff;}
+  .opt.sel{border-color:var(--teal); background:#F2FBF9;}
+  .opt .otop{display:flex; align-items:center; gap:12px;}
+  .opt .oico{width:42px;height:42px;border-radius:11px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;}
+  .opt.sel .oico{background:#DCF2EC;}
+  .opt b{font-size:15px;}
+  .opt p{font-size:12.5px; color:var(--muted); line-height:1.5; margin:10px 0 0;}
+  .radio{width:22px;height:22px;border-radius:50%;border:2px solid #CDCCDB;flex:none;display:flex;align-items:center;justify-content:center;}
+  .opt.sel .radio{border-color:var(--teal); background:var(--teal); color:#fff;}
+
+  .summary-item{display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .summary-item:last-child{border-bottom:none;}
+  .linkbox{display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:13px;}
+  .linkbox .url{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:ui-monospace,Menlo,monospace; font-size:12.5px; color:var(--navy);}
+  .copy{border:none; background:var(--navy); color:#fff; border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; cursor:pointer; font-family:inherit;}
+
+  .mt8{margin-top:8px;} .mt12{margin-top:12px;} .mt16{margin-top:16px;}
+  .field{margin-top:12px;}
+  .field span{font-size:12px; color:var(--muted); font-weight:600;}
+  .field .val{font-size:15px; font-weight:600; margin-top:3px;}
+  .btn-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  /* tutorial screen */
+  .navyhead{background:var(--navy); border-radius:18px; padding:20px; color:#fff;}
+  .istat{background:var(--surface); border-radius:14px; padding:16px 14px; text-align:center;}
+  .istat .n{font-size:26px; font-weight:650; color:var(--navy); line-height:1;}
+  .istat .l{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.3;}
+  .istepper{display:flex; align-items:center; justify-content:space-between;}
+  .istep{display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; width:50px;}
+  .icirc{width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; background:#ECEBF2; color:#9897AD; transition:.2s;}
+  .istep.on .icirc{background:var(--teal); color:#fff; box-shadow:0 0 0 4px #D7F0E6;}
+  .istep .il{font-size:10.5px; color:#9897AD; text-align:center;}
+  .istep.on .il{color:var(--teal-d); font-weight:600;}
+  .iseg{height:2px; background:#E7E6EF; flex:1; margin:0 2px 16px; min-width:6px;}
+  .idetail{background:#EDF6F2; border-radius:14px; padding:16px;}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"><span></span></div>
+
+  <div class="pad" id="topbar">
+    <div class="eyebrow">PROPERTY PASSPORT™</div>
+    <h1 id="h-title">Claim your property</h1>
+    <div class="sub">9 Woodfield Road · CV5 6AJ · House · 118m²</div>
+  </div>
+
+  <div class="stepper" id="stepper">
+    <button class="step active" data-go="1"><div class="dot">1</div><div class="lbl">Claim</div></button>
+    <div class="seg" id="seg1"></div>
+    <button class="step" data-go="2"><div class="dot">2</div><div class="lbl">Ownership</div></button>
+    <div class="seg" id="seg2"></div>
+    <button class="step" data-go="3"><div class="dot">3</div><div class="lbl">Passport</div></button>
+    <div class="seg" id="seg3"></div>
+    <button class="step" data-go="4"><div class="dot">4</div><div class="lbl">Build</div></button>
+    <div class="seg" id="seg4"></div>
+    <button class="step" data-go="5"><div class="dot">5</div><div class="lbl">Publish</div></button>
+  </div>
+
+  <div class="scroll">
+  <div class="pad">
+
+    <!-- TUTORIAL / ONBOARDING -->
+    <section class="screen show" id="s0">
+      <div class="navyhead mt8">
+        <div style="font-size:11px;letter-spacing:1.6px;color:rgba(255,255,255,.6);font-weight:600;">PROPERTY PASSPORT™</div>
+        <div style="font-size:21px;font-weight:650;line-height:1.2;margin:10px 0 8px;">Your home's permanent record — for owning, letting and selling.</div>
+        <div style="font-size:13.5px;color:rgba(255,255,255,.8);line-height:1.5;">A Passport stays with this property for life. Build it now, keep it updated, and when you do decide to let or sell — the hard work is already done.</div>
+      </div>
+
+      <div class="soft mt12" style="border-left:3px solid var(--navy);border-radius:0 14px 14px 0;">
+        <div style="font-size:12px;letter-spacing:1px;font-weight:600;color:var(--navy);">EVERY CAR HAS A LOGBOOK — YOUR HOME SHOULD TOO</div>
+        <div style="font-size:13px;color:#5A5975;line-height:1.5;margin-top:8px;">A car's full history follows it from owner to owner. Your home is worth far more, yet its certificates, guarantees and compliance sit scattered across drawers, emails and solicitors — and have to be re-proven every time you sell or let. A Property Passport keeps it all in one permanent, verified record: current when you let, ready when you sell, and yours for as long as you own it.</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px;">
+        <div class="istat"><div class="n">Free</div><div class="l">To build forever</div></div>
+        <div class="istat"><div class="n">2 min</div><div class="l">To claim ownership today</div></div>
+        <div class="istat"><div class="n">150</div><div class="l">Days avg. conveyancing</div></div>
+        <div class="istat"><div class="n">21 <span style="color:var(--teal);font-size:15px;">●</span></div><div class="l">Searches on this address / mo</div></div>
+      </div>
+
+      <div style="font-size:11px;letter-spacing:1px;color:#9897AD;font-weight:600;margin:18px 2px 12px;">YOUR FIVE STEPS · TAP TO LEARN MORE</div>
+      <div class="istepper" id="tutStepper">
+        <div class="istep on" onclick="showTutStep(0)"><div class="icirc">1</div><div class="il">Claim</div></div>
+        <div class="iseg"></div>
+        <div class="istep" onclick="showTutStep(1)"><div class="icirc">2</div><div class="il">Ownership</div></div>
+        <div class="iseg"></div>
+        <div class="istep" onclick="showTutStep(2)"><div class="icirc">3</div><div class="il">Passport</div></div>
+        <div class="iseg"></div>
+        <div class="istep" onclick="showTutStep(3)"><div class="icirc">4</div><div class="il">Build</div></div>
+        <div class="iseg"></div>
+        <div class="istep" onclick="showTutStep(4)"><div class="icirc">5</div><div class="il">Publish</div></div>
+      </div>
+
+      <div class="idetail mt16">
+        <div id="tutTitle" style="font-size:13px;font-weight:600;color:var(--teal-d);">1 · Claim</div>
+        <div id="tutDetail" style="font-size:13.5px;color:#3A5A50;line-height:1.55;margin-top:7px;"></div>
+      </div>
+
+      <div class="btn-row mt16">
+        <button class="btn ghost" onclick="go(1)">Got it</button>
+        <button class="btn primary" onclick="go(1)">Claim your property →</button>
+      </div>
+    </section>
+
+    <!-- STEP 1: CLAIM (KYC) -->
+    <section class="screen" id="s1">
+      <div class="soft mt8">
+        <div class="row">
+          <div class="ci" style="background:#E7E6F2;color:var(--navy);">⌂</div>
+          <div>
+            <b style="font-size:15px;">9 Woodfield Road</b>
+            <div style="font-size:12.5px;color:var(--muted);">CV5 6AJ · Coventry · House · 118m²</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt12">
+        <b style="font-size:15px;">Let's make sure it's really you</b>
+        <p class="sub mt8">We want to confirm it's you — and make sure no one else can claim your property's Passport. A quick identity check (KYC) keeps your Passport yours. About 2 minutes and fully secure.</p>
+        <div class="mt8" style="border-top:1px solid var(--line);">
+          <div class="vrow" id="kyc-id">
+            <div class="ci">🪪</div>
+            <div class="vmeta"><b>Photo ID</b><small>Passport or driving licence</small></div>
+            <span class="vstate" style="color:var(--muted);">Pending</span>
+          </div>
+          <div class="vrow" id="kyc-self">
+            <div class="ci">🤳</div>
+            <div class="vmeta"><b>Liveness selfie</b><small>Confirms the ID is yours</small></div>
+            <span class="vstate" style="color:var(--muted);">Pending</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="soft mt12" style="display:flex;gap:11px;align-items:flex-start;">
+        <div class="ci" style="background:#fff;">🔒</div>
+        <div style="font-size:12.5px;line-height:1.5;">
+          <b style="font-size:13px;">£15 one-off ID check</b>
+          <div style="color:var(--muted);">Pay once, reusable forever — it lives on your profile, so you never pay again, whoever you share your Passport with.</div>
+        </div>
+      </div>
+
+      <div id="kycCTA"><button class="btn primary mt16" onclick="runKyc()">Claim this property →</button></div>
+      <div id="kycDone" style="display:none;">
+        <div class="card mt16" style="border-color:#CDEBE2;background:#F0FBF7;">
+          <div class="row"><span class="tick">✓</span><b style="font-size:14.5px;">Identity verified — Maxine Wilson</b></div>
+          <div class="sub mt8">You've passed KYC. We can now check this against the official ownership record.</div>
+        </div>
+        <button class="btn primary mt16" onclick="go(2)">Continue →</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: VERIFY OWNERSHIP (LAND REGISTRY) -->
+    <section class="screen" id="s2">
+      <div class="card">
+        <b style="font-size:15px;">Verify ownership</b>
+        <p class="sub mt8">We check your verified identity against HM Land Registry to confirm you're the registered proprietor of this property. No documents to upload.</p>
+        <div class="soft mt12 row" style="gap:11px;">
+          <div class="ci" style="background:#fff;">🏛️</div>
+          <div>
+            <b style="font-size:13.5px;">HM Land Registry</b>
+            <div style="font-size:12px;color:var(--muted);">Official register of property ownership</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="lrCTA"><button class="btn primary mt16" onclick="runLR()">Check the register</button></div>
+      <div id="lrLoading" style="display:none;">
+        <div class="card mt16 row" style="gap:11px;"><span class="spinner"></span><span class="sub" style="margin:0;">Matching you against the register…</span></div>
+      </div>
+      <div id="lrDone" style="display:none;">
+        <div class="card mt16" style="border-color:#CDEBE2;background:#F0FBF7;">
+          <div class="row"><span class="tick">✓</span><b style="font-size:14.5px;">You're the registered owner</b></div>
+          <div class="field"><span>REGISTERED PROPRIETOR</span><div class="val">Maxine Wilson</div></div>
+          <div class="field"><span>TITLE NUMBER</span><div class="val">WM849302</div></div>
+          <div class="sub mt8">Matches your verified identity. Ownership confirmed.</div>
+        </div>
+        <button class="btn primary mt16" onclick="go(3)">Continue →</button>
+      </div>
+    </section>
+
+    <!-- STEP 3: CHOOSE PASSPORT -->
+    <section class="screen" id="s3">
+      <p class="sub mt8" style="margin-bottom:14px;">What are you building this Passport for? You can add the other later — your claim and ownership carry across.</p>
+
+      <div class="opt mt12" id="opt-sell" onclick="selectType('sell')">
+        <div class="otop">
+          <div class="oico">🏷️</div>
+          <div style="flex:1;"><b>Selling passport</b><div style="font-size:12px;color:var(--muted);">Getting ready to sell</div></div>
+          <div class="radio">✓</div>
+        </div>
+        <p>Everything a buyer and conveyancer needs — verified upfront. Built to cut the ~150 days of uncertainty out of a sale.</p>
+      </div>
+
+      <div class="opt mt12" id="opt-land" onclick="selectType('land')">
+        <div class="otop">
+          <div class="oico">🔑</div>
+          <div style="flex:1;"><b>Landlord passport</b><div style="font-size:12px;color:var(--muted);">Letting it out</div></div>
+          <div class="radio">✓</div>
+        </div>
+        <p>Compliance, certificates and tenant-ready information kept current — and re-usable across every tenancy.</p>
+      </div>
+
+      <button class="btn primary mt16" id="typeBtn" disabled onclick="go(4)">Continue →</button>
+    </section>
+
+    <!-- STEP 4: BUILD -->
+    <section class="screen" id="s4">
+      <div class="row" style="justify-content:space-between;margin-bottom:4px;">
+        <b style="font-size:14px;" id="buildHead">Build your passport</b>
+        <span style="font-size:12.5px;color:var(--muted);"><span id="bcount">0</span> of 6 added</span>
+      </div>
+      <div class="progwrap"><div class="progbar" id="bprog"></div></div>
+      <div class="sub" style="margin-bottom:6px;">Add each item. We verify it against the official source and mark it ✓ on your Passport. You can finish the rest anytime.</div>
+      <div class="card" id="buildList"></div>
+      <button class="btn primary mt16" onclick="go(5)">Continue to publish →</button>
+      <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;">Your Passport keeps building even after you publish.</div>
+    </section>
+
+    <!-- STEP 5: PUBLISH -->
+    <section class="screen" id="s5">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <b style="font-size:15px;">What's on your Passport</b>
+          <span class="pill amber" id="readyPill">In progress</span>
+        </div>
+        <div id="summaryList" class="mt8"></div>
+      </div>
+
+      <div class="card mt12">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Your shareable Passport</div>
+        <div class="linkbox">
+          <span style="color:var(--teal);">🔗</span>
+          <span class="url">passport.homescore.uk/9-woodfield-rd</span>
+          <button class="copy" onclick="copyLink(this)">Copy</button>
+        </div>
+      </div>
+
+      <div id="publishBlock">
+        <button class="btn dark mt16" id="publishBtn" onclick="publish()">Publish Passport</button>
+        <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:8px;" id="publishHint">It stays with the property for life — update once, always current.</div>
+      </div>
+
+      <div id="publishedBlock" style="display:none;">
+        <div class="card mt16" style="text-align:center;border-color:#CDEBE2;background:#F0FBF7;">
+          <div style="width:54px;height:54px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:4px auto 10px;">✓</div>
+          <b style="font-size:16px;" id="pubTitle">Passport published</b>
+          <div class="sub mt8" id="pubMsg"></div>
+          <div class="btn-row mt16">
+            <button class="btn ghost" onclick="go(4)">Keep building</button>
+            <button class="btn primary" onclick="resetDemo()">Restart demo</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  </div>
+</div>
+
+<script>
+var TYPES={
+  sell:{
+    head:'Build your selling passport',
+    publishCTA:'Publish Passport',
+    publishHint:'It stays with the property for life — ready the day you sell.',
+    readyAll:'✓ Sale-ready', readyPart:'In progress',
+    pubTitle:'Passport published',
+    pubMsg:'9 Woodfield Road now has a permanent, verified record — ready the day you decide to sell.',
+    items:[
+      {id:'epc',  label:'EPC', sub:'Energy performance certificate', icon:'🌡️', cta:'Upload'},
+      {id:'gas',  label:'Gas safety / boiler', sub:'Latest service or safety record', icon:'🔥', cta:'Upload'},
+      {id:'elec', label:'Electrical (EICR)', sub:'Installation condition report', icon:'⚡', cta:'Upload'},
+      {id:'title',label:'Proof of ownership', sub:'Title register / deeds', icon:'📜', cta:'Add'},
+      {id:'ta6',  label:'Property information', sub:'Standard TA6 questionnaire', icon:'📋', cta:'Answer'},
+      {id:'works',label:'Works & guarantees', sub:'FENSA, warranties, building control', icon:'🛠️', cta:'Upload'}
+    ]
+  },
+  land:{
+    head:'Build your landlord passport',
+    publishCTA:'Publish & mark let-ready',
+    publishHint:'Re-uses across future tenancies — update once, stays current.',
+    readyAll:'✓ Let-ready', readyPart:'Let-ready',
+    pubTitle:'Passport published — let-ready',
+    pubMsg:"9 Woodfield Road is now compliant and shareable. We'll remind you before any certificate expires.",
+    items:[
+      {id:'gas',    label:'Gas Safety (CP12)', sub:'Annual landlord gas certificate', icon:'🔥', cta:'Upload'},
+      {id:'eicr',   label:'EICR', sub:'Electrical report (5-yearly)', icon:'⚡', cta:'Upload'},
+      {id:'epc',    label:'EPC', sub:'Energy performance certificate', icon:'🌡️', cta:'Upload'},
+      {id:'deposit',label:'Deposit protection', sub:'Scheme reference (TDS/DPS)', icon:'🔒', cta:'Add ref'},
+      {id:'rtr',    label:'Right to Rent', sub:'Tenant immigration check', icon:'🪪', cta:'Confirm'},
+      {id:'htr',    label:'How to Rent guide', sub:'Issued at start of tenancy', icon:'📘', cta:'Confirm'}
+    ]
+  }
+};
+var TITLES={1:'Claim your property',2:'Verify ownership',3:'Choose your passport',5:'Publish your passport'};
+var TUT=[
+  {label:'Claim',     detail:"We run a quick identity check (KYC) to confirm it's really you — so no one else can claim your property's Passport. £15 one-off, and reusable forever."},
+  {label:'Ownership', detail:"We verify you against HM Land Registry as the registered owner. Nothing to dig out or upload."},
+  {label:'Passport',  detail:"Choose what you're building it for — a selling passport or a landlord passport. You can add the other later off the same claim."},
+  {label:'Build',     detail:"Add your certificates and property information. We verify each against the official source and tick it off your Passport."},
+  {label:'Publish',   detail:"Publish or share your Passport and control who can access it — buyers, tenants, agents or your solicitor, whoever you choose. It stays with the property for life."}
+];
+function showTutStep(i){
+  document.getElementById('tutTitle').textContent=(i+1)+' · '+TUT[i].label;
+  document.getElementById('tutDetail').textContent=TUT[i].detail;
+  document.querySelectorAll('#tutStepper .istep').forEach(function(s,idx){ s.classList.toggle('on', idx===i); });
+}
+
+var state={ step:1, kyc:false, ownership:false, type:null, built:{}, published:false };
+function cfg(){ return TYPES[state.type||'sell']; }
+function itemById(id){ return cfg().items.find(function(i){return i.id===id;}); }
+
+function go(n){
+  state.step=n;
+  document.querySelectorAll('.screen').forEach(function(el){el.classList.remove('show');});
+  document.getElementById('s'+n).classList.add('show');
+  var intro=(n===0);
+  document.getElementById('topbar').style.display=intro?'none':'block';
+  document.getElementById('stepper').style.display=intro?'none':'flex';
+  if(!intro){
+    if(n===4){ if(!state.type){ selectType('sell'); } document.getElementById('h-title').textContent=cfg().head; renderBuild(); }
+    else { document.getElementById('h-title').textContent=TITLES[n]; }
+    if(n===5) renderSummary();
+    updateStepper();
+  }
+  document.querySelector('.scroll').scrollTop=0;
+}
+function updateStepper(){
+  document.querySelectorAll('#stepper .step').forEach(function(btn){
+    var g=+btn.dataset.go;
+    btn.classList.remove('active','done');
+    if(g===state.step) btn.classList.add('active');
+    else if(g<state.step) btn.classList.add('done');
+  });
+  document.getElementById('seg1').classList.toggle('fill', state.kyc);
+  document.getElementById('seg2').classList.toggle('fill', state.ownership);
+  document.getElementById('seg3').classList.toggle('fill', !!state.type);
+  document.getElementById('seg4').classList.toggle('fill', Object.keys(state.built).length>0 || state.step>=5);
+}
+document.querySelectorAll('#stepper .step').forEach(function(btn){
+  btn.addEventListener('click',function(){ go(+btn.dataset.go); });
+});
+
+/* step 1 KYC */
+function runKyc(){
+  document.getElementById('kycCTA').innerHTML='<div class="card mt16 row" style="gap:11px;"><span class="spinner"></span><span class="sub" style="margin:0;">Running identity check…</span></div>';
+  var ids=['kyc-id','kyc-self'];
+  ids.forEach(function(rid,i){
+    setTimeout(function(){
+      document.querySelector('#'+rid+' .vstate').outerHTML='<span class="vstate ok"><span class="tick">✓</span></span>';
+    }, 500+i*500);
+  });
+  setTimeout(function(){
+    state.kyc=true;
+    document.getElementById('kycCTA').style.display='none';
+    document.getElementById('kycDone').style.display='block';
+    updateStepper();
+  },1400);
+}
+
+/* step 2 Land Registry */
+function runLR(){
+  document.getElementById('lrCTA').style.display='none';
+  document.getElementById('lrLoading').style.display='block';
+  setTimeout(function(){
+    state.ownership=true;
+    document.getElementById('lrLoading').style.display='none';
+    document.getElementById('lrDone').style.display='block';
+    updateStepper();
+  },1300);
+}
+
+/* step 3 choose */
+function selectType(t){
+  state.type=t;
+  document.getElementById('opt-sell').classList.toggle('sel', t==='sell');
+  document.getElementById('opt-land').classList.toggle('sel', t==='land');
+  document.getElementById('typeBtn').disabled=false;
+  updateStepper();
+}
+
+/* step 4 build */
+function renderBuild(){
+  var html='';
+  cfg().items.forEach(function(it){
+    var done=!!state.built[it.id];
+    html+='<div class="vrow" data-item="'+it.id+'">'+
+      '<div class="ci"'+(done?' style="background:#E2F4EF;"':'')+'>'+it.icon+'</div>'+
+      '<div class="vmeta"><b>'+it.label+'</b><small>'+it.sub+'</small></div>'+
+      (done?'<span class="vstate ok"><span class="tick">✓</span> Added</span>'
+           :'<button class="vbtn" onclick="addItem(this)">'+it.cta+'</button>')+'</div>';
+  });
+  document.getElementById('buildList').innerHTML=html;
+  updateBuild();
+}
+function addItem(btn){
+  var row=btn.closest('.vrow'), key=row.dataset.item;
+  btn.outerHTML='<span class="vstate load">● adding…</span>';
+  setTimeout(function(){
+    state.built[key]=true;
+    var s=row.querySelector('.vstate');
+    s.outerHTML='<span class="vstate ok"><span class="tick">✓</span> Added</span>';
+    row.querySelector('.ci').style.background='#E2F4EF';
+    updateBuild();
+  },800);
+}
+function updateBuild(){
+  var c=Object.keys(state.built).length;
+  document.getElementById('bcount').textContent=c;
+  document.getElementById('bprog').style.width=Math.round(c/6*100)+'%';
+  updateStepper();
+}
+
+/* step 5 publish */
+function renderSummary(){
+  var c=cfg();
+  document.getElementById('publishBtn').textContent=c.publishCTA;
+  document.getElementById('publishHint').textContent=c.publishHint;
+  document.getElementById('pubTitle').textContent=c.pubTitle;
+  document.getElementById('pubMsg').textContent=c.pubMsg;
+  var html='';
+  c.items.forEach(function(it){
+    var ok=!!state.built[it.id];
+    html+='<div class="summary-item">'+
+      (ok?'<span class="tick">✓</span>':'<span style="width:22px;height:22px;border-radius:50%;background:#FBEFD9;color:#BA7517;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none;">!</span>')+
+      '<span style="flex:1;">'+it.label+'</span>'+
+      '<span style="font-size:12.5px;font-weight:600;color:'+(ok?'#1D9E75':'#BA7517')+';">'+(ok?'Added':'Outstanding')+'</span></div>';
+  });
+  document.getElementById('summaryList').innerHTML=html;
+  var allGreen=Object.keys(state.built).length===6;
+  var pill=document.getElementById('readyPill');
+  if(allGreen){ pill.className='pill teal'; pill.textContent=c.readyAll; }
+  else { pill.className='pill amber'; pill.textContent=c.readyPart+' · '+Object.keys(state.built).length+'/6'; }
+}
+function copyLink(btn){
+  try{ navigator.clipboard.writeText('https://passport.homescore.uk/9-woodfield-rd'); }catch(e){}
+  btn.textContent='Copied'; setTimeout(function(){btn.textContent='Copy';},1400);
+}
+function publish(){
+  state.published=true;
+  document.getElementById('publishBlock').style.display='none';
+  document.getElementById('publishedBlock').style.display='block';
+}
+
+function resetDemo(){
+  state={step:0,kyc:false,ownership:false,type:null,built:{},published:false};
+  location.reload();
+}
+
+showTutStep(0);
+go(0);
+</script>
+</body>
+</html>
