@@ -1,0 +1,16 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Tenancy Agreement (AST)</title><desc>Freestanding rolled parchment scroll with wax seal.</desc>
+<defs>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8eed5"/><stop offset="1" stop-color="#ecdcb6"/></linearGradient>
+</defs>
+<g transform="rotate(-16 120 150)">
+<rect x="78" y="132" width="84" height="30" rx="4" fill="url(#paper)" stroke="#d8c190" stroke-width="1"/>
+<line x1="92" y1="142" x2="150" y2="142" stroke="#cbb583" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="92" y1="150" x2="150" y2="150" stroke="#cbb583" stroke-width="2.2" stroke-linecap="round"/>
+<ellipse cx="78" cy="147" rx="7" ry="15" fill="#e7d6ac" stroke="#cbb583" stroke-width="1"/>
+<ellipse cx="162" cy="147" rx="7" ry="15" fill="#f8eed5" stroke="#d8c190" stroke-width="1"/>
+</g>
+<circle cx="124" cy="166" r="9" fill="#d6453f"/>
+<circle cx="124" cy="166" r="9" fill="none" stroke="#b5352f" stroke-width="1"/>
+<circle cx="124" cy="166" r="4.5" fill="#b5352f"/>
+</svg>

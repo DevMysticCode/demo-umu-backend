@@ -1,0 +1,27 @@
+<svg width="100%" viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Tenancy Agreement (AST)</title><desc>3D isometric tile with a rolled parchment scroll and wax seal.</desc>
+<defs>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ece7de"/><stop offset="1" stop-color="#ddd7cc"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8eed5"/><stop offset="1" stop-color="#ecdcb6"/></linearGradient>
+</defs>
+<ellipse cx="120" cy="240" rx="88" ry="18" fill="#000000" opacity="0.10"/>
+<polygon points="42,165 120,204 120,230 42,191" fill="#c9c3b7"/>
+<polygon points="198,165 120,204 120,230 198,191" fill="#bdb7aa"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="url(#tile)"/>
+<polygon points="42,165 120,126 198,165 120,204" fill="none" stroke="#efeae2" stroke-width="1" stroke-linejoin="round" opacity="0.7"/>
+<ellipse cx="66" cy="173" rx="9" ry="3" fill="#000000" opacity="0.10"/>
+<polygon points="59,162 73,162 71,174 61,174" fill="#cf7f4f"/>
+<ellipse cx="66" cy="162" rx="7" ry="2.4" fill="#dd8a57"/>
+<circle cx="62" cy="155" r="6" fill="#5cb85c"/><circle cx="70" cy="153" r="6" fill="#4aa64a"/><circle cx="66" cy="149" r="6.5" fill="#6cc46c"/>
+<ellipse cx="120" cy="170" rx="44" ry="11" fill="#000000" opacity="0.09"/>
+<g transform="rotate(-16 120 150)">
+<rect x="78" y="132" width="84" height="30" rx="4" fill="url(#paper)" stroke="#d8c190" stroke-width="1"/>
+<line x1="92" y1="142" x2="150" y2="142" stroke="#cbb583" stroke-width="2.2" stroke-linecap="round"/>
+<line x1="92" y1="150" x2="150" y2="150" stroke="#cbb583" stroke-width="2.2" stroke-linecap="round"/>
+<ellipse cx="78" cy="147" rx="7" ry="15" fill="#e7d6ac" stroke="#cbb583" stroke-width="1"/>
+<ellipse cx="162" cy="147" rx="7" ry="15" fill="#f8eed5" stroke="#d8c190" stroke-width="1"/>
+</g>
+<circle cx="124" cy="166" r="9" fill="#d6453f"/>
+<circle cx="124" cy="166" r="9" fill="none" stroke="#b5352f" stroke-width="1"/>
+<circle cx="124" cy="166" r="4.5" fill="#b5352f"/>
+</svg>

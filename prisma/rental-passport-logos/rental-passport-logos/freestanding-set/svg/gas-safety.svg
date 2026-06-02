@@ -1,0 +1,13 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Gas Safety Certificate</title><desc>Freestanding gas flame emblem.</desc>
+<defs>
+<linearGradient id="fB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7d3e"/><stop offset="1" stop-color="#e2400f"/></linearGradient>
+<linearGradient id="fM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa64f"/><stop offset="1" stop-color="#ff6f1e"/></linearGradient>
+<linearGradient id="fF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe885"/><stop offset="1" stop-color="#ffc23c"/></linearGradient>
+</defs>
+<g transform="translate(-23.6 -12.8) scale(1.2)">
+<path d="M118 84 C 138 110, 148 130, 136 150 C 128 163, 108 163, 100 150 C 90 134, 98 118, 108 112 C 106 124, 116 128, 118 122 C 122 112, 114 100, 118 84 Z" fill="url(#fB)"/>
+<path d="M118 98 C 133 118, 140 134, 130 150 C 123 161, 108 161, 101 150 C 94 138, 100 124, 109 118 C 108 128, 116 132, 118 126 C 121 118, 115 110, 118 98 Z" fill="url(#fM)"/>
+<path d="M118 122 C 128 134, 131 144, 125 153 C 120 160, 110 160, 106 152 C 103 145, 107 137, 113 134 C 112 140, 118 142, 119 137 C 120 132, 118 128, 118 122 Z" fill="url(#fF)"/>
+</g>
+</svg>

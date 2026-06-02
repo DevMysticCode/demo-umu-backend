@@ -1,0 +1,13 @@
+<svg width="100%" viewBox="40 74 160 124" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Deposit Protection</title><desc>Freestanding stack of gold coins with a pound symbol.</desc>
+<defs>
+<linearGradient id="coinTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe07a"/><stop offset="1" stop-color="#fcc63f"/></linearGradient>
+</defs>
+<path d="M88 132 v40 a32 13 0 0 0 64 0 v-40 z" fill="#e0a91f"/>
+<path d="M88 150 a32 13 0 0 0 64 0" fill="none" stroke="#c9941a" stroke-width="1.4"/>
+<path d="M88 162 a32 13 0 0 0 64 0" fill="none" stroke="#c9941a" stroke-width="1.4"/>
+<ellipse cx="120" cy="132" rx="32" ry="13" fill="url(#coinTop)"/>
+<ellipse cx="120" cy="132" rx="32" ry="13" fill="none" stroke="#e0a91f" stroke-width="1.2"/>
+<ellipse cx="120" cy="132" rx="22" ry="8.5" fill="none" stroke="#f0c247" stroke-width="1.4"/>
+<text x="120" y="139" text-anchor="middle" font-family="Georgia, serif" font-size="21" font-weight="700" fill="#9a6f12">&#163;</text>
+</svg>
