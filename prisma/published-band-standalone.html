@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMU · published Passport band</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{background:#ECEBF3;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;}
+
+  .pubwrap{position:relative;border-radius:18px;padding:2px;overflow:hidden;width:100%;max-width:384px;
+    box-shadow:0 12px 30px rgba(193,138,56,.16);}
+  .pubwrap::before{content:"";position:absolute;inset:-60%;
+    background:conic-gradient(from 0deg,#C9A052,#C9A052 58%,#F6E0A6 70%,#FFFFFF 75%,#F6E0A6 80%,#C9A052 92%,#C9A052);
+    animation:spin 4.6s linear infinite;}
+
+  .pub{position:relative;z-index:1;border-radius:16px;background:#fff;padding:13px 18px;overflow:hidden;
+    display:flex;align-items:center;gap:12px;}
+  .pub::after{content:"";position:absolute;top:0;bottom:0;left:0;width:42%;
+    background:linear-gradient(100deg,transparent,rgba(216,178,96,.20),transparent);
+    transform:translateX(-220%) skewX(-18deg);animation:sheen 5.6s ease-in-out 1.6s infinite;}
+
+  .body{flex:1;position:relative;z-index:2;min-width:0;}
+  .title{font-size:12.5px;font-weight:800;color:#231D45;letter-spacing:-.1px;line-height:1.2;white-space:nowrap;}
+  .sub{font-size:11.5px;color:#6B6A82;line-height:1.4;margin-top:5px;}
+  .inside{display:inline-flex;align-items:center;gap:7px;margin-top:7px;font-size:11.5px;font-weight:650;color:#231D45;cursor:pointer;}
+  .inside .q{width:18px;height:18px;border-radius:50%;background:#FAEEDA;color:#9A6F22;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:none;}
+
+  .price{position:relative;z-index:2;display:flex;align-items:center;gap:6px;flex:none;}
+  .amt{font-size:28px;font-weight:800;color:#231D45;letter-spacing:-.6px;}
+  .arrow{font-size:24px;font-weight:700;color:#231D45;animation:nudge 1.6s ease-in-out infinite;}
+
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes sheen{0%{transform:translateX(-220%) skewX(-18deg);}24%,100%{transform:translateX(360%) skewX(-18deg);}}
+  @keyframes nudge{0%,100%{transform:translateX(0);}50%{transform:translateX(4px);}}
+</style>
+</head>
+<body>
+  <div class="pubwrap">
+    <div class="pub">
+      <div class="body">
+        <div class="title">This property has a published Passport</div>
+        <div class="sub">Gain access to the full verified record &mdash; certificates, history &amp; more.</div>
+        <div class="inside">What&rsquo;s inside the Passport? <span class="q">?</span></div>
+      </div>
+      <div class="price"><span class="amt">&pound;99</span><span class="arrow">&rarr;</span></div>
+    </div>
+  </div>
+</body>
+</html>

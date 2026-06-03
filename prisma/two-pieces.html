@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMU · two swappable pieces — band + bottom block</title>
+<style>
+  :root{
+    --navy:#231D45; --navy-2:#352D5C; --teal:#129C8C; --teal-d:#0F6E56; --pale:#E7F4F1; --paler:#F2FAF8;
+    --gold:#C18A38; --amber:#EFA63C; --muted:#7E7D93; --faint:#A9A8BC; --line:#E8E7F0;
+    --bg:#ECEBF3; --card:#FFFFFF; --shadow:0 8px 26px rgba(35,29,69,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{background:#181628;min-height:100vh;padding:30px 14px 60px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+  .devbar{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:520px;text-align:center;}
+  .eyebrow{font-size:11px;letter-spacing:2.4px;text-transform:uppercase;color:rgba(255,255,255,.42);font-weight:700;}
+  .switch{display:inline-flex;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:5px;}
+  .sw{padding:9px 15px;border:none;background:transparent;color:rgba(255,255,255,.62);font-family:inherit;font-size:12.5px;font-weight:700;border-radius:100px;cursor:pointer;transition:.15s;white-space:nowrap;}
+  .sw:hover{color:#fff;} .sw.active{background:var(--teal);color:#fff;box-shadow:0 3px 10px rgba(18,156,140,.4);}
+  .hint{font-size:12px;color:rgba(255,255,255,.42);max-width:420px;line-height:1.55;}
+
+  .phone{width:100%;max-width:392px;background:var(--bg);border-radius:28px;padding:18px 16px 24px;box-shadow:0 24px 60px rgba(10,8,30,.5);border:1px solid #2c2a40;}
+
+  /* untouched placeholder */
+  .untouched{border:1.5px dashed #C9C8DA;border-radius:16px;padding:22px 16px;text-align:center;background:repeating-linear-gradient(135deg,#fff,#fff 9px,#F6F5FB 9px,#F6F5FB 18px);}
+  .untouched .lbl{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--faint);font-weight:700;}
+  .untouched .sub{font-size:12.5px;color:var(--muted);margin-top:5px;}
+  .zonetag{display:flex;align-items:center;gap:8px;margin:18px 2px 8px;}
+  .zonetag .n{width:20px;height:20px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;}
+  .zonetag .t{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--teal-d);font-weight:700;}
+
+  /* ── BAND ── */
+  .band{border-radius:16px;padding:16px 17px;display:flex;align-items:center;gap:12px;}
+  .band.unclaimed{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;cursor:pointer;}
+  .band.unclaimed b{font-size:15px;font-weight:650;} .band.unclaimed p{font-size:12.5px;color:rgba(255,255,255,.78);margin-top:4px;line-height:1.4;}
+  .band .arrow{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;}
+
+  .band.progress{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;flex-direction:column;align-items:stretch;gap:0;cursor:pointer;}
+  .band.progress .ptop{display:flex;align-items:center;gap:11px;}
+  .band.progress .pico{width:38px;height:38px;border-radius:50%;background:rgba(124,242,217,.18);display:flex;align-items:center;justify-content:center;font-size:18px;flex:none;}
+  .band.progress b{font-size:15px;font-weight:650;display:flex;align-items:center;gap:8px;}
+  .band.progress .chip{font-size:8.5px;background:rgba(124,242,217,.22);color:#BFF6E8;padding:2px 8px;border-radius:99px;letter-spacing:.6px;}
+  .band.progress p{font-size:12px;color:rgba(255,255,255,.78);margin-top:3px;}
+  .band.progress .ptrack{height:7px;background:rgba(255,255,255,.16);border-radius:99px;overflow:hidden;margin-top:13px;}
+  .band.progress .ptrack i{display:block;height:100%;width:60%;background:linear-gradient(90deg,#5EEAD4,var(--teal));border-radius:99px;}
+  .band.progress .pnum{margin-left:auto;font-size:12px;font-weight:700;color:#BFF6E8;}
+
+  .band.published{background:linear-gradient(135deg,var(--teal-d),var(--teal));color:#fff;cursor:pointer;}
+  .band.published .pico{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:19px;flex:none;}
+  .band.published b{font-size:15px;font-weight:650;display:flex;align-items:center;gap:8px;}
+  .band.published .star{color:var(--gold);}
+  .band.published .tm{font-size:8.5px;background:rgba(255,255,255,.22);padding:2px 8px;border-radius:99px;letter-spacing:.6px;}
+  .band.published p{font-size:12px;color:rgba(255,255,255,.88);margin-top:3px;}
+  .band.published .share{margin-left:auto;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;}
+
+  /* ── BOTTOM BLOCK ── */
+  .connhead{text-align:center;font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:20px 0 12px;}
+  .stack{display:flex;flex-direction:column;gap:11px;}
+  .box{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:none;font-family:inherit;text-align:left;cursor:pointer;transition:.15s;width:100%;}
+  .box.primary{background:linear-gradient(135deg,var(--teal-d),var(--teal));color:#fff;box-shadow:0 8px 20px rgba(15,110,86,.28);}
+  .box.primary:hover{filter:brightness(1.06);}
+  .box.plain{background:#fff;color:var(--navy);box-shadow:var(--shadow);}
+  .box.plain:hover{transform:translateY(-1px);}
+  .box .ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;}
+  .box.primary .ic{background:rgba(255,255,255,.18);} .box.plain .ic{background:var(--pale);}
+  .box .bt{font-size:15.5px;font-weight:700;} .box .bs{font-size:12.5px;margin-top:3px;line-height:1.35;}
+  .box.primary .bs{color:rgba(255,255,255,.85);} .box.plain .bs{color:var(--muted);}
+  .box .right{margin-left:auto;display:flex;align-items:center;gap:9px;flex:none;}
+  .box .pbadge{font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;background:var(--pale);color:var(--teal-d);}
+  .box .chev{font-size:18px;color:var(--faint);} .box.primary .chev{color:rgba(255,255,255,.8);}
+
+  .annot{font-size:11.5px;color:var(--faint);text-align:center;margin-top:16px;line-height:1.55;padding:0 4px;}
+  .toast{position:fixed;left:50%;bottom:34px;transform:translate(-50%,140%);background:var(--navy);color:#fff;border-radius:14px;padding:13px 18px;font-size:13px;font-weight:600;box-shadow:0 14px 30px rgba(0,0,0,.35);opacity:0;transition:.4s cubic-bezier(.2,.8,.2,1);z-index:80;}
+  .toast.show{transform:translate(-50%,0);opacity:1;}
+</style>
+</head>
+<body data-state="unclaimed">
+
+  <div class="devbar">
+    <span class="eyebrow">Only two regions change · everything else stays as built</span>
+    <div class="switch">
+      <button class="sw active" onclick="setState('unclaimed')">Unclaimed · new</button>
+      <button class="sw" onclick="setState('progress')">Passport in progress</button>
+      <button class="sw" onclick="setState('published')">Passport published</button>
+    </div>
+    <div class="hint">The dashed area is your existing screen — <b>untouched</b>. Only the <b>band</b> and the <b>bottom block</b> swap by status.</div>
+  </div>
+
+  <div class="phone">
+
+    <!-- untouched part -->
+    <div class="untouched">
+      <div class="lbl">Your existing HomeScore screen</div>
+      <div class="sub">Property card · HomeScore ring · stats · EPC splits — all unchanged</div>
+    </div>
+
+    <!-- ZONE 1: BAND -->
+    <div class="zonetag"><span class="n">1</span><span class="t">Status band</span></div>
+
+    <div class="band unclaimed" id="bUnclaimed" onclick="toast('Claim flow')">
+      <div style="flex:1;"><b>This property is unclaimed</b><p>Is it yours? Build your verified Passport in minutes.</p></div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="band progress" id="bProgress" style="display:none;" onclick="toast('Open Passport')">
+      <div class="ptop">
+        <div class="pico">🪪</div>
+        <div style="flex:1;"><b>Your Passport <span class="chip">IN PROGRESS</span></b><p>Keep building — add docs &amp; steps to publish.</p></div>
+        <span class="pnum">60%</span>
+      </div>
+      <div class="ptrack"><i></i></div>
+    </div>
+
+    <div class="band published" id="bPublished" style="display:none;" onclick="toast('Share Passport')">
+      <div class="pico">✓</div>
+      <div style="flex:1;"><b><span class="star">★</span> Verified Passport is live <span class="tm">PUBLISHED</span></b><p>Live since 12 Apr · 37 views this week · tap to share.</p></div>
+      <div class="share">↗</div>
+    </div>
+
+    <!-- ZONE 2: BOTTOM BLOCK -->
+    <div class="zonetag"><span class="n">2</span><span class="t">Bottom block</span></div>
+
+    <!-- new-visitor: the two connection boxes (unchanged) -->
+    <div id="blockConnection">
+      <div class="connhead">What’s your connection to this property?</div>
+      <div class="stack">
+        <button class="box primary" onclick="toast('Claim & quiz')"><div class="ic">🏠</div><div><div class="bt">I own this property</div><div class="bs">Claim it free, take the quiz &amp; get your real score.</div></div><div class="right"><span class="chev">›</span></div></button>
+        <button class="box plain" onclick="toast('Buyer report')"><div class="ic">🔍</div><div><div class="bt">I’m interested in this property</div><div class="bs">Full running costs, risks &amp; questions to ask before you offer.</div></div><div class="right"><span class="chev">›</span></div></button>
+      </div>
+    </div>
+
+    <!-- returning owner: three actions -->
+    <div id="blockOwner" style="display:none;">
+      <div class="connhead" id="ownerHead">Pick up where you left off</div>
+      <div class="stack">
+        <button class="box primary" onclick="toast('Go to dashboard')"><div class="ic">📊</div><div><div class="bt">Go to your dashboard</div><div class="bs">Your home base — Passport, docs &amp; everything in one place.</div></div><div class="right"><span class="chev">›</span></div></button>
+        <button class="box plain" onclick="toast('Open pathway')"><div class="ic">🎯</div><div><div class="bt">Your pathway</div><div class="bs" id="pwSub">Keep climbing your HomeScore.</div></div><div class="right"><span class="pbadge" id="pwBadge">0/6</span><span class="chev">›</span></div></button>
+        <button class="box plain" onclick="toast('Open boost')"><div class="ic">⚡</div><div><div class="bt">Boost your score</div><div class="bs" id="boSub">Add docs to grow your Move Ready &amp; Passport.</div></div><div class="right"><span class="pbadge" id="boBadge">12%</span><span class="chev">›</span></div></button>
+      </div>
+    </div>
+
+    <div class="annot" id="annot">New visitor: unclaimed band + the two connection boxes, exactly as built.</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  function $(id){return document.getElementById(id);}
+  const S = {
+    unclaimed:{ band:'bUnclaimed', block:'connection',
+      annot:'New visitor: unclaimed band + the two connection boxes, exactly as built.' },
+    progress:{ band:'bProgress', block:'owner', ownerHead:'Pick up where you left off', pwBadge:'2/6', pwSub:'Keep climbing your HomeScore.', boBadge:'40%', boSub:'Add docs to grow your Move Ready & Passport.',
+      annot:'Owner, building: band shows Passport progress, bottom block becomes Dashboard · Pathway · Boost with live progress.' },
+    published:{ band:'bPublished', block:'owner', ownerHead:'Your home', pwBadge:'6/6 ✓', pwSub:'Level C reached — all steps complete.', boBadge:'95%', boSub:'Almost fully documented — add the last cert.',
+      annot:'Owner, published: band is the live verified Passport (share). Same three actions; pathway shows complete.' }
+  };
+  function setState(state){
+    document.body.dataset.state = state; const s = S[state];
+    document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('active', b.getAttribute('onclick').includes("'"+state+"'")));
+    ['bUnclaimed','bProgress','bPublished'].forEach(id=>$(id).style.display='none');
+    $(s.band).style.display = (s.band==='bProgress') ? 'flex':'flex';
+    const owner = s.block==='owner';
+    $('blockConnection').style.display = owner ? 'none':'block';
+    $('blockOwner').style.display = owner ? 'block':'none';
+    if(owner){ $('ownerHead').textContent=s.ownerHead; $('pwBadge').textContent=s.pwBadge; $('pwSub').textContent=s.pwSub; $('boBadge').textContent=s.boBadge; $('boSub').textContent=s.boSub; }
+    $('annot').textContent = s.annot;
+  }
+  let tt; function toast(m){ $('toast').textContent=m; $('toast').classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>$('toast').classList.remove('show'),2200); }
+  setState('unclaimed');
+</script>
+</body>
+</html>
