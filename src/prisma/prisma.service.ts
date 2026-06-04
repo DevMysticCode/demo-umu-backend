@@ -193,4 +193,32 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get propertySearchLog() {
     return this.prisma.propertySearchLog;
   }
+
+  get marketplaceCategory() {
+    return this.prisma.marketplaceCategory;
+  }
+
+  get marketplaceJob() {
+    return this.prisma.marketplaceJob;
+  }
+
+  get marketplaceOffer() {
+    return this.prisma.marketplaceOffer;
+  }
+
+  get marketplaceThread() {
+    return this.prisma.marketplaceThread;
+  }
+
+  get marketplaceMessage() {
+    return this.prisma.marketplaceMessage;
+  }
+
+  get marketplacePayment() {
+    return this.prisma.marketplacePayment;
+  }
+
+  get marketplaceReview() {
+    return this.prisma.marketplaceReview;
+  }
 }

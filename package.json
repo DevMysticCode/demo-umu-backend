@@ -20,6 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "prisma:seed": "ts-node prisma/seed.ts",
     "import:price-paid": "ts-node -r tsconfig-paths/register src/scripts/import-price-paid.ts",
+    "seed:marketplace": "ts-node -r tsconfig-paths/register src/scripts/seed-marketplace.ts",
+    "seed:marketplace:demo": "ts-node -r tsconfig-paths/register src/scripts/seed-marketplace-demo.ts",
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
     "hmlr:wsdl": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/fetch-hmlr-wsdl.ts"
   },
