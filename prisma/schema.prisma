@@ -8,45 +8,54 @@ datasource db {
 }
 
 model User {
-  id                     String                 @id @default(uuid())
-  email                  String                 @unique
-  password               String
-  createdAt              DateTime               @default(now())
-  dob                    DateTime?
-  firstName              String?
-  gender                 String?
-  isVerified             Boolean                @default(false)
+  id                            String                 @id @default(uuid())
+  email                         String                 @unique
+  password                      String
+  createdAt                     DateTime               @default(now())
+  dob                           DateTime?
+  firstName                     String?
+  gender                        String?
+  isVerified                    Boolean                @default(false)
   // Persona KYC — per-user, one-time. Once kycStatus is "approved" we skip
   // the KYC steps in the claim flow on every subsequent property claim.
-  kycStatus              String?                // pending | approved | declined | needs_review | failed
-  kycInquiryId           String?                // Persona inquiry/case id (inq_… or case_…)
-  kycCompletedAt         DateTime?
-  lastName               String?
-  phone                  String?
-  postcode               String?
-  avatarUrl              String?
-  contactVisible         Boolean                @default(true)
-  pushNotifications      Boolean                @default(true)
-  emailNewsletter        Boolean                @default(true)
-  smsNotifications       Boolean                @default(false)
-  passports              Passport[]
-  passportCollaborations PassportCollaborator[]
-  preference             UserPreference?
-  collections            PassportCollection[]
-  buyerPassportAccesses  BuyerPassportAccess[]
-  addresses              UserAddress[]
-  companies              UserCompany[]
-  solicitors             UserSolicitor[]
-  collaboratorsAdded     UserCollaborator[]     @relation("CollaboratorOwner")
-  collaboratorOf         UserCollaborator[]     @relation("CollaboratorUser")
-  userDocuments          UserDocument[]
-  wishlistedProperties   UserWishlist[]
-  savedProperties        UserSavedProperty[]
-  reminders              UserReminder[]
-  videoProgress          VideoProgress[]
-  buyerNotes             BuyerNote[]
-  buyerProfile           BuyerProfile?
-  accessRequests         AccessRequest[]  // OPDA verifier-API requests (Sprint 1)
+  kycStatus                     String? // pending | approved | declined | needs_review | failed
+  kycInquiryId                  String? // Persona inquiry/case id (inq_… or case_…)
+  kycCompletedAt                DateTime?
+  lastName                      String?
+  phone                         String?
+  postcode                      String?
+  avatarUrl                     String?
+  contactVisible                Boolean                @default(true)
+  pushNotifications             Boolean                @default(true)
+  emailNewsletter               Boolean                @default(true)
+  smsNotifications              Boolean                @default(false)
+  passports                     Passport[]
+  passportCollaborations        PassportCollaborator[]
+  preference                    UserPreference?
+  collections                   PassportCollection[]
+  buyerPassportAccesses         BuyerPassportAccess[]
+  addresses                     UserAddress[]
+  companies                     UserCompany[]
+  solicitors                    UserSolicitor[]
+  collaboratorsAdded            UserCollaborator[]     @relation("CollaboratorOwner")
+  collaboratorOf                UserCollaborator[]     @relation("CollaboratorUser")
+  userDocuments                 UserDocument[]
+  wishlistedProperties          UserWishlist[]
+  savedProperties               UserSavedProperty[]
+  reminders                     UserReminder[]
+  videoProgress                 VideoProgress[]
+  buyerNotes                    BuyerNote[]
+  buyerProfile                  BuyerProfile?
+  accessRequests                AccessRequest[] // OPDA verifier-API requests (Sprint 1)
+  marketplaceJobs               MarketplaceJob[] // jobs this user has posted as a customer
+  marketplaceOffers             MarketplaceOffer[]     @relation("MarketplaceOfferSupplier") // offers this user has made as a supplier
+  marketplaceThreadsAsCustomer  MarketplaceThread[]    @relation("MarketplaceThreadCustomer")
+  marketplaceThreadsAsSupplier  MarketplaceThread[]    @relation("MarketplaceThreadSupplier")
+  marketplaceMessages           MarketplaceMessage[]   @relation("MarketplaceMessageSender")
+  marketplacePaymentsAsCustomer MarketplacePayment[]   @relation("MarketplacePaymentCustomer")
+  marketplacePaymentsAsSupplier MarketplacePayment[]   @relation("MarketplacePaymentSupplier")
+  marketplaceReviewsAuthored    MarketplaceReview[]    @relation("MarketplaceReviewFrom")
+  marketplaceReviewsReceived    MarketplaceReview[]    @relation("MarketplaceReviewTo")
 }
 
 model UserAddress {
@@ -104,121 +113,121 @@ model OtpCode {
 }
 
 model Property {
-  id                     String                  @id @default(uuid())
-  udprn                  String?                 @unique
-  uprn                   String?                 @unique
-  addressLine1           String
-  addressLine2           String?
-  city                   String?
-  county                 String?
-  postcode               String
-  latitude               Float?
-  longitude              Float?
-  propertyType           String?
-  bedrooms               Int?
-  bathrooms              Int?
-  sqft                   Int?
-  floorAreaSqm           Float?
-  epcRating              String?
-  epcScore               Int?
-  heatingType            String?
-  co2Emissions           Float?
-  tenure                 String?
-  yearBuilt              Int?
-  estimatedPrice         Float?
-  lastSoldPrice          Float?
-  lastSoldDate           DateTime?
-  councilTaxBand         String?
+  id                    String    @id @default(uuid())
+  udprn                 String?   @unique
+  uprn                  String?   @unique
+  addressLine1          String
+  addressLine2          String?
+  city                  String?
+  county                String?
+  postcode              String
+  latitude              Float?
+  longitude             Float?
+  propertyType          String?
+  bedrooms              Int?
+  bathrooms             Int?
+  sqft                  Int?
+  floorAreaSqm          Float?
+  epcRating             String?
+  epcScore              Int?
+  heatingType           String?
+  co2Emissions          Float?
+  tenure                String?
+  yearBuilt             Int?
+  estimatedPrice        Float?
+  lastSoldPrice         Float?
+  lastSoldDate          DateTime?
+  councilTaxBand        String?
   // ── Council Tax Finder API (counciltaxfinder.com) — exact per-address figures ──
-  councilTaxAnnual       Float?    // £/yr for this exact address (e.g. 1377.60)
-  councilTaxCouncilName  String?   // Billing council label (e.g. "NEWCASTLE UPON TYNE")
-  councilTaxRef          String?   // Local Authority Reference Number
-  councilTaxYear         String?   // Tax year string from the API (e.g. "2024-2025")
-  councilTaxCouncilWeb   String?   // Council website host (e.g. "newcastle.gov.uk")
-  councilTaxFetchedAt    DateTime? // When the API was last hit successfully. Cached ~30 days.
-  floodRisk              String?   // EA "Risk of Flooding from Rivers and Sea" (Very Low / Low / Medium / High)
-  floodRiskEnrichedAt    DateTime? // When floodRisk was last fetched from the EA. Cached 90 days.
-  imageUrl               String?
-  images                 Json?
-  titleNumber            String?
-  epcEnrichedAt          DateTime?
-  createdAt              DateTime                @default(now())
+  councilTaxAnnual      Float? // £/yr for this exact address (e.g. 1377.60)
+  councilTaxCouncilName String? // Billing council label (e.g. "NEWCASTLE UPON TYNE")
+  councilTaxRef         String? // Local Authority Reference Number
+  councilTaxYear        String? // Tax year string from the API (e.g. "2024-2025")
+  councilTaxCouncilWeb  String? // Council website host (e.g. "newcastle.gov.uk")
+  councilTaxFetchedAt   DateTime? // When the API was last hit successfully. Cached ~30 days.
+  floodRisk             String? // EA "Risk of Flooding from Rivers and Sea" (Very Low / Low / Medium / High)
+  floodRiskEnrichedAt   DateTime? // When floodRisk was last fetched from the EA. Cached 90 days.
+  imageUrl              String?
+  images                Json?
+  titleNumber           String?
+  epcEnrichedAt         DateTime?
+  createdAt             DateTime  @default(now())
 
   // ── HomeScore V2 EPC cost fields ─────────────────────────────────────────
-  heatingCostCurrent     Float?   // EPC heating-cost-current (£/yr)
-  hotWaterCostCurrent    Float?   // EPC hot-water-cost-current (£/yr)
-  lightingCostCurrent    Float?   // EPC lighting-cost-current (£/yr)
+  heatingCostCurrent  Float? // EPC heating-cost-current (£/yr)
+  hotWaterCostCurrent Float? // EPC hot-water-cost-current (£/yr)
+  lightingCostCurrent Float? // EPC lighting-cost-current (£/yr)
 
   // ── EPC "potential" figures (what the same property would achieve with
   //    all recommended improvements) — used by the environmental-impact
   //    card and the running-costs "could fall to £X" line. Real EPC data,
   //    not heuristic. Nullable until the property is enriched.
-  heatingCostPotential   Float?   // EPC heating-cost-potential (£/yr)
-  hotWaterCostPotential  Float?   // EPC hot-water-cost-potential (£/yr)
-  lightingCostPotential  Float?   // EPC lighting-cost-potential (£/yr)
-  co2EmissionsPotential  Float?   // EPC co2-emissions-potential (tonnes/yr)
-  epcRatingPotential     String?  // EPC potential-energy-rating
-  epcScorePotential      Int?     // EPC potential-energy-efficiency (SAP)
+  heatingCostPotential  Float? // EPC heating-cost-potential (£/yr)
+  hotWaterCostPotential Float? // EPC hot-water-cost-potential (£/yr)
+  lightingCostPotential Float? // EPC lighting-cost-potential (£/yr)
+  co2EmissionsPotential Float? // EPC co2-emissions-potential (tonnes/yr)
+  epcRatingPotential    String? // EPC potential-energy-rating
+  epcScorePotential     Int? // EPC potential-energy-efficiency (SAP)
 
   // ── HomeScore V2 insulation fields ───────────────────────────────────────
-  wallsEnergyEff         String?  // "Very Good" | "Good" | "Average" | "Poor" | "Very Poor"
-  wallsDescription       String?  // EPC walls-description, e.g. "Cavity wall, as built, no insulation (assumed)"
-  roofEnergyEff          String?
-  roofDescription        String?  // EPC roof-description, e.g. "Pitched, 100 mm loft insulation"
-  floorEnergyEff         String?
-  floorDescription       String?  // used to detect "assumed" no insulation
-  windowsEnergyEff       String?
-  windowsDescription     String?  // EPC windows-description, e.g. "Single glazed" / "Fully double glazed"
-  glazedArea             String?  // "Less than typical" | "Normal" | "More than typical" | "Much more than typical"
-  multiGlazeProportion   Float?   // 0–100 percentage
+  wallsEnergyEff       String? // "Very Good" | "Good" | "Average" | "Poor" | "Very Poor"
+  wallsDescription     String? // EPC walls-description, e.g. "Cavity wall, as built, no insulation (assumed)"
+  roofEnergyEff        String?
+  roofDescription      String? // EPC roof-description, e.g. "Pitched, 100 mm loft insulation"
+  floorEnergyEff       String?
+  floorDescription     String? // used to detect "assumed" no insulation
+  windowsEnergyEff     String?
+  windowsDescription   String? // EPC windows-description, e.g. "Single glazed" / "Fully double glazed"
+  glazedArea           String? // "Less than typical" | "Normal" | "More than typical" | "Much more than typical"
+  multiGlazeProportion Float? // 0–100 percentage
 
   // ── HomeScore V2 heating fields ──────────────────────────────────────────
-  mainheatEnergyEff      String?  // main heating system efficiency rating
-  mainheatDescription    String?  // EPC mainheat-description, e.g. "Boiler and radiators, mains gas"
-  mainheatcEnergyEff     String?  // heating controls efficiency rating
-  hotWaterEnergyEff      String?
-  hotwaterDescription    String?  // used to detect "no cylinder thermostat"
-  secondheatDescription  String?  // secondary heating type (for penalty)
+  mainheatEnergyEff       String? // main heating system efficiency rating
+  mainheatDescription     String? // EPC mainheat-description, e.g. "Boiler and radiators, mains gas"
+  mainheatcEnergyEff      String? // heating controls efficiency rating
+  hotWaterEnergyEff       String?
+  hotwaterDescription     String? // used to detect "no cylinder thermostat"
+  secondheatDescription   String? // secondary heating type (for penalty)
   mainheatcontDescription String? // controls description
 
   // ── HomeScore V2 ventilation ─────────────────────────────────────────────
-  mechanicalVentilation  String?  // "natural" | "balanced with heat recovery" | etc.
+  mechanicalVentilation String? // "natural" | "balanced with heat recovery" | etc.
 
   // ── HomeScore V2 lighting ────────────────────────────────────────────────
-  lightingEnergyEff      String?
-  lowEnergyLighting      Float?   // percentage 0–100
+  lightingEnergyEff String?
+  lowEnergyLighting Float? // percentage 0–100
 
   // ── HomeScore V2 renewables ──────────────────────────────────────────────
-  photoSupply            Float?   // solar PV supply (kW) — >0 means PV present
-  solarWaterHeatingFlag  String?  // "Y" | "N"
-  windTurbineCount       Int?
+  photoSupply           Float? // solar PV supply (kW) — >0 means PV present
+  solarWaterHeatingFlag String? // "Y" | "N"
+  windTurbineCount      Int?
 
   // ── HomeScore V2 EPC metadata ────────────────────────────────────────────
-  lodgementDate          String?  // EPC lodgement date (YYYY-MM-DD)
-  constructionAgeBand    String?  // e.g. "1930-1949"
-  builtForm              String?  // "Detached" | "Semi-Detached" | "Mid-Terrace" | etc.
+  lodgementDate       String? // EPC lodgement date (YYYY-MM-DD)
+  constructionAgeBand String? // e.g. "1930-1949"
+  builtForm           String? // "Detached" | "Semi-Detached" | "Mid-Terrace" | etc.
 
   // Lookup key for the EPC certificate this row was enriched from. Used to
   // re-fetch recommendations / the full cert without another address search.
-  epcLmkKey              String?
+  epcLmkKey String?
 
   // EPC recommendations array, fetched from the EPC Register's
   // /recommendations?lmk-key=... endpoint at enrichment time. Each entry is
   // an object: { id, title, description, cost, typicalSaving, resultingSap,
   // resultingEnvRating }. Renders as the simulator's improvement steps.
-  epcRecommendations     Json?
+  epcRecommendations Json?
 
   // ── Actual energy spend (from uploaded bills) ──────────────────────────
   // When the user uploads an energy bill on the simulator, we OCR + parse it
   // and persist the structured result here. Overrides EPC estimates in
   // running-cost calculations when present.
-  actualEnergySpend       Float?    // £/yr extracted from the bill
-  actualGasSpend          Float?    // £/yr (gas portion)
-  actualElectricitySpend  Float?    // £/yr (electricity portion)
-  actualBillSupplier      String?   // "British Gas" | "Octopus" | etc.
-  actualBillPeriod        String?   // "annual" | "quarterly" | "monthly"
-  actualBillRawText       String?   // raw OCR text (for debugging + future re-parse)
-  actualBillUploadedAt    DateTime?
+  actualEnergySpend      Float? // £/yr extracted from the bill
+  actualGasSpend         Float? // £/yr (gas portion)
+  actualElectricitySpend Float? // £/yr (electricity portion)
+  actualBillSupplier     String? // "British Gas" | "Octopus" | etc.
+  actualBillPeriod       String? // "annual" | "quarterly" | "monthly"
+  actualBillRawText      String? // raw OCR text (for debugging + future re-parse)
+  actualBillUploadedAt   DateTime?
 
   passports              Passport[]
   ownershipVerifications OwnershipVerification[]
@@ -236,33 +245,33 @@ model PropertySearchLog {
   id         String   @id @default(uuid())
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  userId     String?  // null for guest visitors
-  sessionId  String?  // localStorage UUID for guest dedup (best-effort)
+  userId     String? // null for guest visitors
+  sessionId  String? // localStorage UUID for guest dedup (best-effort)
   createdAt  DateTime @default(now())
 
   @@index([propertyId, createdAt])
 }
 
 model OwnershipVerification {
-  id                  String                      @id @default(uuid())
-  propertyId          String
-  userId              String
-  status              OwnershipVerificationStatus @default(SUBMITTED)
+  id                      String                      @id @default(uuid())
+  propertyId              String
+  userId                  String
+  status                  OwnershipVerificationStatus @default(SUBMITTED)
   // How the user proved ownership — drives the partner round-trip behaviour.
   // null on legacy rows (pre-HomeScore-publish flow).
-  verificationMethod  String?                     // "photo-id" | "mortgage" | "open-banking"
-  submittedAt         DateTime                    @default(now())
-  verifiedAt          DateTime?
-  passportId          String?
+  verificationMethod      String? // "photo-id" | "mortgage" | "open-banking"
+  submittedAt             DateTime                    @default(now())
+  verifiedAt              DateTime?
+  passportId              String?
   // HM Land Registry — Online Owner Verification (Business Gateway) result.
   // Persisted so we can replay decisions, show match details on the claim
   // UI, and avoid re-charging HMLR for the same identity / property pair.
-  landRegistryMessageId    String?
-  landRegistryTitleNumber  String?
-  landRegistryMatchResult  String?  // SINGLE_MATCH | MULTIPLE_MATCHES | NO_MATCHES
-  landRegistryRawResponse  Json?    // full parsed OVResult / OVRejection
-  landRegistryCheckedAt    DateTime?
-  property            Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  landRegistryMessageId   String?
+  landRegistryTitleNumber String?
+  landRegistryMatchResult String? // SINGLE_MATCH | MULTIPLE_MATCHES | NO_MATCHES
+  landRegistryRawResponse Json? // full parsed OVResult / OVRejection
+  landRegistryCheckedAt   DateTime?
+  property                Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([propertyId, userId])
   @@index([propertyId])
@@ -307,38 +316,38 @@ model SectionTemplate {
 }
 
 model Passport {
-  id            String                 @id @default(uuid())
+  id                String                   @id @default(uuid())
   // Address is no longer globally unique — the same property can host both a
   // SELLER and a LANDLORD passport when one was converted from the other.
-  addressLine1  String
-  postcode      String
-  ownerId       String
-  propertyId    String?
-  type          PassportType           @default(SELLER)
+  addressLine1      String
+  postcode          String
+  ownerId           String
+  propertyId        String?
+  type              PassportType             @default(SELLER)
   // True when the property is a House in Multiple Occupation (landlord only).
   // Drives whether PAT-testing and HMO-licence sections are seeded.
-  isHmo         Boolean                @default(false)
+  isHmo             Boolean                  @default(false)
   // Filled when this passport was created via the landlord → seller convert
   // flow. Lets us show "transferred from your letting passport" badges and
   // keep both passports linked.
   convertedFromId   String?
-  convertedFrom     Passport?          @relation("PassportConverted", fields: [convertedFromId], references: [id])
-  convertedTo       Passport[]         @relation("PassportConverted")
-  status        PassportStatus         @default(IN_PROGRESS)
-  createdAt     DateTime               @default(now())
+  convertedFrom     Passport?                @relation("PassportConverted", fields: [convertedFromId], references: [id])
+  convertedTo       Passport[]               @relation("PassportConverted")
+  status            PassportStatus           @default(IN_PROGRESS)
+  createdAt         DateTime                 @default(now())
   // Resume tracking — last task the owner / collaborator visited so the
   // "Pick up where you left off" button can route them straight back.
-  lastVisitedTaskId  String?
-  lastVisitedAt      DateTime?
-  owner         User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  property      Property?              @relation(fields: [propertyId], references: [id])
-  sections      PassportSection[]
-  collaborators   PassportCollaborator[]
-  collectionItems PassportCollectionItem[]
-  buyerAccesses   BuyerPassportAccess[]
-  sharedLinks     SharedPassportLink[]
-  buyerNotes      BuyerNote[]
-  activities      PassportActivity[]
+  lastVisitedTaskId String?
+  lastVisitedAt     DateTime?
+  owner             User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  property          Property?                @relation(fields: [propertyId], references: [id])
+  sections          PassportSection[]
+  collaborators     PassportCollaborator[]
+  collectionItems   PassportCollectionItem[]
+  buyerAccesses     BuyerPassportAccess[]
+  sharedLinks       SharedPassportLink[]
+  buyerNotes        BuyerNote[]
+  activities        PassportActivity[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -350,11 +359,11 @@ model Passport {
 }
 
 model PassportCollection {
-  id        String                  @id @default(uuid())
+  id        String                   @id @default(uuid())
   name      String
   userId    String
-  createdAt DateTime                @default(now())
-  user      User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime                 @default(now())
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     PassportCollectionItem[]
 
   @@index([userId])
@@ -459,16 +468,16 @@ model PassportSectionTask {
 // Each row records a verified event (issued, section completed, doc uploaded,
 // match, publish, …) with a pseudo block-hash for visual tamper-evidence.
 model PassportActivity {
-  id          String   @id @default(uuid())
-  passportId  String
-  type        String   // e.g. ISSUED, SECTION_COMPLETED, PUBLISHED, MATCHED…
-  title       String   // human-readable headline
-  actor       String   // "You", "UmovingU matching engine", agency name, etc.
-  icon        String?  // single emoji used in the prototype timeline rail
-  hash        String   // short pseudo block-hash for the verified stamp
-  metadata    Json?    // optional structured payload (sectionKey, etc.)
-  createdAt   DateTime @default(now())
-  passport    Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  passportId String
+  type       String // e.g. ISSUED, SECTION_COMPLETED, PUBLISHED, MATCHED…
+  title      String // human-readable headline
+  actor      String // "You", "UmovingU matching engine", agency name, etc.
+  icon       String? // single emoji used in the prototype timeline rail
+  hash       String // short pseudo block-hash for the verified stamp
+  metadata   Json? // optional structured payload (sectionKey, etc.)
+  createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([passportId, createdAt])
 }
@@ -565,7 +574,7 @@ model UserReminder {
   userId    String
   title     String
   date      DateTime // stored as UTC date (no time component)
-  time      String?  // "14:00" HH:mm format
+  time      String? // "14:00" HH:mm format
   repeats   String   @default("never") // "never" | "annually"
   notes     String?
   type      String   @default("manual") // "manual" | "tradesperson" | "business"
@@ -689,40 +698,40 @@ model VideoProgress {
 }
 
 model HomeScoreResult {
-  id          String   @id @default(uuid())
-  propertyId  String
-  userId      String
-  total       Int
-  rating      String
-  answers     Json
+  id         String @id @default(uuid())
+  propertyId String
+  userId     String
+  total      Int
+  rating     String
+  answers    Json
 
   // ── V2 fields (all nullable — V1 records remain valid) ───────────────────
-  tier             String?  // "estimated" | "verified" | "certified"
-  baseBill         Float?   // estimated annual energy bill from EPC (£)
-  adjustedBill     Float?   // recency-adjusted bill (£)
-  actualBill       Float?   // user-entered real bill for Tier 2 (£)
-  costPerSqm       Float?
-  neighbourMedian  Float?   // median annual bill for similar neighbourhood properties (£)
-  billDifference   Float?   // positive = paying more than median, negative = paying less
+  tier            String? // "estimated" | "verified" | "certified"
+  baseBill        Float? // estimated annual energy bill from EPC (£)
+  adjustedBill    Float? // recency-adjusted bill (£)
+  actualBill      Float? // user-entered real bill for Tier 2 (£)
+  costPerSqm      Float?
+  neighbourMedian Float? // median annual bill for similar neighbourhood properties (£)
+  billDifference  Float? // positive = paying more than median, negative = paying less
 
   // V2 component scores (0–5 scale before weighting)
-  costEfficiency   Float?
-  insulation       Float?
-  heating          Float?
-  controls         Float?
-  ventilation      Float?
-  lighting         Float?
-  renewableBonus   Float?
+  costEfficiency Float?
+  insulation     Float?
+  heating        Float?
+  controls       Float?
+  ventilation    Float?
+  lighting       Float?
+  renewableBonus Float?
 
   // V1 component scores (kept for backward compat)
-  heatingV1    Int?
-  structure    Int?
-  efficiency   Int?
-  electrics    Int?
-  plumbing     Int?
+  heatingV1  Int?
+  structure  Int?
+  efficiency Int?
+  electrics  Int?
+  plumbing   Int?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // When the owner published this HomeScore to their street pool.
   // Drives the "1 of N homes" street-publish-stats and the published screen.
@@ -735,15 +744,15 @@ model HomeScoreResult {
 }
 
 model SharedPassportLink {
-  id         String          @id @default(uuid())
+  id         String   @id @default(uuid())
   passportId String
-  token      String          @unique
+  token      String   @unique
   // "buyer" (default — seller passport sharing) or "tenant" (landlord
   // passport sharing — exposes only the tenant-relevant document subset).
-  scope      String          @default("buyer")
+  scope      String   @default("buyer")
   expiresAt  DateTime
-  createdAt  DateTime        @default(now())
-  passport   Passport        @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([passportId])
@@ -766,57 +775,57 @@ model BuyerNote {
 // shared with sellers / agents / solicitors. Distinct from Passport (seller/owner
 // document) and BuyerPassportAccess (buyer's purchased access to a seller's passport).
 model BuyerProfile {
-  id               String   @id @default(uuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                     String              @id @default(uuid())
+  userId                 String              @unique
+  user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Public reference — short, URL-safe code shown on shared profile (e.g. "K3M9X2").
-  publicRef        String?  @unique
+  publicRef              String?             @unique
   // Tier — BASIC (free) / VERIFIED (£29) / PREMIUM (£79).
-  tier             String   @default("BASIC")
-  tierPaidAt       DateTime?
-  tierPaymentId    String?  // Stripe PaymentIntent id (£ paid for Verified/Premium)
+  tier                   String              @default("BASIC")
+  tierPaidAt             DateTime?
+  tierPaymentId          String? // Stripe PaymentIntent id (£ paid for Verified/Premium)
   // Step 1: ID
-  idDocumentType   String?  // "passport" | "drivingLicence" | "nationalId"
-  idDocumentUrl    String?
-  idVerified       Boolean  @default(false)
+  idDocumentType         String? // "passport" | "drivingLicence" | "nationalId"
+  idDocumentUrl          String?
+  idVerified             Boolean             @default(false)
   // Phase 2 (Persona) — populated by the KYC webhook.
-  idVerificationProvider String?  // "persona"
+  idVerificationProvider String? // "persona"
   idVerificationId       String?
   idVerifiedAt           DateTime?
   // Step 2: Funds
-  fundsType        String?  // "mortgage" | "cash" | "help"
-  fundsAmount      Int?     // max budget in GBP
-  fundsDocumentUrl String?
-  fundsVerified    Boolean  @default(false)
+  fundsType              String? // "mortgage" | "cash" | "help"
+  fundsAmount            Int? // max budget in GBP
+  fundsDocumentUrl       String?
+  fundsVerified          Boolean             @default(false)
   // Phase 3 (Armalytix/TrueLayer) — mock-shaped fields persisted from day 1.
-  fundsProvider           String?   // "armalytix" | "truelayer" | "mock"
-  fundsVerificationId     String?
-  fundsVerifiedAt         DateTime?
-  fundsAmountVerified     Int?      // £ confirmed by open-banking pass
-  amlStatus               String?   // "CLEAR" | "FLAG" | "PENDING"
-  affordabilityScore      Int?      // 0–100
-  sourceOfFundsJson       Json?     // breakdown rows
+  fundsProvider          String? // "armalytix" | "truelayer" | "mock"
+  fundsVerificationId    String?
+  fundsVerifiedAt        DateTime?
+  fundsAmountVerified    Int? // £ confirmed by open-banking pass
+  amlStatus              String? // "CLEAR" | "FLAG" | "PENDING"
+  affordabilityScore     Int? // 0–100
+  sourceOfFundsJson      Json? // breakdown rows
   // Step 3: Chain
-  chainPosition   String?   // "ftb" | "selling" | "sold" | "renting"
+  chainPosition          String? // "ftb" | "selling" | "sold" | "renting"
   // Step 4: Solicitor + timeline + property type
-  solicitorStatus String?   // "yes" | "looking" | "notsure"
-  timeline        String?   // "asap" | "3m" | "6m" | "flex"
-  propertyType    String?   // "house" | "flat" | "newBuild" | "any"
+  solicitorStatus        String? // "yes" | "looking" | "notsure"
+  timeline               String? // "asap" | "3m" | "6m" | "flex"
+  propertyType           String? // "house" | "flat" | "newBuild" | "any"
   // Step 5: Statement
-  statement       String?
+  statement              String?
   // Digital signature (canvas PNG data URL OR typed name).
-  signatureData   String?   // base64 data URL when canvas-drawn
-  signedName      String?   // populated when user typed their name instead
-  signedAt        DateTime?
+  signatureData          String? // base64 data URL when canvas-drawn
+  signedName             String? // populated when user typed their name instead
+  signedAt               DateTime?
   // Meta
-  completedSteps  Int       @default(0) // 1-5
-  published       Boolean   @default(false)
-  publishedAt     DateTime?
+  completedSteps         Int                 @default(0) // 1-5
+  published              Boolean             @default(false)
+  publishedAt            DateTime?
   // Strength score (0–100) computed server-side on every upsert.
-  strengthScore   Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  shares          BuyerProfileShare[]
+  strengthScore          Int                 @default(0)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  shares                 BuyerProfileShare[]
 }
 
 // ── Buyer Profile External API (OPDA / PDTF Sprint 1) ───────────────────────
@@ -828,29 +837,29 @@ model BuyerProfile {
 // access_token. Every API call against that token writes an AccessLog row.
 
 model VerifierOrg {
-  id            String   @id @default(uuid())
-  name          String                       // "Lloyds Bank"
-  legalName     String?                      // "Lloyds Banking Group plc"
-  logoEmoji     String?                      // "🏦" — used until brand assets ship
-  description   String?                      // "Mortgage division · FCA authorised"
-  fcaNumber     String?                      // FRN for regulated firms
-  contactEmail  String
-  websiteUrl    String?
-  status        String   @default("ACTIVE")  // ACTIVE | SUSPENDED
-  createdAt     DateTime @default(now())
-  clients       VerifierClient[]
-  requests      AccessRequest[]
+  id           String           @id @default(uuid())
+  name         String // "Lloyds Bank"
+  legalName    String? // "Lloyds Banking Group plc"
+  logoEmoji    String? // "🏦" — used until brand assets ship
+  description  String? // "Mortgage division · FCA authorised"
+  fcaNumber    String? // FRN for regulated firms
+  contactEmail String
+  websiteUrl   String?
+  status       String           @default("ACTIVE") // ACTIVE | SUSPENDED
+  createdAt    DateTime         @default(now())
+  clients      VerifierClient[]
+  requests     AccessRequest[]
 }
 
 model VerifierClient {
-  id               String   @id @default(uuid())
+  id               String          @id @default(uuid())
   orgId            String
-  org              VerifierOrg @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  clientId         String   @unique          // public ID, sent in API headers
-  clientSecretHash String                    // bcrypt of generated secret
-  redirectUris     String[] @default([])     // for future OAuth phase
-  allowedScopes    String[]                  // max scopes this client can request
-  createdAt        DateTime @default(now())
+  org              VerifierOrg     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  clientId         String          @unique // public ID, sent in API headers
+  clientSecretHash String // bcrypt of generated secret
+  redirectUris     String[]        @default([]) // for future OAuth phase
+  allowedScopes    String[] // max scopes this client can request
+  createdAt        DateTime        @default(now())
   revokedAt        DateTime?
   requests         AccessRequest[]
 
@@ -858,20 +867,20 @@ model VerifierClient {
 }
 
 model AccessRequest {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   orgId           String
-  org             VerifierOrg @relation(fields: [orgId], references: [id])
+  org             VerifierOrg    @relation(fields: [orgId], references: [id])
   clientId        String
   client          VerifierClient @relation(fields: [clientId], references: [id])
   buyerUserId     String
-  buyer           User @relation(fields: [buyerUserId], references: [id], onDelete: Cascade)
-  requestedScopes String[]                   // what the org asked for
-  approvedScopes  String[] @default([])      // subset granted (filled on approve)
-  reason          String?                    // optional message from verifier
-  status          String   @default("PENDING")  // PENDING | APPROVED | DECLINED | EXPIRED
-  expiresAt       DateTime                   // request itself expires (48h)
+  buyer           User           @relation(fields: [buyerUserId], references: [id], onDelete: Cascade)
+  requestedScopes String[] // what the org asked for
+  approvedScopes  String[]       @default([]) // subset granted (filled on approve)
+  reason          String? // optional message from verifier
+  status          String         @default("PENDING") // PENDING | APPROVED | DECLINED | EXPIRED
+  expiresAt       DateTime // request itself expires (48h)
   decidedAt       DateTime?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime       @default(now())
   grant           AccessGrant?
 
   @@index([buyerUserId, status])
@@ -879,31 +888,31 @@ model AccessRequest {
 }
 
 model AccessGrant {
-  id            String   @id @default(uuid())
-  requestId     String   @unique
-  request       AccessRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  accessToken   String   @unique             // bearer token (UUID-shaped or longer)
-  refreshToken  String?  @unique             // optional, Sprint 2 OAuth
-  scopes        String[]                     // approved scopes (subset of request)
-  expiresAt     DateTime                     // grant TTL — max 30 days
-  revokedAt     DateTime?                    // buyer-revocable at any time
-  createdAt     DateTime @default(now())
-  lastUsedAt    DateTime?
-  useCount      Int      @default(0)
-  logs          AccessLog[]
+  id           String        @id @default(uuid())
+  requestId    String        @unique
+  request      AccessRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  accessToken  String        @unique // bearer token (UUID-shaped or longer)
+  refreshToken String?       @unique // optional, Sprint 2 OAuth
+  scopes       String[] // approved scopes (subset of request)
+  expiresAt    DateTime // grant TTL — max 30 days
+  revokedAt    DateTime? // buyer-revocable at any time
+  createdAt    DateTime      @default(now())
+  lastUsedAt   DateTime?
+  useCount     Int           @default(0)
+  logs         AccessLog[]
 
   @@index([accessToken])
 }
 
 model AccessLog {
-  id             String   @id @default(uuid())
+  id             String      @id @default(uuid())
   grantId        String
   grant          AccessGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
   scopesReturned String[]
   ip             String?
   userAgent      String?
-  endpoint       String?                     // e.g. "GET /api/v1/buyer-profile"
-  createdAt      DateTime @default(now())
+  endpoint       String? // e.g. "GET /api/v1/buyer-profile"
+  createdAt      DateTime    @default(now())
 
   @@index([grantId])
 }
@@ -912,18 +921,18 @@ model AccessLog {
 // expiring read-only badge at /shared-buyer/<token>. Expiry is agent-configurable
 // at create time; revocation flips revokedAt and 410s the public route.
 model BuyerProfileShare {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   profileId      String
   profile        BuyerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  token          String   @unique          // short URL-safe slug
-  recipientName  String?                   // "Hamilton Court Estates"
-  recipientEmail String?                   // optional, used by Resend
-  scope          Json                      // ["identity","deposit","sof","afford","credit","story"]
-  sentAt         DateTime @default(now())
-  expiresAt      DateTime                  // agent-configurable
+  token          String       @unique // short URL-safe slug
+  recipientName  String? // "Hamilton Court Estates"
+  recipientEmail String? // optional, used by Resend
+  scope          Json // ["identity","deposit","sof","afford","credit","story"]
+  sentAt         DateTime     @default(now())
+  expiresAt      DateTime // agent-configurable
   revokedAt      DateTime?
   lastViewedAt   DateTime?
-  viewCount      Int      @default(0)
+  viewCount      Int          @default(0)
 
   @@index([profileId])
 }
@@ -935,19 +944,207 @@ model PricePaidTransaction {
   price           Int
   transactionDate DateTime
   postcode        String
-  propertyType    String?  // D=Detached, S=Semi-detached, T=Terraced, F=Flat, O=Other
+  propertyType    String? // D=Detached, S=Semi-detached, T=Terraced, F=Flat, O=Other
   isNewBuild      Boolean  @default(false)
-  tenure          String?  // F=Freehold, L=Leasehold, U=Unknown
-  paon            String?  // Primary Addressable Object Name (house number/name)
-  saon            String?  // Secondary Addressable Object Name (flat/unit)
+  tenure          String? // F=Freehold, L=Leasehold, U=Unknown
+  paon            String? // Primary Addressable Object Name (house number/name)
+  saon            String? // Secondary Addressable Object Name (flat/unit)
   street          String?
   locality        String?
   town            String?
   district        String?
   county          String?
-  category        String?  // A=Standard, B=Additional (non-standard)
+  category        String? // A=Standard, B=Additional (non-standard)
 
   @@index([postcode])
   @@index([postcode, paon])
   @@index([transactionDate])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Marketplace (Step 1 — categories + read-only job feed)
+//
+// Job posting + uploads + offers come in later steps. For now this
+// table lives behind GET endpoints only; the demo jobs are inserted
+// by `scripts/seed-marketplace.ts` so the Home + Browse screens have
+// content out of the box.
+// ─────────────────────────────────────────────────────────────────────
+model MarketplaceCategory {
+  id         String   @id @default(uuid())
+  slug       String   @unique // e.g. 'plumbing'
+  name       String // e.g. 'Plumbing'
+  emoji      String // single emoji shown on the tile
+  background String // raw CSS background value (gradient string)
+  sortOrder  Int      @default(0) // controls grid ordering
+  createdAt  DateTime @default(now())
+
+  jobs MarketplaceJob[]
+}
+
+model MarketplaceJob {
+  id         String              @id @default(uuid())
+  customerId String? // null for seeded demo jobs
+  customer   User?               @relation(fields: [customerId], references: [id])
+  categoryId String
+  category   MarketplaceCategory @relation(fields: [categoryId], references: [id])
+
+  title          String
+  description    String
+  locationLabel  String // 'Bristol BS1'
+  postcode       String? // for future distance calc
+  distanceMi     Float? // mocked in Step 1; real geo in Step 3+
+  urgency        String   @default("standard") // 'urgent' | 'standard' | 'flexible'
+  availability   String? // free-text label e.g. 'Available 25 Apr'
+  availableDates Json? // string[] for the chip row on jobDetail
+  budgetMin      Int // whole pounds
+  budgetMax      Int?
+  offerCount     Int      @default(0)
+  photoBg        String? // CSS background for the header photo placeholder (legacy)
+  photoBgs       Json? // additional thumb gradients (legacy, string[])
+  photos         String[] @default([]) // uploaded photo URLs; takes precedence over photoBgs when present
+  status         String   @default("open") // open | in_progress | completed | cancelled
+  postedAt       DateTime @default(now())
+
+  offers  MarketplaceOffer[]
+  threads MarketplaceThread[]
+  payment MarketplacePayment?
+  reviews MarketplaceReview[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([postcode])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Marketplace offers (Step 3 — no payment yet)
+//
+// A supplier submits an offer against a job. The customer (job poster)
+// can accept or decline. Accepting flips the job to "in_progress" and
+// auto-declines every other open offer on the same job. Payments arrive
+// in Step 5 (UProtect escrow) — for now an accepted offer is just a
+// status flip, no Stripe.
+// ─────────────────────────────────────────────────────────────────────
+model MarketplaceOffer {
+  id            String         @id @default(uuid())
+  jobId         String
+  job           MarketplaceJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  supplierId    String
+  supplier      User           @relation("MarketplaceOfferSupplier", fields: [supplierId], references: [id])
+  price         Int // whole pounds, matches budget
+  message       String // pitch to the customer
+  availableDate String? // chip the supplier selected (e.g. "25 Apr")
+  status        String         @default("pending") // pending | accepted | declined | withdrawn
+  createdAt     DateTime       @default(now())
+
+  payment MarketplacePayment?
+
+  @@unique([jobId, supplierId]) // one open offer per supplier per job
+  @@index([jobId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Marketplace messages (Step 4 — 1:1 thread per (job, supplier) pair)
+//
+// A thread is the persistent conversation between the job customer and
+// one specific supplier. It can exist before any offer (a supplier
+// asking clarifying questions) or after acceptance (work-in-progress
+// chat). One thread per pair so we never fork into parallel histories.
+// ─────────────────────────────────────────────────────────────────────
+model MarketplaceThread {
+  id            String         @id @default(uuid())
+  jobId         String
+  job           MarketplaceJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  supplierId    String
+  supplier      User           @relation("MarketplaceThreadSupplier", fields: [supplierId], references: [id])
+  customerId    String // denormalised for indexing the customer's inbox
+  customer      User           @relation("MarketplaceThreadCustomer", fields: [customerId], references: [id])
+  createdAt     DateTime       @default(now())
+  lastMessageAt DateTime?
+
+  messages MarketplaceMessage[]
+
+  @@unique([jobId, supplierId])
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+model MarketplaceMessage {
+  id        String            @id @default(uuid())
+  threadId  String
+  thread    MarketplaceThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User              @relation("MarketplaceMessageSender", fields: [senderId], references: [id])
+  body      String
+  createdAt DateTime          @default(now())
+  readAt    DateTime?
+
+  @@index([threadId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// UProtect escrow (Step 5)
+//
+// A MarketplacePayment captures the customer's authorisation to pay for
+// a specific (job, offer, supplier) triplet. State machine:
+//
+//   pending  → just created; Stripe PaymentIntent waiting for client
+//              confirmation
+//   held     → PaymentIntent succeeded → funds on platform balance
+//              "in escrow". Job sits in_progress.
+//   released → customer confirmed completion → funds OK to disburse
+//              to supplier (real Connect transfer comes in a later
+//              pass; for now this is a DB-only flip + system message)
+//   refunded → customer cancelled / refund path
+// ─────────────────────────────────────────────────────────────────────
+model MarketplacePayment {
+  id                    String           @id @default(uuid())
+  jobId                 String           @unique // one held payment per job
+  job                   MarketplaceJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  offerId               String           @unique // one payment per accepted offer
+  offer                 MarketplaceOffer @relation(fields: [offerId], references: [id])
+  customerId            String
+  customer              User             @relation("MarketplacePaymentCustomer", fields: [customerId], references: [id])
+  supplierId            String
+  supplier              User             @relation("MarketplacePaymentSupplier", fields: [supplierId], references: [id])
+  amount                Int // job price (pence)
+  platformFee           Int // 10% (pence)
+  total                 Int // amount + platformFee
+  status                String           @default("pending") // pending | held | released | refunded
+  stripePaymentIntentId String?          @unique
+  createdAt             DateTime         @default(now())
+  heldAt                DateTime?
+  releasedAt            DateTime?
+  refundedAt            DateTime?
+
+  @@index([customerId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Marketplace reviews (Step 6)
+//
+// One review per (jobId, fromUserId) so both sides of a transaction can
+// rate each other after release. Reviews are immutable once posted —
+// editing would let people retaliate after seeing the other side's
+// score. If a review needs to change we'd add a separate amendment
+// table later.
+// ─────────────────────────────────────────────────────────────────────
+model MarketplaceReview {
+  id         String         @id @default(uuid())
+  jobId      String
+  job        MarketplaceJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  fromUserId String // the reviewer
+  fromUser   User           @relation("MarketplaceReviewFrom", fields: [fromUserId], references: [id])
+  toUserId   String // the user being reviewed
+  toUser     User           @relation("MarketplaceReviewTo", fields: [toUserId], references: [id])
+  direction  String // 'customer_to_supplier' | 'supplier_to_customer'
+  rating     Int // 1..5
+  body       String?
+  createdAt  DateTime       @default(now())
+
+  @@unique([jobId, fromUserId])
+  @@index([toUserId])
 }

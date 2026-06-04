@@ -20,6 +20,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
 import { KycModule } from './kyc/kyc.module';
 import { VerifierApiModule } from './verifier-api/verifier-api.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { VerifierApiModule } from './verifier-api/verifier-api.module';
     BuyerProfileModule,
     KycModule,
     VerifierApiModule,
+    MarketplaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

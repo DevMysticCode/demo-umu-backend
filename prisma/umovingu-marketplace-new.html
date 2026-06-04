@@ -1,0 +1,2626 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UmovingU · Marketplace</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; -webkit-font-smoothing:antialiased; }
+:root {
+  --primary:#231D45; --primary-2:#352D5C; --primary-3:#4A4566;
+  --accent:#00A19A; --accent-dark:#008A84; --accent-light:#00B8B0;
+  --accent-pale:#E5F4F2; --accent-paler:#F2FAF8;
+  --bg:#F5F6FA; --page:#F0F2F8; --card:#FFFFFF;
+  --text:#231D45; --text-secondary:#6B7089; --text-faint:#A8A9AD;
+  --border:#E4E5ED; --border-soft:#F0F1F5;
+  --warning:#F5A623; --warning-pale:#FDF3E0; --warning-deep:#7A5500;
+  --error:#E74C5E; --error-pale:#FCEBEA; --error-light:#F87171;
+  --gold:#FFD700; --platinum:#E5E4E2; --silver:#A8A9AD; --bronze:#CD7F32;
+  --stage:#0e1216;
+  --shadow-card:0 2px 8px rgba(35,29,69,0.05);
+  --shadow-soft:0 2px 12px rgba(35,29,69,0.05);
+  --shadow-lift:0 8px 24px rgba(35,29,69,0.10);
+}
+html,body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
+body {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,161,154,0.08), transparent 60%), var(--stage);
+  min-height:100vh; padding:50px 16px 80px;
+  display:flex; flex-direction:column; align-items:center; gap:24px;
+}
+.stage-caption { text-align:center; color:rgba(255,255,255,0.6); max-width:760px; font-size:13px; font-weight:500; line-height:1.6; }
+.stage-caption .label { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:8px; display:block; font-weight:700; }
+.stage-caption .head { font-size:28px; color:white; line-height:1.1; margin-bottom:10px; font-weight:800; letter-spacing:-0.6px; }
+.stage-caption a { color:#5EEAD4; text-decoration:none; font-weight:700; border-bottom:1px dashed rgba(94,234,212,0.4); padding-bottom:1px; }
+.stage-caption a:hover { color:white; border-bottom-color:white; }
+.screen-switcher { display:inline-flex; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18); border-radius:100px; padding:5px; gap:4px; flex-wrap:wrap; justify-content:center; max-width:760px; box-shadow:0 6px 20px rgba(0,0,0,0.25); }
+.screen-btn { font-family:inherit; font-size:11.5px; font-weight:700; color:rgba(255,255,255,0.7); background:transparent; border:none; padding:9px 13px; border-radius:100px; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+.screen-btn:hover { color:white; background:rgba(255,255,255,0.06); }
+.screen-btn.active { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; box-shadow:0 4px 12px rgba(0,161,154,0.4); }
+.persona-toggle { display:inline-flex; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18); border-radius:100px; padding:4px; gap:2px; box-shadow:0 4px 16px rgba(0,0,0,0.20); }
+.persona-btn { font-family:inherit; font-size:11px; font-weight:800; color:rgba(255,255,255,0.7); background:transparent; border:none; padding:7px 13px; border-radius:100px; cursor:pointer; transition:all 0.2s; letter-spacing:0.3px; text-transform:uppercase; }
+.persona-btn.active { background:white; color:var(--primary); }
+
+.phone { width:420px; height:880px; background:var(--page); border-radius:44px; overflow:hidden; box-shadow:0 25px 80px rgba(35,29,69,0.2),0 4px 20px rgba(35,29,69,0.08),0 0 0 8px #0a0d12,0 0 0 9px rgba(255,255,255,0.06),inset 0 0 0 1px rgba(255,255,255,0.6); display:flex; flex-direction:column; position:relative; isolation:isolate; }
+.phone::before { content:''; position:absolute; top:11px; left:50%; transform:translateX(-50%); width:118px; height:30px; background:#0a0d12; border-radius:100px; z-index:30; }
+.status-bar { display:flex; justify-content:space-between; align-items:center; padding:14px 28px 8px; font-size:14px; font-weight:700; color:var(--text); background:var(--page); flex-shrink:0; z-index:5; }
+.status-bar .right { display:flex; gap:5px; align-items:center; }
+.signal-bars { display:flex; gap:2px; align-items:flex-end; }
+.signal-bars i { width:3px; background:currentColor; border-radius:1px; display:block; }
+.signal-bars i:nth-child(1){height:4px;} .signal-bars i:nth-child(2){height:6px;} .signal-bars i:nth-child(3){height:8px;} .signal-bars i:nth-child(4){height:10px;}
+.battery { width:24px; height:11px; border:1px solid currentColor; border-radius:3px; position:relative; padding:1.5px; }
+.battery::after { content:''; position:absolute; right:-3px; top:50%; transform:translateY(-50%); width:1.5px; height:5px; background:currentColor; border-radius:0 1px 1px 0; }
+.battery i { height:100%; width:75%; background:currentColor; border-radius:1px; display:block; }
+.body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:64px; background:var(--page); position:relative; }
+.body::-webkit-scrollbar { width:0; }
+.screen { display:none; }
+body[data-screen="home"]            .screen.home { display:block; }
+body[data-screen="yourProjects"]    .screen.yourProjects { display:block; }
+body[data-screen="browse"]          .screen.browse { display:block; }
+body[data-screen="postJob"]         .screen.postJob { display:block; }
+body[data-screen="jobDetail"]       .screen.jobDetail { display:block; }
+body[data-screen="makeOffer"]       .screen.makeOffer { display:block; }
+body[data-screen="offers"]          .screen.offers { display:block; }
+body[data-screen="authorise"]       .screen.authorise { display:block; }
+body[data-screen="contract"]        .screen.contract { display:block; }
+body[data-screen="leaveReview"]     .screen.leaveReview { display:block; }
+body[data-screen="customerProfile"] .screen.customerProfile { display:block; }
+body[data-screen="supplierProfile"] .screen.supplierProfile { display:block; }
+body[data-screen="supplierDash"]    .screen.supplierDash { display:block; }
+body[data-screen="leaderboard"]     .screen.leaderboard { display:block; }
+body[data-screen="rewards"]         .screen.rewards { display:block; }
+body[data-screen="earnings"]        .screen.earnings { display:block; }
+body[data-screen="invoice"]         .screen.invoice { display:block; }
+body[data-screen="messages"]        .screen.messages { display:block; }
+body[data-screen="uprotect"]        .screen.uprotect { display:block; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+@keyframes pulseDot { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.4); opacity:0.5; } }
+@keyframes numPop { 0%{transform:scale(1);} 40%{transform:scale(1.16);} 100%{transform:scale(1);} }
+@keyframes shimmerStar { 0%,100% { opacity:0.9; transform:rotate(0); } 50% { opacity:1; transform:rotate(8deg) scale(1.1); } }
+@keyframes ringPulse { 0%,100% { box-shadow:0 0 0 0 rgba(0,161,154,0); } 50% { box-shadow:0 0 0 8px rgba(0,161,154,0.15); } }
+.anim-1{animation:fadeSlideUp .35s .05s cubic-bezier(.22,1,.36,1) both;}
+.anim-2{animation:fadeSlideUp .35s .12s cubic-bezier(.22,1,.36,1) both;}
+.anim-3{animation:fadeSlideUp .35s .22s cubic-bezier(.22,1,.36,1) both;}
+.anim-4{animation:fadeSlideUp .35s .32s cubic-bezier(.22,1,.36,1) both;}
+.anim-5{animation:fadeSlideUp .35s .42s cubic-bezier(.22,1,.36,1) both;}
+.anim-6{animation:fadeSlideUp .35s .52s cubic-bezier(.22,1,.36,1) both;}
+.pulse-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); display:inline-block; box-shadow:0 0 0 3px rgba(0,161,154,0.15); animation:pulseDot 1.8s ease-in-out infinite; }
+
+/* ── MOTION SYSTEM ── */
+@keyframes glowBorderTeal {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,161,154,0.10), 0 0 0 0 rgba(0,161,154,0); }
+  50%      { box-shadow: 0 6px 18px rgba(0,161,154,0.18), 0 0 0 4px rgba(0,161,154,0.08); }
+}
+@keyframes glowBorderAmber {
+  0%, 100% { box-shadow: 0 4px 14px rgba(245,166,35,0.10), 0 0 0 0 rgba(245,166,35,0); }
+  50%      { box-shadow: 0 6px 18px rgba(245,166,35,0.18), 0 0 0 4px rgba(245,166,35,0.08); }
+}
+@keyframes statBreathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.035); }
+}
+@keyframes onlineBlink {
+  0%, 100% { opacity:1; box-shadow:0 0 0 0 rgba(0,161,154,0.55); }
+  60%      { opacity:0.55; box-shadow:0 0 0 6px rgba(0,161,154,0); }
+}
+@keyframes numFlash {
+  0%       { transform: scale(1.18); }
+  50%      { transform: scale(1.05); }
+  100%     { transform: scale(1); }
+}
+
+/* Apply to specific elements */
+.glow-teal { animation: glowBorderTeal 3.2s ease-in-out infinite; }
+.glow-amber { animation: glowBorderAmber 3.2s ease-in-out infinite; }
+.breathe { animation: statBreathe 4s ease-in-out infinite; transform-origin: center; display: inline-block; }
+.online-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent); animation: onlineBlink 1.8s ease-in-out infinite; vertical-align:middle; margin-right:5px; }
+
+/* Press feedback on all tappable cards */
+.proj-active-card, .job-list-card, .cat-tile, .offer-card, .partner-tile, .tier-card, .msg-row, .menu-row, .sup-section-tile, .alert-tile, .action-row, .inv-row, .hero-card, .rewards-teaser, .projects-entry, .pathway-banner, .quest-card, .lb-row, .chip { transition: transform .12s cubic-bezier(.22,1,.36,1), box-shadow .15s, border-color .15s, background .15s; }
+.proj-active-card:active, .job-list-card:active, .cat-tile:active, .offer-card:active, .partner-tile:active, .tier-card:active, .msg-row:active, .menu-row:active, .sup-section-tile:active, .alert-tile:active, .action-row:active, .inv-row:active, .hero-card:active, .rewards-teaser:active, .projects-entry:active, .pathway-banner:active, .quest-card:active, .lb-row:active { transform: scale(0.975); }
+
+/* Progress bars / sliders / chart bars — smooth fill */
+.proj-active-fill, .quest-prog-fill, .slider-fill { transition: width 1.2s cubic-bezier(.22,1,.36,1); }
+.chart-bar-shape { transition: height 1.1s cubic-bezier(.22,1,.36,1); }
+
+/* Number flash when value updates */
+.num-flash { animation: numFlash .55s cubic-bezier(.22,1,.36,1); display: inline-block; }
+
+/* ── HEADER (universal) ── */
+.app-header { display:flex; align-items:center; gap:12px; padding:18px 20px 14px; background:var(--card); border-bottom:1px solid var(--border-soft); }
+.app-header-text { flex:1; min-width:0; }
+.app-greeting { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--text-secondary); margin-bottom:2px; }
+.app-greeting .wave { display:inline-block; animation:waveHand 2.4s ease-in-out infinite; transform-origin:70% 70%; font-size:14px; }
+@keyframes waveHand { 0%,60%,100% { transform:rotate(0); } 10%,30% { transform:rotate(14deg); } 20% { transform:rotate(-8deg); } }
+.app-title { font-size:26px; font-weight:800; color:var(--text); letter-spacing:-0.7px; line-height:1.05; }
+.app-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:800; box-shadow:0 4px 12px rgba(0,161,154,0.30); cursor:pointer; flex-shrink:0; }
+.app-icon-btn { width:36px; height:36px; border-radius:50%; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); font-size:14px; font-weight:800; transition:all .15s; flex-shrink:0; }
+.app-icon-btn:hover { background:var(--accent-paler); border-color:var(--accent-pale); color:var(--accent-dark); }
+
+.sub-header { display:flex; align-items:center; gap:10px; padding:14px 20px; background:var(--card); border-bottom:1px solid var(--border-soft); }
+.back-btn { width:34px; height:34px; border-radius:10px; background:var(--bg); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); font-size:18px; font-weight:800; flex-shrink:0; }
+.back-btn:hover { background:var(--accent-paler); border-color:var(--accent-pale); color:var(--accent-dark); }
+.sub-title { flex:1; font-size:15px; font-weight:800; color:var(--text); letter-spacing:-0.3px; }
+.sub-pill { font-size:10px; font-weight:800; padding:5px 10px; background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); border-radius:100px; letter-spacing:0.8px; text-transform:uppercase; }
+
+/* ── SEARCH ── */
+.search-row { display:flex; align-items:center; gap:8px; margin:14px 20px 0; }
+.search-input { flex:1; display:flex; align-items:center; gap:10px; background:var(--card); border:1.5px solid var(--border); border-radius:14px; padding:0 14px; box-shadow:var(--shadow-card); transition:border-color .15s; }
+.search-input:focus-within { border-color:var(--accent); box-shadow:0 0 0 4px rgba(0,161,154,0.12); }
+.search-input svg { width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+.search-input input { flex:1; background:transparent; border:none; padding:14px 0; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--text); min-width:0; }
+.search-input input:focus { outline:none; }
+.search-input input::placeholder { color:var(--text-faint); font-weight:500; }
+.search-btn { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; border:none; font-family:inherit; font-size:13px; font-weight:800; padding:14px 16px; border-radius:14px; cursor:pointer; box-shadow:0 4px 14px rgba(0,161,154,0.30); flex-shrink:0; transition:filter .15s; }
+.search-btn:hover { filter:brightness(1.06); }
+
+/* ── HERO (gamified, used on home + supplier dash) ── */
+.hero-card { margin:14px 20px 0; padding:18px; background:linear-gradient(140deg,#2D2466 0%,#231D45 55%,#15102E 100%); border-radius:18px; color:white; box-shadow:0 16px 36px -10px rgba(35,29,69,0.40); position:relative; overflow:hidden; }
+.hero-card::before { content:''; position:absolute; top:-40%; right:-25%; width:280px; height:280px; border-radius:50%; background:radial-gradient(circle,rgba(255,193,89,0.18) 0%,transparent 65%); pointer-events:none; animation:glowFloat 6s ease-in-out infinite; }
+.hero-card::after { content:''; position:absolute; bottom:-30%; left:-20%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(0,184,176,0.20) 0%,transparent 60%); pointer-events:none; }
+@keyframes glowFloat { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.08); opacity:0.7; } }
+.hero-card > * { position:relative; z-index:1; }
+.hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.hero-eyebrow { font-size:10px; font-weight:800; color:rgba(255,255,255,0.95); letter-spacing:1.4px; text-transform:uppercase; }
+.hero-update { font-size:10.5px; font-weight:800; color:white; padding:3px 9px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.28); border-radius:100px; }
+.hero-headline { font-size:21px; font-weight:800; letter-spacing:-0.6px; line-height:1.15; margin-bottom:6px; }
+.hero-sub { font-size:13px; font-weight:500; color:rgba(255,255,255,0.78); line-height:1.45; margin-bottom:12px; }
+.hero-sub b { color:#FFD58A; font-weight:800; }
+.hero-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.hero-stat { padding:10px 8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:12px; text-align:center; }
+.hero-stat-num { font-size:22px; font-weight:800; letter-spacing:-0.6px; color:white; line-height:1; }
+.hero-stat-num.amber { color:#FFD58A; }
+.hero-stat-num.mint { color:#5EEAD4; }
+.hero-stat-label { font-size:9.5px; font-weight:800; color:rgba(255,255,255,0.65); letter-spacing:0.5px; text-transform:uppercase; margin-top:4px; }
+
+/* ── SECTION HEAD ── */
+.section-h { display:flex; align-items:baseline; justify-content:space-between; padding:20px 20px 10px; }
+.section-title { font-size:14px; font-weight:800; color:var(--text); letter-spacing:-0.3px; }
+.section-link { font-size:12px; font-weight:800; color:var(--accent-dark); cursor:pointer; }
+
+/* ── CATEGORY GRID (real photo tiles) ── */
+.cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0 20px; }
+.cat-tile { aspect-ratio:1; padding:0; background:var(--bg); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); position:relative; overflow:hidden; cursor:pointer; transition:all .15s; background-size:cover; background-position:center; }
+.cat-tile:hover { transform:translateY(-2px); box-shadow:0 10px 22px rgba(35,29,69,0.18); }
+.cat-tile::before { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,0.78) 100%); pointer-events:none; }
+.cat-name { position:absolute; bottom:7px; left:8px; right:8px; font-size:10.5px; font-weight:800; color:white; letter-spacing:-0.1px; text-align:left; line-height:1.15; text-shadow:0 1px 3px rgba(0,0,0,0.4); z-index:2; }
+.cat-emoji { display:none; }
+
+/* ── JOB RAIL (horizontal scroll) ── */
+.job-rail { display:flex; gap:12px; padding:0 20px 4px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.job-rail::-webkit-scrollbar { display:none; }
+.job-card { flex:0 0 240px; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-card); transition:all .15s; cursor:pointer; }
+.job-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(35,29,69,0.10); border-color:var(--accent-pale); }
+.job-card-img { height:120px; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.job-card-img.plumb { background:linear-gradient(135deg,#A8DAFF 0%,#5B8DEF 60%,#2D68C4 100%); }
+.job-card-img.elec  { background:linear-gradient(135deg,#FFE69E 0%,#F5A623 60%,#C67800 100%); }
+.job-card-img.kitchen { background:linear-gradient(135deg,#FFD5B5 0%,#E07C4F 60%,#A04014 100%); }
+.job-card-img.bathroom { background:linear-gradient(135deg,#B5E8D5 0%,#3DA66A 60%,#1F5C36 100%); }
+.job-card-img.paint { background:linear-gradient(135deg,#E5C8FF 0%,#9468E0 60%,#5B3795 100%); }
+.job-card-img.garden { background:linear-gradient(135deg,#C5E8A8 0%,#4ADE80 60%,#1F8F45 100%); }
+.job-card-illus { font-size:42px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.18)); }
+.job-card-budget { position:absolute; top:10px; right:10px; padding:5px 10px; background:rgba(255,255,255,0.95); backdrop-filter:blur(6px); border-radius:100px; font-size:11.5px; font-weight:800; color:var(--text); letter-spacing:-0.2px; box-shadow:0 2px 6px rgba(0,0,0,0.10); }
+.job-card-urgency { position:absolute; top:10px; left:10px; padding:3px 8px; background:rgba(231,76,94,0.95); color:white; border-radius:100px; font-size:9.5px; font-weight:800; letter-spacing:0.4px; text-transform:uppercase; }
+.job-card-urgency.flex { background:rgba(35,29,69,0.85); }
+.job-card-body { padding:12px; }
+.job-card-title { font-size:13px; font-weight:800; color:var(--text); letter-spacing:-0.2px; line-height:1.25; }
+.job-card-meta { font-size:10.5px; font-weight:600; color:var(--text-secondary); margin-top:3px; }
+.job-card-foot { display:flex; align-items:center; gap:5px; margin-top:9px; padding-top:9px; border-top:1px solid var(--border-soft); }
+.job-card-offers { font-size:10px; font-weight:800; color:var(--accent-dark); padding:2px 7px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:100px; }
+.job-card-time { font-size:10px; font-weight:600; color:var(--text-faint); }
+
+/* ── PRIMARY ACTION BUTTONS ── */
+.btn-primary { width:100%; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; border:none; font-family:inherit; font-size:14.5px; font-weight:800; padding:15px; border-radius:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(0,161,154,0.30); transition:filter .15s; }
+.btn-primary:hover { filter:brightness(1.06); }
+.btn-primary::after { content:'\2192'; font-size:16px; }
+.btn-primary.no-arrow::after { content:''; }
+.btn-secondary { width:100%; background:var(--card); color:var(--text); border:1.5px solid var(--border); font-family:inherit; font-size:14px; font-weight:800; padding:14px; border-radius:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .15s; }
+.btn-secondary:hover { border-color:var(--accent-pale); background:var(--accent-paler); color:var(--accent-dark); }
+.btn-row { display:flex; gap:10px; margin:14px 20px 0; }
+
+/* ── PILLS & CHIPS ── */
+.pill { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:800; padding:5px 11px; border-radius:100px; letter-spacing:0.3px; }
+.pill.teal { background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); }
+.pill.amber { background:var(--warning-pale); color:var(--warning-deep); border:1px solid rgba(245,166,35,0.3); }
+.pill.red { background:var(--error-pale); color:var(--error); border:1px solid var(--error-light); }
+.pill.navy { background:var(--primary); color:white; border:1px solid var(--primary); }
+.pill.gold { background:#FFF6D5; color:#7A5500; border:1px solid #FFE08A; }
+.pill.outline { background:transparent; color:var(--text-secondary); border:1px solid var(--border); }
+
+/* ── TRUST STRIP ── */
+.trust-strip { display:flex; align-items:flex-start; gap:10px; margin:14px 20px 0; padding:12px 14px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent-pale); border-radius:14px; }
+.trust-strip-icon { width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); display:flex; align-items:center; justify-content:center; color:white; font-size:14px; flex-shrink:0; box-shadow:0 4px 10px rgba(0,161,154,0.25); }
+.trust-strip-text { flex:1; font-size:11.5px; font-weight:600; color:var(--text-secondary); line-height:1.45; }
+.trust-strip-text b { color:var(--text); font-weight:800; }
+
+/* ── STEPPER ── */
+.stepper { display:flex; gap:6px; padding:14px 20px 0; }
+.stepper-step { flex:1; height:5px; border-radius:100px; background:var(--border-soft); }
+.stepper-step.done { background:linear-gradient(90deg,var(--accent),var(--accent-light)); }
+.stepper-step.active { background:linear-gradient(90deg,var(--accent-pale),var(--accent)); animation:ringPulse 1.6s infinite; }
+
+/* ── FORM FIELDS ── */
+.field-group { margin:14px 20px 0; }
+.field-label { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; padding-left:2px; }
+.field-input { width:100%; padding:14px 14px; background:var(--card); border:1.5px solid var(--border); border-radius:12px; font-family:inherit; font-size:14px; font-weight:600; color:var(--text); box-shadow:var(--shadow-card); transition:border-color .15s; }
+.field-input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 4px rgba(0,161,154,0.12); }
+.field-input::placeholder { color:var(--text-faint); font-weight:500; }
+textarea.field-input { resize:none; min-height:90px; font-family:inherit; }
+.field-help { font-size:11px; font-weight:500; color:var(--text-faint); margin-top:6px; padding-left:2px; }
+
+.chip-row { display:flex; flex-wrap:wrap; gap:8px; }
+.chip { padding:8px 14px; background:var(--card); border:1.5px solid var(--border); border-radius:100px; font-size:12px; font-weight:700; color:var(--text); cursor:pointer; transition:all .15s; }
+.chip:hover { border-color:var(--accent-pale); color:var(--accent-dark); }
+.chip.selected { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; border-color:var(--accent); box-shadow:0 4px 10px rgba(0,161,154,0.25); }
+
+/* ── PHOTO CHECKLIST ── */
+.photo-checklist { margin:14px 20px 0; padding:14px; background:var(--warning-pale); border:1.5px solid rgba(245,166,35,0.3); border-radius:14px; }
+.photo-checklist-h { display:flex; align-items:center; gap:7px; font-size:11.5px; font-weight:800; color:var(--warning-deep); margin-bottom:8px; }
+.photo-checklist-row { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12px; font-weight:700; color:var(--warning-deep); }
+.photo-checklist-row.done { color:var(--accent-dark); }
+.checklist-tick { width:18px; height:18px; border-radius:50%; background:#FFD58A; color:white; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; }
+.photo-checklist-row.done .checklist-tick { background:var(--accent); }
+.photo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 20px 0; }
+.photo-tile { aspect-ratio:1; border-radius:12px; background:linear-gradient(135deg,#D5F0EE,#F2FAF8); border:1.5px dashed var(--accent-pale); display:flex; align-items:center; justify-content:center; font-size:30px; color:var(--accent-dark); cursor:pointer; transition:all .15s; }
+.photo-tile:hover { border-color:var(--accent); background:var(--accent-paler); }
+.photo-tile.filled { background:linear-gradient(135deg,#A8DAFF,#5B8DEF); border-style:solid; border-color:transparent; color:white; }
+
+/* ── BUDGET PILLS ── */
+.budget-row { display:flex; gap:10px; margin:14px 20px 0; }
+.budget-pill { flex:1; padding:14px; background:var(--card); border:1.5px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); text-align:center; }
+.budget-pill-label { font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:0.7px; text-transform:uppercase; margin-bottom:4px; }
+.budget-pill-amt { font-size:22px; font-weight:800; color:var(--accent-dark); letter-spacing:-0.4px; }
+
+.insight-card { display:flex; gap:10px; margin:14px 20px 0; padding:14px; background:linear-gradient(135deg,#FFF6D5,var(--card)); border:1.5px solid #FFE08A; border-radius:14px; }
+.insight-icon { font-size:22px; flex-shrink:0; }
+.insight-text { flex:1; font-size:12px; font-weight:600; color:var(--warning-deep); line-height:1.5; }
+.insight-text b { color:var(--text); font-weight:800; }
+
+/* ── BOTTOM TAB BAR ── */
+.tab-bar { position:absolute; left:0; right:0; bottom:0; height:62px; background:var(--card); border-top:1px solid var(--border); display:flex; align-items:stretch; box-shadow:0 -4px 16px rgba(35,29,69,0.04); z-index:50; padding:0 4px; }
+.tab-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:transparent; border:none; cursor:pointer; padding:6px 4px; color:var(--text-secondary); font-family:inherit; font-size:9.5px; font-weight:800; letter-spacing:0.2px; transition:color .15s; }
+.tab-btn-icon { font-size:18px; line-height:1; }
+.tab-btn.active { color:var(--accent-dark); }
+.tab-btn.active .tab-btn-icon { transform:scale(1.1); }
+.tab-btn.center { position:relative; }
+.tab-btn.center .tab-btn-icon { width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 6px 16px rgba(0,161,154,0.35); margin-top:-22px; margin-bottom:-2px; }
+.tab-btn.center.active .tab-btn-icon { transform:none; }
+
+/* ── SUPPLIER AVATAR (illustrated) ── */
+.sup-avatar { width:48px; height:48px; border-radius:50%; flex-shrink:0; position:relative; overflow:hidden; box-shadow:0 4px 10px rgba(35,29,69,0.12); border:2px solid var(--card); }
+.sup-avatar.lg { width:84px; height:84px; }
+.sup-avatar.md { width:60px; height:60px; }
+.sup-avatar svg { width:100%; height:100%; display:block; }
+.sup-tier { position:absolute; bottom:-3px; right:-3px; width:18px; height:18px; border-radius:50%; background:var(--accent); color:white; font-weight:900; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; font-size:9px; }
+.sup-tier.lg { width:24px; height:24px; font-size:14px; bottom:-2px; right:-2px; }
+.sup-tier.platinum { background:linear-gradient(135deg,#E5E4E2,#A8A9AD); }
+.sup-tier.gold { background:linear-gradient(135deg,#FFE45C,var(--gold)); }
+.sup-tier.silver { background:linear-gradient(135deg,#F0F0F0,var(--silver)); }
+.sup-tier.bronze { background:linear-gradient(135deg,#E5A47A,var(--bronze)); }
+
+/* ── SUPPLIER CARD ── */
+.sup-card { margin:0 20px 10px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); display:flex; gap:12px; cursor:pointer; transition:all .15s; }
+.sup-card:hover { border-color:var(--accent-pale); transform:translateY(-1px); box-shadow:var(--shadow-lift); }
+.sup-info { flex:1; min-width:0; }
+.sup-name-row { display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+.sup-name { font-size:14px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.sup-verified { color:var(--accent-dark); font-size:13px; }
+.sup-meta { display:flex; gap:10px; font-size:11px; font-weight:600; color:var(--text-secondary); margin-bottom:6px; }
+.sup-meta b { color:var(--text); font-weight:800; }
+.sup-tags { display:flex; gap:5px; flex-wrap:wrap; }
+.sup-arrow { font-size:18px; color:var(--text-faint); align-self:center; font-weight:800; }
+
+/* ── OFFER CARD (with Their/Your price) ── */
+.offer-card { margin:0 20px 14px; padding:14px 14px 12px; background:var(--card); border:1.5px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); transition:all .15s; }
+.offer-card.selected { border-color:var(--accent); box-shadow:0 8px 22px rgba(0,161,154,0.18); }
+.offer-head { display:flex; gap:12px; }
+.offer-info { flex:1; min-width:0; }
+.offer-name-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.offer-name { font-size:14.5px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.offer-rating { display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; color:var(--text-secondary); margin-top:3px; }
+.offer-star { color:var(--gold); font-size:13px; animation:shimmerStar 3s ease-in-out infinite; }
+.offer-rating b { color:var(--text); font-weight:800; }
+.offer-prices { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 10px; padding:12px; background:linear-gradient(135deg,var(--accent-paler),var(--card) 80%); border:1px solid var(--accent-pale); border-radius:12px; }
+.offer-price-col { text-align:center; }
+.offer-price-label { font-size:9.5px; font-weight:800; color:var(--text-secondary); letter-spacing:0.7px; text-transform:uppercase; margin-bottom:3px; }
+.offer-price-amt { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.5px; }
+.offer-price-amt.accent { color:var(--accent-dark); }
+.offer-msg { font-size:12.5px; font-style:italic; color:var(--text-secondary); line-height:1.5; padding:10px 12px; background:var(--bg); border-radius:10px; margin-bottom:10px; }
+.offer-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.offer-rate-box { padding:10px 12px; background:linear-gradient(135deg,#F0F8FF,var(--card)); border:1px solid #C7E0FF; border-radius:10px; margin-bottom:10px; }
+.offer-rate-box-h { font-size:10px; font-weight:800; color:#2D68C4; letter-spacing:0.8px; text-transform:uppercase; margin-bottom:6px; }
+.offer-rate-row { display:flex; justify-content:space-between; font-size:11px; font-weight:700; color:var(--text); padding:2px 0; }
+.offer-rate-row b { color:var(--accent-dark); font-weight:800; }
+.offer-accept-btn { width:100%; padding:13px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; font-family:inherit; font-size:13.5px; font-weight:800; border:none; border-radius:12px; cursor:pointer; box-shadow:0 4px 12px rgba(0,161,154,0.30); }
+
+/* ── BREAKDOWN ROW (used in Authorise, Earnings) ── */
+.breakdown { margin:14px 20px 0; padding:4px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); }
+.breakdown-row { display:flex; justify-content:space-between; align-items:center; padding:11px 0; font-size:13px; font-weight:700; color:var(--text); }
+.breakdown-row + .breakdown-row { border-top:1px solid var(--border-soft); }
+.breakdown-row.total { font-size:15px; font-weight:800; }
+.breakdown-row.total .amt { color:var(--accent-dark); }
+.breakdown-label { color:var(--text-secondary); }
+.breakdown-row.total .breakdown-label { color:var(--text); }
+
+/* ── PAYMENT STEPS LIST (used in Authorise + Contract) ── */
+.step-list { margin:14px 20px 0; padding:14px 16px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.step-list-h { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.step-row { display:flex; gap:11px; padding:9px 0; }
+.step-row + .step-row { border-top:1px dashed var(--border-soft); }
+.step-row-icon { width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg,var(--accent-paler),var(--accent-pale)); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.step-row-icon.done { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; }
+.step-row-icon.active { background:linear-gradient(135deg,#FFD58A,var(--warning)); color:white; animation:ringPulse 1.6s infinite; }
+.step-row-text { flex:1; min-width:0; padding-top:2px; }
+.step-row-title { font-size:12.5px; font-weight:800; color:var(--text); letter-spacing:-0.1px; line-height:1.25; }
+.step-row-sub { font-size:11px; font-weight:500; color:var(--text-secondary); margin-top:2px; line-height:1.4; }
+
+/* ── ACCEPT PILL ── */
+.accept-card { display:flex; align-items:center; gap:12px; margin:14px 20px 0; padding:12px 14px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent); border-radius:14px; }
+.accept-icon { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; box-shadow:0 4px 10px rgba(0,161,154,0.30); flex-shrink:0; }
+.accept-text { flex:1; }
+.accept-title { font-size:13px; font-weight:800; color:var(--text); }
+.accept-sub { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+
+/* ── KV CARD ── */
+.kv-card { margin:14px 20px 0; padding:14px 16px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.kv-h { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:10px; }
+.kv-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; font-size:13px; font-weight:700; }
+.kv-row + .kv-row { border-top:1px solid var(--border-soft); }
+.kv-label { color:var(--text-secondary); font-weight:600; }
+.kv-val { color:var(--text); font-weight:800; }
+.kv-val.accent { color:var(--accent-dark); }
+.kv-val.amber { color:var(--warning-deep); }
+.kv-val.red { color:var(--error); }
+
+/* ── HERO STAT BOX ── */
+.stat-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:0 20px; margin-top:14px; }
+.stat-box { padding:14px 10px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); text-align:center; }
+.stat-box-num { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.5px; line-height:1; }
+.stat-box-label { font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:0.5px; text-transform:uppercase; margin-top:5px; }
+
+/* ── INNER TABS ── */
+.inner-tabs { display:flex; gap:4px; background:var(--bg); border:1px solid var(--border); border-radius:100px; padding:4px; margin:14px 20px 0; }
+.inner-tab { flex:1; padding:8px 10px; font-family:inherit; font-size:12px; font-weight:800; color:var(--text-secondary); background:transparent; border:none; border-radius:100px; cursor:pointer; transition:all .15s; }
+.inner-tab.active { background:var(--card); color:var(--text); box-shadow:0 2px 6px rgba(35,29,69,0.08); }
+
+/* ── LEADERBOARD PODIUM ── */
+.podium { display:flex; align-items:flex-end; justify-content:center; gap:10px; margin:16px 20px 0; padding:20px 0 16px; background:linear-gradient(180deg,var(--primary),var(--primary-2)); border-radius:18px; color:white; position:relative; overflow:hidden; box-shadow:0 14px 32px -8px rgba(35,29,69,0.40); }
+.podium::before { content:''; position:absolute; top:-30%; left:50%; transform:translateX(-50%); width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(255,215,0,0.18),transparent 65%); }
+.podium > * { position:relative; z-index:1; }
+.podium-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.podium-col .rank { font-size:18px; font-weight:800; color:#FFD58A; }
+.podium-col.first .rank { font-size:22px; }
+.podium-col .sup-avatar { box-shadow:0 4px 14px rgba(0,0,0,0.30); border-color:#FFD58A; }
+.podium-col.first .sup-avatar { border-color:var(--gold); }
+.podium-name { font-size:11.5px; font-weight:800; color:white; max-width:90px; text-align:center; line-height:1.2; }
+.podium-pts { font-size:10px; font-weight:800; color:rgba(255,215,0,0.95); }
+.podium-block { width:64px; background:linear-gradient(180deg,rgba(255,255,255,0.15),rgba(255,255,255,0.06)); border:1px solid rgba(255,255,255,0.25); border-radius:8px 8px 0 0; padding:8px 0; font-size:14px; font-weight:800; text-align:center; }
+.podium-col.first .podium-block { height:64px; background:linear-gradient(180deg,#FFE45C,var(--gold)); color:var(--primary); border:none; }
+.podium-col.second .podium-block { height:48px; background:linear-gradient(180deg,#F0F0F0,var(--silver)); color:var(--primary); border:none; }
+.podium-col.third .podium-block { height:36px; background:linear-gradient(180deg,#E5A47A,var(--bronze)); color:white; border:none; }
+
+.lb-row { display:flex; align-items:center; gap:12px; margin:0 20px 8px; padding:12px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); }
+.lb-rank { font-size:14px; font-weight:800; color:var(--text-secondary); width:24px; text-align:center; flex-shrink:0; }
+.lb-rank.up::after { content:'\2191'; color:var(--accent-dark); font-size:11px; margin-left:1px; }
+.lb-info { flex:1; min-width:0; }
+.lb-name { font-size:13px; font-weight:800; color:var(--text); }
+.lb-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:1px; }
+.lb-pts { font-size:13px; font-weight:800; color:var(--accent-dark); }
+
+/* ── TIER LADDER ── */
+.tier-card { margin:14px 20px 0; padding:14px; background:var(--card); border:1.5px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.tier-card.bronze { border-color:rgba(205,127,50,0.4); background:linear-gradient(135deg,#FFF5EE,var(--card)); }
+.tier-card.silver { border-color:rgba(168,169,173,0.4); background:linear-gradient(135deg,#F5F5F8,var(--card)); }
+.tier-card.gold { border-color:rgba(255,215,0,0.4); background:linear-gradient(135deg,#FFFAE0,var(--card)); }
+.tier-card.platinum { border-color:rgba(229,228,226,0.6); background:linear-gradient(135deg,#FAFAFA,var(--card)); box-shadow:0 6px 18px rgba(35,29,69,0.08); }
+.tier-card.current { border-width:2px; border-color:var(--accent); box-shadow:0 6px 18px rgba(0,161,154,0.20); }
+.tier-h { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.tier-emoji { font-size:24px; }
+.tier-info { flex:1; }
+.tier-name { font-size:14px; font-weight:800; color:var(--text); }
+.tier-range { font-size:11px; font-weight:600; color:var(--text-secondary); }
+.tier-current-pill { font-size:9.5px; font-weight:800; padding:4px 9px; background:var(--accent); color:white; border-radius:100px; letter-spacing:0.5px; text-transform:uppercase; }
+.tier-perk { display:flex; align-items:center; gap:7px; font-size:11.5px; font-weight:600; color:var(--text); padding:3px 0; }
+.tier-perk-tick { color:var(--accent-dark); font-weight:900; flex-shrink:0; }
+
+/* ── PARTNER DEAL TILE ── */
+.partner-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:0 20px; }
+.partner-tile { padding:14px 12px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.partner-tile:hover { border-color:var(--accent-pale); transform:translateY(-2px); box-shadow:var(--shadow-lift); }
+.partner-emoji { font-size:32px; margin-bottom:6px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.08)); }
+.partner-name { font-size:13px; font-weight:800; color:var(--text); }
+.partner-pct { font-size:11px; font-weight:800; color:var(--accent-dark); margin-top:2px; }
+.partner-desc { font-size:10.5px; font-weight:500; color:var(--text-secondary); margin-top:5px; line-height:1.35; }
+
+/* ── EARN-RULE ROW ── */
+.earn-row { display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; margin:0 20px 6px; box-shadow:var(--shadow-card); }
+.earn-emoji { width:34px; height:34px; border-radius:10px; background:var(--accent-paler); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.earn-text { flex:1; font-size:12.5px; font-weight:700; color:var(--text); }
+.earn-pts { font-size:13px; font-weight:800; color:var(--accent-dark); }
+
+/* ── MESSAGE THREAD ── */
+.msg-row { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--card); border-bottom:1px solid var(--border-soft); cursor:pointer; transition:background .15s; }
+.msg-row:hover { background:var(--accent-paler); }
+.msg-info { flex:1; min-width:0; }
+.msg-name { font-size:13.5px; font-weight:800; color:var(--text); display:flex; justify-content:space-between; align-items:center; }
+.msg-time { font-size:10.5px; font-weight:600; color:var(--text-faint); }
+.msg-preview { font-size:12px; font-weight:500; color:var(--text-secondary); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.msg-row.unread .msg-preview { color:var(--text); font-weight:700; }
+.msg-row.unread::after { content:''; width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+
+/* ── COMPLETION CELEBRATION (job released) ── */
+.celebrate-card { margin:14px 20px 0; padding:20px 18px; background:linear-gradient(135deg,#D5F0EE,var(--accent-paler)); border:2px solid var(--accent); border-radius:18px; text-align:center; box-shadow:0 14px 32px -8px rgba(0,161,154,0.30); }
+.celebrate-icon { font-size:40px; margin-bottom:8px; animation:shimmerStar 1.8s ease-in-out infinite; }
+.celebrate-head { font-size:18px; font-weight:800; color:var(--accent-dark); margin-bottom:4px; letter-spacing:-0.3px; }
+.celebrate-amt { font-size:34px; font-weight:800; color:var(--accent-dark); letter-spacing:-1px; line-height:1; margin:6px 0 8px; }
+.celebrate-sub { font-size:12px; font-weight:600; color:var(--text-secondary); line-height:1.5; }
+
+/* ── REVIEW chips ── */
+.review-tag { display:inline-flex; align-items:center; gap:5px; padding:8px 12px; font-size:12px; font-weight:700; color:var(--text); background:var(--card); border:1.5px solid var(--border); border-radius:100px; cursor:pointer; transition:all .15s; }
+.review-tag:hover { border-color:var(--accent-pale); background:var(--accent-paler); color:var(--accent-dark); }
+.review-tag.selected { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; border-color:var(--accent); box-shadow:0 4px 10px rgba(0,161,154,0.25); }
+
+/* ── REVIEW slider rows ── */
+.slider-row { padding:11px 0; }
+.slider-row + .slider-row { border-top:1px solid var(--border-soft); }
+.slider-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.slider-label { font-size:12.5px; font-weight:800; color:var(--text); }
+.slider-stars { font-size:14px; letter-spacing:1px; color:var(--gold); }
+.slider-stars .empty { color:var(--border); }
+.slider-track { height:6px; border-radius:100px; background:var(--bg); position:relative; overflow:hidden; }
+.slider-fill { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg,var(--accent),var(--accent-light)); border-radius:100px; transition:width .3s; }
+
+/* ── EARNINGS chart ── */
+.chart-card { margin:14px 20px 0; padding:14px 14px 18px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.chart-h { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; }
+.chart-h-title { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1.2px; text-transform:uppercase; }
+.chart-h-total { font-size:18px; font-weight:800; color:var(--text); letter-spacing:-0.4px; }
+.chart-bars { display:flex; align-items:flex-end; justify-content:space-between; gap:6px; height:120px; padding-top:8px; }
+.chart-bar { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; }
+.chart-bar-shape { width:100%; max-width:36px; background:linear-gradient(180deg,var(--accent-light),var(--accent-dark)); border-radius:6px 6px 0 0; transition:height 1s cubic-bezier(.22,1,.36,1); position:relative; }
+.chart-bar-shape::after { content:attr(data-val); position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:800; color:var(--text); }
+.chart-bar-label { font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:0.3px; }
+
+/* ── INVOICE ROW ── */
+.inv-row { padding:12px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; margin:0 20px 8px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.inv-row:hover { border-color:var(--accent-pale); transform:translateY(-1px); }
+.inv-head { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.inv-id { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:0.5px; font-family:'SF Mono',Menlo,monospace; }
+.inv-status { font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:100px; letter-spacing:0.4px; text-transform:uppercase; }
+.inv-status.paid { background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); }
+.inv-status.sent { background:#E6F0FF; color:#2D68C4; border:1px solid #C7E0FF; }
+.inv-status.overdue { background:var(--error-pale); color:var(--error); border:1px solid var(--error-light); }
+.inv-body { display:flex; justify-content:space-between; align-items:flex-end; }
+.inv-title { font-size:13px; font-weight:800; color:var(--text); }
+.inv-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+.inv-amt { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+
+/* ── EXPENSE ROW ── */
+.exp-row { display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; margin:0 20px 6px; box-shadow:var(--shadow-card); }
+.exp-emoji { width:34px; height:34px; border-radius:10px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.exp-info { flex:1; min-width:0; }
+.exp-title { font-size:12.5px; font-weight:800; color:var(--text); letter-spacing:-0.1px; line-height:1.2; }
+.exp-meta { font-size:10.5px; font-weight:600; color:var(--text-secondary); margin-top:2px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.exp-cat { font-size:9px; font-weight:800; padding:2px 7px; background:var(--bg); border:1px solid var(--border); border-radius:100px; letter-spacing:0.4px; text-transform:uppercase; }
+.exp-amt { font-size:13px; font-weight:800; color:var(--text); text-align:right; }
+.exp-vat { font-size:10px; font-weight:700; color:var(--accent-dark); margin-top:1px; }
+
+/* ── BIG ACTION ROW ── */
+.action-row { display:flex; align-items:center; gap:12px; padding:14px 14px; background:var(--card); border:1.5px dashed var(--accent-pale); border-radius:14px; margin:14px 20px 0; cursor:pointer; transition:all .15s; }
+.action-row:hover { border-style:solid; border-color:var(--accent); background:var(--accent-paler); }
+.action-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--accent-paler),var(--accent-pale)); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--accent-dark); flex-shrink:0; }
+.action-text { flex:1; font-size:13px; font-weight:800; color:var(--text); }
+.action-arrow { font-size:18px; color:var(--accent-dark); font-weight:800; }
+
+/* ── PROFILE TILES ── */
+.profile-hero { margin:14px 20px 0; padding:22px 18px 18px; background:linear-gradient(140deg,var(--accent),var(--accent-dark)); border-radius:18px; color:white; text-align:center; box-shadow:0 14px 32px -8px rgba(0,161,154,0.40); position:relative; overflow:hidden; }
+.profile-hero::after { content:''; position:absolute; top:-40%; right:-15%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,0.18),transparent 65%); pointer-events:none; }
+.profile-hero > * { position:relative; z-index:1; }
+.profile-avatar { width:74px; height:74px; border-radius:50%; background:white; color:var(--accent-dark); font-size:30px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; box-shadow:0 8px 20px rgba(0,0,0,0.15); border:3px solid rgba(255,255,255,0.5); }
+.profile-name { font-size:20px; font-weight:800; letter-spacing:-0.4px; margin-bottom:2px; }
+.profile-meta { font-size:11.5px; font-weight:600; color:rgba(255,255,255,0.85); }
+.profile-stars { display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:5px 11px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.32); border-radius:100px; font-size:11.5px; font-weight:800; }
+
+.menu-card { margin:14px 20px 0; padding:6px 0; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.menu-row { display:flex; align-items:center; gap:12px; padding:13px 16px; cursor:pointer; transition:background .15s; }
+.menu-row:hover { background:var(--accent-paler); }
+.menu-row + .menu-row { border-top:1px solid var(--border-soft); }
+.menu-emoji { font-size:18px; width:24px; text-align:center; flex-shrink:0; }
+.menu-text { flex:1; font-size:13px; font-weight:700; color:var(--text); }
+.menu-arrow { color:var(--text-faint); font-size:18px; }
+
+/* ── UCREDIT / REWARDS TEASER ── */
+.rewards-teaser { margin:14px 20px 0; padding:16px 16px 14px; background:linear-gradient(135deg,#FFD58A 0%,#F0A030 60%,#C67800 100%); color:white; border-radius:16px; cursor:pointer; transition:all .15s; box-shadow:0 8px 22px -6px rgba(192,120,0,0.36); position:relative; overflow:hidden; }
+.rewards-teaser:hover { transform:translateY(-2px); }
+.rewards-teaser::after { content:''; position:absolute; top:-30%; right:-15%; width:200px; height:200px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,0.20),transparent 65%); }
+.rewards-teaser > * { position:relative; z-index:1; }
+.rewards-eyebrow { font-size:10px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:rgba(255,255,255,0.88); margin-bottom:6px; }
+.rewards-headline { font-size:15px; font-weight:800; letter-spacing:-0.3px; margin-bottom:3px; }
+.rewards-sub { font-size:12px; font-weight:600; color:rgba(255,255,255,0.92); }
+.rewards-arrow { position:absolute; top:50%; right:14px; transform:translateY(-50%); font-size:22px; font-weight:800; color:white; }
+
+/* ── QUEST CARD (supplier dashboard) ── */
+.quest-card { margin:14px 20px 0; padding:14px 16px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent-pale); border-radius:14px; box-shadow:var(--shadow-card); }
+.quest-h { display:flex; align-items:center; gap:7px; font-size:11px; font-weight:800; color:var(--accent-dark); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+.quest-title { font-size:14px; font-weight:800; color:var(--text); letter-spacing:-0.3px; margin-bottom:4px; }
+.quest-sub { font-size:12px; font-weight:600; color:var(--text-secondary); line-height:1.45; margin-bottom:10px; }
+.quest-prog { height:7px; border-radius:100px; background:var(--bg); overflow:hidden; margin-bottom:6px; }
+.quest-prog-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-light)); border-radius:100px; transition:width 1s cubic-bezier(.22,1,.36,1); }
+.quest-prog-text { font-size:10.5px; font-weight:800; color:var(--accent-dark); }
+
+/* ── PORTFOLIO GRID ── */
+.portfolio-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 20px; }
+.portfolio-tile { aspect-ratio:1; border-radius:12px; overflow:hidden; cursor:pointer; transition:all .15s; }
+.portfolio-tile:hover { transform:scale(1.04); }
+.portfolio-tile.a { background:linear-gradient(135deg,#A8DAFF,#5B8DEF); }
+.portfolio-tile.b { background:linear-gradient(135deg,#FFD5B5,#E07C4F); }
+.portfolio-tile.c { background:linear-gradient(135deg,#B5E8D5,#3DA66A); }
+.portfolio-tile.d { background:linear-gradient(135deg,#E5C8FF,#9468E0); }
+.portfolio-tile.e { background:linear-gradient(135deg,#C5E8A8,#4ADE80); }
+.portfolio-tile.f { background:linear-gradient(135deg,#FFD58A,#F5A623); }
+
+/* ── ON-PAGE HEADER (no white strip) ── */
+.page-header { display:flex; align-items:center; gap:12px; padding:20px 20px 14px; background:transparent; }
+.page-header-text { flex:1; min-width:0; }
+.app-back { display:inline-flex; align-items:center; gap:5px; margin:14px 20px -2px; padding:7px 14px 7px 10px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--text-secondary); font-size:12.5px; font-weight:700; cursor:pointer; box-shadow:0 1px 3px rgba(35,29,69,0.04); transition:transform .12s ease; }
+.app-back:active { transform:scale(0.96); }
+.app-back .chev { font-size:17px; line-height:1; color:var(--accent-dark); margin-top:-2px; }
+.page-greeting { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--text-secondary); letter-spacing:-0.1px; margin-bottom:2px; }
+.page-greeting .wave { display:inline-block; animation:waveHand 2.4s ease-in-out infinite; transform-origin:70% 70%; font-size:14px; }
+.page-title { font-size:28px; font-weight:800; color:var(--text); letter-spacing:-0.8px; line-height:1.05; }
+
+/* ── PROJECTS ENTRY PILL ── */
+.projects-entry { display:flex; align-items:center; gap:12px; margin:14px 20px 0; padding:12px 14px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent-pale); border-radius:14px; cursor:pointer; transition:all .15s; }
+.projects-entry:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,161,154,0.12); border-color:var(--accent); }
+.projects-entry-ico { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); display:flex; align-items:center; justify-content:center; color:white; font-size:16px; font-weight:900; box-shadow:0 4px 10px rgba(0,161,154,0.30); flex-shrink:0; }
+.projects-entry-info { flex:1; min-width:0; }
+.projects-entry-title { font-size:13px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.projects-entry-title b { color:var(--accent-dark); }
+.projects-entry-sub { font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+.projects-entry-arrow { font-size:18px; color:var(--accent-dark); font-weight:800; }
+
+/* ── ILLUSTRATED CATEGORY CARDS ── */
+.cat-card-list { display:flex; flex-direction:column; gap:10px; padding:0 20px; }
+.cat-card { display:flex; align-items:stretch; gap:12px; padding:14px 14px 14px 16px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; position:relative; overflow:hidden; min-height:138px; }
+.cat-card:hover { transform:translateY(-2px); border-color:var(--accent-pale); box-shadow:0 10px 24px rgba(35,29,69,0.08); }
+.cat-card.trades { background:linear-gradient(135deg,var(--accent-paler),var(--card) 65%); border-color:var(--accent-pale); }
+.cat-card.home { background:linear-gradient(135deg,#FDF3E0,var(--card) 65%); border-color:rgba(245,166,35,0.30); }
+.cat-card.outdoor { background:linear-gradient(135deg,#E8F5DC,var(--card) 65%); border-color:rgba(74,222,128,0.30); }
+.cat-card.property { background:linear-gradient(135deg,#E6EEFB,var(--card) 65%); border-color:rgba(45,104,196,0.20); }
+.cat-card-text { flex:1; min-width:0; display:flex; flex-direction:column; }
+.cat-card-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.cat-card-title { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-0.3px; }
+.cat-card-chev { color:var(--text-faint); font-size:18px; font-weight:800; }
+.cat-card-desc { font-size:11.5px; font-weight:500; color:var(--text-secondary); line-height:1.4; margin-bottom:10px; }
+.cat-card-pills { display:flex; flex-wrap:wrap; gap:5px; margin-top:auto; }
+.cat-card-pill { font-size:10px; font-weight:800; padding:4px 9px; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:100px; letter-spacing:0.2px; }
+.cat-card.trades .cat-card-pill { color:var(--accent-dark); border-color:var(--accent-pale); }
+.cat-card.home .cat-card-pill { color:var(--warning-deep); border-color:rgba(245,166,35,0.30); }
+.cat-card.outdoor .cat-card-pill { color:#1F5C36; border-color:rgba(74,222,128,0.30); }
+.cat-card.property .cat-card-pill { color:#1a1f71; border-color:rgba(45,104,196,0.30); }
+.cat-card-illus { width:88px; flex-shrink:0; display:flex; align-items:flex-end; justify-content:center; }
+.cat-card-illus svg { width:100%; height:auto; max-height:124px; filter:drop-shadow(0 4px 8px rgba(35,29,69,0.10)); }
+
+/* ── YOUR PROJECTS screen ── */
+.proj-hero { margin:14px 20px 0; padding:18px; background:linear-gradient(140deg,#2D2466 0%,#231D45 55%,#15102E 100%); border-radius:18px; color:white; box-shadow:0 16px 36px -10px rgba(35,29,69,0.40); position:relative; overflow:hidden; }
+.proj-hero::before { content:''; position:absolute; top:-40%; right:-25%; width:280px; height:280px; border-radius:50%; background:radial-gradient(circle,rgba(255,193,89,0.18) 0%,transparent 65%); pointer-events:none; animation:glowFloat 6s ease-in-out infinite; }
+.proj-hero::after { content:''; position:absolute; bottom:-30%; left:-20%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(0,184,176,0.20) 0%,transparent 60%); pointer-events:none; }
+.proj-hero > * { position:relative; z-index:1; }
+.proj-hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.proj-hero-eyebrow { font-size:10px; font-weight:800; color:rgba(255,255,255,0.95); letter-spacing:1.4px; text-transform:uppercase; }
+.proj-hero-pill { font-size:10.5px; font-weight:800; color:white; padding:3px 9px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.28); border-radius:100px; }
+.proj-hero-headline { font-size:22px; font-weight:800; letter-spacing:-0.6px; line-height:1.15; margin-bottom:6px; }
+.proj-hero-sub { font-size:13px; font-weight:500; color:rgba(255,255,255,0.78); line-height:1.45; margin-bottom:14px; }
+.proj-hero-sub b { color:#FFD58A; font-weight:800; }
+.proj-hero-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.proj-hero-stat { padding:10px 8px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:12px; text-align:center; }
+.proj-hero-stat-num { font-size:22px; font-weight:800; letter-spacing:-0.6px; color:white; line-height:1; }
+.proj-hero-stat-num.amber { color:#FFD58A; }
+.proj-hero-stat-num.mint { color:#5EEAD4; }
+.proj-hero-stat-label { font-size:9.5px; font-weight:800; color:rgba(255,255,255,0.65); letter-spacing:0.5px; text-transform:uppercase; margin-top:4px; }
+
+.proj-active-card { display:flex; gap:12px; margin:0 20px 10px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.proj-active-card:hover { transform:translateY(-1px); border-color:var(--accent-pale); }
+.proj-active-thumb { width:60px; height:60px; border-radius:12px; flex-shrink:0; background-size:cover; background-position:center; background-color:var(--bg); box-shadow:0 2px 6px rgba(35,29,69,0.10); }
+.proj-active-info { flex:1; min-width:0; }
+.proj-active-title { font-size:13.5px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.proj-active-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+.proj-active-meta b { color:var(--text); font-weight:800; }
+.proj-active-prog { display:flex; align-items:center; gap:7px; margin-top:6px; }
+.proj-active-bar { flex:1; height:5px; background:var(--bg); border-radius:100px; overflow:hidden; }
+.proj-active-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent-light)); border-radius:100px; }
+.proj-active-pct { font-size:10px; font-weight:800; color:var(--accent-dark); }
+.proj-active-status { font-size:9.5px; font-weight:800; padding:4px 8px; border-radius:100px; letter-spacing:0.4px; text-transform:uppercase; align-self:flex-start; }
+.proj-active-status.live { background:var(--accent-paler); color:var(--accent-dark); border:1px solid var(--accent-pale); }
+.proj-active-status.draft { background:var(--warning-pale); color:var(--warning-deep); border:1px solid rgba(245,166,35,0.30); }
+
+/* Pathway suggestion (when arriving from HomeScore) */
+.pathway-banner { display:flex; gap:12px; margin:14px 20px 0; padding:14px 14px 12px; background:linear-gradient(135deg,#FFF6D5,var(--card)); border:1.5px solid #FFE08A; border-radius:14px; }
+.pathway-banner-ico { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#FFD700,#F5A623); display:flex; align-items:center; justify-content:center; color:white; font-size:16px; flex-shrink:0; box-shadow:0 4px 10px rgba(245,166,35,0.30); }
+.pathway-banner-body { flex:1; min-width:0; }
+.pathway-banner-title { font-size:12.5px; font-weight:800; color:var(--warning-deep); letter-spacing:-0.1px; }
+.pathway-banner-sub { font-size:11px; font-weight:600; color:var(--warning-deep); margin-top:2px; line-height:1.4; }
+.pathway-banner-sub b { color:var(--text); font-weight:800; }
+
+/* ── VERTICAL JOB LIST (full-width white cards, real photo) ── */
+.job-list { display:flex; flex-direction:column; gap:12px; padding:0 20px; }
+.job-list-card { background:var(--card); border:1px solid var(--border); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.job-list-card:hover { transform:translateY(-2px); box-shadow:0 12px 28px rgba(35,29,69,0.10); border-color:var(--accent-pale); }
+.job-list-photo { width:100%; height:170px; position:relative; background-color:var(--bg); background-size:cover; background-position:center; }
+.job-list-photo::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.20) 100%); pointer-events:none; }
+.job-list-photo-fallback { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:48px; color:rgba(255,255,255,0.6); z-index:0; }
+.job-list-urgency { position:absolute; top:12px; left:12px; padding:5px 11px; background:rgba(231,76,94,0.95); color:white; border-radius:100px; font-size:10px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-shadow:0 2px 6px rgba(0,0,0,0.20); z-index:2; }
+.job-list-urgency.flex { background:rgba(35,29,69,0.85); }
+.job-list-urgency.standard { background:rgba(0,161,154,0.92); }
+.job-list-cat { position:absolute; top:12px; right:12px; padding:5px 11px; background:rgba(255,255,255,0.95); color:var(--text); border-radius:100px; font-size:10.5px; font-weight:800; letter-spacing:0.3px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-shadow:0 2px 6px rgba(0,0,0,0.10); z-index:2; }
+.job-list-distance { position:absolute; bottom:10px; left:12px; display:inline-flex; align-items:center; gap:4px; padding:5px 10px; background:rgba(255,255,255,0.92); color:var(--text); border-radius:100px; font-size:10.5px; font-weight:800; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); box-shadow:0 2px 6px rgba(0,0,0,0.10); z-index:2; }
+.job-list-body { padding:14px 16px 16px; }
+.job-list-title { font-size:15px; font-weight:800; color:var(--text); letter-spacing:-0.3px; line-height:1.25; margin-bottom:4px; }
+.job-list-meta { font-size:11.5px; font-weight:600; color:var(--text-secondary); margin-bottom:10px; }
+.job-list-foot { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid var(--border-soft); }
+.job-list-budget { display:flex; align-items:baseline; gap:4px; font-size:18px; font-weight:800; color:var(--text); letter-spacing:-0.4px; }
+.job-list-budget .price-animate { color:var(--accent-dark); }
+.job-list-budget small { font-size:11px; font-weight:600; color:var(--text-secondary); }
+.job-list-offers { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:800; color:var(--accent-dark); padding:5px 10px; background:var(--accent-paler); border:1px solid var(--accent-pale); border-radius:100px; }
+.job-list-offers::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulseDot 1.8s infinite; }
+
+/* ── JOB DETAIL hero photo ── */
+.jd-photo { width:100%; height:240px; background-size:cover; background-position:center; position:relative; background-color:var(--bg); }
+.jd-photo::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,0.10) 0%,transparent 30%,rgba(0,0,0,0.60) 100%); }
+.jd-photo-top { position:absolute; top:14px; left:14px; right:14px; display:flex; justify-content:space-between; gap:8px; z-index:3; }
+.jd-photo-bottom { position:absolute; bottom:14px; left:14px; right:14px; z-index:3; display:flex; gap:6px; flex-wrap:wrap; }
+.jd-photo-counter { padding:5px 11px; background:rgba(0,0,0,0.55); color:white; border-radius:100px; font-size:11px; font-weight:800; letter-spacing:0.3px; backdrop-filter:blur(6px); display:inline-flex; align-items:center; gap:5px; }
+.jd-photo-pill { padding:5px 11px; background:rgba(255,255,255,0.95); color:var(--text); border-radius:100px; font-size:10.5px; font-weight:800; letter-spacing:0.3px; backdrop-filter:blur(6px); }
+.jd-photo-pill.urgent { background:rgba(231,76,94,0.95); color:white; }
+.jd-photo-pill.protected { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; }
+.jd-title-block { padding:16px 20px 0; }
+.jd-title { font-size:21px; font-weight:800; color:var(--text); letter-spacing:-0.5px; line-height:1.15; margin-bottom:6px; }
+.jd-meta { font-size:12px; font-weight:600; color:var(--text-secondary); display:flex; gap:10px; align-items:center; }
+.jd-budget-card { margin:14px 20px 0; padding:16px; background:linear-gradient(135deg,var(--accent-paler),var(--card)); border:1.5px solid var(--accent-pale); border-radius:14px; display:flex; align-items:center; justify-content:space-between; }
+.jd-budget-label { font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:1px; text-transform:uppercase; margin-bottom:3px; }
+.jd-budget-amt { font-size:24px; font-weight:800; color:var(--accent-dark); letter-spacing:-0.6px; }
+.jd-budget-side { text-align:right; font-size:11px; font-weight:700; color:var(--text-secondary); }
+.jd-budget-side b { color:var(--accent-dark); font-weight:800; font-size:13px; }
+
+.jd-section { margin:18px 20px 0; }
+.jd-section-h { font-size:11px; font-weight:800; color:var(--text-secondary); letter-spacing:1.2px; text-transform:uppercase; margin-bottom:8px; }
+.jd-desc { font-size:13px; font-weight:500; color:var(--text); line-height:1.55; }
+.jd-thumbs { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.jd-thumb { aspect-ratio:1; border-radius:10px; background-size:cover; background-position:center; background-color:var(--bg); box-shadow:var(--shadow-card); }
+.jd-cust-card { display:flex; gap:12px; padding:12px 14px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); align-items:center; }
+.jd-cust-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--accent-light),var(--accent-dark)); color:white; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,161,154,0.25); }
+.jd-cust-info { flex:1; }
+.jd-cust-name { font-size:13px; font-weight:800; color:var(--text); display:flex; align-items:center; gap:5px; }
+.jd-cust-meta { font-size:11px; font-weight:600; color:var(--text-secondary); margin-top:2px; display:flex; gap:8px; align-items:center; }
+
+/* ── OFFERS: total bar ── */
+.offers-totals { display:flex; justify-content:space-between; padding:14px 20px 6px; }
+.offers-count { font-size:13px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
+.offers-count b { color:var(--accent-dark); font-size:20px; font-weight:800; }
+.offers-sort { font-size:12px; font-weight:700; color:var(--accent-dark); cursor:pointer; }
+.offers-blurb { padding:0 20px 6px; font-size:12px; font-weight:500; color:var(--text-secondary); line-height:1.45; }
+
+/* ── CONTRACT step state pill ── */
+.contract-card { margin:14px 20px 0; padding:18px; background:linear-gradient(140deg,var(--primary) 0%,var(--primary-2) 60%,var(--primary-3) 100%); border-radius:18px; color:white; position:relative; overflow:hidden; box-shadow:0 16px 36px -10px rgba(35,29,69,0.40); }
+.contract-card::after { content:''; position:absolute; top:-40%; right:-20%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(0,161,154,0.20),transparent 65%); }
+.contract-card > * { position:relative; z-index:1; }
+.contract-h { display:flex; align-items:center; gap:8px; font-size:10px; font-weight:800; color:rgba(255,255,255,0.85); letter-spacing:1.4px; text-transform:uppercase; margin-bottom:8px; }
+.contract-shield { width:20px; height:20px; border-radius:6px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); display:flex; align-items:center; justify-content:center; font-size:11px; }
+.contract-title { font-size:18px; font-weight:800; letter-spacing:-0.4px; line-height:1.2; margin-bottom:6px; }
+.contract-meta { font-size:12px; font-weight:600; color:rgba(255,255,255,0.78); line-height:1.45; margin-bottom:14px; }
+.contract-amt-row { display:flex; gap:10px; }
+.contract-amt-tile { flex:1; padding:10px 12px; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.18); border-radius:12px; }
+.contract-amt-label { font-size:9.5px; font-weight:800; color:rgba(255,255,255,0.70); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:3px; }
+.contract-amt-val { font-size:17px; font-weight:800; color:white; letter-spacing:-0.3px; }
+.contract-amt-val small { font-size:11px; font-weight:700; color:rgba(255,255,255,0.65); }
+
+.duo-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 20px; margin-top:14px; }
+.duo-card { padding:12px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); text-align:center; }
+.duo-card-label { font-size:9.5px; font-weight:800; color:var(--text-secondary); letter-spacing:0.6px; text-transform:uppercase; margin-bottom:7px; }
+.duo-card-avatar { width:42px; height:42px; border-radius:50%; margin:0 auto 6px; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.duo-card-name { font-size:12px; font-weight:800; color:var(--text); }
+.duo-card-meta { font-size:10.5px; font-weight:600; color:var(--text-secondary); margin-top:2px; }
+
+/* ── REVIEW screen specifics ── */
+.review-card { margin:14px 20px 0; padding:16px 18px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); }
+.review-star-row { display:flex; align-items:center; justify-content:center; gap:8px; padding:8px 0; }
+.review-star { font-size:36px; cursor:pointer; transition:transform .15s; color:var(--gold); filter:drop-shadow(0 2px 4px rgba(255,215,0,0.30)); }
+.review-star:hover { transform:scale(1.15); }
+.review-star.dim { color:var(--border); filter:none; }
+.review-prompt { font-size:12.5px; font-weight:700; color:var(--text-secondary); text-align:center; padding-top:10px; }
+
+/* ── REAL-PHOTO SUPPLIER AVATAR ── */
+.sup-photo-avatar { width:48px; height:48px; border-radius:50%; flex-shrink:0; background-size:cover; background-position:center; position:relative; box-shadow:0 4px 10px rgba(35,29,69,0.15); border:2px solid var(--card); background-color:var(--bg); }
+.sup-photo-avatar.md { width:60px; height:60px; }
+.sup-photo-avatar.lg { width:90px; height:90px; }
+.sup-photo-avatar.xl { width:110px; height:110px; }
+.sup-photo-avatar .sup-tier { position:absolute; bottom:-3px; right:-3px; width:20px; height:20px; border-radius:50%; border:2px solid var(--card); display:flex; align-items:center; justify-content:center; font-size:11px; }
+.sup-photo-avatar.lg .sup-tier { width:26px; height:26px; font-size:14px; }
+
+/* ── MESSAGE THREAD ── */
+.chat-thread { padding:14px 16px; }
+.chat-msg { max-width:78%; margin-bottom:10px; padding:10px 13px; border-radius:14px; font-size:13px; font-weight:500; line-height:1.45; }
+.chat-msg.them { background:var(--card); border:1px solid var(--border); color:var(--text); margin-right:auto; border-bottom-left-radius:4px; box-shadow:var(--shadow-card); }
+.chat-msg.me { background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; margin-left:auto; border-bottom-right-radius:4px; box-shadow:0 4px 12px rgba(0,161,154,0.25); }
+.chat-time { font-size:10px; font-weight:700; color:var(--text-faint); text-align:center; margin:14px 0 8px; letter-spacing:0.4px; }
+
+/* ── UPROTECT explainer ── */
+.up-hero { margin:14px 20px 0; padding:24px 20px; background:linear-gradient(140deg,var(--accent) 0%,var(--accent-dark) 60%,#005552 100%); border-radius:18px; color:white; text-align:center; position:relative; overflow:hidden; box-shadow:0 16px 36px -10px rgba(0,161,154,0.40); }
+.up-hero::after { content:''; position:absolute; top:-30%; right:-15%; width:240px; height:240px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,0.20),transparent 65%); }
+.up-hero > * { position:relative; z-index:1; }
+.up-shield { font-size:48px; margin-bottom:8px; }
+.up-hero-title { font-size:24px; font-weight:800; letter-spacing:-0.6px; margin-bottom:6px; }
+.up-hero-sub { font-size:13px; font-weight:500; color:rgba(255,255,255,0.85); line-height:1.5; }
+
+.up-step { display:flex; gap:12px; margin:0 20px 10px; padding:14px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-card); align-items:flex-start; }
+.up-step-num { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); color:white; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(0,161,154,0.30); }
+.up-step-body { flex:1; padding-top:5px; }
+.up-step-title { font-size:13.5px; font-weight:800; color:var(--text); letter-spacing:-0.2px; margin-bottom:3px; }
+.up-step-sub { font-size:11.5px; font-weight:500; color:var(--text-secondary); line-height:1.5; }
+
+/* ── PRICING ROW INSIDE PARTNER DEAL ── */
+.partner-tile-tier { font-size:9.5px; font-weight:800; padding:3px 7px; border-radius:100px; letter-spacing:0.3px; margin-top:8px; display:inline-block; }
+.partner-tile-tier.platinum { background:#FAFAFA; color:var(--text); border:1px solid #E5E4E2; }
+.partner-tile-tier.gold { background:#FFF9D5; color:#7A5500; border:1px solid #FFE08A; }
+.partner-tile-tier.silver { background:#F5F5F8; color:#5A5C66; border:1px solid #D5D6E0; }
+
+/* ── PROFILE STAT TILES ── */
+.profile-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:14px 20px 0; }
+.profile-stat-tile { padding:12px 8px; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); text-align:center; }
+.profile-stat-num { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.5px; line-height:1; }
+.profile-stat-label { font-size:10px; font-weight:800; color:var(--text-secondary); letter-spacing:0.4px; text-transform:uppercase; margin-top:4px; }
+
+/* ── ALERT TILE on supplier dash ── */
+.alert-tile { display:flex; align-items:center; gap:10px; padding:12px 14px; background:linear-gradient(135deg,#FDF3E0,var(--card)); border:1.5px solid rgba(245,166,35,0.4); border-radius:14px; margin:0 20px 10px; box-shadow:var(--shadow-card); cursor:pointer; transition:all .15s; }
+.alert-tile:hover { transform:translateY(-1px); }
+.alert-tile-icon { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#FFD58A,var(--warning)); color:white; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 10px rgba(245,166,35,0.25); }
+.alert-tile-body { flex:1; }
+.alert-tile-title { font-size:12.5px; font-weight:800; color:var(--warning-deep); letter-spacing:-0.1px; }
+.alert-tile-sub { font-size:11px; font-weight:600; color:var(--warning-deep); margin-top:2px; }
+
+/* ── HOMESCORE-MATCH AVATAR (SC) ── */
+.sc-avatar { width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent-dark)); display:flex; align-items:center; justify-content:center; color:white; font-size:13px; font-weight:800; letter-spacing:0.5px; box-shadow:0 4px 12px rgba(0,161,154,0.30),inset 0 0 0 2px white,inset 0 0 0 3px var(--accent); cursor:pointer; flex-shrink:0; }
+
+
+/* self-contained category icon */
+.cat-ico { position:absolute; inset:0 0 16px 0; display:flex; align-items:center; justify-content:center; font-size:34px; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.28)); }
+.cat-name { text-shadow:0 1px 3px rgba(0,0,0,0.35); }
+</style>
+</head>
+<body data-screen="home" data-persona="customer">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#00B8B0"/>
+    <stop offset="100%" stop-color="#008A84"/>
+  </linearGradient>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><polyline points="13,5 19,12 13,19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <!-- Illustrated supplier avatars (SVG) -->
+  <symbol id="ava-martin" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#FFD58A"/>
+    <circle cx="50" cy="38" r="20" fill="#F5DCC0"/>
+    <path d="M30 38 Q30 22 50 22 Q70 22 70 38 Q70 28 50 26 Q34 28 30 38 Z" fill="#5C3A1E"/>
+    <rect x="42" y="38" width="6" height="3" fill="#231D45" rx="1"/>
+    <rect x="52" y="38" width="6" height="3" fill="#231D45" rx="1"/>
+    <path d="M44 50 Q50 54 56 50" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <path d="M22 100 Q22 75 38 70 Q44 76 50 76 Q56 76 62 70 Q78 75 78 100 Z" fill="#00A19A"/>
+    <rect x="46" y="70" width="8" height="8" fill="#F5DCC0"/>
+  </symbol>
+  <symbol id="ava-sarah" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#C5E8A8"/>
+    <circle cx="50" cy="40" r="22" fill="#FBEAD4"/>
+    <path d="M28 40 Q28 14 50 14 Q72 14 72 40 Q72 50 70 56 Q66 30 50 30 Q34 30 30 56 Q28 50 28 40 Z" fill="#7A4E25"/>
+    <ellipse cx="42" cy="42" rx="3" ry="2" fill="#231D45"/>
+    <ellipse cx="58" cy="42" rx="3" ry="2" fill="#231D45"/>
+    <path d="M44 52 Q50 56 56 52" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <path d="M44 50 Q42 56 40 56" fill="none" stroke="#E07C4F" stroke-width="1.5"/>
+    <path d="M20 100 Q22 76 38 72 Q44 78 50 78 Q56 78 62 72 Q78 76 80 100 Z" fill="#9468E0"/>
+  </symbol>
+  <symbol id="ava-james" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#A8DAFF"/>
+    <circle cx="50" cy="38" r="20" fill="#E8C9A8"/>
+    <path d="M28 36 Q30 20 50 20 Q70 20 72 36 Q70 28 50 28 Q30 28 28 36 Z" fill="#231D45"/>
+    <rect x="40" y="36" width="20" height="8" fill="#231D45" rx="3"/>
+    <rect x="42" y="38" width="6" height="4" fill="white" rx="1"/>
+    <rect x="52" y="38" width="6" height="4" fill="white" rx="1"/>
+    <rect x="48" y="40" width="4" height="2" fill="#231D45"/>
+    <path d="M44 52 Q50 54 56 52" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <path d="M22 100 Q22 75 38 70 Q44 76 50 76 Q56 76 62 70 Q78 75 78 100 Z" fill="#F5A623"/>
+  </symbol>
+  <symbol id="ava-priya" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#E5C8FF"/>
+    <circle cx="50" cy="40" r="22" fill="#D4836D"/>
+    <path d="M28 40 Q28 14 50 14 Q72 14 72 40 Q72 56 64 60 Q62 32 50 32 Q38 32 36 60 Q28 56 28 40 Z" fill="#1a1f71"/>
+    <ellipse cx="42" cy="44" rx="3" ry="2" fill="#231D45"/>
+    <ellipse cx="58" cy="44" rx="3" ry="2" fill="#231D45"/>
+    <path d="M44 54 Q50 58 56 54" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="50" cy="22" r="3" fill="#FFD700"/>
+    <path d="M20 100 Q22 76 38 72 Q44 78 50 78 Q56 78 62 72 Q78 76 80 100 Z" fill="#E74C5E"/>
+  </symbol>
+  <symbol id="ava-dave" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#FFD5B5"/>
+    <circle cx="50" cy="38" r="20" fill="#E8B89A"/>
+    <ellipse cx="50" cy="28" rx="22" ry="8" fill="#231D45"/>
+    <ellipse cx="42" cy="40" rx="3" ry="2" fill="#231D45"/>
+    <ellipse cx="58" cy="40" rx="3" ry="2" fill="#231D45"/>
+    <path d="M40 52 Q50 56 60 52" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <rect x="38" y="56" width="24" height="6" fill="#7A4E25" rx="1"/>
+    <path d="M22 100 Q22 75 38 70 Q44 76 50 76 Q56 76 62 70 Q78 75 78 100 Z" fill="#3DA66A"/>
+  </symbol>
+  <!-- Category illustrations — full-figure characters with props -->
+  <symbol id="cat-trades" viewBox="0 0 120 120">
+    <ellipse cx="60" cy="110" rx="42" ry="6" fill="rgba(0,161,154,0.18)"/>
+    <!-- Body / overalls -->
+    <path d="M30 110 L34 60 Q42 50 60 50 Q78 50 86 60 L90 110 Z" fill="#00A19A"/>
+    <rect x="44" y="56" width="32" height="20" fill="#FFD58A" rx="2"/>
+    <rect x="56" y="62" width="8" height="6" fill="#231D45" rx="1"/>
+    <!-- Head -->
+    <circle cx="60" cy="36" r="14" fill="#F5DCC0"/>
+    <!-- Hard hat -->
+    <path d="M44 32 Q44 18 60 18 Q76 18 76 32 Z" fill="#FFD700"/>
+    <rect x="42" y="30" width="36" height="4" fill="#231D45"/>
+    <rect x="58" y="14" width="4" height="4" fill="#E74C5E"/>
+    <!-- Face -->
+    <rect x="52" y="36" width="3" height="2" fill="#231D45" rx="1"/>
+    <rect x="65" y="36" width="3" height="2" fill="#231D45" rx="1"/>
+    <path d="M55 44 Q60 47 65 44" fill="none" stroke="#231D45" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Arms / wrench -->
+    <rect x="22" y="62" width="12" height="32" fill="#00A19A" rx="6"/>
+    <circle cx="28" cy="96" r="7" fill="#F5DCC0"/>
+    <!-- Wrench -->
+    <rect x="14" y="80" width="6" height="22" fill="#A8A9AD" rx="2"/>
+    <path d="M11 78 L23 78 L23 84 L17 84 L17 88 L11 88 Z" fill="#A8A9AD"/>
+    <rect x="86" y="62" width="12" height="32" fill="#00A19A" rx="6"/>
+    <circle cx="92" cy="96" r="7" fill="#F5DCC0"/>
+  </symbol>
+  <symbol id="cat-home" viewBox="0 0 120 120">
+    <ellipse cx="60" cy="110" rx="42" ry="6" fill="rgba(244,166,35,0.18)"/>
+    <!-- Body -->
+    <path d="M32 110 L36 58 Q44 50 60 50 Q76 50 84 58 L88 110 Z" fill="#F5A623"/>
+    <rect x="44" y="56" width="32" height="22" fill="white" rx="2"/>
+    <!-- Head -->
+    <circle cx="60" cy="36" r="14" fill="#E8C9A8"/>
+    <path d="M44 32 Q44 18 60 18 Q76 18 76 32 Q76 26 60 26 Q44 26 44 32 Z" fill="#7A4E25"/>
+    <!-- Face -->
+    <rect x="52" y="36" width="3" height="2" fill="#231D45" rx="1"/>
+    <rect x="65" y="36" width="3" height="2" fill="#231D45" rx="1"/>
+    <path d="M55 44 Q60 47 65 44" fill="none" stroke="#231D45" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Paint roller in right hand -->
+    <rect x="86" y="60" width="12" height="34" fill="#F5A623" rx="6"/>
+    <circle cx="92" cy="96" r="7" fill="#E8C9A8"/>
+    <rect x="98" y="86" width="4" height="22" fill="#A8A9AD"/>
+    <rect x="92" y="70" width="20" height="10" fill="#5B3795" rx="2"/>
+    <rect x="94" y="72" width="16" height="6" fill="white" rx="1"/>
+    <!-- Left arm with paint can -->
+    <rect x="22" y="60" width="12" height="32" fill="#F5A623" rx="6"/>
+    <circle cx="28" cy="96" r="7" fill="#E8C9A8"/>
+    <rect x="14" y="100" width="22" height="14" fill="#A8A9AD" rx="2"/>
+    <rect x="14" y="104" width="22" height="4" fill="#E07C4F"/>
+  </symbol>
+  <symbol id="cat-outdoor" viewBox="0 0 120 120">
+    <ellipse cx="60" cy="110" rx="42" ry="6" fill="rgba(74,222,128,0.22)"/>
+    <!-- Plants behind -->
+    <path d="M14 110 Q14 88 22 82 Q30 88 30 110 Z" fill="#3DA66A"/>
+    <path d="M90 110 Q90 90 96 84 Q102 90 102 110 Z" fill="#4ADE80"/>
+    <circle cx="22" cy="78" r="6" fill="#4ADE80"/>
+    <circle cx="96" cy="80" r="6" fill="#3DA66A"/>
+    <!-- Body -->
+    <path d="M34 110 L38 60 Q44 52 60 52 Q76 52 82 60 L86 110 Z" fill="#3DA66A"/>
+    <rect x="46" y="58" width="28" height="20" fill="#C5E8A8" rx="2"/>
+    <!-- Head -->
+    <circle cx="60" cy="38" r="13" fill="#D4836D"/>
+    <!-- Hat -->
+    <path d="M40 32 Q40 16 60 16 Q80 16 80 32 Z" fill="#7A4E25"/>
+    <ellipse cx="60" cy="32" rx="22" ry="4" fill="#5C3A1E"/>
+    <!-- Face -->
+    <rect x="52" y="38" width="3" height="2" fill="#231D45" rx="1"/>
+    <rect x="65" y="38" width="3" height="2" fill="#231D45" rx="1"/>
+    <path d="M55 46 Q60 49 65 46" fill="none" stroke="#231D45" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Plant pot held -->
+    <rect x="20" y="64" width="12" height="30" fill="#3DA66A" rx="6"/>
+    <circle cx="26" cy="96" r="7" fill="#D4836D"/>
+    <ellipse cx="26" cy="84" rx="16" ry="3" fill="#7A4E25"/>
+    <rect x="14" y="82" width="24" height="14" fill="#A04014" rx="1"/>
+    <path d="M22 80 Q26 70 30 80 M18 82 Q22 72 26 82 M24 80 Q28 70 32 80" fill="none" stroke="#4ADE80" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Right arm -->
+    <rect x="86" y="62" width="12" height="32" fill="#3DA66A" rx="6"/>
+    <circle cx="92" cy="96" r="7" fill="#D4836D"/>
+  </symbol>
+  <symbol id="cat-property" viewBox="0 0 120 120">
+    <ellipse cx="60" cy="110" rx="42" ry="6" fill="rgba(45,104,196,0.18)"/>
+    <!-- Body / suit -->
+    <path d="M32 110 L36 60 Q44 52 60 52 Q76 52 84 60 L88 110 Z" fill="#231D45"/>
+    <path d="M44 58 L60 76 L76 58 L72 110 L48 110 Z" fill="white"/>
+    <path d="M56 60 L60 76 L64 60 Z" fill="#E74C5E"/>
+    <!-- Head -->
+    <circle cx="60" cy="38" r="13" fill="#F5DCC0"/>
+    <!-- Hair -->
+    <path d="M42 32 Q42 16 60 16 Q78 16 78 32 Q78 24 60 24 Q42 24 42 32 Z" fill="#3A2818"/>
+    <!-- Glasses -->
+    <rect x="48" y="36" width="9" height="6" fill="none" stroke="#231D45" stroke-width="1.5" rx="2"/>
+    <rect x="62" y="36" width="9" height="6" fill="none" stroke="#231D45" stroke-width="1.5" rx="2"/>
+    <line x1="57" y1="39" x2="62" y2="39" stroke="#231D45" stroke-width="1.5"/>
+    <rect x="50" y="38" width="5" height="3" fill="#231D45" opacity="0.2"/>
+    <rect x="64" y="38" width="5" height="3" fill="#231D45" opacity="0.2"/>
+    <path d="M55 47 Q60 50 65 47" fill="none" stroke="#231D45" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Clipboard -->
+    <rect x="84" y="64" width="14" height="32" fill="#231D45" rx="6"/>
+    <circle cx="91" cy="96" r="7" fill="#F5DCC0"/>
+    <rect x="98" y="60" width="18" height="24" fill="white" stroke="#231D45" stroke-width="1.5" rx="2"/>
+    <rect x="104" y="58" width="6" height="4" fill="#A8A9AD" rx="1"/>
+    <line x1="101" y1="66" x2="113" y2="66" stroke="#00A19A" stroke-width="1.5"/>
+    <line x1="101" y1="70" x2="111" y2="70" stroke="#6B7089" stroke-width="1"/>
+    <line x1="101" y1="74" x2="113" y2="74" stroke="#6B7089" stroke-width="1"/>
+    <line x1="101" y1="78" x2="109" y2="78" stroke="#6B7089" stroke-width="1"/>
+    <!-- Left arm -->
+    <rect x="22" y="62" width="12" height="32" fill="#231D45" rx="6"/>
+    <circle cx="28" cy="96" r="7" fill="#F5DCC0"/>
+  </symbol>
+  <symbol id="ava-amir" viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#B5E8D5"/>
+    <circle cx="50" cy="38" r="20" fill="#C49A78"/>
+    <path d="M28 38 Q28 18 50 18 Q72 18 72 38 Q72 28 50 26 Q32 28 28 38 Z" fill="#3A2818"/>
+    <ellipse cx="42" cy="40" rx="3" ry="2" fill="#231D45"/>
+    <ellipse cx="58" cy="40" rx="3" ry="2" fill="#231D45"/>
+    <path d="M44 52 Q50 54 56 52" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round"/>
+    <path d="M30 60 Q50 70 70 60" fill="none" stroke="#3A2818" stroke-width="2"/>
+    <path d="M22 100 Q22 75 38 70 Q44 76 50 76 Q56 76 62 70 Q78 75 78 100 Z" fill="#2D68C4"/>
+  </symbol>
+</defs></svg>
+
+<div class="stage-caption">
+  <span class="label">UMU · MARKETPLACE</span>
+  <div class="head">UmovingU Marketplace.</div>
+  Vetted suppliers · UProtect escrow · merit-ranked leaderboard. <a href="homescore-v6.html">← Back to HomeScore</a>
+</div>
+
+<div class="persona-toggle">
+  <button class="persona-btn active" onclick="setPersona('customer')">👤 Customer</button>
+  <button class="persona-btn" onclick="setPersona('supplier')">🔧 Supplier</button>
+</div>
+
+<div class="screen-switcher">
+  <button class="screen-btn active" onclick="go('home')">Home</button>
+  <button class="screen-btn" onclick="go('yourProjects')">Your Projects</button>
+  <button class="screen-btn" onclick="go('browse')">Browse</button>
+  <button class="screen-btn" onclick="go('postJob')">Post Job</button>
+  <button class="screen-btn" onclick="go('jobDetail')">Job Detail</button>
+  <button class="screen-btn" onclick="go('offers')">Offers</button>
+  <button class="screen-btn" onclick="go('authorise')">Authorise</button>
+  <button class="screen-btn" onclick="go('contract')">Contract</button>
+  <button class="screen-btn" onclick="go('leaveReview')">Review</button>
+  <button class="screen-btn" onclick="go('messages')">Messages</button>
+  <button class="screen-btn" onclick="go('customerProfile')">My Profile</button>
+  <button class="screen-btn" onclick="go('supplierProfile')">Supplier Profile</button>
+  <button class="screen-btn" onclick="go('supplierDash')">Supplier Dash</button>
+  <button class="screen-btn" onclick="go('earnings')">Earnings</button>
+  <button class="screen-btn" onclick="go('leaderboard')">Leaderboard</button>
+  <button class="screen-btn" onclick="go('uprotect')">UProtect</button>
+</div>
+
+<div class="phone">
+  <div class="status-bar"><span>9:41</span><div class="right"><div class="signal-bars"><i></i><i></i><i></i><i></i></div><div class="battery"><i></i></div></div></div>
+  <div class="body" id="phoneBody">
+
+    <!-- ═════════════ MARKETPLACE HOME ═════════════ -->
+    <div class="screen home">
+      <!-- Back to the main UmovingU app -->
+      <div class="app-back" onclick="backToApp()"><span class="chev">‹</span> UmovingU</div>
+
+      <!-- On-page header (no white strip) -->
+      <div class="page-header" data-show-persona="customer">
+        <div class="page-header-text">
+          <div class="page-greeting">Good morning, Sarah <span class="wave">👋</span></div>
+          <div class="page-title">Marketplace</div>
+        </div>
+        <div class="sc-avatar" onclick="go('customerProfile')">SC</div>
+      </div>
+      <div class="page-header" data-show-persona="supplier">
+        <div class="page-header-text">
+          <div class="page-greeting">Good morning, Martin <span class="wave">👋</span></div>
+          <div class="page-title">Marketplace</div>
+        </div>
+        <div class="sc-avatar" onclick="go('supplierProfile')" style="background:linear-gradient(135deg,#E5E4E2,#A8A9AD);color:var(--primary);box-shadow:0 4px 12px rgba(0,0,0,0.20),inset 0 0 0 2px white,inset 0 0 0 3px #A8A9AD;">MO</div>
+      </div>
+
+      <!-- Personal hero (gradient, with stats) -->
+      <div class="hero-card anim-1" data-show-persona="customer" onclick="go('yourProjects')" style="cursor:pointer;">
+        <div class="hero-top">
+          <div class="hero-eyebrow">📋 Your projects</div>
+          <div class="hero-update">2 active</div>
+        </div>
+        <div class="hero-headline">Completed <span data-counter="4" data-duration="1100">0</span> jobs with UmovingU</div>
+        <div class="hero-sub">Every payment held safely in UProtect escrow until your job's done.</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="hero-stat-num breathe" data-counter="5">0</div><div class="hero-stat-label">Posted</div></div>
+          <div class="hero-stat"><div class="hero-stat-num mint" data-counter="4">0</div><div class="hero-stat-label">Completed</div></div>
+          <div class="hero-stat"><div class="hero-stat-num amber" data-counter="2">0</div><div class="hero-stat-label">In progress</div></div>
+        </div>
+      </div>
+
+      <div class="hero-card anim-1" data-show-persona="supplier" onclick="go('supplierDash')" style="cursor:pointer;">
+        <div class="hero-top">
+          <div class="hero-eyebrow">⭐ 4.9 rating · 324 jobs done</div>
+          <div class="hero-update">#1 in Bristol</div>
+        </div>
+        <div class="hero-headline">Earned <span data-counter="4128" data-prefix="£" data-duration="1100">£0</span> this month</div>
+        <div class="hero-sub"><b>3 active jobs</b> · 2 pending offers · 12 jobs done this quarter.</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="hero-stat-num breathe" data-counter="3">0</div><div class="hero-stat-label">Active</div></div>
+          <div class="hero-stat"><div class="hero-stat-num mint" data-counter="2">0</div><div class="hero-stat-label">Offers</div></div>
+          <div class="hero-stat"><div class="hero-stat-num amber" data-counter="47">0</div><div class="hero-stat-label">Reviews</div></div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="search-row anim-2">
+        <div class="search-input">
+          <svg><use href="#i-search"/></svg>
+          <input type="text" id="homeSearch" placeholder="" />
+        </div>
+        <button class="search-btn" onclick="go('browse')">Go</button>
+      </div>
+
+      <!-- Categories: real-photo tiles -->
+      <div class="section-h"><div class="section-title">Categories</div><span class="section-link" onclick="go('browse')">See all →</span></div>
+      <div class="cat-grid anim-3">
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/plumber,pipework?lock=1001'),linear-gradient(135deg,#00B8B0,#008A84);background-size:cover;background-position:center;" onclick="openJob('bathroom')"><div class="cat-name">Plumbing</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/electrician,wiring?lock=1002'),linear-gradient(135deg,#4A4566,#231D45);background-size:cover;background-position:center;" onclick="openJob('electrical')"><div class="cat-name">Electrical</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/carpenter,woodwork?lock=1003'),linear-gradient(135deg,#C9974A,#9A6E2C);background-size:cover;background-position:center;" onclick="openJob('carpentry')"><div class="cat-name">Carpentry</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/decorating,wall?lock=1004'),linear-gradient(135deg,#008A84,#00635E);background-size:cover;background-position:center;" onclick="openJob('painting')"><div class="cat-name">Painting</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/bathroom,interior?lock=1005'),linear-gradient(135deg,#352D5C,#231D45);background-size:cover;background-position:center;" onclick="openJob('bathroom')"><div class="cat-name">Bathrooms</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/kitchen,cabinets?lock=1006'),linear-gradient(135deg,#C9974A,#9A6E2C);background-size:cover;background-position:center;" onclick="openJob('kitchen')"><div class="cat-name">Kitchens</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/gardener,landscaping?lock=1007'),linear-gradient(135deg,#008A84,#00635E);background-size:cover;background-position:center;" onclick="openJob('garden')"><div class="cat-name">Garden</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/architecture,blueprint?lock=1008'),linear-gradient(135deg,#4A4566,#231D45);background-size:cover;background-position:center;" onclick="openJob('surveys')"><div class="cat-name">Surveys</div></div>
+      </div>
+
+      <!-- Recently posted — vertical full-width photo cards -->
+      <div class="section-h"><div class="section-title" data-show-persona="customer">Recently posted near you</div><div class="section-title" data-show-persona="supplier">Jobs near you</div><span class="section-link" onclick="go('browse')">All (14) →</span></div>
+      <div class="job-list anim-4">
+
+        <div class="job-list-card" onclick="openJob('bathroom')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/bathroom,interior?lock=1021'),linear-gradient(135deg,#B5E8D5,#3DA66A);">
+            <span class="job-list-urgency">Urgent</span>
+            <span class="job-list-cat">🛁 Bathroom</span>
+            <span class="job-list-distance">📍 1.2 mi · Bristol BS1</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Full bathroom replumb &amp; refit</div>
+            <div class="job-list-meta">Posted 2 hours ago · Available 25 Apr</div>
+            <div class="job-list-foot">
+              <div class="job-list-budget"><span data-counter="2500" data-prefix="£">£0</span><small>– £4,000</small></div>
+              <span class="job-list-offers">5 offers</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('kitchen')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/kitchen,cabinets?lock=1022'),linear-gradient(135deg,#FFD5B5,#E07C4F);">
+            <span class="job-list-urgency flex">Flexible</span>
+            <span class="job-list-cat">🍳 Kitchen</span>
+            <span class="job-list-distance">📍 3.4 mi · Bristol BS6</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Kitchen install · 12 units + worktop</div>
+            <div class="job-list-meta">Posted 1 day ago · Flexible dates</div>
+            <div class="job-list-foot">
+              <div class="job-list-budget"><span data-counter="8000" data-prefix="£">£0</span><small>– £12,000</small></div>
+              <span class="job-list-offers">3 offers</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('electrical')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/electrician,wiring?lock=1023'),linear-gradient(135deg,#FFE69E,#F5A623);">
+            <span class="job-list-urgency standard">Standard</span>
+            <span class="job-list-cat">⚡ Electrical</span>
+            <span class="job-list-distance">📍 0.6 mi · Coventry CV5</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">EICR · 3-bed semi · electrical safety</div>
+            <div class="job-list-meta">Posted 4 hours ago · Within 7 days</div>
+            <div class="job-list-foot">
+              <div class="job-list-budget"><span data-counter="850" data-prefix="£">£0</span></div>
+              <span class="job-list-offers">7 offers</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('garden')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/gardener,landscaping?lock=1024'),linear-gradient(135deg,#C5E8A8,#4ADE80);">
+            <span class="job-list-urgency standard">Standard</span>
+            <span class="job-list-cat">🌿 Garden</span>
+            <span class="job-list-distance">📍 2.1 mi · Bristol BS3</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Lawn turf, beds &amp; fencing</div>
+            <div class="job-list-meta">Posted 6 hours ago · Spring slot</div>
+            <div class="job-list-foot">
+              <div class="job-list-budget"><span data-counter="1200" data-prefix="£">£0</span></div>
+              <span class="job-list-offers">2 offers</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- UProtect strip -->
+      <div class="trust-strip anim-5">
+        <div class="trust-strip-icon">🛡</div>
+        <div class="trust-strip-text"><b>UProtect — Secure escrow payments.</b> You're never charged when posting a job. Funds are only taken when you accept an offer. <span style="color:var(--accent-dark);font-weight:800;cursor:pointer;" onclick="go('uprotect')">How it works →</span></div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ YOUR PROJECTS (personal dashboard) ═════════════ -->
+    <div class="screen yourProjects">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="page-greeting">Sarah Mitchell · <b style="color:var(--accent-dark);">15 Woodfield Rd</b></div>
+          <div class="page-title">Your projects</div>
+        </div>
+        <div class="sc-avatar" onclick="go('customerProfile')">SC</div>
+      </div>
+
+      <!-- Personal hero (the gradient stats card) -->
+      <div class="proj-hero anim-1">
+        <div class="proj-hero-top">
+          <div class="proj-hero-eyebrow">✦ Activity · This year</div>
+          <span class="proj-hero-pill">2 active</span>
+        </div>
+        <div class="proj-hero-headline">You've completed <span data-counter="4" data-duration="1100">0</span> jobs with UmovingU</div>
+        <div class="proj-hero-sub">Every payment held safely in UProtect escrow until your job's done.</div>
+        <div class="proj-hero-stats">
+          <div class="proj-hero-stat"><div class="proj-hero-stat-num breathe" data-counter="5">0</div><div class="proj-hero-stat-label">Posted</div></div>
+          <div class="proj-hero-stat"><div class="proj-hero-stat-num mint" data-counter="4">0</div><div class="proj-hero-stat-label">Completed</div></div>
+          <div class="proj-hero-stat"><div class="proj-hero-stat-num amber" data-counter="2">0</div><div class="proj-hero-stat-label">In progress</div></div>
+        </div>
+      </div>
+
+      <!-- Pathway banner — shown when arriving from HomeScore -->
+      <div class="pathway-banner anim-2">
+        <div class="pathway-banner-ico">⚡</div>
+        <div class="pathway-banner-body">
+          <div class="pathway-banner-title">From your HomeScore pathway</div>
+          <div class="pathway-banner-sub">Your EPC has <b>6 recommended steps</b> · save <b>£693/yr</b>. Tap any to post as a job — suppliers will quote.</div>
+        </div>
+      </div>
+
+      <!-- Active jobs -->
+      <div class="section-h"><div class="section-title">Active jobs</div><span class="section-link">2 in progress</span></div>
+
+      <div class="proj-active-card anim-3" onclick="go('contract')">
+        <div class="proj-active-thumb" style="background-image:url('https://loremflickr.com/200/200/home,interior?lock=1031'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+        <div class="proj-active-info">
+          <div class="proj-active-title">Bathroom replumb &amp; refit</div>
+          <div class="proj-active-meta">Martin's Plumbing · <b>£3,200</b> · started 21 Apr</div>
+          <div class="proj-active-prog"><div class="proj-active-bar"><div class="proj-active-fill" data-progress="60"></div></div><span class="proj-active-pct">60%</span></div>
+        </div>
+        <span class="proj-active-status live">In progress</span>
+      </div>
+
+      <div class="proj-active-card anim-3 glow-amber" onclick="setJob('electrical');showOffers()">
+        <div class="proj-active-thumb" style="background-image:url('https://loremflickr.com/200/200/home,interior?lock=1032'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+        <div class="proj-active-info">
+          <div class="proj-active-title">EICR · electrical safety report</div>
+          <div class="proj-active-meta">3 offers received · <b>£420–£680</b></div>
+          <div class="proj-active-prog"><div class="proj-active-bar"><div class="proj-active-fill" data-progress="25" style="background:linear-gradient(90deg,#FFD58A,#F5A623);"></div></div><span class="proj-active-pct" style="color:var(--warning-deep);">Choose supplier</span></div>
+        </div>
+        <span class="proj-active-status draft">Reviewing</span>
+      </div>
+
+      <div class="proj-active-card anim-4" onclick="openJob('kitchen')">
+        <div class="proj-active-thumb" style="background-image:url('https://loremflickr.com/200/200/home,interior?lock=1033'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+        <div class="proj-active-info">
+          <div class="proj-active-title">Kitchen splashback retile</div>
+          <div class="proj-active-meta">Draft · saved 2 days ago</div>
+          <div class="proj-active-prog"><div class="proj-active-bar"><div class="proj-active-fill" data-progress="8" style="background:linear-gradient(90deg,#D5D6E0,#A8A9AD);"></div></div><span class="proj-active-pct" style="color:var(--text-faint);">Finish posting</span></div>
+        </div>
+        <span class="proj-active-status draft">Draft</span>
+      </div>
+
+      <!-- Completed jobs section -->
+      <div class="section-h"><div class="section-title">Recently completed</div><span class="section-link">View all (4)</span></div>
+      <div class="proj-active-card anim-5">
+        <div class="proj-active-thumb kitchen">🎨</div>
+        <div class="proj-active-info">
+          <div class="proj-active-title">Hallway repaint</div>
+          <div class="proj-active-meta">Priya Decorating · <b>£680</b> · 18 Mar 2026</div>
+          <div class="proj-active-prog"><div class="proj-active-bar"><div class="proj-active-fill" style="width:100%;"></div></div><span class="proj-active-pct">★ 5.0 left</span></div>
+        </div>
+        <span class="proj-active-status live" style="background:#FFF6D5;color:#7A5500;border-color:#FFE08A;">Reviewed</span>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ BROWSE ═════════════ -->
+    <div class="screen browse">
+      <div class="sub-header"><button class="back-btn" onclick="go('home')">‹</button><div class="sub-title">Browse jobs</div><span class="sub-pill">14 nearby</span></div>
+
+      <div class="search-row anim-1">
+        <div class="search-input">
+          <svg><use href="#i-search"/></svg>
+          <input type="text" placeholder="Find jobs near you…" />
+        </div>
+        <button class="search-btn">Filter</button>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="chip-row anim-1" style="padding:0 20px;margin-top:12px;">
+        <span class="chip selected">All</span>
+        <span class="chip">⭐ Top rated</span>
+        <span class="chip">📍 Nearest</span>
+        <span class="chip">🆕 Newest</span>
+        <span class="chip">⚡ Urgent</span>
+      </div>
+
+      <div class="section-h" style="padding-bottom:6px;"><div class="section-title">Browse by category</div></div>
+      <div class="cat-grid anim-2">
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/plumber,pipework?lock=1009'),linear-gradient(135deg,#00B8B0,#008A84);background-size:cover;background-position:center;" onclick="openJob('bathroom')"><div class="cat-name">Plumbing</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/electrician,wiring?lock=1010'),linear-gradient(135deg,#4A4566,#231D45);background-size:cover;background-position:center;" onclick="openJob('electrical')"><div class="cat-name">Electrical</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/carpenter,woodwork?lock=1011'),linear-gradient(135deg,#C9974A,#9A6E2C);background-size:cover;background-position:center;" onclick="openJob('carpentry')"><div class="cat-name">Carpentry</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/decorating,wall?lock=1012'),linear-gradient(135deg,#008A84,#00635E);background-size:cover;background-position:center;" onclick="openJob('painting')"><div class="cat-name">Painting</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/bathroom,interior?lock=1013'),linear-gradient(135deg,#352D5C,#231D45);background-size:cover;background-position:center;" onclick="openJob('bathroom')"><div class="cat-name">Bathrooms</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/kitchen,cabinets?lock=1014'),linear-gradient(135deg,#C9974A,#9A6E2C);background-size:cover;background-position:center;" onclick="openJob('kitchen')"><div class="cat-name">Kitchens</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/gardener,landscaping?lock=1015'),linear-gradient(135deg,#008A84,#00635E);background-size:cover;background-position:center;" onclick="openJob('garden')"><div class="cat-name">Garden</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/building,site?lock=1016'),linear-gradient(135deg,#C9974A,#9A6E2C);background-size:cover;background-position:center;" onclick="openJob('building')"><div class="cat-name">Building</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/boiler,radiator?lock=1017'),linear-gradient(135deg,#352D5C,#231D45);background-size:cover;background-position:center;" onclick="openJob('heating')"><div class="cat-name">Heating</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/architecture,blueprint?lock=1018'),linear-gradient(135deg,#4A4566,#231D45);background-size:cover;background-position:center;" onclick="openJob('surveys')"><div class="cat-name">Surveys</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/window,glazing?lock=1019'),linear-gradient(135deg,#008A84,#00635E);background-size:cover;background-position:center;" onclick="openJob('window')"><div class="cat-name">Windows</div></div>
+        <div class="cat-tile" style="background-image:url('https://loremflickr.com/400/400/cleaning,housework?lock=1020'),linear-gradient(135deg,#00B8B0,#008A84);background-size:cover;background-position:center;" onclick="openJob('cleaning')"><div class="cat-name">Cleaning</div></div>
+      </div>
+
+      <div class="section-h"><div class="section-title">All jobs nearby</div><span class="section-link">Sort: nearest</span></div>
+      <div class="job-list anim-3">
+
+        <div class="job-list-card" onclick="openJob('bathroom')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/bathroom,interior?lock=1025'),linear-gradient(135deg,#B5E8D5,#3DA66A);">
+            <span class="job-list-urgency">Urgent</span>
+            <span class="job-list-cat">🛁 Bathroom</span>
+            <span class="job-list-distance">📍 1.2 mi · BS1</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Full bathroom replumb &amp; refit</div>
+            <div class="job-list-meta">Posted 2 hours ago · Available 25 Apr</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="2500" data-prefix="£">£0</span><small>– £4,000</small></div><span class="job-list-offers">5 offers</span></div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('electrical')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/electrician,wiring?lock=1026'),linear-gradient(135deg,#FFE69E,#F5A623);">
+            <span class="job-list-urgency standard">Standard</span>
+            <span class="job-list-cat">⚡ Electrical</span>
+            <span class="job-list-distance">📍 0.6 mi · CV5</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">EICR · 3-bed semi · electrical safety</div>
+            <div class="job-list-meta">Posted 4 hours ago · Within 7 days</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="850" data-prefix="£">£0</span></div><span class="job-list-offers">7 offers</span></div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('kitchen')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/kitchen,cabinets?lock=1027'),linear-gradient(135deg,#FFD5B5,#E07C4F);">
+            <span class="job-list-urgency flex">Flexible</span>
+            <span class="job-list-cat">🍳 Kitchen</span>
+            <span class="job-list-distance">📍 3.4 mi · BS6</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Kitchen install · 12 units + worktop</div>
+            <div class="job-list-meta">Posted 1 day ago · Flexible dates</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="8000" data-prefix="£">£0</span><small>– £12,000</small></div><span class="job-list-offers">3 offers</span></div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('garden')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/gardener,landscaping?lock=1028'),linear-gradient(135deg,#C5E8A8,#4ADE80);">
+            <span class="job-list-urgency standard">Standard</span>
+            <span class="job-list-cat">🌿 Garden</span>
+            <span class="job-list-distance">📍 2.1 mi · BS3</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Lawn turf, beds &amp; fencing</div>
+            <div class="job-list-meta">Posted 6 hours ago · Spring slot</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="1200" data-prefix="£">£0</span></div><span class="job-list-offers">2 offers</span></div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('heating')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/boiler,radiator?lock=1029'),linear-gradient(135deg,#A8DAFF,#5B8DEF);">
+            <span class="job-list-urgency standard">Standard</span>
+            <span class="job-list-cat">🔥 Heating</span>
+            <span class="job-list-distance">📍 1.8 mi · CV5</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Combi boiler annual service</div>
+            <div class="job-list-meta">Posted 1 day ago · Within 14 days</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="420" data-prefix="£">£0</span></div><span class="job-list-offers">4 offers</span></div>
+          </div>
+        </div>
+
+        <div class="job-list-card" onclick="openJob('painting')">
+          <div class="job-list-photo" style="background-image:linear-gradient(180deg,rgba(0,0,0,0.10),rgba(0,0,0,0.05)),url('https://loremflickr.com/700/300/decorating,wall?lock=1030'),linear-gradient(135deg,#E5C8FF,#9468E0);">
+            <span class="job-list-urgency flex">Flexible</span>
+            <span class="job-list-cat">🎨 Painting</span>
+            <span class="job-list-distance">📍 2.7 mi · BS1</span>
+          </div>
+          <div class="job-list-body">
+            <div class="job-list-title">Hallway, stairs &amp; landing repaint</div>
+            <div class="job-list-meta">Posted 2 days ago · Flexible</div>
+            <div class="job-list-foot"><div class="job-list-budget"><span data-counter="680" data-prefix="£">£0</span></div><span class="job-list-offers">1 offer</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ POST JOB ═════════════ -->
+    <div class="screen postJob">
+      <div class="sub-header"><button class="back-btn" onclick="go('home')">‹</button><div class="sub-title">Post a job</div><span class="sub-pill" style="background:var(--accent-paler);">Free</span></div>
+
+      <div class="stepper">
+        <div class="stepper-step done"></div>
+        <div class="stepper-step done"></div>
+        <div class="stepper-step active"></div>
+        <div class="stepper-step"></div>
+        <div class="stepper-step"></div>
+      </div>
+
+      <div class="section-h" style="padding-top:18px;padding-bottom:0;"><div class="section-title">Step 2 · Upload photos</div></div>
+      <div class="field-help" style="margin:0 20px 10px;">Clear photos from different angles help suppliers quote accurately. <b style="color:var(--text);">Minimum 3 photos.</b></div>
+
+      <div class="photo-checklist anim-1">
+        <div class="photo-checklist-h">📸 Photo checklist</div>
+        <div class="photo-checklist-row done"><span class="checklist-tick">✓</span> Overall view of work area</div>
+        <div class="photo-checklist-row done"><span class="checklist-tick">✓</span> Close-up of problem areas</div>
+        <div class="photo-checklist-row done"><span class="checklist-tick">✓</span> Access points / surrounding area</div>
+        <div class="photo-checklist-row"><span class="checklist-tick">○</span> Existing damage or issues</div>
+      </div>
+
+      <div class="photo-grid anim-2">
+        <div class="photo-tile filled" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1034'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="photo-tile filled" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1035'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="photo-tile filled" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1036'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="photo-tile">+</div>
+        <div class="photo-tile">+</div>
+        <div class="photo-tile">+</div>
+      </div>
+
+      <div class="field-group anim-3">
+        <div class="field-label">Job title</div>
+        <input class="field-input" type="text" value="Full bathroom replumb &amp; refit"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Detailed description</div>
+        <textarea class="field-input" rows="4">Complete replumb of family bathroom including new copper piping, bath, basin and toilet. Existing tiling intact — needs careful removal and refit.</textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 20px 0;">
+        <div>
+          <div class="field-label">Location</div>
+          <input class="field-input" type="text" value="Bristol BS1"/>
+        </div>
+        <div>
+          <div class="field-label">Urgency</div>
+          <select class="field-input" style="appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22><path d=%22M1 1l4 4 4-4%22 stroke=%22%236B7089%22 stroke-width=%222%22 fill=%22none%22/></svg>');background-repeat:no-repeat;background-position:right 14px center;padding-right:32px;"><option>Urgent</option><option>Standard</option><option>Flexible</option></select>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Available dates</div>
+        <div class="chip-row" style="margin-top:2px;">
+          <span class="chip selected">25 Apr</span>
+          <span class="chip selected">28 Apr</span>
+          <span class="chip">2 May</span>
+          <span class="chip">9 May</span>
+        </div>
+      </div>
+
+      <div class="section-h" style="padding-top:18px;"><div class="section-title">Set your budget</div></div>
+      <div class="field-help" style="margin:0 20px 10px;">Suppliers will offer within this range. You're not committed until you accept.</div>
+      <div class="budget-row">
+        <div class="budget-pill">
+          <div class="budget-pill-label">Minimum</div>
+          <div class="budget-pill-amt">£2,500</div>
+        </div>
+        <div class="budget-pill">
+          <div class="budget-pill-label">Maximum</div>
+          <div class="budget-pill-amt">£4,000</div>
+        </div>
+      </div>
+
+      <div class="insight-card">
+        <div class="insight-icon">💡</div>
+        <div class="insight-text"><b>Market insight</b> — Similar plumbing jobs in Bristol typically receive offers between <b>£2,800 – £3,500</b>. Your range looks competitive.</div>
+      </div>
+
+      <div class="trust-strip">
+        <div class="trust-strip-icon">🛡</div>
+        <div class="trust-strip-text"><b>Posting is free.</b> You're only charged when you accept an offer — funds held in UProtect escrow until the job's complete.</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary no-arrow" onclick="go('jobDetail')">Post job — Free</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- Other screens come in the next batch — stubs to keep routing valid -->
+    <!-- ═════════════ JOB DETAIL ═════════════ -->
+    <div class="screen jobDetail">
+      <div class="jd-photo" id="jdPhoto" style="background-image:url('https://loremflickr.com/800/320/bathroom,interior?lock=1037'),linear-gradient(135deg,#352D5C,#008A84);">
+        <div class="jd-photo-top">
+          <button class="back-btn" onclick="go('home')" style="background:rgba(255,255,255,0.95);">‹</button>
+          <div style="display:flex;gap:6px;">
+            <button class="back-btn" onclick="alert('Save')" style="background:rgba(255,255,255,0.95);width:34px;">♡</button>
+            <button class="back-btn" onclick="alert('Share')" style="background:rgba(255,255,255,0.95);width:34px;">↗</button>
+          </div>
+        </div>
+        <div class="jd-photo-bottom">
+          <span class="jd-photo-counter">📷 4 photos</span>
+          <span class="jd-photo-pill urgent" id="jdUrgency">Urgent</span>
+          <span class="jd-photo-pill protected">🛡 UProtect</span>
+        </div>
+      </div>
+
+      <div class="jd-title-block anim-1">
+        <div class="jd-title" id="jdTitle">Full bathroom replumb &amp; refit</div>
+        <div class="jd-meta" id="jdMeta">📍 Bristol BS1 · Posted 2h ago · 🛁 Bathroom</div>
+      </div>
+
+      <div class="jd-budget-card anim-1">
+        <div>
+          <div class="jd-budget-label">Budget range</div>
+          <div class="jd-budget-amt" id="jdBudget">£2,500 – £4,000</div>
+        </div>
+        <div class="jd-budget-side" id="jdOffers"><b>5 offers</b><br>received</div>
+      </div>
+
+      <div class="jd-section anim-2">
+        <div class="jd-section-h">📅 Available dates</div>
+        <div class="chip-row">
+          <span class="chip selected">25 Apr</span>
+          <span class="chip selected">28 Apr</span>
+          <span class="chip">2 May</span>
+          <span class="chip">9 May</span>
+        </div>
+      </div>
+
+      <div class="jd-section anim-2">
+        <div class="jd-section-h">Description</div>
+        <div class="jd-desc" id="jdDesc">Complete replumb of family bathroom including new copper piping, bath, basin and toilet. Existing tiling is intact — needs careful removal and refit. Property is a 3-bed semi, second-floor bathroom, water mains accessible from airing cupboard. Looking for someone reliable to finish in one visit.</div>
+      </div>
+
+      <div class="jd-section anim-3">
+        <div class="jd-section-h">📷 Photos (4)</div>
+        <div class="jd-thumbs" id="jdThumbs">
+          <div class="jd-thumb" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1038'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+          <div class="jd-thumb" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1039'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+          <div class="jd-thumb" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1040'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+          <div class="jd-thumb" style="background-image:url('https://loremflickr.com/300/300/bathroom,interior?lock=1041'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+        </div>
+      </div>
+
+      <div class="jd-section anim-3">
+        <div class="jd-section-h">Posted by</div>
+        <div class="jd-cust-card">
+          <div class="jd-cust-avatar">SC</div>
+          <div class="jd-cust-info">
+            <div class="jd-cust-name">Sarah Mitchell <span style="color:var(--accent-dark);">✓</span></div>
+            <div class="jd-cust-meta"><span style="color:var(--gold);">★</span> 4.8 · 4 jobs completed · Member since Jan 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trust-strip anim-4" style="margin-top:18px;">
+        <div class="trust-strip-icon">🛡</div>
+        <div class="trust-strip-text"><b>Posting is free.</b> You're only charged when you accept an offer. Funds held in UProtect escrow until the job's verified complete.</div>
+      </div>
+
+      <div class="btn-row anim-4">
+        <button class="btn-primary" data-show-persona="supplier" onclick="go('makeOffer')">Make an offer</button>
+        <button class="btn-primary" data-show-persona="customer" id="jdOffersBtn" onclick="showOffers()">View 5 offers</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ MAKE OFFER ═════════════ -->
+    <div class="screen makeOffer">
+      <div class="sub-header"><button class="back-btn" onclick="go('jobDetail')">‹</button><div class="sub-title">Make your offer</div></div>
+
+      <div class="jd-section anim-1" style="margin-top:14px;">
+        <div class="jd-section-h">📋 Job</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);">Full bathroom replumb &amp; refit · Bristol BS1</div>
+      </div>
+
+      <div class="field-group anim-1">
+        <div class="field-label">Your price</div>
+        <input class="field-input" type="text" value="£3,200" style="font-size:22px;font-weight:800;color:var(--accent-dark);text-align:center;"/>
+        <div class="field-help">Customer's budget: <b style="color:var(--text);">£2,500 – £4,000</b> · 4 other suppliers have quoted within range.</div>
+      </div>
+
+      <div class="field-group anim-2">
+        <div class="field-label">Available date</div>
+        <div class="chip-row" style="margin-top:2px;">
+          <span class="chip selected">25 Apr</span>
+          <span class="chip">28 Apr</span>
+          <span class="chip">2 May</span>
+          <span class="chip">9 May</span>
+        </div>
+      </div>
+
+      <div class="field-group anim-2">
+        <div class="field-label">Message to customer</div>
+        <textarea class="field-input" rows="4">Hi Sarah, I'd love to take on this bathroom refit. I have 15+ years experience and have done dozens of full replumbs. I can start on 25 Apr and finish in 3 days. Quote includes all parts &amp; labour.</textarea>
+      </div>
+
+      <div class="trust-strip anim-3">
+        <div class="trust-strip-icon">🛡</div>
+        <div class="trust-strip-text"><b>The customer reviews your offer.</b> They decide whether to accept. If they do, funds are held in UProtect escrow until the job's verified complete.</div>
+      </div>
+
+      <div class="btn-row anim-3">
+        <button class="btn-primary no-arrow" onclick="alert('Offer submitted! Customer will review.');go('home')">Submit offer</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ REVIEW OFFERS ═════════════ -->
+    <div class="screen offers">
+      <div class="sub-header"><button class="back-btn" onclick="go('jobDetail')">‹</button><div class="sub-title">Review offers</div></div>
+
+      <div class="offers-totals">
+        <div class="offers-count" id="offersCount"><b>5</b> offers received</div>
+        <span class="offers-sort">Sort: best match ▾</span>
+      </div>
+      <div class="offers-blurb" id="offersBlurb">Full bathroom replumb &amp; refit · your budget <b>£2,500 – £4,000</b>. Tap a supplier to compare.</div>
+
+      <div id="offersList"></div>
+
+      <div class="trust-strip anim-3">
+        <div class="trust-strip-icon">🛡</div>
+        <div class="trust-strip-text"><b>You're not committed yet.</b> Funds are only taken when you accept — and they sit in UProtect escrow until the job's verified.</div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ AUTHORISE PAYMENT ═════════════ -->
+    <div class="screen authorise">
+      <div class="sub-header"><button class="back-btn" onclick="go('offers')">‹</button><div class="sub-title">Authorise payment</div><span class="sub-pill" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;border-color:var(--accent);">🛡 UProtect</span></div>
+
+      <div class="jd-section anim-1" style="margin-top:14px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:6px;">🛡</div>
+        <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.4px;margin-bottom:4px;">Authorise payment</div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);line-height:1.5;">You'll be charged now — but funds are held in escrow until the job is verified complete.</div>
+      </div>
+
+      <div class="breakdown anim-2">
+        <div class="breakdown-row"><span class="breakdown-label">Job total</span><span id="authTotal">£3,200.00</span></div>
+        <div class="breakdown-row"><span class="breakdown-label">UProtect fee (10%)</span><span id="authFee">£320.00</span></div>
+        <div class="breakdown-row total"><span class="breakdown-label">Total charged</span><span class="amt" id="authGrand">£3,520.00</span></div>
+      </div>
+
+      <div class="step-list anim-3">
+        <div class="step-list-h">What happens to your money</div>
+        <div class="step-row">
+          <div class="step-row-icon done">🔒</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Charged now — held in UProtect escrow</div>
+            <div class="step-row-sub">Funds are <b style="color:var(--text);">not</b> sent to the supplier yet. Safe with us.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">🔨</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Supplier completes the work &amp; uploads evidence</div>
+            <div class="step-row-sub">Photos of finished job + any notes.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">📸</div>
+          <div class="step-row-text">
+            <div class="step-row-title">You review the supplier's evidence + add your own photos</div>
+            <div class="step-row-sub">Compare the photos against the work you agreed. Cover every area.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">✅</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Happy with it? Approve, and we release the funds</div>
+            <div class="step-row-sub">Money is only released once you've approved the completed work.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">⚖️</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Not right? Our team reviews &amp; makes a fair adjustment</div>
+            <div class="step-row-sub">If the work doesn't match the evidence, UmovingU's complaints team steps in to resolve it — a fair adjustment, not automatically a full refund.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kv-card anim-4">
+        <div class="kv-h">💳 Payment method</div>
+        <div class="kv-row"><span class="kv-label">Visa ending 4821</span><span class="kv-val">Expires 09/27 · <span style="color:var(--accent-dark);cursor:pointer;">Change</span></span></div>
+      </div>
+
+      <div class="btn-row anim-4">
+        <button class="btn-primary no-arrow" id="authBtn" onclick="go('contract')">🔒 Authorise £3,520.00</button>
+      </div>
+
+      <div style="padding:14px 20px 24px;font-size:11px;font-weight:500;color:var(--text-faint);text-align:center;line-height:1.5;">
+        By authorising, you agree to the UmovingU <span style="color:var(--accent-dark);font-weight:700;cursor:pointer;">Terms</span> and <span style="color:var(--accent-dark);font-weight:700;cursor:pointer;">UProtect Policy</span>.
+      </div>
+    </div>
+    <!-- ═════════════ CONTRACT / JOB IN PROGRESS ═════════════ -->
+    <div class="screen contract">
+      <div class="sub-header"><button class="back-btn" onclick="go('yourProjects')">‹</button><div class="sub-title">Job contract</div></div>
+
+      <div class="contract-card anim-1">
+        <div class="contract-h"><div class="contract-shield">🛡</div>UProtect Contract</div>
+        <div class="contract-title" id="conTitle">Full bathroom replumb &amp; refit</div>
+        <div class="contract-meta">📍 15 Woodfield Rd, Coventry CV5 6AJ · Started 21 Apr 2026</div>
+        <div class="contract-amt-row">
+          <div class="contract-amt-tile">
+            <div class="contract-amt-label">Job total</div>
+            <div class="contract-amt-val" id="conJob">£3,200<small> .00</small></div>
+          </div>
+          <div class="contract-amt-tile">
+            <div class="contract-amt-label">+ UProtect fee</div>
+            <div class="contract-amt-val" id="conFee">£320<small> .00</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="duo-cards anim-2">
+        <div class="duo-card">
+          <div class="duo-card-label">Customer</div>
+          <div class="duo-card-avatar">SC</div>
+          <div class="duo-card-name">Sarah Mitchell</div>
+          <div class="duo-card-meta">★ 4.8 · 4 jobs</div>
+        </div>
+        <div class="duo-card">
+          <div class="duo-card-label">Supplier</div>
+          <div class="duo-card-avatar" style="background-image:linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+          <div class="duo-card-name" id="conSup">Martin's Plumbing</div>
+          <div class="duo-card-meta">★ 4.9 · 324 jobs</div>
+        </div>
+      </div>
+
+      <div class="step-list anim-3">
+        <div class="step-list-h">⏱ Payment timeline</div>
+        <div class="step-row">
+          <div class="step-row-icon done">✓</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Offer accepted</div>
+            <div class="step-row-sub" id="conChose">You chose Martin's Plumbing · 20 Apr 2026</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon done">✓</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Payment authorised</div>
+            <div class="step-row-sub" id="conCharged">£3,520 charged &amp; held in UProtect escrow · 20 Apr</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon active">🔨</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Work in progress</div>
+            <div class="step-row-sub">Supplier started 21 Apr · 60% complete</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">📸</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Evidence submitted</div>
+            <div class="step-row-sub">Both parties upload completion photos</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-row-icon">✅</div>
+          <div class="step-row-text">
+            <div class="step-row-title">Review &amp; release</div>
+            <div class="step-row-sub">UmovingU team verifies, then releases funds</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trust-strip anim-4" style="border-color:var(--warning);background:var(--warning-pale);">
+        <div class="trust-strip-icon">📸</div>
+        <div class="trust-strip-text"><b>Photos are your protection.</b> Take clear shots of every area and angle so the whole room is fully covered. If the finished work is ever disputed, these are the evidence used to resolve it — so take as many as you can.</div>
+      </div>
+      <div class="btn-row anim-4">
+        <button class="btn-secondary" onclick="alert('Open chat with your supplier')">💬 Message</button>
+        <button class="btn-primary no-arrow" onclick="alert('Photo upload coming next')">📸 Upload evidence</button>
+      </div>
+
+      <div class="kv-card anim-4">
+        <div class="kv-h" id="conUpdH">💬 Latest update from Martin</div>
+        <div id="conUpdMsg" style="font-size:13px;font-weight:500;color:var(--text);line-height:1.5;padding:6px 0;">"Day 1 done — old pipework removed, new copper installed. Will fit the bath tomorrow morning. Photos to follow."</div>
+        <div class="kv-row"><span class="kv-label">21 Apr · 17:42</span><span class="kv-val" style="color:var(--accent-dark);cursor:pointer;">Reply →</span></div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ LEAVE REVIEW ═════════════ -->
+    <div class="screen leaveReview">
+      <div class="sub-header"><button class="back-btn" onclick="go('contract')">‹</button><div class="sub-title">Leave a review</div></div>
+
+      <!-- Celebration -->
+      <div class="celebrate-card anim-1">
+        <div class="celebrate-icon">🎉</div>
+        <div class="celebrate-head">Funds released!</div>
+        <div class="celebrate-amt" id="revAmt">£3,200</div>
+        <div class="celebrate-sub" id="revSub">£320 UProtect fee retained · £3,200 paid to <b>Martin's Plumbing</b>.</div>
+      </div>
+
+      <!-- Supplier card -->
+      <div class="review-card anim-2">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+          <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+          <div style="flex:1;">
+            <div id="revSup" style="font-size:14px;font-weight:800;color:var(--text);">Martin's Plumbing</div>
+            <div id="revJobLine" style="font-size:11.5px;font-weight:600;color:var(--text-secondary);">Full bathroom replumb &amp; refit · £3,200</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall stars -->
+      <div class="review-card anim-2">
+        <div class="kv-h" style="text-align:center;margin-bottom:0;">Overall rating</div>
+        <div class="review-star-row">
+          <span class="review-star">★</span>
+          <span class="review-star">★</span>
+          <span class="review-star">★</span>
+          <span class="review-star">★</span>
+          <span class="review-star">★</span>
+        </div>
+        <div class="review-prompt">Tap the stars to rate</div>
+      </div>
+
+      <!-- Category sliders -->
+      <div class="review-card anim-3">
+        <div class="kv-h">Rate by category</div>
+        <div class="slider-row">
+          <div class="slider-head"><span class="slider-label">⏰ Punctuality</span><span class="slider-stars">★★★★★</span></div>
+          <div class="slider-track"><div class="slider-fill" data-progress="100"></div></div>
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span class="slider-label">🤝 Communication</span><span class="slider-stars">★★★★★</span></div>
+          <div class="slider-track"><div class="slider-fill" data-progress="100"></div></div>
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span class="slider-label">🏆 Workmanship</span><span class="slider-stars">★★★★<span class="empty">★</span></span></div>
+          <div class="slider-track"><div class="slider-fill" data-progress="80"></div></div>
+        </div>
+        <div class="slider-row">
+          <div class="slider-head"><span class="slider-label">📅 Reliability</span><span class="slider-stars">★★★★★</span></div>
+          <div class="slider-track"><div class="slider-fill" data-progress="100"></div></div>
+        </div>
+      </div>
+
+      <!-- Tag chips -->
+      <div class="review-card anim-3">
+        <div class="kv-h">What did they do well?</div>
+        <div class="chip-row" style="padding-top:4px;">
+          <span class="review-tag selected">✓ Left it spotless</span>
+          <span class="review-tag selected">✓ Stuck to quote</span>
+          <span class="review-tag selected">✓ Finished on time</span>
+          <span class="review-tag">Respectful</span>
+          <span class="review-tag">Tidy worker</span>
+          <span class="review-tag">Good comms</span>
+          <span class="review-tag">Fair priced</span>
+        </div>
+      </div>
+
+      <!-- Comment -->
+      <div class="field-group anim-4">
+        <div class="field-label">A few words (optional)</div>
+        <textarea class="field-input" id="revText" rows="3" placeholder="Tell other customers what they were like to work with…">Martin was brilliant. On time every day, kept everything tidy, finished a day early. Will definitely use again.</textarea>
+      </div>
+
+      <div class="btn-row anim-4">
+        <button class="btn-primary no-arrow" onclick="alert('Thanks! Your review has been posted.');go('home')">Post review</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ CUSTOMER PROFILE ═════════════ -->
+    <div class="screen customerProfile">
+      <div class="sub-header"><button class="back-btn" onclick="go('home')">‹</button><div class="sub-title">My profile</div></div>
+
+      <div class="profile-hero anim-1">
+        <div class="profile-avatar">SC</div>
+        <div class="profile-name">Sarah Mitchell</div>
+        <div class="profile-meta">Member since January 2026 · 📍 Bristol</div>
+        <div class="profile-stars">⭐⭐⭐⭐⭐ <b style="color:white;">4.8</b> · 4 reviews</div>
+      </div>
+
+      <div class="profile-stats anim-2">
+        <div class="profile-stat-tile"><div class="profile-stat-num" data-counter="5">0</div><div class="profile-stat-label">Posted</div></div>
+        <div class="profile-stat-tile"><div class="profile-stat-num" style="color:var(--accent-dark);" data-counter="4">0</div><div class="profile-stat-label">Completed</div></div>
+        <div class="profile-stat-tile"><div class="profile-stat-num" style="color:var(--warning);" data-counter="2">0</div><div class="profile-stat-label">Active</div></div>
+      </div>
+
+      <div class="section-h"><div class="section-title">My active jobs</div><span class="section-link" onclick="go('yourProjects')">All →</span></div>
+      <div class="proj-active-card anim-3" onclick="go('contract')" style="margin:0 20px 10px;">
+        <div class="proj-active-thumb" style="background-image:url('https://loremflickr.com/200/200/home,interior?lock=1047'),linear-gradient(135deg,#352D5C,#008A84);"></div>
+        <div class="proj-active-info">
+          <div class="proj-active-title">Bathroom replumb &amp; refit</div>
+          <div class="proj-active-meta">Martin's Plumbing · <b>£3,200</b></div>
+          <div class="proj-active-prog"><div class="proj-active-bar"><div class="proj-active-fill" data-progress="60"></div></div><span class="proj-active-pct">60%</span></div>
+        </div>
+        <span class="proj-active-status live">In progress</span>
+      </div>
+
+      <div class="section-h" style="padding-top:14px;"><div class="section-title">Account</div></div>
+      <div class="menu-card anim-4">
+        <div class="menu-row" onclick="alert('Payment methods')"><span class="menu-emoji">💳</span><span class="menu-text">Payment methods</span><span class="menu-arrow">›</span></div>
+        <div class="menu-row" onclick="go('uprotect')"><span class="menu-emoji">🛡</span><span class="menu-text">UProtect history</span><span class="menu-arrow">›</span></div>
+        <div class="menu-row" onclick="alert('Reviews')"><span class="menu-emoji">⭐</span><span class="menu-text">Reviews &amp; ratings</span><span class="menu-arrow">›</span></div>
+        <div class="menu-row" onclick="alert('Verification')"><span class="menu-emoji">✅</span><span class="menu-text">Verification</span><span class="menu-arrow">›</span></div>
+        <div class="menu-row" onclick="alert('Settings')"><span class="menu-emoji">⚙️</span><span class="menu-text">Settings</span><span class="menu-arrow">›</span></div>
+        <div class="menu-row" onclick="alert('Help')"><span class="menu-emoji">💬</span><span class="menu-text">Help &amp; support</span><span class="menu-arrow">›</span></div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ SUPPLIER PROFILE (public) ═════════════ -->
+    <div class="screen supplierProfile">
+      <div class="sub-header"><button class="back-btn" onclick="go('offers')">‹</button><div class="sub-title">Supplier</div><span class="sub-pill" style="background:var(--accent-pale);color:var(--accent-dark);border-color:var(--accent);">✓ Verified</span></div>
+
+      <div class="profile-hero anim-1">
+        <div class="sup-photo-avatar lg" style="margin:0 auto 10px;background-image:linear-gradient(135deg,#352D5C,#008A84);border-color:white;"><span class="sup-tier verified">✓</span></div>
+        <div class="profile-name">Martin's Plumbing</div>
+        <div class="profile-meta">📍 Bristol · 15+ years · Family business</div>
+        <div class="profile-stars">⭐⭐⭐⭐⭐ <b style="color:white;">4.9</b> · 87 reviews · 96% complete</div>
+      </div>
+
+      <div class="profile-stats anim-2">
+        <div class="profile-stat-tile"><div class="profile-stat-num" data-counter="324">0</div><div class="profile-stat-label">Jobs done</div></div>
+        <div class="profile-stat-tile"><div class="profile-stat-num" style="color:var(--accent-dark);">&lt; 1h</div><div class="profile-stat-label">Response</div></div>
+        <div class="profile-stat-tile"><div class="profile-stat-num" style="color:var(--accent-dark);" data-counter="96" data-suffix="%">0</div><div class="profile-stat-label">Completion</div></div>
+      </div>
+
+      <div class="section-h"><div class="section-title">Why customers rate them</div></div>
+      <div style="padding:0 20px;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="pill teal">⏰ Punctuality 98%</span>
+        <span class="pill teal">🤝 Reliability 99%</span>
+        <span class="pill teal">🏆 Workmanship 97%</span>
+        <span class="pill teal">💬 Communication 96%</span>
+        <span class="pill teal">✨ Left it spotless</span>
+        <span class="pill teal">💰 Stuck to quote</span>
+        <span class="pill teal">📅 Finished on time</span>
+      </div>
+
+      <div class="section-h"><div class="section-title">Recent reviews</div><span class="section-link">All 87 →</span></div>
+      <div class="review-card anim-3" style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:12.5px;font-weight:800;color:var(--text);">Sarah M.</div>
+          <div style="font-size:11px;color:var(--text-secondary);">2 days ago · ★★★★★</div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text-secondary);line-height:1.5;">"Martin was brilliant. On time every day, kept everything tidy, finished a day early. Will definitely use again."</div>
+      </div>
+      <div class="review-card anim-3" style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:12.5px;font-weight:800;color:var(--text);">David L.</div>
+          <div style="font-size:11px;color:var(--text-secondary);">1 week ago · ★★★★★</div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text-secondary);line-height:1.5;">"Price was exactly what he quoted. No extras, no surprises. Left the bathroom cleaner than he found it."</div>
+      </div>
+
+      <div class="section-h"><div class="section-title">Recent work</div></div>
+      <div class="portfolio-grid anim-3">
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1049'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1050'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1051'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1052'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1053'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+        <div class="portfolio-tile" style="background-image:url('https://loremflickr.com/400/400/home,interior?lock=1054'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div>
+      </div>
+
+      <div class="section-h" style="padding-top:14px;"><div class="section-title">Credentials</div></div>
+      <div class="kv-card anim-4" style="margin-top:0;">
+        <div class="qual-row"><div class="qual-icon">🎓</div><div class="qual-info"><div class="qual-name">Gas Safe Registered</div><div class="qual-meta">Cert #234567 · expires Mar 2027</div></div><span class="pill teal">Verified</span></div>
+        <div class="qual-row"><div class="qual-icon">🔧</div><div class="qual-info"><div class="qual-name">City &amp; Guilds Plumbing L3</div><div class="qual-meta">Awarded 2009</div></div><span class="pill teal">Verified</span></div>
+        <div class="qual-row"><div class="qual-icon">🛡</div><div class="qual-info"><div class="qual-name">Public Liability £5m</div><div class="qual-meta">Hiscox · valid to Sep 2026</div></div><span class="pill teal">Verified</span></div>
+      </div>
+
+      <div class="btn-row anim-4">
+        <button class="btn-secondary" onclick="go('messages')">💬 Message</button>
+        <button class="btn-primary" onclick="go('jobDetail')">View their offer</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+    <!-- ═════════════ SUPPLIER DASHBOARD ═════════════ -->
+    <div class="screen supplierDash">
+      <div class="page-header">
+        <div class="page-header-text">
+          <div class="page-greeting">Good morning, Martin <span class="wave">👋</span></div>
+          <div class="page-title">Dashboard</div>
+        </div>
+        <div class="sup-photo-avatar" style="background-image:linear-gradient(135deg,#352D5C,#008A84);" onclick="go('supplierProfile')"><span class="sup-tier verified">✓</span></div>
+      </div>
+
+      <div class="hero-card anim-1" onclick="go('earnings')" style="cursor:pointer;">
+        <div class="hero-top">
+          <div class="hero-eyebrow">⭐ 4.9 rating · 324 jobs done</div>
+          <div class="hero-update">#1 in Bristol</div>
+        </div>
+        <div class="hero-headline">Earned <span data-counter="4128" data-prefix="£" data-duration="1100">£0</span> this month</div>
+        <div class="hero-sub"><b>3 active jobs</b> · 2 pending offers · 12 jobs done this quarter.</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="hero-stat-num breathe" data-counter="3">0</div><div class="hero-stat-label">Active</div></div>
+          <div class="hero-stat"><div class="hero-stat-num mint" data-counter="2">0</div><div class="hero-stat-label">Offers</div></div>
+          <div class="hero-stat"><div class="hero-stat-num amber" data-counter="47">0</div><div class="hero-stat-label">Reviews</div></div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="alert-tile anim-2 glow-amber">
+        <div class="alert-tile-icon">⚠</div>
+        <div class="alert-tile-body">
+          <div class="alert-tile-title">Public liability expires in 6 weeks</div>
+          <div class="alert-tile-sub">Hiscox · Renew before 12 Jun to stay verified</div>
+        </div>
+        <span class="menu-arrow">›</span>
+      </div>
+
+      <!-- Quick actions grid -->
+      <div class="section-h"><div class="section-title">Quick actions</div></div>
+      <div class="sup-section-grid">
+        <div class="sup-section-tile" onclick="alert('Active jobs')"><div class="sup-section-tile-ico">🔨</div><div class="sup-section-tile-name">Active jobs</div><div class="sup-section-tile-sub">3 ongoing</div></div>
+        <div class="sup-section-tile" onclick="alert('Pending offers')"><div class="sup-section-tile-ico">📨</div><div class="sup-section-tile-name">Pending offers</div><div class="sup-section-tile-sub">2 awaiting</div></div>
+        <div class="sup-section-tile" onclick="go('earnings')"><div class="sup-section-tile-ico">💰</div><div class="sup-section-tile-name">Earnings &amp; tax</div><div class="sup-section-tile-sub">£4,128 / month</div></div>
+        <div class="sup-section-tile" onclick="alert('Qualifications')"><div class="sup-section-tile-ico">🎓</div><div class="sup-section-tile-name">Qualifications</div><div class="sup-section-tile-sub">3 verified</div></div>
+        <div class="sup-section-tile alert" onclick="alert('Insurance')"><div class="sup-section-tile-ico">🛡</div><div class="sup-section-tile-name">Insurance</div><div class="sup-section-tile-sub">Expiring soon</div></div>
+        <div class="sup-section-tile" onclick="go('leaderboard')"><div class="sup-section-tile-ico">🏆</div><div class="sup-section-tile-name">Leaderboard</div><div class="sup-section-tile-sub">#1 Bristol</div></div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ EARNINGS / P&L ═════════════ -->
+    <div class="screen earnings">
+      <div class="sub-header"><button class="back-btn" onclick="go('supplierDash')">‹</button><div class="sub-title">Earnings &amp; tax</div><span class="sub-pill" style="background:var(--accent-paler);">2026 tax year</span></div>
+
+      <div class="inner-tabs anim-1">
+        <button class="inner-tab active" onclick="setEarnTab('invoices')">Invoices</button>
+        <button class="inner-tab" onclick="setEarnTab('expenses')">Expenses</button>
+        <button class="inner-tab" onclick="setEarnTab('tax')">Tax &amp; VAT</button>
+      </div>
+
+      <!-- INVOICES TAB -->
+      <div id="earnPaneInvoices">
+        <!-- Monthly chart -->
+        <div class="chart-card anim-2">
+          <div class="chart-h"><div class="chart-h-title">Income · last 6 months</div><div class="chart-h-total"><span data-counter="24180" data-prefix="£" data-duration="1100">£0</span></div></div>
+          <div class="chart-bars">
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="38" data-val="£3.1k"></div><div class="chart-bar-label">Nov</div></div>
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="52" data-val="£3.8k"></div><div class="chart-bar-label">Dec</div></div>
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="48" data-val="£3.6k"></div><div class="chart-bar-label">Jan</div></div>
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="71" data-val="£4.7k"></div><div class="chart-bar-label">Feb</div></div>
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="65" data-val="£4.4k"></div><div class="chart-bar-label">Mar</div></div>
+            <div class="chart-bar"><div class="chart-bar-shape" data-chart-h="88" data-val="£4.1k" style="background:linear-gradient(180deg,#FFD58A,#F5A623);"></div><div class="chart-bar-label">Apr</div></div>
+          </div>
+        </div>
+
+        <div class="action-row anim-2" onclick="alert('Create manual invoice')">
+          <div class="action-icon">+</div>
+          <div class="action-text">Create manual invoice</div>
+          <span class="action-arrow">›</span>
+        </div>
+
+        <div class="kv-card anim-3" style="background:linear-gradient(135deg,var(--accent-paler),var(--card));border-color:var(--accent-pale);">
+          <div class="kv-h" style="color:var(--accent-dark);">🪄 Auto-invoicing is on</div>
+          <div style="font-size:12.5px;font-weight:500;color:var(--text-secondary);line-height:1.5;padding:4px 0;">When a job is marked complete via UProtect, we auto-generate a branded invoice and send it to your customer. No typing, no chasing. Get home to the kids.</div>
+        </div>
+
+        <div class="section-h"><div class="section-title">Recent invoices</div><span class="section-link">Export all →</span></div>
+
+        <div class="inv-row anim-3" onclick="go('invoice')">
+          <div class="inv-head"><span class="inv-id">INV-2026-089</span><span class="inv-status paid">Paid</span></div>
+          <div class="inv-body">
+            <div><div class="inv-title">Full bathroom replumb &amp; refit</div><div class="inv-meta">Sarah M. · 24 Apr 2026</div></div>
+            <div style="text-align:right;"><div class="inv-amt">£3,840</div><div class="inv-meta">inc. VAT</div></div>
+          </div>
+        </div>
+
+        <div class="inv-row anim-3">
+          <div class="inv-head"><span class="inv-id">INV-2026-088</span><span class="inv-status sent">Sent</span></div>
+          <div class="inv-body">
+            <div><div class="inv-title">Radiator replacement × 4</div><div class="inv-meta">David L. · 18 Apr 2026</div></div>
+            <div style="text-align:right;"><div class="inv-amt">£816</div><div class="inv-meta">inc. VAT</div></div>
+          </div>
+        </div>
+
+        <div class="inv-row anim-3">
+          <div class="inv-head"><span class="inv-id">INV-2026-085</span><span class="inv-status paid">Paid</span></div>
+          <div class="inv-body">
+            <div><div class="inv-title">Boiler service · annual</div><div class="inv-meta">James W. · 12 Apr 2026</div></div>
+            <div style="text-align:right;"><div class="inv-amt">£420</div><div class="inv-meta">inc. VAT</div></div>
+          </div>
+        </div>
+
+        <div class="inv-row anim-3">
+          <div class="inv-head"><span class="inv-id">INV-2026-078</span><span class="inv-status overdue">Overdue</span></div>
+          <div class="inv-body">
+            <div><div class="inv-title">Kitchen splashback fit</div><div class="inv-meta">Priya R. · 28 Mar 2026</div></div>
+            <div style="text-align:right;"><div class="inv-amt">£4,200</div><div class="inv-meta">7 days late</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPENSES TAB -->
+      <div id="earnPaneExpenses" style="display:none;">
+        <div class="kv-card anim-2" style="background:linear-gradient(135deg,#F0F8FF,var(--card));border-color:#C7E0FF;">
+          <div class="kv-h" style="color:#2D68C4;">💰 VAT reclaimable this quarter</div>
+          <div style="font-size:24px;font-weight:800;color:#2D68C4;letter-spacing:-0.5px;">£552.40</div>
+        </div>
+
+        <div class="action-row anim-2" onclick="alert('Snap a receipt')">
+          <div class="action-icon">📸</div>
+          <div class="action-text">Add expense / snap receipt</div>
+          <span class="action-arrow">›</span>
+        </div>
+
+        <div class="section-h"><div class="section-title">Recent expenses</div></div>
+
+        <div class="exp-row anim-3">
+          <div class="exp-emoji">🧱</div>
+          <div class="exp-info">
+            <div class="exp-title">Vaillant ecoTEC Plus 832 combi boiler</div>
+            <div class="exp-meta"><span class="exp-cat">Materials</span><span>24 Apr · 📎 Receipt</span></div>
+          </div>
+          <div><div class="exp-amt">£1,120.00</div><div class="exp-vat">+£224 VAT</div></div>
+        </div>
+
+        <div class="exp-row anim-3">
+          <div class="exp-emoji">🔧</div>
+          <div class="exp-info">
+            <div class="exp-title">15mm copper pipe × 20m</div>
+            <div class="exp-meta"><span class="exp-cat">Materials</span><span>23 Apr · 📎 Receipt</span></div>
+          </div>
+          <div><div class="exp-amt">£48.00</div><div class="exp-vat">+£9.60 VAT</div></div>
+        </div>
+
+        <div class="exp-row anim-3">
+          <div class="exp-emoji">🚐</div>
+          <div class="exp-info">
+            <div class="exp-title">Van fuel · April</div>
+            <div class="exp-meta"><span class="exp-cat">Travel</span><span>monthly</span></div>
+          </div>
+          <div><div class="exp-amt">£185.00</div><div class="exp-vat" style="color:var(--text-faint);">no VAT</div></div>
+        </div>
+
+        <div class="exp-row anim-3">
+          <div class="exp-emoji">🛡</div>
+          <div class="exp-info">
+            <div class="exp-title">Public liability insurance · monthly</div>
+            <div class="exp-meta"><span class="exp-cat">Insurance</span><span>Hiscox · 1 Apr</span></div>
+          </div>
+          <div><div class="exp-amt">£42.00</div><div class="exp-vat" style="color:var(--text-faint);">exempt</div></div>
+        </div>
+
+        <div class="exp-row anim-3">
+          <div class="exp-emoji">🧰</div>
+          <div class="exp-info">
+            <div class="exp-title">Screwfix · drill bits &amp; silicone</div>
+            <div class="exp-meta"><span class="exp-cat">Tools</span><span>16 Apr · 📎 Receipt</span></div>
+          </div>
+          <div><div class="exp-amt">£34.50</div><div class="exp-vat">+£6.90 VAT</div></div>
+        </div>
+      </div>
+
+      <!-- TAX & VAT TAB -->
+      <div id="earnPaneTax" style="display:none;">
+        <div class="kv-card anim-2" style="background:linear-gradient(135deg,#FCEBEA,var(--card));border-color:var(--error-light);">
+          <div class="kv-h" style="color:var(--error);">📊 VAT position · this quarter</div>
+          <div class="kv-row"><span class="kv-label">VAT collected (output)</span><span class="kv-val">£8,160.00</span></div>
+          <div class="kv-row"><span class="kv-label">VAT paid on expenses (input)</span><span class="kv-val">-£2,204.00</span></div>
+          <div class="kv-row" style="border-top:2px solid var(--border);padding-top:12px;margin-top:4px;"><span class="kv-label" style="color:var(--text);font-weight:800;">VAT owed to HMRC</span><span class="kv-val red" style="font-size:18px;">£5,956.00</span></div>
+        </div>
+
+        <div class="kv-card anim-3" style="background:linear-gradient(135deg,var(--accent-paler),var(--card));border-color:var(--accent-pale);">
+          <div class="kv-h" style="color:var(--accent-dark);">💼 Profit &amp; loss · this quarter</div>
+          <div class="kv-row"><span class="kv-label">Total income</span><span class="kv-val">£40,800</span></div>
+          <div class="kv-row"><span class="kv-label">Total expenses</span><span class="kv-val">-£11,020</span></div>
+          <div class="kv-row" style="border-top:2px solid var(--border);padding-top:12px;margin-top:4px;"><span class="kv-label" style="color:var(--text);font-weight:800;">Net profit</span><span class="kv-val accent" style="font-size:18px;">£29,780</span></div>
+        </div>
+
+        <div class="section-h"><div class="section-title">Quarterly breakdown</div></div>
+        <div class="kv-card anim-3">
+          <div class="kv-h">Q1 (Apr–Jun)</div>
+          <div class="kv-row"><span class="kv-label">Income</span><span class="kv-val">£12,420</span></div>
+          <div class="kv-row"><span class="kv-label">Expenses</span><span class="kv-val">£3,180</span></div>
+          <div class="kv-row"><span class="kv-label">Net profit</span><span class="kv-val accent">£9,240</span></div>
+          <div class="kv-row"><span class="kv-label">VAT owed</span><span class="kv-val red">£1,848</span></div>
+        </div>
+        <div class="kv-card anim-3">
+          <div class="kv-h">Q2 (Jul–Sep) <span style="color:var(--text-faint);font-weight:600;text-transform:none;letter-spacing:0;font-size:10px;">· upcoming</span></div>
+          <div class="kv-row"><span class="kv-label">Income (est.)</span><span class="kv-val">£14,200</span></div>
+          <div class="kv-row"><span class="kv-label">Set aside for VAT</span><span class="kv-val" style="color:var(--warning-deep);">£2,840</span></div>
+        </div>
+
+        <div class="trust-strip anim-4">
+          <div class="trust-strip-icon">💡</div>
+          <div class="trust-strip-text"><b>UInvoice tip</b> — All UProtect payments are logged here automatically. Snap photos of receipts to track expenses. Export everything for self-assessment — no QuickBooks needed.</div>
+        </div>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ INVOICE DETAIL ═════════════ -->
+    <div class="screen invoice">
+      <div class="sub-header"><button class="back-btn" onclick="go('earnings')">‹</button><div class="sub-title">Invoice</div><span class="sub-pill" style="background:var(--accent-paler);">Paid</span></div>
+
+      <div class="kv-card anim-1 glow-teal" style="text-align:center;padding:18px 16px;">
+        <div style="font-size:11px;font-weight:800;color:var(--text-secondary);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:5px;">INV-2026-089</div>
+        <div style="font-size:28px;font-weight:800;color:var(--text);letter-spacing:-0.7px;"><span class="breathe" style="display:inline-block;" data-counter="3840" data-prefix="£" data-duration="1100">£0</span></div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-top:3px;">inc. VAT · paid via UProtect</div>
+      </div>
+
+      <div class="kv-card anim-2">
+        <div class="kv-h">Job</div>
+        <div class="kv-row"><span class="kv-label">Description</span><span class="kv-val" style="text-align:right;max-width:60%;">Full bathroom replumb &amp; refit</span></div>
+        <div class="kv-row"><span class="kv-label">Customer</span><span class="kv-val">Sarah Mitchell</span></div>
+        <div class="kv-row"><span class="kv-label">Job date</span><span class="kv-val">21–24 Apr 2026</span></div>
+      </div>
+
+      <div class="breakdown anim-2">
+        <div class="breakdown-row"><span class="breakdown-label">Labour (3 days)</span><span>£1,800.00</span></div>
+        <div class="breakdown-row"><span class="breakdown-label">Materials</span><span>£1,250.00</span></div>
+        <div class="breakdown-row"><span class="breakdown-label">Fittings &amp; sundries</span><span>£150.00</span></div>
+        <div class="breakdown-row"><span class="breakdown-label">Subtotal</span><span>£3,200.00</span></div>
+        <div class="breakdown-row"><span class="breakdown-label">VAT (20%)</span><span>£640.00</span></div>
+        <div class="breakdown-row total"><span class="breakdown-label">Total</span><span class="amt">£3,840.00</span></div>
+      </div>
+
+      <div class="kv-card anim-3" style="background:linear-gradient(135deg,var(--accent-paler),var(--card));border-color:var(--accent-pale);">
+        <div class="kv-h" style="color:var(--accent-dark);">✓ Payment received</div>
+        <div class="kv-row"><span class="kv-label">Paid via UProtect</span><span class="kv-val accent">26 Apr 2026</span></div>
+      </div>
+
+      <div class="btn-row anim-3">
+        <button class="btn-secondary" onclick="alert('Duplicate invoice')">📋 Duplicate</button>
+        <button class="btn-primary no-arrow" onclick="alert('PDF download')">📄 View PDF</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ LEADERBOARD ═════════════ -->
+    <div class="screen leaderboard">
+      <div class="sub-header"><button class="back-btn" onclick="go('supplierDash')">‹</button><div class="sub-title">Leaderboard</div><span class="sub-pill">Bristol · top rated</span></div>
+
+      <!-- Podium -->
+      <div class="podium anim-1">
+        <div class="podium-col second">
+          <div class="rank">2</div>
+          <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);border-color:#A8A9AD;"></div>
+          <div class="podium-name">James W.</div>
+          <div class="podium-pts">★ 4.7</div>
+          <div class="podium-block">2</div>
+        </div>
+        <div class="podium-col first">
+          <div class="rank">1</div>
+          <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+          <div class="podium-name">Martin's Plumbing</div>
+          <div class="podium-pts">★ 4.9</div>
+          <div class="podium-block">🏆 1</div>
+        </div>
+        <div class="podium-col third">
+          <div class="rank">3</div>
+          <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);border-color:#CD7F32;"></div>
+          <div class="podium-name">Amir Sani</div>
+          <div class="podium-pts">★ 4.6</div>
+          <div class="podium-block">3</div>
+        </div>
+      </div>
+
+      <div class="section-h"><div class="section-title">All suppliers · Bristol</div><span class="section-link">Top rated ▾</span></div>
+
+      <div class="lb-row anim-2"><div class="lb-rank up">4</div><div class="lb-info"><div class="lb-name">Tom Beale Electrical</div><div class="lb-meta">⚡ Electrical · 210 jobs</div></div><div class="lb-pts">★ 4.8</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank">5</div><div class="lb-info"><div class="lb-name">Sarah Wood Carpentry</div><div class="lb-meta">🪚 Carpentry · 175 jobs</div></div><div class="lb-pts">★ 4.8</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank up">6</div><div class="lb-info"><div class="lb-name">Priya Decorating</div><div class="lb-meta">🎨 Painting · 140 jobs</div></div><div class="lb-pts">★ 4.7</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank">7</div><div class="lb-info"><div class="lb-name">Dave Greens Garden Co</div><div class="lb-meta">🌿 Garden · 120 jobs</div></div><div class="lb-pts">★ 4.7</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank">8</div><div class="lb-info"><div class="lb-name">BS Bathrooms Ltd</div><div class="lb-meta">🛁 Bathrooms · 98 jobs</div></div><div class="lb-pts">★ 4.6</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank up">9</div><div class="lb-info"><div class="lb-name">QuickFix Tilers</div><div class="lb-meta">🧱 Tiling · 76 jobs</div></div><div class="lb-pts">★ 4.6</div></div>
+      <div class="lb-row anim-2"><div class="lb-rank">10</div><div class="lb-info"><div class="lb-name">Coventry Heating Co</div><div class="lb-meta">🔥 Heating · 54 jobs</div></div><div class="lb-pts">★ 4.5</div></div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+    <!-- ═════════════ MESSAGES ═════════════ -->
+    <div class="screen messages">
+      <div class="page-header" style="border-bottom:1px solid var(--border-soft);">
+        <div class="page-header-text">
+          <div class="page-greeting">Conversations</div>
+          <div class="page-title">Messages</div>
+        </div>
+        <div class="sc-avatar" onclick="go('customerProfile')">SC</div>
+      </div>
+
+      <!-- Conversation list -->
+      <div class="msg-row unread" onclick="document.getElementById('msgThread').style.display='block';this.parentNode.querySelectorAll('.msg-row').forEach(function(r){r.style.display='none';});">
+        <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+        <div class="msg-info">
+          <div class="msg-name">Martin's Plumbing<span class="msg-time">17:42</span></div>
+          <div class="msg-preview">Day 1 done — old pipework removed, new copper installed…</div>
+        </div>
+      </div>
+
+      <div class="msg-row" style="opacity:0.95;">
+        <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+        <div class="msg-info">
+          <div class="msg-name">James Plumbing Co<span class="msg-time">Yesterday</span></div>
+          <div class="msg-preview">Hi Sarah, can do this for £2,950 fitted. Start 28 Apr…</div>
+        </div>
+      </div>
+
+      <div class="msg-row" style="opacity:0.95;">
+        <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+        <div class="msg-info">
+          <div class="msg-name">Amir Sani Plumbing<span class="msg-time">2d</span></div>
+          <div class="msg-preview">Hi Sarah, happy to quote £2,780. I can do it in 3-4 days…</div>
+        </div>
+      </div>
+
+      <div class="msg-row" style="opacity:0.85;">
+        <div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>
+        <div class="msg-info">
+          <div class="msg-name">Priya Decorating<span class="msg-time">18 Mar</span></div>
+          <div class="msg-preview">Thanks for the lovely review Sarah! Glad you're happy 💚</div>
+        </div>
+      </div>
+
+      <!-- Thread (hidden until a row is clicked) -->
+      <div id="msgThread" style="display:none;">
+        <div class="sub-header" style="background:var(--card);">
+          <button class="back-btn" onclick="document.getElementById('msgThread').style.display='none';document.querySelectorAll('.screen.messages .msg-row').forEach(function(r){r.style.display='';});">‹</button>
+          <div class="sup-photo-avatar" style="background-image:linear-gradient(135deg,#352D5C,#008A84);width:36px;height:36px;"><span class="sup-tier verified">✓</span></div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:800;color:var(--text);">Martin's Plumbing</div><div style="font-size:10.5px;font-weight:600;color:var(--accent-dark);"><span class="online-dot"></span>Online · &lt; 1h response</div></div>
+          <button class="back-btn" style="width:34px;">📞</button>
+        </div>
+        <div class="chat-thread">
+          <div class="chat-time">21 Apr 2026 · 09:30</div>
+          <div class="chat-msg them">Hi Sarah — I'm 5 mins away. Should I park on the road or driveway?</div>
+          <div class="chat-msg me">Driveway is fine, the gate's open 👍</div>
+          <div class="chat-msg them">Great, see you in a sec!</div>
+          <div class="chat-time">21 Apr 2026 · 17:42</div>
+          <div class="chat-msg them">Day 1 done — old pipework removed, new copper installed. Will fit the bath tomorrow morning. Photos to follow 📸</div>
+          <div class="chat-msg them" style="padding:6px;background:transparent;border:none;box-shadow:none;"><div style="width:140px;height:100px;border-radius:10px;background-image:url('https://loremflickr.com/400/300/home,renovation?lock=1064'),linear-gradient(135deg,#352D5C,#008A84);background-size:cover;background-position:center;"></div></div>
+          <div class="chat-msg me">Brilliant, thanks Martin! Looks amazing already 🙌</div>
+        </div>
+        <div style="padding:8px 16px;background:var(--card);border-top:1px solid var(--border-soft);display:flex;gap:8px;align-items:center;">
+          <button class="back-btn" style="width:36px;">+</button>
+          <input class="field-input" type="text" placeholder="Message…" style="padding:10px 14px;font-size:13px;border-radius:100px;"/>
+          <button class="back-btn" style="background:linear-gradient(135deg,var(--accent),var(--accent-dark));border:none;color:white;width:38px;">↑</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════════ UPROTECT explainer ═════════════ -->
+    <div class="screen uprotect">
+      <div class="sub-header"><button class="back-btn" onclick="go('home')">‹</button><div class="sub-title">UProtect</div></div>
+
+      <div class="up-hero anim-1">
+        <div class="up-shield">🛡</div>
+        <div class="up-hero-title">UProtect</div>
+        <div class="up-hero-sub">Secure escrow payments. Money stays safe until the job's verified complete.</div>
+      </div>
+
+      <div class="section-h"><div class="section-title">How it works</div></div>
+      <div class="up-step anim-2">
+        <div class="up-step-num">1</div>
+        <div class="up-step-body">
+          <div class="up-step-title">Post your job for free</div>
+          <div class="up-step-sub">No charge to list. Suppliers come to you with their best price.</div>
+        </div>
+      </div>
+      <div class="up-step anim-2">
+        <div class="up-step-num">2</div>
+        <div class="up-step-body">
+          <div class="up-step-title">Review &amp; compare offers</div>
+          <div class="up-step-sub">See prices, ratings, messages. Take your time. No pressure to accept.</div>
+        </div>
+      </div>
+      <div class="up-step anim-3">
+        <div class="up-step-num">3</div>
+        <div class="up-step-body">
+          <div class="up-step-title">Accept &amp; authorise payment</div>
+          <div class="up-step-sub">Only charged when you accept. Funds held in escrow — <b>not</b> sent to supplier.</div>
+        </div>
+      </div>
+      <div class="up-step anim-3">
+        <div class="up-step-num">4</div>
+        <div class="up-step-body">
+          <div class="up-step-title">Job completed &amp; verified</div>
+          <div class="up-step-sub">Both parties upload evidence. Our team reviews. Funds released to supplier.</div>
+        </div>
+      </div>
+
+      <div class="kv-card anim-4" style="background:linear-gradient(135deg,var(--accent-paler),var(--card));border-color:var(--accent-pale);">
+        <div class="kv-h" style="color:var(--accent-dark);">🔒 Your safety nets</div>
+        <div style="padding:4px 0;font-size:12.5px;font-weight:600;color:var(--text);line-height:1.55;">✓ Full refund if the job isn't completed or doesn't match the brief<br>✓ Independent UmovingU team reviews evidence from both sides<br>✓ All suppliers are vetted, insured &amp; UProtect-registered<br>✓ Money never leaves escrow until you sign off</div>
+      </div>
+
+      <div class="trust-strip anim-4">
+        <div class="trust-strip-icon">💚</div>
+        <div class="trust-strip-text"><b>Used on every UmovingU job.</b> 12,400+ jobs protected since launch. Zero unrecovered payments.</div>
+      </div>
+
+      <div class="btn-row anim-4">
+        <button class="btn-primary" onclick="go('home')">Browse jobs</button>
+      </div>
+
+      <div style="height:24px;"></div>
+    </div>
+
+  </div><!-- /.body -->
+
+  <!-- Bottom toolbar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="home" onclick="go('home')"><span class="tab-btn-icon">🏠</span><span>Home</span></button>
+    <button class="tab-btn" data-tab="browse" onclick="go('browse')"><span class="tab-btn-icon">🔍</span><span>Browse</span></button>
+    <button class="tab-btn center" data-tab="postJob" onclick="go('postJob')"><span class="tab-btn-icon">+</span><span>Post</span></button>
+    <button class="tab-btn" data-tab="messages" onclick="go('messages')"><span class="tab-btn-icon">💬</span><span>Inbox</span></button>
+    <button class="tab-btn" data-tab="yourProjects" onclick="go(state.persona==='supplier'?'supplierDash':'yourProjects')"><span class="tab-btn-icon">📋</span><span>Projects</span></button>
+  </div>
+</div><!-- /.phone -->
+
+<script>
+var state = { screen:'home', persona:'customer' };
+
+var SEARCH_PLACEHOLDER = {
+  customer: 'What do you need done?',
+  supplier: 'Find jobs near you…'
+};
+
+function setPersona(p){
+  state.persona = p;
+  document.body.dataset.persona = p;
+  document.querySelectorAll('.persona-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.persona-btn').forEach(function(b){
+    if(b.textContent.toLowerCase().indexOf(p) > -1) b.classList.add('active');
+  });
+  document.querySelectorAll('[data-show-persona]').forEach(function(el){
+    el.style.display = (el.dataset.showPersona === p) ? '' : 'none';
+  });
+  var ph = document.getElementById('homeSearch');
+  if(ph) ph.placeholder = SEARCH_PLACEHOLDER[p];
+  if(state.screen === 'home') pulseScreen('home');
+}
+
+function go(screen){
+  state.screen = screen;
+  document.body.dataset.screen = screen;
+  var bodyEl = document.querySelector('.body');
+  if(bodyEl) bodyEl.scrollTop = 0;
+  document.querySelectorAll('.screen-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.screen-btn').forEach(function(b){
+    if(b.getAttribute('onclick') && b.getAttribute('onclick').indexOf("'"+screen+"'") > -1) b.classList.add('active');
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    if(b.dataset.tab === screen) b.classList.add('active');
+    if(screen === 'supplierDash' && b.dataset.tab === 'customerProfile') b.classList.add('active');
+  });
+  pulseScreen(screen);
+}
+
+/* ── Counter animation ── */
+function counterUp(el, target, duration, prefix, suffix){
+  if(!el) return;
+  prefix = prefix || ''; suffix = suffix || ''; duration = duration || 900;
+  var start = 0; var startTime = null;
+  function tick(t){
+    if(!startTime) startTime = t;
+    var p = Math.min(1, (t - startTime)/duration);
+    var eased = 1 - Math.pow(1 - p, 3);
+    var v = Math.round(start + (target - start) * eased);
+    el.textContent = prefix + v.toLocaleString() + suffix;
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── UNIVERSAL MOTION on screen open ── */
+function pulseScreen(screen){
+  var root = document.querySelector('.screen.' + screen);
+  if(!root) return;
+
+  // Counter-up every [data-counter] element
+  setTimeout(function(){
+    var counters = root.querySelectorAll('[data-counter]');
+    counters.forEach(function(el, i){
+      var target = parseFloat(el.dataset.counter) || 0;
+      var prefix = el.dataset.prefix || '';
+      var suffix = el.dataset.suffix || '';
+      var duration = parseInt(el.dataset.duration, 10) || 1000;
+      var delay = el.dataset.delay !== undefined ? parseInt(el.dataset.delay, 10) : i * 70;
+      setTimeout(function(){ counterUp(el, target, duration, prefix, suffix); }, delay);
+    });
+  }, 60);
+
+  // Progress bars / slider fills — animate from 0 to data-progress%
+  setTimeout(function(){
+    root.querySelectorAll('[data-progress]').forEach(function(el, i){
+      var target = el.dataset.progress;
+      el.style.width = '0%';
+      var delay = el.dataset.delay !== undefined ? parseInt(el.dataset.delay, 10) : i * 60;
+      setTimeout(function(){ el.style.width = target + '%'; }, 120 + delay);
+    });
+  }, 80);
+
+  // Chart bars — animate from 0 height
+  setTimeout(function(){
+    root.querySelectorAll('[data-chart-h]').forEach(function(el, i){
+      var target = el.dataset.chartH;
+      el.style.height = '0%';
+      setTimeout(function(){ el.style.height = target + '%'; }, 150 + i * 70);
+    });
+  }, 80);
+}
+
+function setEarnTab(tab){
+  document.querySelectorAll('.screen.earnings .inner-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.screen.earnings .inner-tab').forEach(function(b){
+    var label = b.textContent.toLowerCase();
+    if((tab==='invoices' && label.indexOf('invoice')>-1) ||
+       (tab==='expenses' && label.indexOf('expense')>-1) ||
+       (tab==='tax' && label.indexOf('tax')>-1)) b.classList.add('active');
+  });
+  document.getElementById('earnPaneInvoices').style.display = (tab==='invoices') ? '' : 'none';
+  document.getElementById('earnPaneExpenses').style.display = (tab==='expenses') ? '' : 'none';
+  document.getElementById('earnPaneTax').style.display = (tab==='tax') ? '' : 'none';
+}
+
+function setRewardsTab(tab){
+  document.querySelectorAll('.screen.rewards .inner-tab').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.screen.rewards .inner-tab').forEach(function(b){
+    var label = b.textContent.toLowerCase();
+    if((tab==='perks' && label.indexOf('perk')>-1) ||
+       (tab==='partners' && label.indexOf('partner')>-1) ||
+       (tab==='earn' && label.indexOf('earn')>-1)) b.classList.add('active');
+  });
+  document.getElementById('rewardsPanePerks').style.display = (tab==='perks') ? '' : 'none';
+  document.getElementById('rewardsPanePartners').style.display = (tab==='partners') ? '' : 'none';
+  document.getElementById('rewardsPaneEarn').style.display = (tab==='earn') ? '' : 'none';
+}
+
+/* Initial setup */
+
+var JOBS = {
+ bathroom:{kw:'bathroom,interior',lock:2100,title:'Full bathroom replumb & refit',cat:'🛁 Bathroom',budget:'£2,500 – £4,000',offers:5,urg:'Urgent',base:3200,word:'bathroom',sups:["Martin's Plumbing","James Plumbing Co","Amir Sani Plumbing"],desc:'Complete replumb of family bathroom including new copper piping, bath, basin and toilet. Existing tiling intact — needs careful removal and refit.'},
+ kitchen:{kw:'kitchen,cabinets',lock:2110,title:'Kitchen install · 12 units + worktop',cat:'🍳 Kitchen',budget:'£8,000 – £12,000',offers:3,urg:'Flexible',base:9800,word:'kitchen',sups:["Bristol Kitchen Fitters","Oakline Kitchens","James Fitted Kitchens"],desc:'Full fitted-kitchen installation — 12 base and wall units, laminate worktop, sink and appliance fitting. Units supplied; looking for fit-only.'},
+ electrical:{kw:'electrician,wiring',lock:2120,title:'EICR · 3-bed semi · electrical safety',cat:'⚡ Electrical',budget:'£700 – £1,000',offers:7,urg:'Standard',base:850,word:'electrical',sups:["Tom Beale Electrical","Bright Spark Electrics","Volt & Co Electrical"],desc:'Full Electrical Installation Condition Report (EICR) for a 3-bed semi. Consumer unit accessible. Qualified, registered electrician required.'},
+ garden:{kw:'gardener,landscaping',lock:2130,title:'Lawn turf, beds & fencing',cat:'🌿 Garden',budget:'£900 – £1,500',offers:2,urg:'Standard',base:1200,word:'garden',sups:["Dave Greens Garden Co","Bristol Landscapes","GreenScape Gardens"],desc:'Re-turf rear lawn (approx 60m²), dig two new flower beds, and replace eight fence panels.'},
+ heating:{kw:'boiler,radiator',lock:2140,title:'Combi boiler annual service',cat:'🔥 Heating',budget:'£300 – £500',offers:4,urg:'Standard',base:420,word:'heating',sups:["Coventry Heating Co","GasSafe Engineers","WarmHome Heating"],desc:'Annual service of a combi boiler plus a check of all radiators. Gas Safe registered engineer required.'},
+ painting:{kw:'decorating,wall',lock:2150,title:'Hallway, stairs & landing repaint',cat:'🎨 Painting',budget:'£500 – £900',offers:1,urg:'Flexible',base:680,word:'decorating',sups:["Priya Decorating","Bristol Painters & Co","FreshCoat Decorating"],desc:'Repaint hallway, stairs and landing — walls and woodwork. Customer supplying the paint.'},
+ carpentry:{kw:'carpenter,woodwork',lock:2160,title:'Fitted wardrobes · main bedroom',cat:'🪚 Carpentry',budget:'£1,800 – £2,600',offers:3,urg:'Flexible',base:2200,word:'carpentry',sups:["Sarah Wood Carpentry","Oakline Joinery","Bespoke Carpentry Bristol"],desc:'Built-in fitted wardrobes across one wall of the main bedroom, including hanging rails and shelving.'},
+ surveys:{kw:'architecture,blueprint',lock:2170,title:'Pre-purchase building survey',cat:'📋 Survey',budget:'£600 – £900',offers:2,urg:'Standard',base:750,word:'survey',sups:["RICS Surveys Bristol","HomeCheck Surveyors","Property Survey Co"],desc:'RICS Level 2 HomeBuyer survey for a 1930s 3-bed semi ahead of purchase.'},
+ building:{kw:'building,site',lock:2180,title:'Single-storey rear extension',cat:'🏗️ Building',budget:'£28,000 – £40,000',offers:4,urg:'Flexible',base:34000,word:'building',sups:["BuildRight Construction","Bristol Builders Ltd","Foundation Build Co"],desc:'Single-storey rear kitchen extension, approx 18m². Plans and building control approved.'},
+ window:{kw:'window,glazing',lock:2190,title:'Replace 6 uPVC windows',cat:'🪟 Windows',budget:'£3,200 – £4,500',offers:3,urg:'Standard',base:3900,word:'window',sups:["ClearView Windows","Bristol Glazing","A-Rated Windows"],desc:'Supply and fit six A-rated uPVC double-glazed windows to a semi-detached house.'},
+ cleaning:{kw:'cleaning,housework',lock:2200,title:'End-of-tenancy deep clean',cat:'🧽 Cleaning',budget:'£180 – £260',offers:5,urg:'Urgent',base:220,word:'cleaning',sups:["SparkleClean Bristol","FreshStart Cleaning","TidyHome Co"],desc:'Full end-of-tenancy deep clean of a 2-bed flat, including oven, windows and carpets.'}
+};
+var CURRENT = 'bathroom';
+function fmt(n){ return n.toLocaleString('en-GB'); }
+function esc(s){ return String(s).replace(/&/g,'&amp;'); }
+function setText(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; }
+function setJob(t){ if(JOBS[t]) CURRENT=t; }
+function jobPrices(j){ return [j.base, Math.round(j.base*0.95/10)*10, Math.round(j.base*0.90/10)*10]; }
+
+function openJob(type){
+  setJob(type);
+  var j = JOBS[CURRENT];
+  var fb = ",linear-gradient(135deg,#352D5C,#008A84)";
+  var p = document.getElementById('jdPhoto');
+  if(p) p.style.backgroundImage = "url('https://loremflickr.com/800/320/"+j.kw+"?lock="+j.lock+"')"+fb;
+  setText('jdTitle', j.title);
+  setText('jdMeta', '📍 Bristol · Posted 2h ago · '+j.cat);
+  setText('jdBudget', j.budget);
+  setText('jdUrgency', j.urg);
+  setText('jdDesc', j.desc);
+  var o = document.getElementById('jdOffers'); if(o) o.innerHTML = '<b>'+j.offers+' offers</b><br>received';
+  var b = document.getElementById('jdOffersBtn'); if(b) b.textContent = 'View '+j.offers+' offers';
+  var th = document.getElementById('jdThumbs');
+  if(th){ th.innerHTML=''; for(var i=1;i<=4;i++){ var d=document.createElement('div'); d.className='jd-thumb'; d.style.backgroundImage="url('https://loremflickr.com/300/300/"+j.kw+"?lock="+(j.lock+i)+"')"+fb; th.appendChild(d); } }
+  go('jobDetail');
+}
+
+function offerCard(j, slot){
+  var prices = jobPrices(j);
+  var price = prices[slot];
+  var name = j.sups[slot];
+  var meta = [{r:'4.9',rev:87,c:96,resp:'&lt; 1hr'},{r:'4.7',rev:52,c:92,resp:'2hr'},{r:'4.6',rev:31,c:89,resp:'4hr'}][slot];
+  var avail = ['25 Apr 2026','28 Apr 2026','2 May 2026'][slot];
+  var msgs = [
+    "Hi Sarah, I'd love to take on your "+j.word+" job — 15+ years' experience and fully insured. I can start "+avail+" and the quote is all-in.",
+    "Happy to help with your "+j.word+" job. Strong reviews, quick turnaround, and a free quote for any extras. Could start "+avail+".",
+    "Hi Sarah, I can do your "+j.word+" job at a competitive price. I bring my own tools and protect floors. Available "+avail+"."
+  ];
+  var sel = (slot === 0);
+  var avatar = '<div class="sup-photo-avatar md" style="background-image:linear-gradient(135deg,#352D5C,#008A84);"><span class="sup-tier verified">✓</span></div>';
+  var chips = sel ? '<div class="offer-chips"><span class="pill teal">⏰ Punctuality 98%</span><span class="pill teal">🤝 Reliability 99%</span><span class="pill teal">🏆 Workmanship 97%</span></div>' : '';
+  var btn = sel
+    ? '<button class="offer-accept-btn" onclick="acceptOffer(0)">Accept this offer — £'+fmt(price)+' →</button>'
+    : '<button class="offer-accept-btn" style="background:linear-gradient(135deg,var(--primary),var(--primary-2));" onclick="acceptOffer('+slot+')">Select — £'+fmt(price)+'</button>';
+  return '<div class="offer-card'+(sel?' selected glow-teal':'')+'">'
+    + '<div class="offer-head">'+avatar
+    + '<div class="offer-info"><div class="offer-name-row"><span class="offer-name">'+esc(name)+'</span><span class="sup-verified">✓</span></div>'
+    + '<div class="offer-rating"><span class="offer-star">★</span><b>'+meta.r+'</b><span>('+meta.rev+' reviews)</span> · '+meta.c+'% complete · '+meta.resp+' response</div></div></div>'
+    + '<div class="offer-prices"><div class="offer-price-col"><div class="offer-price-label">Their price</div><div class="offer-price-amt accent">£'+fmt(price)+'</div></div>'
+    + '<div class="offer-price-col"><div class="offer-price-label">Available</div><div class="offer-price-amt" style="font-size:14px;">'+avail+'</div></div></div>'
+    + '<div class="offer-msg">"'+msgs[slot]+'"</div>'
+    + chips + btn + '</div>';
+}
+
+function showOffers(){
+  var j = JOBS[CURRENT];
+  var oc = document.getElementById('offersCount'); if(oc) oc.innerHTML = '<b>'+j.offers+'</b> offers received';
+  var ob = document.getElementById('offersBlurb'); if(ob) ob.innerHTML = esc(j.title)+' · your budget <b>'+j.budget+'</b>. Tap a supplier to compare.';
+  var list = document.getElementById('offersList');
+  if(list) list.innerHTML = offerCard(j,0)+offerCard(j,1)+offerCard(j,2);
+  go('offers');
+}
+
+function acceptOffer(slot){
+  var j = JOBS[CURRENT];
+  var price = jobPrices(j)[slot];
+  var name = j.sups[slot];
+  var fee = Math.round(price*0.10);
+  var total = price + fee;
+  // authorise
+  setText('authTotal', '£'+fmt(price)+'.00');
+  setText('authFee', '£'+fmt(fee)+'.00');
+  setText('authGrand', '£'+fmt(total)+'.00');
+  setText('authBtn', '🔒 Authorise £'+fmt(total)+'.00');
+  // contract
+  setText('conTitle', j.title);
+  setText('conSup', name);
+  setText('conChose', 'You chose '+name+' · 20 Apr 2026');
+  var cj=document.getElementById('conJob'); if(cj) cj.innerHTML='£'+fmt(price)+'<small> .00</small>';
+  var cf=document.getElementById('conFee'); if(cf) cf.innerHTML='£'+fmt(fee)+'<small> .00</small>';
+  setText('conCharged', '£'+fmt(total)+' charged & held in UProtect escrow · 20 Apr');
+  // review
+  setText('revAmt', '£'+fmt(price));
+  setText('revSup', name);
+  setText('revJobLine', j.title+' · £'+fmt(price));
+  setText('conUpdH', '💬 Latest update from '+name);
+  var um=document.getElementById('conUpdMsg'); if(um) um.textContent='"Day 1 done — work started and going to plan. Will send completion photos shortly."';
+  var rt=document.getElementById('revText'); if(rt) rt.value='Brilliant from start to finish — on time every day, tidy, and finished ahead of schedule. Would definitely use again.';
+  var rs=document.getElementById('revSub'); if(rs) rs.innerHTML='£'+fmt(fee)+' UProtect fee retained · £'+fmt(price)+' paid to <b>'+esc(name)+'</b>.';
+  go('authorise');
+}
+
+function backToApp(){
+  // ── Connect to the host UmovingU app here ──
+  // Web view inside the native app:  window.ReactNativeWebView.postMessage('close')
+  // A route in the same web app:     location.assign('/')  (or your router's home)
+  if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+    window.ReactNativeWebView.postMessage('close');
+  } else if (window.history.length > 1) {
+    history.back();
+  } else {
+    alert('↩ Returning to the UmovingU app');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  setPersona('customer');
+  pulseScreen('home');
+});
+</script>
+</body>
+</html>
