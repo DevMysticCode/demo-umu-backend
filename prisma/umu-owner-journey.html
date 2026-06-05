@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UMU · owner journey (connected prototype)</title>
+<style>
+  :root{
+    --navy:#231D45; --navy-2:#33285C; --teal:#00A19A; --teal-d:#007E78; --teal-br:#19C7A6; --pale:#E7F4F1;
+    --gold:#C18A38; --gold-d:#A9772A; --gold-pale:#FBF1DE; --muted:#7E7D93; --faint:#A9A8BC; --line:#E8E7F0;
+    --bg:#ECEBF3; --card:#FFFFFF; --shadow:0 6px 18px rgba(35,29,69,.08);
+    --green:#37B27A; --amber:#E8A33A; --red:#E0584F;
+    --gC:#6F9A33; --gD:#C98A2B; --gE:#D86F4A; --epcE:#D86F4A; --epcC:#6F9A33;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  body{background:#181628;min-height:100vh;padding:24px 14px 50px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+
+  /* dev bar */
+  .devbar{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:430px;text-align:center;}
+  .dcap{color:rgba(255,255,255,.5);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+  .dsw{display:inline-flex;gap:5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:100px;padding:5px;}
+  .dbtn{padding:9px 15px;border:none;background:transparent;color:rgba(255,255,255,.62);font-family:inherit;font-size:12.5px;font-weight:700;border-radius:100px;cursor:pointer;}
+  .dbtn.active{background:var(--teal);color:#fff;}
+  .dhint{font-size:11px;color:rgba(255,255,255,.38);}
+
+  .phone{position:relative;width:100%;max-width:392px;height:812px;background:var(--bg);border-radius:32px;overflow:hidden;box-shadow:0 24px 60px rgba(10,8,30,.5);border:1px solid #2c2a40;}
+  .scroll{height:100%;overflow-y:auto;padding:14px 16px 26px;scrollbar-width:none;} .scroll::-webkit-scrollbar{display:none;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 12px;}
+  .tbtn{width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--navy);cursor:pointer;}
+  .ttl{text-align:center;} .ttl b{font-size:16px;font-weight:650;} .ttl div{font-size:12px;color:var(--muted);margin-top:1px;}
+  .av{width:38px;height:38px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+
+  /* ---------- HOMESCORE SCREEN ---------- */
+  .card{background:linear-gradient(155deg,#CC731B,#B65E0E);border-radius:18px;padding:17px;color:#fff;box-shadow:0 14px 30px rgba(150,84,16,.22);}
+  .chead{display:flex;align-items:flex-start;gap:10px;} .ring{width:12px;height:12px;border-radius:50%;border:3px solid rgba(255,255,255,.9);margin-top:6px;flex:none;}
+  .addr{font-size:20px;font-weight:700;letter-spacing:-.3px;} .meta{font-size:12.5px;color:rgba(255,255,255,.82);margin-top:2px;}
+  .cdiv{height:.5px;background:rgba(255,255,255,.25);margin:14px 0;}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .tile{background:rgba(255,255,255,.1);border:.5px solid rgba(255,255,255,.25);border-radius:12px;padding:12px;}
+  .tlabel{font-size:12px;color:rgba(255,255,255,.9);font-weight:600;}
+  .tile .epc{width:26px;height:26px;border-radius:6px;background:var(--gE);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:9px;}
+  .tile .hs{font-size:13px;font-weight:600;margin-top:9px;} .tile .hs b{font-size:23px;font-weight:700;}
+  .tbar{height:6px;background:rgba(255,255,255,.22);border-radius:99px;overflow:hidden;margin:9px 0 7px;} .tbar i{display:block;height:100%;background:rgba(255,255,255,.95);border-radius:99px;}
+  .thook{font-size:11px;color:rgba(255,255,255,.9);}
+  .vrow{display:flex;align-items:center;gap:9px;margin-top:11px;font-size:12.5px;color:rgba(255,255,255,.92);} .vrow .dot{width:8px;height:8px;border-radius:50%;background:#7CF2D9;flex:none;}
+
+  .claim{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:16px;padding:16px;color:#fff;display:flex;align-items:center;gap:12px;margin-top:13px;}
+  .claim b{font-size:15px;font-weight:650;} .claim p{font-size:12px;color:rgba(255,255,255,.78);margin-top:4px;} .claim .ar{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;}
+
+  .hscard{background:#fff;border:1.5px solid #BFE7DF;border-radius:18px;padding:17px;margin-top:13px;box-shadow:var(--shadow);}
+  .hslabel{font-size:11px;letter-spacing:1.4px;color:var(--teal);font-weight:700;}
+  .hsrow{display:flex;align-items:center;gap:15px;margin-top:11px;}
+  .ringwrap{position:relative;width:92px;height:92px;flex:none;} .ringwrap .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;} .ringwrap .val b{font-size:27px;font-weight:700;color:var(--navy);} .ringwrap .val small{font-size:11px;color:var(--muted);}
+  .hsright h2{font-size:18px;font-weight:650;} .hsright p{font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:5px;} .hsright b.t{color:var(--teal-d);}
+  .hsnote{display:flex;gap:7px;border-top:1px solid var(--line);margin-top:12px;padding-top:11px;font-size:11.5px;color:var(--muted);line-height:1.4;} .hsnote a{color:var(--teal-d);font-weight:650;}
+
+  .stats2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px;}
+  .stat{background:#fff;border:1px solid #DCEEEA;border-radius:13px;padding:12px 8px;text-align:center;}
+  .stat .k{font-size:9px;letter-spacing:.5px;color:var(--muted);font-weight:700;} .stat .v{font-size:16px;font-weight:700;color:var(--navy);margin:5px 0 3px;} .stat .v .u{font-size:10px;font-weight:400;color:var(--muted);} .stat .v.red{color:var(--red);} .stat .s{font-size:9.5px;color:var(--muted);}
+
+  .hero{position:relative;overflow:hidden;border-radius:18px;margin-top:11px;padding:17px;background:radial-gradient(circle at 88% 12%, rgba(25,199,166,.22), transparent 42%),radial-gradient(circle at 10% 90%, rgba(193,138,56,.14), transparent 40%),linear-gradient(150deg,#231D45,#33285C);color:#fff;box-shadow:0 14px 34px rgba(20,14,50,.45);cursor:pointer;}
+  .hero::before{content:"";position:absolute;inset:0;opacity:.5;background:repeating-linear-gradient(0deg,rgba(255,255,255,.04),rgba(255,255,255,.04) 1px,transparent 1px,transparent 22px),repeating-linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.04) 1px,transparent 1px,transparent 22px);}
+  .hero>*{position:relative;z-index:1;}
+  .eyebrow{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;font-weight:800;color:#9DEFDB;}
+  .rankrow{display:flex;align-items:flex-end;gap:10px;margin-top:8px;} .rankrow .big{font-size:40px;font-weight:800;letter-spacing:-2px;line-height:.9;} .rankrow .rmeta b{font-size:13px;font-weight:700;} .rankrow .rmeta p{font-size:11px;color:rgba(255,255,255,.7);margin-top:1px;}
+  .preview{position:relative;margin:14px 0 3px;height:54px;}
+  .road{position:absolute;left:0;right:0;top:27px;height:11px;background:#15102E;border-radius:3px;} .road::after{content:"";position:absolute;top:4px;left:0;right:0;border-top:2px dashed rgba(232,163,58,.55);}
+  .ph{position:absolute;width:22px;height:20px;border-radius:4px 4px 2px 2px;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);} .ph::before{content:"";position:absolute;top:-6px;left:-1px;right:-1px;height:8px;background:inherit;clip-path:polygon(0 100%,50% 0,100% 100%);} .ph .cd{position:absolute;bottom:2px;right:2px;width:5px;height:5px;border-radius:50%;}
+  .ph.you{width:28px;height:26px;background:#9DEFDB;box-shadow:0 0 0 4px rgba(25,199,166,.3);animation:pulse 2.2s ease-out infinite;} .ph.you .pin{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:12px;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(25,199,166,.4);}70%{box-shadow:0 0 0 11px rgba(25,199,166,0);}100%{box-shadow:0 0 0 0 rgba(25,199,166,0);}}
+  .projchip{display:inline-flex;align-items:center;gap:6px;margin-top:7px;font-size:11.5px;font-weight:800;color:#0c1f1a;background:linear-gradient(135deg,#9DEFDB,var(--teal-br));padding:6px 12px;border-radius:99px;}
+  .heroCta{position:relative;overflow:hidden;display:flex;width:100%;margin-top:13px;padding:13px;border:none;border-radius:12px;background:#fff;color:var(--navy);font-family:inherit;font-size:14px;font-weight:800;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+  .heroCta::after{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(25,199,166,.25),transparent);transform:translateX(-200%) skewX(-18deg);animation:sheen 4.4s ease-in-out 1.2s infinite;}
+  .heroCta .ar{animation:nudge 1.5s ease-in-out infinite;}
+  @keyframes sheen{0%{transform:translateX(-200%) skewX(-18deg);}30%,100%{transform:translateX(360%) skewX(-18deg);}}
+  @keyframes nudge{0%,100%{transform:translateX(0);}50%{transform:translateX(4px);}}
+
+  .splitfoot{font-size:10.5px;letter-spacing:.5px;color:var(--muted);font-weight:700;margin:18px 2px 9px;}
+  .splits{background:#fff;border-radius:14px;padding:4px 14px;box-shadow:var(--shadow);}
+  .sp{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #F2F1F8;font-size:13px;} .sp:last-child{border-bottom:none;} .sp .e{width:18px;} .sp .n{flex:1;color:var(--navy);font-weight:600;} .sp .sc{font-weight:700;color:var(--navy);}
+
+  .forkhead{text-align:center;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:22px 0 11px;}
+  .fopt{display:flex;align-items:center;gap:13px;padding:15px;border-radius:15px;border:none;text-align:left;width:100%;font-family:inherit;cursor:pointer;margin-bottom:10px;}
+  .fopt.own{background:linear-gradient(135deg,var(--teal-d),var(--teal));color:#fff;box-shadow:0 8px 18px rgba(15,110,86,.26);} .fopt.buy{background:#fff;color:var(--navy);box-shadow:var(--shadow);}
+  .fopt .fic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none;} .fopt.own .fic{background:rgba(255,255,255,.18);} .fopt.buy .fic{background:var(--pale);}
+  .fopt .ft{font-size:15px;font-weight:700;} .fopt .fs{font-size:12px;margin-top:2px;} .fopt.own .fs{color:rgba(255,255,255,.85);} .fopt.buy .fs{color:var(--muted);}
+
+  /* ---------- INTERNAL PASSPORT SCREEN ---------- */
+  .ip-eyebrow{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--faint);font-weight:800;}
+  .ip-h1{font-size:23px;font-weight:750;color:var(--navy);margin:5px 0 2px;letter-spacing:-.3px;}
+  .ip-sub1{font-size:12.5px;color:var(--muted);}
+  .scores{background:radial-gradient(circle at 85% 10%,rgba(25,199,166,.16),transparent 45%),linear-gradient(150deg,var(--navy),var(--navy-2));border-radius:18px;padding:18px 14px;margin-top:14px;color:#fff;box-shadow:0 12px 28px rgba(20,14,50,.4);}
+  .srow{display:flex;justify-content:space-around;}
+  .ip-ringwrap{position:relative;width:78px;height:78px;text-align:center;} .ip-ringwrap .v{position:absolute;top:0;left:0;right:0;height:78px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;}
+  .rlbl{font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:rgba(255,255,255,.7);font-weight:700;margin-top:6px;} .rsub{font-size:9.5px;color:rgba(255,255,255,.45);margin-top:1px;}
+  .scnote{margin-top:14px;font-size:11px;color:rgba(255,255,255,.7);line-height:1.45;background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;} .scnote b{color:#9DEFDB;}
+
+  .epcstatus{position:relative;background:#fff;border:1.5px solid #ECD9AC;border-radius:18px;padding:17px;margin-top:13px;box-shadow:0 10px 26px rgba(193,138,56,.14);overflow:hidden;}
+  .epcstatus::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(180deg,var(--gold),var(--gold-d));}
+  .es-eye{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold-d);font-weight:800;}
+  .es-h{font-size:17px;font-weight:750;color:var(--navy);margin:6px 0 14px;letter-spacing:-.2px;}
+  .compare{display:flex;align-items:center;gap:10px;}
+  .badge{flex:1;border-radius:13px;padding:13px 10px;text-align:center;}
+  .badge.stale{background:#F4F3F8;border:1px solid #E4E3EE;} .badge.ver{background:var(--pale);border:1px solid #BFE7DF;}
+  .badge .bl{font-size:9px;letter-spacing:.5px;text-transform:uppercase;font-weight:800;} .badge.stale .bl{color:var(--muted);} .badge.ver .bl{color:var(--teal-d);}
+  .badge .letter{width:38px;height:38px;border-radius:9px;margin:8px auto 0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;}
+  .badge.stale .letter{background:var(--epcE);opacity:.65;} .badge.ver .letter{background:var(--epcC);}
+  .badge .num{font-size:12px;font-weight:700;color:var(--navy);margin-top:6px;} .badge.stale .num{color:var(--muted);}
+  .badge .tagp{font-size:9px;font-weight:700;margin-top:6px;display:inline-block;padding:2px 8px;border-radius:99px;}
+  .badge.stale .tagp{background:#E7E6F0;color:#8A8899;} .badge.ver .tagp{background:#fff;color:var(--teal-d);}
+  .arrow{font-size:18px;color:var(--gold);font-weight:700;flex:none;}
+  .es-p{font-size:12px;color:var(--muted);line-height:1.5;margin:14px 0 0;} .es-p b{color:var(--navy);}
+  .es-btn{display:flex;width:100%;margin-top:14px;padding:13px;border:2px solid #00A19A;border-radius:12px;background:#fff;color:#007E78;font-family:inherit;font-size:14px;font-weight:700;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+  .es-micro{text-align:center;font-size:10px;color:var(--faint);margin-top:9px;}
+
+  .qhead{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:20px 2px 9px;}
+  .qlink{display:flex;align-items:center;gap:12px;background:#fff;border-radius:13px;padding:13px 14px;box-shadow:var(--shadow);margin-bottom:9px;cursor:pointer;}
+  .qlink .qic{width:38px;height:38px;border-radius:10px;background:var(--pale);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;}
+  .qlink b{font-size:13.5px;font-weight:650;color:var(--navy);} .qlink p{font-size:11px;color:var(--muted);margin-top:1px;}
+  .qlink .pill{margin-left:auto;font-size:11px;font-weight:700;color:var(--teal-d);background:var(--pale);border-radius:99px;padding:4px 10px;flex:none;}
+
+  /* ---------- SHARED POP-OUT ---------- */
+  .backdrop{position:absolute;inset:0;background:rgba(24,22,40,.6);backdrop-filter:blur(2px);display:none;align-items:flex-end;z-index:50;} .backdrop.open{display:flex;}
+  .sheet{width:100%;max-height:94%;background:#fff;border-radius:22px 22px 0 0;overflow-y:auto;padding:18px 16px 24px;scrollbar-width:none;animation:slideup .35s cubic-bezier(.2,.8,.2,1);} .sheet::-webkit-scrollbar{display:none;}
+  @keyframes slideup{from{transform:translateY(100%);}to{transform:none;}}
+  .phead{display:flex;align-items:flex-start;gap:11px;} .phead .ic{width:40px;height:40px;border-radius:11px;background:var(--pale);display:flex;align-items:center;justify-content:center;font-size:19px;flex:none;} .phead b{font-size:15px;font-weight:750;color:var(--navy);line-height:1.2;} .phead p{font-size:11px;color:var(--muted);margin-top:3px;} .phead .x{margin-left:auto;width:32px;height:32px;border-radius:9px;background:#F2F1F8;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);flex:none;cursor:pointer;}
+  .hr{height:1px;background:var(--line);margin:13px 0;}
+  .rankcard{display:flex;align-items:center;gap:14px;background:var(--pale);border:1px solid #BFE7DF;border-radius:13px;padding:13px 15px;} .rankcard .n{font-size:30px;font-weight:800;color:var(--teal-d);letter-spacing:-1px;} .rankcard b{font-size:13.5px;font-weight:700;color:var(--navy);} .rankcard small{font-size:11.5px;color:var(--muted);display:block;margin-top:2px;}
+  .legend{display:flex;gap:11px;justify-content:center;margin:13px 0;flex-wrap:wrap;} .lg{font-size:11px;color:var(--navy);font-weight:600;display:inline-flex;align-items:center;gap:5px;} .lg .d{width:8px;height:8px;border-radius:50%;}
+  .mapwrap{background:linear-gradient(180deg,#CDE7E2,#DDEAE0);border-radius:13px;padding:13px 12px 9px;overflow-x:auto;scrollbar-width:none;} .mapwrap::-webkit-scrollbar{display:none;}
+  .mapinner{width:max-content;padding:0;position:relative;} .hrow{display:flex;gap:6px;}
+  .road2{height:18px;background:#3a3550;border-radius:3px;margin:5px 0;display:flex;align-items:center;justify-content:center;position:relative;} .road2::after{content:"";position:absolute;left:8px;right:8px;border-top:2px dashed var(--amber);} .road2 span{font-size:7.5px;letter-spacing:3px;color:rgba(255,255,255,.5);font-weight:700;position:relative;}
+  .h2c{width:44px;flex:none;text-align:center;} .rf{width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:11px solid #C0584C;margin:0 auto;} .bd{width:34px;height:27px;background:#fff;margin:0 auto;border-radius:2px;position:relative;box-shadow:0 2px 4px rgba(0,0,0,.12);} .ec{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:3px;font-size:7px;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;} .dt{position:absolute;bottom:3px;right:3px;width:7px;height:7px;border-radius:50%;} .nm{font-size:9.5px;color:#3a3550;margin-top:3px;font-weight:700;}
+  .h2c.you .rf{border-bottom-color:var(--teal);} .h2c.you .bd{box-shadow:0 0 0 3px rgba(18,156,140,.4);} .h2c.you .nm{color:var(--teal-d);} .h2c.you .pin{font-size:13px;display:block;margin-bottom:-2px;animation:bob 1.8s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+  .swipe{text-align:center;font-size:10.5px;color:var(--muted);margin:11px 0 3px;} .taphint{text-align:center;font-size:11px;color:var(--faint);font-style:italic;margin-bottom:11px;}
+  .tapped{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;} .tapped b{font-size:13.5px;color:var(--navy);} .tapped .gr{font-size:11.5px;font-weight:700;color:#fff;background:var(--red);border-radius:7px;padding:5px 10px;} .tapped .cost{margin-left:auto;font-size:16px;font-weight:800;color:var(--red);}
+  .proj{display:flex;align-items:center;gap:12px;border:1.5px solid var(--teal);border-radius:13px;padding:14px;margin-top:11px;} .proj .ic{width:40px;height:40px;border-radius:10px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;} .proj .eb{font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--teal-d);font-weight:800;} .proj .v{font-size:20px;font-weight:800;color:var(--navy);} .proj .s{font-size:11.5px;color:var(--teal-d);font-weight:600;} .proj .save{margin-left:auto;text-align:right;border-left:1px solid var(--line);padding-left:12px;flex:none;} .proj .save .a{font-size:18px;font-weight:800;color:var(--teal-d);} .proj .save .l{font-size:9.5px;color:var(--muted);}
+  .connector{display:flex;justify-content:center;} .connector .pipe{width:2px;height:15px;background:var(--gold);position:relative;} .connector .pipe::after{content:"TO GET THERE";position:absolute;left:8px;top:0;font-size:7.5px;font-weight:800;letter-spacing:.5px;color:var(--gold);white-space:nowrap;}
+  .epcprompt{border:2px solid var(--gold);border-radius:14px;padding:15px;background:#FFFDF8;}
+  .epcprompt .warn{display:flex;align-items:center;gap:9px;} .epcprompt .wic{width:34px;height:34px;border-radius:9px;background:var(--gold-pale);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;} .epcprompt b{font-size:14px;font-weight:750;color:var(--navy);} .epcprompt p{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:8px;} .epcprompt p b{color:var(--navy);}
+  .epcbtn{display:flex;width:100%;margin-top:12px;padding:12px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--gold),#A9772A);color:#fff;font-family:inherit;font-size:13.5px;font-weight:700;align-items:center;justify-content:center;gap:7px;cursor:pointer;} .epcprompt .micro{text-align:center;font-size:10px;color:var(--faint);margin-top:7px;}
+  /* walking figure + tappable houses */
+  .walker{position:absolute;top:40px;left:0;z-index:5;transition:left 1.2s ease-in-out;}
+  .person{display:block;overflow:visible;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.9));}
+  .person line,.person circle{stroke:#fff;stroke-width:2.4;stroke-linecap:round;fill:none;}
+  .person .head{fill:#fff;stroke:none;}
+  .person .leg,.person .arm{transform-box:view-box;}
+  .person .leg{transform-origin:12px 19px;} .person .arm{transform-origin:12px 11px;}
+  .person .l1{transform:rotate(13deg);} .person .l2{transform:rotate(-13deg);}
+  .person .a1{transform:rotate(-17deg);} .person .a2{transform:rotate(17deg);}
+  .person.walking .l1{animation:legA .5s ease-in-out infinite;}
+  .person.walking .l2{animation:legB .5s ease-in-out infinite;}
+  .person.walking .a1{animation:armB .5s ease-in-out infinite;}
+  .person.walking .a2{animation:armA .5s ease-in-out infinite;}
+  @keyframes legA{0%,100%{transform:rotate(16deg);}50%{transform:rotate(-16deg);}}
+  @keyframes legB{0%,100%{transform:rotate(-16deg);}50%{transform:rotate(16deg);}}
+  @keyframes armA{0%,100%{transform:rotate(28deg);}50%{transform:rotate(-22deg);}}
+  @keyframes armB{0%,100%{transform:rotate(-28deg);}50%{transform:rotate(22deg);}}
+  @keyframes housepop{0%{transform:scale(1);}45%{transform:scale(1.2) translateY(-3px);}100%{transform:scale(1);}}
+  .h2c.pop{animation:housepop .38s cubic-bezier(.25,1.5,.45,1);}
+  @keyframes walk{0%{left:2%;}50%{left:80%;}100%{left:2%;}}
+  .h2c{cursor:pointer;transition:transform .1s;} .h2c:active{transform:scale(.93);}
+  .h2c.sel .bd{box-shadow:0 0 0 3px var(--navy);} .h2c.sel.you .bd{box-shadow:0 0 0 3px var(--teal);}
+  /* unified pathway → EPC block */
+  .pathblock{border:1.5px solid #E6E5EF;border-radius:16px;overflow:hidden;margin-top:13px;background:#fff;}
+  .pb-proj{display:flex;align-items:center;gap:12px;padding:15px;}
+  .pb-proj .ic{width:40px;height:40px;border-radius:10px;background:var(--pale);display:flex;align-items:center;justify-content:center;font-size:17px;flex:none;}
+  .pb-proj .eb{font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--teal-d);font-weight:800;} .pb-proj .v{font-size:20px;font-weight:800;color:var(--navy);} .pb-proj .s{font-size:11.5px;color:var(--teal-d);font-weight:600;}
+  .pb-proj .save{margin-left:auto;text-align:right;flex:none;} .pb-proj .save .a{font-size:18px;font-weight:800;color:var(--teal-d);} .pb-proj .save .l{font-size:9.5px;color:var(--muted);}
+  .pb-div{display:flex;align-items:center;gap:9px;padding:0 15px 2px;} .pb-div .ln{flex:1;height:1px;background:#ECE3CE;} .pb-div .lbl{font-size:8.5px;font-weight:800;letter-spacing:.7px;color:var(--gold-d);}
+  .pb-epc{padding:15px;background:#FFFDF8;border-top:1px solid #F2E9D2;}
+  .pb-epc b.t{font-size:14px;font-weight:750;color:var(--navy);display:block;}
+  .pb-epc p{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:7px;} .pb-epc p b{color:var(--navy);}
+  .pb-epc .btn{display:flex;width:100%;margin-top:12px;padding:12px;border:2px solid #00A19A;border-radius:11px;background:#fff;color:#007E78;font-family:inherit;font-size:13.5px;font-weight:700;align-items:center;justify-content:center;gap:7px;cursor:pointer;}
+  .pb-epc .micro{text-align:center;font-size:10px;color:var(--faint);margin-top:7px;}
+  /* transition beat */
+  .transition{position:absolute;inset:0;background:linear-gradient(160deg,var(--navy),var(--navy-2));z-index:60;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px;color:#fff;text-align:center;}
+  .transition.open{display:flex;animation:fadein .3s;} @keyframes fadein{from{opacity:0;}to{opacity:1;}}
+  .tr-check{width:62px;height:62px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:16px;animation:pop .45s cubic-bezier(.2,1.5,.4,1);} @keyframes pop{from{transform:scale(0);}to{transform:scale(1);}}
+  .tr-h{font-size:22px;font-weight:750;letter-spacing:-.3px;} .tr-sub{font-size:12.5px;color:rgba(255,255,255,.65);margin-top:6px;}
+  .tr-steps{display:flex;flex-direction:column;gap:9px;margin:24px 0;width:100%;max-width:286px;}
+  .tr-step{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.08);border-radius:12px;padding:11px 13px;text-align:left;}
+  .tr-step .d{width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .tr-step b{font-size:12.5px;font-weight:650;} .tr-step span{font-size:10.5px;color:rgba(255,255,255,.55);}
+  .tr-score{font-size:13px;font-weight:800;color:#9DEFDB;margin-left:auto;}
+  .tr-btn{width:100%;max-width:286px;padding:14px;border:none;border-radius:13px;background:#fff;color:var(--navy);font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;}
+  /* property-journey top card (matches original prototype) */
+  .journey{background:radial-gradient(circle at 85% 8%,rgba(25,199,166,.18),transparent 45%),linear-gradient(150deg,var(--navy),var(--navy-2));border-radius:18px;padding:18px 16px;margin-top:6px;color:#fff;box-shadow:0 12px 28px rgba(20,14,50,.4);}
+  .j-head{display:flex;align-items:center;justify-content:space-between;}
+  .j-eye{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:#9DEFDB;font-weight:800;}
+  .j-priv{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.85);background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:99px;padding:3px 10px;}
+  .j-addr{font-size:20px;font-weight:750;letter-spacing:-.3px;margin:11px 0 16px;} .j-addr span{display:block;font-size:11.5px;font-weight:400;color:rgba(255,255,255,.62);margin-top:3px;}
+  .j-foot{margin-top:15px;font-size:11px;color:rgba(255,255,255,.72);line-height:1.45;background:rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;}
+  /* old-prototype action cards */
+  .sechead{display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:20px 2px 9px;}
+  .sechead .cnt-pill{font-size:11px;font-weight:700;color:var(--teal-d);background:var(--pale);border-radius:99px;padding:3px 10px;text-transform:none;letter-spacing:0;}
+  .actcard{display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:14px;box-shadow:var(--shadow);margin-bottom:9px;cursor:pointer;}
+  .actcard.hl{border:1.5px solid #BFE7DF;}
+  .actcard .aic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;}
+  .actcard b{font-size:14px;font-weight:650;color:var(--navy);} .actcard p{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.35;}
+  .actcard .plus{width:32px;height:32px;border-radius:50%;background:var(--teal-d);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none;margin-left:auto;}
+  .actcard .chev{margin-left:auto;color:var(--faint);font-weight:700;flex:none;font-size:18px;}
+  .actcard .pill{margin-left:auto;font-size:11px;font-weight:700;color:var(--teal-d);background:var(--pale);border-radius:99px;padding:4px 10px;flex:none;}
+  .rprog{transition:stroke-dashoffset .9s cubic-bezier(.3,.9,.3,1);}
+  /* next step / start my passport card */
+  .nextstep{background:linear-gradient(155deg,#00A19A,#00857E);border-radius:18px;padding:20px 16px;margin-top:14px;color:#fff;box-shadow:0 12px 28px rgba(0,120,112,.3);}
+  .ns-eye{font-size:10px;letter-spacing:1.3px;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:800;}
+  .ns-rings{display:flex;justify-content:space-around;margin:16px 0 4px;}
+  .ns-ringwrap{position:relative;width:84px;height:84px;text-align:center;} .ns-v{position:absolute;top:0;left:0;right:0;height:84px;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:800;} .ns-v small{font-size:13px;}
+  .ns-lbl{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.82);font-weight:700;margin-top:6px;}
+  .ns-h{font-size:21px;font-weight:750;margin-top:15px;letter-spacing:-.3px;}
+  .ns-p{font-size:12.5px;color:rgba(255,255,255,.82);line-height:1.5;margin-top:8px;}
+  .ns-btn{display:flex;width:100%;margin-top:16px;padding:15px;border:none;border-radius:13px;background:#fff;color:#007E78;font-family:inherit;font-size:15px;font-weight:700;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+  /* fork info sheets */
+  .isheet-ic{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;}
+  .isheet-h{font-size:19px;font-weight:750;color:var(--navy);margin-top:12px;letter-spacing:-.2px;}
+  .isheet-sub{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.45;}
+  .ilist{margin:16px 0;display:flex;flex-direction:column;gap:11px;}
+  .iitem{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;color:var(--navy);line-height:1.4;} .iitem b{font-weight:700;}
+  .iitem .tk{width:20px;height:20px;border-radius:50%;background:var(--pale);color:var(--teal-d);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;}
+  .isheet-cta{display:flex;width:100%;padding:14px;border:none;border-radius:13px;font-family:inherit;font-size:15px;font-weight:700;align-items:center;justify-content:center;gap:8px;cursor:pointer;}
+  .isheet-cta.own{background:linear-gradient(135deg,var(--teal-d),var(--teal));color:#fff;} .isheet-cta.buy{background:var(--navy);color:#fff;}
+  .isheet-skip{text-align:center;font-size:13px;color:var(--muted);font-weight:600;margin-top:12px;cursor:pointer;}
+</style>
+</head>
+<body>
+  <div class="devbar">
+    <span class="dcap">Owner journey · connected prototype</span>
+    <div class="dsw">
+      <button id="d-home" class="dbtn active" onclick="showHome()">① HomeScore (visitor)</button>
+      <button id="d-pass" class="dbtn" onclick="showPassport()">② Home base (owner)</button>
+    </div>
+    <span class="dhint">Tap “I own this property” to move from ① to ② · quiz/pathway/boost (already built) sit between them</span>
+  </div>
+
+  <div class="phone">
+
+    <!-- ============ SCREEN 1: HOMESCORE ============ -->
+    <div id="screen-home" class="scroll">
+      <div class="topbar"><div class="tbtn">‹</div><div class="ttl"><b>Your HomeScore</b><div>Your home’s energy snapshot</div></div><div class="tbtn" style="color:var(--teal);">?</div></div>
+
+      <div class="card">
+        <div class="chead"><span class="ring"></span><div><div class="addr">35, Woodfield Road</div><div class="meta">CV5 6AJ · House · 93m²</div></div></div>
+        <div class="cdiv"></div>
+        <div class="tiles">
+          <div class="tile"><span class="tlabel">EPC rating</span><div class="epc">E</div><div class="tbar"><i style="width:38%;"></i></div><div class="thook">Room to improve</div></div>
+          <div class="tile"><span class="tlabel">⚡ HomeScore</span><div class="hs"><b>46</b>/100</div><div class="tbar"><i style="width:46%;"></i></div><div class="thook">Room to climb</div></div>
+        </div>
+        <div class="vrow"><span class="dot"></span><span><b>3 people</b> checked this HomeScore today</span></div>
+      </div>
+
+      <div class="claim"><div style="flex:1;"><b>This property is unclaimed</b><p>Is it yours? Build your verified Passport in minutes.</p></div><div class="ar">→</div></div>
+
+      <div class="hscard">
+        <div class="hslabel">HOMESCORE™</div>
+        <div class="hsrow">
+          <div class="ringwrap"><svg width="92" height="92" viewBox="0 0 92 92"><circle cx="46" cy="46" r="40" fill="none" stroke="#EAEAF0" stroke-width="8"/><circle cx="46" cy="46" r="40" fill="none" stroke="#00A19A" stroke-width="8" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="136" transform="rotate(-90 46 46)"/></svg><div class="val"><b>46</b><small>/100</small></div></div>
+          <div class="hsright"><h2>Room to climb · E → C</h2><p>The EPC lists <b class="t">6 steps</b> to cut bills by <b class="t">~£987/yr</b>.</p></div>
+        </div>
+        <div class="hsnote"><span>ⓘ</span><div>Based on a <b style="color:var(--navy);">2017 EPC</b>. <a>Refine with the quiz →</a></div></div>
+      </div>
+
+      <div class="stats2">
+        <div class="stat"><div class="k">EST. BILLS</div><div class="v">£1,425<span class="u">/yr</span></div><div class="s">Save £987/yr</div></div>
+        <div class="stat"><div class="k">CO₂</div><div class="v red">6.6<span class="u">t/yr</span></div><div class="s">UK avg 6.0t</div></div>
+      </div>
+
+      <div class="hero" onclick="openStreet()">
+        <div class="eyebrow">🏘 Your street · Woodfield Road</div>
+        <div class="rankrow"><span class="big">#21</span><div class="rmeta"><b>of 43 homes</b><p>£190 cheaper than the street average</p></div></div>
+        <div class="preview">
+          <div class="road"></div>
+          <div class="ph" style="left:0%;top:5px;"><span class="cd" style="background:var(--green);"></span></div>
+          <div class="ph" style="left:14%;top:5px;"><span class="cd" style="background:var(--red);"></span></div>
+          <div class="ph" style="left:28%;top:5px;"><span class="cd" style="background:var(--amber);"></span></div>
+          <div class="ph you" style="left:43%;top:1px;"><span class="pin">📍</span><span class="cd" style="background:var(--amber);"></span></div>
+          <div class="ph" style="left:60%;top:5px;"><span class="cd" style="background:var(--green);"></span></div>
+          <div class="ph" style="left:74%;top:5px;"><span class="cd" style="background:var(--red);"></span></div>
+          <div class="ph" style="left:88%;top:5px;"><span class="cd" style="background:var(--amber);"></span></div>
+        </div>
+        <span class="projchip">↑ You could be 2nd · save £987/yr</span>
+        <button class="heroCta">Explore your street map <span class="ar">→</span></button>
+      </div>
+
+      <div class="splitfoot">HOW YOUR 46 SPLITS · EPC STATS</div>
+      <div class="splits">
+        <div class="sp"><span class="e">🔥</span><span class="n">Heating</span><span class="sc">14/20</span></div>
+        <div class="sp"><span class="e">🧱</span><span class="n">Structure</span><span class="sc">17/25</span></div>
+        <div class="sp"><span class="e">💡</span><span class="n">Efficiency</span><span class="sc">7/15</span></div>
+        <div class="sp"><span class="e">⚡</span><span class="n">Electrics</span><span class="sc">10/20</span></div>
+        <div class="sp"><span class="e">💧</span><span class="n">Plumbing</span><span class="sc">4/20</span></div>
+      </div>
+
+      <div class="forkhead">What’s your connection to this property?</div>
+      <button class="fopt own" onclick="openOwn()"><div class="fic">🏠</div><div><div class="ft">I own this property</div><div class="fs">Take the quiz &amp; get your real HomeScore.</div></div></button>
+      <button class="fopt buy" onclick="openBuy()"><div class="fic">🔍</div><div><div class="ft">I’m interested in this property</div><div class="fs">Full running costs, risks &amp; questions before you offer.</div></div></button>
+      <div style="height:14px;"></div>
+    </div>
+
+    <!-- ============ SCREEN 2: INTERNAL PASSPORT ============ -->
+    <div id="screen-passport" class="scroll" style="display:none;">
+      <div class="topbar"><div class="tbtn" onclick="showHome()">‹</div><div class="av">MW</div></div>
+
+      <div class="journey">
+        <div class="j-head"><span class="j-eye">✨ Your property journey</span><span class="j-priv">🔒 Private</span></div>
+        <div class="j-addr">35 Woodfield Road<span>CV5 6AJ · House · 93m²</span></div>
+        <div class="srow">
+          <div><div class="ip-ringwrap"><svg width="78" height="78" viewBox="0 0 78 78"><circle cx="39" cy="39" r="32" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="7"/><circle class="rprog" data-off="72" cx="39" cy="39" r="32" fill="none" stroke="#19C7A6" stroke-width="7" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" transform="rotate(-90 39 39)"/></svg><div class="v"><span class="cnt" data-to="64">0</span></div></div><div class="rlbl">HomeScore</div><div class="rsub">Energy</div></div>
+          <div><div class="ip-ringwrap"><svg width="78" height="78" viewBox="0 0 78 78"><circle cx="39" cy="39" r="32" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="7"/><circle class="rprog" data-off="110" cx="39" cy="39" r="32" fill="none" stroke="#E8A33A" stroke-width="7" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" transform="rotate(-90 39 39)"/></svg><div class="v" style="font-size:17px;"><span class="cnt" data-to="45">0</span><small style="font-size:11px;">%</small></div></div><div class="rlbl">Move Ready</div><div class="rsub">docs &amp; certs</div></div>
+          <div><div class="ip-ringwrap"><svg width="78" height="78" viewBox="0 0 78 78"><circle cx="39" cy="39" r="32" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="7"/><circle class="rprog" data-off="80" cx="39" cy="39" r="32" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" transform="rotate(-90 39 39)"/></svg><div class="v" style="font-size:17px;"><span class="cnt" data-to="60">0</span><small style="font-size:11px;">%</small></div></div><div class="rlbl">Passport</div><div class="rsub">ownership</div></div>
+        </div>
+        <div class="j-foot">🔒 Only you see this — a buyer sees it when they purchase your Passport, not the public figure.</div>
+      </div>
+
+      <div class="epcstatus">
+        <div class="es-eye">Make it official</div>
+        <div class="es-h">The public still sees your 2017 EPC</div>
+        <div class="compare">
+          <div class="badge stale"><div class="bl">Public record</div><div class="letter">E</div><div class="num">46 · 2017</div><span class="tagp">out of date</span></div>
+          <span class="arrow">→</span>
+          <div class="badge ver"><div class="bl">Your verified score</div><div class="letter">C</div><div class="num">64 · now</div><span class="tagp">✓ confirmed</span></div>
+        </div>
+        <p class="es-p">Your <b>street rank and the public register</b> still read E·46 from 2017 — so the work you’ve done isn’t showing where it counts. A new EPC syncs the public record to your verified score.</p>
+        <button class="es-btn">Update my EPC · from £60 →</button>
+        <div class="es-micro">Only your new official EPC moves your public street rank.</div>
+      </div>
+
+      <div class="sechead">📎 Upload a document <span class="cnt-pill">0 of 4</span></div>
+      <div class="actcard hl"><div class="aic" style="background:#FBEFC8;">💡</div><div style="flex:1;"><b>Utility bills</b><p>See your actual spend vs your EPC estimate — most impactful first step</p></div><div class="plus">+</div></div>
+
+      <div class="sechead">🔧 Book a professional</div>
+      <div class="actcard"><div class="aic" style="background:#F6D9A8;">🔥</div><div style="flex:1;"><b>Book a Gas Safe engineer</b><p>Service your boiler · cert auto-lands in your score</p></div><span class="chev">›</span></div>
+      <div class="actcard"><div class="aic" style="background:#E6DCF7;">⚡</div><div style="flex:1;"><b>Book an electrician (EICR)</b><p>Electrical check · from £150</p></div><span class="chev">›</span></div>
+      <div class="actcard"><div class="aic" style="background:#CDEBD3;">🏠</div><div style="flex:1;"><b>New EPC assessment</b><p>From £60 · required if yours is 10+ years old</p></div><span class="chev">›</span></div>
+
+      <div class="sechead">🏘 Your street</div>
+      <div class="actcard" onclick="openStreet()"><div class="aic" style="background:var(--pale);">📍</div><div style="flex:1;"><b>How you rank on Woodfield Road</b><p>See the map &amp; what would move you up</p></div><span class="pill">#21 of 43</span></div>
+
+      <div class="nextstep">
+        <div class="ns-eye">✦ Next step on your journey</div>
+        <div class="ns-h">Your Passport is 60% there.</div>
+        <div class="ns-p">Each document you add lifts your scores. Reach Move Ready and publish your Passport to lock in everything you’ve built.</div>
+        <button class="ns-btn">🚀 Continue my Passport →</button>
+      </div>
+      <div style="height:12px;"></div>
+    </div>
+
+    <!-- ============ FORK POP-OUTS ============ -->
+    <div class="backdrop" id="own-bd" onclick="if(event.target===this)closeOwn()">
+      <div class="sheet">
+        <div class="isheet-ic" style="background:var(--pale);">🏠</div>
+        <div class="isheet-h">Is 35 Woodfield Road yours?</div>
+        <div class="isheet-sub">The score above is just an estimate from the EPC. A quick quiz refines it into your real HomeScore — here’s where it leads:</div>
+        <div class="ilist">
+          <div class="iitem"><span class="tk">1</span><div><b>Take a 2-minute quiz</b> — turn the public estimate into your real HomeScore</div></div>
+          <div class="iitem"><span class="tk">2</span><div><b>Unlock your pathway</b> — the steps to cut bills by ~£987/yr</div></div>
+          <div class="iitem"><span class="tk">3</span><div><b>Build a verified Passport</b> — the figure buyers pay to see</div></div>
+        </div>
+        <button class="isheet-cta own" onclick="closeOwn();showPassport();">Start the quiz →</button>
+        <div class="isheet-skip" onclick="closeOwn()">Not now</div>
+      </div>
+    </div>
+
+    <div class="backdrop" id="buy-bd" onclick="if(event.target===this)closeBuy()">
+      <div class="sheet">
+        <div class="isheet-ic" style="background:#EEF0FB;">🔍</div>
+        <div class="isheet-h">Thinking of buying this home?</div>
+        <div class="isheet-sub">Get the full picture before you offer on 35 Woodfield Road:</div>
+        <div class="ilist">
+          <div class="iitem"><span class="tk">✓</span><div><b>Full annual running costs</b> — what it really costs to live here</div></div>
+          <div class="iitem"><span class="tk">✓</span><div><b>Energy &amp; risk breakdown</b> from the EPC and public data</div></div>
+          <div class="iitem"><span class="tk">✓</span><div><b>The questions to ask</b> before you make an offer</div></div>
+          <div class="iitem"><span class="tk">✓</span><div><b>How it compares</b> on the street</div></div>
+        </div>
+        <button class="isheet-cta buy" onclick="closeBuy()">See the full picture →</button>
+        <div class="isheet-skip" onclick="closeBuy()">Not now</div>
+      </div>
+    </div>
+
+    <!-- ============ SHARED STREET POP-OUT ============ -->
+    <div class="backdrop" id="backdrop" onclick="if(event.target===this)closeStreet()">
+      <div class="sheet">
+        <div class="phead"><div class="ic">🏘</div><div><b>Your street, ranked by energy cost</b><p>CV5 6AJ · 43 homes · estimated from EPC data</p></div><div class="x" onclick="closeStreet()">✕</div></div>
+        <div class="hr"></div>
+        <div class="rankcard"><span class="n">#21</span><div><b>21st cheapest of 43 homes</b><small><b>£190 below</b> the postcode average of £1,651/yr</small></div></div>
+        <div class="legend"><span class="lg"><span class="d" style="background:var(--green);"></span>Under £1,200</span><span class="lg"><span class="d" style="background:var(--amber);"></span>£1,200–1,800</span><span class="lg"><span class="d" style="background:var(--red);"></span>Over £1,800</span></div>
+        <div class="mapwrap"><div class="mapinner">
+          <div class="hrow">
+            <div class="h2c" onclick="tapHouse(this,'27','C','72','£1,050','green')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--green);">C</span><span class="dt" style="background:var(--green);"></span></div><div class="nm">27</div></div>
+            <div class="h2c" onclick="tapHouse(this,'29','G','12','£2,400','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">G</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">29</div></div>
+            <div class="h2c" onclick="tapHouse(this,'31','F','25','£2,050','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">F</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">31</div></div>
+            <div class="h2c" onclick="tapHouse(this,'33','F','30','£1,920','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">F</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">33</div></div>
+            <div class="h2c you" onclick="tapHouse(this,'35','E','46','£1,461','amber')"><span class="pin">📍</span><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--amber);">E</span><span class="dt" style="background:var(--amber);"></span></div><div class="nm">35 ★</div></div>
+            <div class="h2c" onclick="tapHouse(this,'37','D','58','£1,560','amber')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--amber);">D</span><span class="dt" style="background:var(--amber);"></span></div><div class="nm">37</div></div>
+            <div class="h2c" onclick="tapHouse(this,'39','B','84','£980','green')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--green);">B</span><span class="dt" style="background:var(--green);"></span></div><div class="nm">39</div></div>
+            <div class="h2c" onclick="tapHouse(this,'41','G','15','£2,280','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">G</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">41</div></div>
+          </div>
+          <div class="road2"><span>WOODFIELD ROAD</span></div>
+          <span class="walker"><svg class="person" viewBox="0 0 24 34" width="22" height="30"><circle class="head" cx="12" cy="5" r="3.4"/><line class="body" x1="12" y1="8.5" x2="12" y2="19"/><line class="arm a1" x1="12" y1="11" x2="12" y2="21"/><line class="arm a2" x1="12" y1="11" x2="12" y2="21"/><line class="leg l1" x1="12" y1="19" x2="12" y2="30"/><line class="leg l2" x1="12" y1="19" x2="12" y2="30"/></svg></span>
+          <div class="hrow">
+            <div class="h2c" onclick="tapHouse(this,'28','F','28','£2,100','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">F</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">28</div></div>
+            <div class="h2c" onclick="tapHouse(this,'30','D','60','£1,540','amber')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--amber);">D</span><span class="dt" style="background:var(--amber);"></span></div><div class="nm">30</div></div>
+            <div class="h2c" onclick="tapHouse(this,'32','C','74','£1,140','green')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--green);">C</span><span class="dt" style="background:var(--green);"></span></div><div class="nm">32</div></div>
+            <div class="h2c" onclick="tapHouse(this,'34','A','93','£820','green')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--green);">A</span><span class="dt" style="background:var(--green);"></span></div><div class="nm">34</div></div>
+            <div class="h2c" onclick="tapHouse(this,'36','F','26','£1,990','red')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--red);">F</span><span class="dt" style="background:var(--red);"></span></div><div class="nm">36</div></div>
+            <div class="h2c" onclick="tapHouse(this,'38','E','48','£1,710','amber')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--amber);">E</span><span class="dt" style="background:var(--amber);"></span></div><div class="nm">38</div></div>
+            <div class="h2c" onclick="tapHouse(this,'40','D','62','£1,470','amber')"><div class="rf"></div><div class="bd"><span class="ec" style="background:var(--amber);">D</span><span class="dt" style="background:var(--amber);"></span></div><div class="nm">40</div></div>
+          </div>
+        </div></div>
+        <div class="swipe">← swipe to see the rest of your postcode →</div>
+        <div class="taphint">Tap any house to see its EPC and cost</div>
+        <div class="tapped" id="tapped"><b>No. 35</b><span class="gr" style="background:var(--amber);">E · 46</span><span class="cost" style="color:var(--amber);">£1,461/yr</span></div>
+        <div class="pathblock">
+          <div class="pb-proj"><div class="ic">📈</div><div><div class="eb">If you complete the EPC pathway</div><div class="v">£438<span style="font-size:12px;color:var(--muted);">/yr</span></div><div class="s">2nd of 43 · up from 21st</div></div><div class="save"><div class="a">−£987</div><div class="l">/yr saved</div></div></div>
+          <div class="pb-div"><span class="ln"></span><span class="lbl">TO GET THERE</span><span class="ln"></span></div>
+          <div class="pb-epc">
+            <b class="t">Your rank still reads your 2017 EPC</b>
+            <p>The street is calculated from your <b>public EPC — out of date</b>. Do the work, then update your EPC so the public record catches up and you climb here.</p>
+            <button class="btn">Update my EPC · from £60 →</button>
+            <div class="micro">Only your new official EPC moves your public street rank.</div>
+          </div>
+        </div>
+        <div style="height:10px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  function hideTransition(){var t=document.getElementById('transition');if(t)t.classList.remove('open');}
+  function showHome(){document.getElementById('screen-home').style.display='block';document.getElementById('screen-passport').style.display='none';document.getElementById('d-home').classList.add('active');document.getElementById('d-pass').classList.remove('active');hideTransition();closeStreet();}
+  function showPassport(){document.getElementById('screen-home').style.display='none';document.getElementById('screen-passport').style.display='block';document.getElementById('d-pass').classList.add('active');document.getElementById('d-home').classList.remove('active');hideTransition();closeStreet();animateScores();}
+  function countUp(el,to){var dur=950,t0=performance.now();function step(t){var p=Math.min((t-t0)/dur,1);el.textContent=Math.round((1-Math.pow(1-p,3))*to);if(p<1)requestAnimationFrame(step);}requestAnimationFrame(step);}
+  function animateScores(){
+    var rings=document.querySelectorAll('#screen-passport .rprog');
+    var cnts=document.querySelectorAll('#screen-passport .cnt');
+    rings.forEach(function(c){c.style.transition='none';c.style.strokeDashoffset=201;});
+    cnts.forEach(function(el){el.textContent='0';});
+    void document.getElementById('screen-passport').offsetWidth;
+    setTimeout(function(){
+      rings.forEach(function(c){c.style.transition='stroke-dashoffset .95s cubic-bezier(.3,.9,.3,1)';c.style.strokeDashoffset=c.getAttribute('data-off');});
+      cnts.forEach(function(el){countUp(el,parseInt(el.getAttribute('data-to'),10));});
+    },40);
+  }
+  function openStreet(){document.getElementById('backdrop').classList.add('open');setTimeout(function(){placeWalker(document.querySelector('.h2c.you'),false);},70);}
+  function closeStreet(){document.getElementById('backdrop').classList.remove('open');}
+  function openOwn(){document.getElementById('own-bd').classList.add('open');}
+  function closeOwn(){document.getElementById('own-bd').classList.remove('open');}
+  function openBuy(){document.getElementById('buy-bd').classList.add('open');}
+  function closeBuy(){document.getElementById('buy-bd').classList.remove('open');}
+  var BANDCOL={green:'#37B27A',amber:'#E8A33A',red:'#E0584F'};
+  var walkerX=0;
+  function placeWalker(el,animate){
+    var w=document.querySelector('.walker'), road=document.querySelector('.road2'), p=document.querySelector('.person');
+    if(!w||!el||!road) return;
+    var x=el.offsetLeft+el.offsetWidth/2-11;
+    w.style.top=(road.offsetTop-16)+'px';
+    if(animate){
+      var dur=Math.max(750,Math.abs(x-walkerX)*7);
+      w.style.transition='left '+dur+'ms linear';
+      p.classList.add('walking');
+      clearTimeout(w._t); w._t=setTimeout(function(){p.classList.remove('walking');},dur+60);
+      w.style.left=x+'px';
+    } else {
+      w.style.transition='none';
+      w.style.left=x+'px';
+      void w.offsetWidth;
+    }
+    walkerX=x;
+  }
+  function tapHouse(el,num,grade,score,cost,band){
+    document.querySelectorAll('.h2c').forEach(function(h){h.classList.remove('sel');});
+    el.classList.add('sel');
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    var c=BANDCOL[band], t=document.getElementById('tapped');
+    t.querySelector('b').textContent='No. '+num;
+    var gr=t.querySelector('.gr'); gr.textContent=grade+' · '+score; gr.style.background=c;
+    var cs=t.querySelector('.cost'); cs.textContent=cost+'/yr'; cs.style.color=c;
+    placeWalker(el,true);
+  }
+</script>
+</body>
+</html>
