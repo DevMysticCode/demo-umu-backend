@@ -26,6 +26,7 @@ export interface MarketplacePaymentDto {
   heldAt: string | null;
   releasedAt: string | null;
   refundedAt: string | null;
+  evidencePhotos: string[];
 }
 
 export interface AuthorizeResult {
@@ -194,6 +195,33 @@ export class EscrowService {
     return this.toDto(payment);
   }
 
+  // Append evidence photo URLs to the payment row. Either party can
+  // add (customer uploads "before" + ongoing shots, supplier uploads
+  // "completion" shots). We pre-validate that the URLs look like our
+  // own uploads to avoid users pasting in arbitrary external links.
+  async addEvidencePhotos(
+    viewerUserId: string,
+    paymentId: string,
+    photos: string[],
+  ): Promise<MarketplacePaymentDto> {
+    const payment = await this.findVisiblePayment(viewerUserId, paymentId);
+
+    const cleaned = (photos ?? [])
+      .map((p) => (p ?? '').toString().trim())
+      .filter((p) => p.startsWith('/uploads/'));
+    if (!cleaned.length) {
+      throw new BadRequestException('No valid photo URLs provided');
+    }
+    // Soft cap so a misbehaving client can't fill the column unbounded.
+    const next = [...(payment.evidencePhotos ?? []), ...cleaned].slice(0, 60);
+
+    const updated = await this.prisma.marketplacePayment.update({
+      where: { id: paymentId },
+      data: { evidencePhotos: next },
+    });
+    return this.toDto(updated);
+  }
+
   // ─── internal ─────────────────────────────────────────────────────
   private async findOwnPayment(viewerUserId: string, paymentId: string) {
     const payment = await this.prisma.marketplacePayment.findUnique({ where: { id: paymentId } });
@@ -228,6 +256,7 @@ export class EscrowService {
       heldAt: p.heldAt?.toISOString() ?? null,
       releasedAt: p.releasedAt?.toISOString() ?? null,
       refundedAt: p.refundedAt?.toISOString() ?? null,
+      evidencePhotos: Array.isArray(p.evidencePhotos) ? p.evidencePhotos : [],
     };
   }
 }
