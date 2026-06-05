@@ -18,6 +18,12 @@ export interface MarketplaceReviewDto {
   direction: 'customer_to_supplier' | 'supplier_to_customer';
   rating: number;
   body: string | null;
+  // Per-dimension scores. Null when the reviewer skipped the sliders.
+  punctuality: number | null;
+  communication: number | null;
+  workmanship: number | null;
+  reliability: number | null;
+  tags: string[];
   createdAt: string;
   fromUserName: string;
   fromUserInitials: string;
@@ -75,6 +81,13 @@ export class ReviewsService {
       throw new ForbiddenException('You are not a party to this job');
     }
 
+    // Normalise the tag list — trim each entry, drop blanks, cap length
+    // per chip. Keeps the column compact and predictable for downstream
+    // search/filter even if the client sends sloppy data.
+    const cleanTags = (dto.tags ?? [])
+      .map((t) => (t ?? '').toString().trim())
+      .filter((t) => t.length > 0 && t.length <= 60);
+
     try {
       const review = await this.prisma.marketplaceReview.create({
         data: {
@@ -84,6 +97,11 @@ export class ReviewsService {
           direction,
           rating: dto.rating,
           body: dto.body?.trim() || null,
+          punctuality: dto.punctuality ?? null,
+          communication: dto.communication ?? null,
+          workmanship: dto.workmanship ?? null,
+          reliability: dto.reliability ?? null,
+          tags: cleanTags,
         },
         include: { fromUser: true },
       });
@@ -228,6 +246,11 @@ export class ReviewsService {
       direction: r.direction,
       rating: r.rating,
       body: r.body,
+      punctuality: r.punctuality ?? null,
+      communication: r.communication ?? null,
+      workmanship: r.workmanship ?? null,
+      reliability: r.reliability ?? null,
+      tags: Array.isArray(r.tags) ? r.tags : [],
       createdAt: r.createdAt.toISOString(),
       fromUserName: nameFor(r.fromUser?.firstName, r.fromUser?.lastName),
       fromUserInitials: initialsFor(r.fromUser?.firstName, r.fromUser?.lastName),

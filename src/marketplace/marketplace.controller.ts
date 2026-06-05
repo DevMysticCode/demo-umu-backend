@@ -243,6 +243,28 @@ export class MarketplaceController {
     return this.escrow.getPayment(req.user.id, paymentId);
   }
 
+  // Evidence photos posted against the contract. Body shape:
+  //   { photos: ['/uploads/job-photos/abc.jpg', …] }
+  // Either the customer or the supplier can append (their respective
+  // before/after shots). Validated against /uploads/ prefix to keep
+  // arbitrary external URLs out of the column.
+  @Post('payments/:id/evidence')
+  @UseGuards(JwtAuthGuard)
+  addEvidence(
+    @Param('id') paymentId: string,
+    @Req() req: any,
+    @Body() body: { photos: string[] },
+  ) {
+    return this.escrow.addEvidencePhotos(req.user.id, paymentId, body?.photos ?? []);
+  }
+
+  // Contract page bundle — job + payment + offer + parties + thread.
+  @Get('jobs/:id/contract')
+  @UseGuards(JwtAuthGuard)
+  getContract(@Param('id') jobId: string, @Req() req: any) {
+    return this.service.getContract(req.user.id, jobId);
+  }
+
   // Used by the offers page to know whether to show the receipt link
   // instead of the accept/decline buttons.
   @Get('jobs/:id/payment')

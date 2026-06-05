@@ -74,6 +74,72 @@ export interface MarketplaceStats {
   completed: number;
 }
 
+// Bundled payload returned by `GET /marketplace/jobs/:id/contract`.
+// Composed in `MarketplaceService.getContract` so the contract screen
+// renders in a single round-trip — see comment on that method.
+export interface MarketplaceContractDto {
+  job: {
+    id: string;
+    title: string;
+    locationLabel: string;
+    categoryLabel: string;
+    startedAt: string;        // ISO date — payment.heldAt or createdAt
+    status: string;
+  };
+  payment: {
+    id: string;
+    jobId: string;
+    offerId: string;
+    customerId: string;
+    supplierId: string;
+    amount: number;
+    platformFee: number;
+    total: number;
+    status: 'pending' | 'held' | 'released' | 'refunded';
+    createdAt: string;
+    heldAt: string | null;
+    releasedAt: string | null;
+    refundedAt: string | null;
+    evidencePhotos: string[];
+  };
+  offer: {
+    id: string;
+    message: string;
+    availableDate: string | null;
+    acceptedAt: string;
+  };
+  parties: {
+    customer: {
+      id: string;
+      name: string;
+      initials: string;
+      rating: number | null;
+      reviewCount: number;
+      jobsPosted: number;
+    };
+    supplier: {
+      id: string;
+      name: string;
+      initials: string;
+      rating: number | null;
+      reviewCount: number;
+      jobsCompleted: number;
+    };
+  };
+  viewerRole: 'customer' | 'supplier';
+  thread: {
+    id: string;
+    lastMessage: {
+      body: string;
+      createdAt: string;
+      senderId: string;
+      senderName: string;
+      isMine: boolean;
+    } | null;
+  } | null;
+  viewerHasReviewed: boolean;
+}
+
 function postedAgoLabel(postedAt: Date): string {
   const ms = Date.now() - postedAt.getTime();
   const mins = Math.round(ms / 60_000);
@@ -193,6 +259,125 @@ export class MarketplaceService {
       orderBy: { postedAt: 'desc' },
     });
     return rows.map((j) => this.toListItem(j));
+  }
+
+  // Bundled payload powering the contract screen. The contract is
+  // implicit (we don't store a separate row) — it's a view that
+  // composes job + accepted-offer + payment + parties + thread snapshot
+  // so the client can render the prototype's contract page in one
+  // network round-trip.
+  async getContract(viewerUserId: string, jobId: string): Promise<MarketplaceContractDto> {
+    const job = await this.prisma.marketplaceJob.findUnique({
+      where: { id: jobId },
+      include: { category: true, customer: true },
+    });
+    if (!job) throw new NotFoundException('Job not found');
+
+    const payment = await this.prisma.marketplacePayment.findUnique({
+      where: { jobId },
+      include: { offer: true, supplier: true, customer: true },
+    });
+    if (!payment) {
+      // No payment yet → contract doesn't exist. The customer should
+      // still be on the offers/authorize flow.
+      throw new BadRequestException('This job has no contract yet — authorise an offer first');
+    }
+    if (payment.customerId !== viewerUserId && payment.supplierId !== viewerUserId) {
+      throw new ForbiddenException('You are not a party to this contract');
+    }
+
+    // Best-effort thread lookup so the contract screen can show the
+    // latest update from the other party. If no thread exists yet we
+    // just leave the panel empty.
+    const thread = await this.prisma.marketplaceThread.findUnique({
+      where: { jobId_supplierId: { jobId, supplierId: payment.supplierId } },
+      include: {
+        messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+      },
+    });
+
+    const [partyStats, viewerReview] = await Promise.all([
+      this.reviews.getStatsForUsers([payment.customerId, payment.supplierId]),
+      this.prisma.marketplaceReview.findUnique({
+        where: { jobId_fromUserId: { jobId, fromUserId: viewerUserId } },
+      }),
+    ]);
+
+    const customerStats = partyStats[payment.customerId];
+    const supplierStats = partyStats[payment.supplierId];
+    const lastMsg = thread?.messages?.[0] ?? null;
+
+    return {
+      job: {
+        id: job.id,
+        title: job.title,
+        locationLabel: job.locationLabel,
+        categoryLabel: `${job.category.emoji} ${job.category.name}`,
+        // The contract "started" the moment the payment was held.
+        // Falls back to createdAt for legacy rows that pre-date heldAt.
+        startedAt: (payment.heldAt ?? payment.createdAt).toISOString(),
+        status: job.status,
+      },
+      payment: {
+        id: payment.id,
+        jobId: payment.jobId,
+        offerId: payment.offerId,
+        customerId: payment.customerId,
+        supplierId: payment.supplierId,
+        amount: payment.amount,
+        platformFee: payment.platformFee,
+        total: payment.total,
+        status: payment.status as any,
+        createdAt: payment.createdAt.toISOString(),
+        heldAt: payment.heldAt?.toISOString() ?? null,
+        releasedAt: payment.releasedAt?.toISOString() ?? null,
+        refundedAt: payment.refundedAt?.toISOString() ?? null,
+        evidencePhotos: Array.isArray(payment.evidencePhotos) ? payment.evidencePhotos : [],
+      },
+      offer: {
+        id: payment.offer.id,
+        message: payment.offer.message,
+        availableDate: payment.offer.availableDate,
+        // The offer table has no `acceptedAt` column; the most accurate
+        // proxy is the payment row's createdAt (it's authored in the
+        // same `$transaction` that flips offer → accepted).
+        acceptedAt: payment.createdAt.toISOString(),
+      },
+      parties: {
+        customer: {
+          id: payment.customerId,
+          name: `${payment.customer.firstName ?? ''} ${payment.customer.lastName ?? ''}`.trim() || 'Customer',
+          initials: `${payment.customer.firstName?.[0] ?? ''}${payment.customer.lastName?.[0] ?? ''}`.toUpperCase() || 'C',
+          rating: customerStats?.averageRating ?? null,
+          reviewCount: customerStats?.reviewCount ?? 0,
+          jobsPosted: customerStats?.jobsPosted ?? 0,
+        },
+        supplier: {
+          id: payment.supplierId,
+          name: `${payment.supplier.firstName ?? ''} ${payment.supplier.lastName ?? ''}`.trim() || 'Supplier',
+          initials: `${payment.supplier.firstName?.[0] ?? ''}${payment.supplier.lastName?.[0] ?? ''}`.toUpperCase() || 'S',
+          rating: supplierStats?.averageRating ?? null,
+          reviewCount: supplierStats?.reviewCount ?? 0,
+          jobsCompleted: supplierStats?.jobsCompleted ?? 0,
+        },
+      },
+      viewerRole: payment.customerId === viewerUserId ? 'customer' : 'supplier',
+      thread: thread
+        ? {
+            id: thread.id,
+            lastMessage: lastMsg
+              ? {
+                  body: lastMsg.body,
+                  createdAt: lastMsg.createdAt.toISOString(),
+                  senderId: lastMsg.senderId,
+                  senderName: `${lastMsg.sender.firstName ?? ''} ${lastMsg.sender.lastName ?? ''}`.trim() || 'They',
+                  isMine: lastMsg.senderId === viewerUserId,
+                }
+              : null,
+          }
+        : null,
+      viewerHasReviewed: !!viewerReview,
+    };
   }
 
   async getStats(userId: string): Promise<MarketplaceStats> {

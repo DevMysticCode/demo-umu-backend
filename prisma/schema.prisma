@@ -1118,6 +1118,12 @@ model MarketplacePayment {
   releasedAt            DateTime?
   refundedAt            DateTime?
 
+  // Evidence photos uploaded against the contract — relative URLs from
+  // /marketplace/upload-photo. Either party can add (customer for
+  // "before/during", supplier for "after / completion"). Used by the
+  // contract screen's evidence section and any future dispute flow.
+  evidencePhotos        String[]         @default([])
+
   @@index([customerId])
   @@index([supplierId])
   @@index([status])
@@ -1143,6 +1149,17 @@ model MarketplaceReview {
   direction  String // 'customer_to_supplier' | 'supplier_to_customer'
   rating     Int // 1..5
   body       String?
+  // Per-dimension scores (1..5) — UI surfaces these as sliders. Nullable
+  // so suppliers reviewing customers can leave them blank without us
+  // baking the same four labels into both directions.
+  punctuality   Int?
+  communication Int?
+  workmanship   Int?
+  reliability   Int?
+  // Short praise tags (e.g. "Left it spotless"). Stored as a string
+  // array so we don't need a join table for what's essentially a list
+  // of UI chip selections.
+  tags       String[]       @default([])
   createdAt  DateTime       @default(now())
 
   @@unique([jobId, fromUserId])
