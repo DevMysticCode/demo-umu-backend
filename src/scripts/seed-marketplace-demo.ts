@@ -63,7 +63,7 @@ const DEMO_JOBS = [
     availableDates: ['25 Apr', '28 Apr', '2 May'],
     budgetMin: 1800,
     budgetMax: 2400,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #B5E8D5, #3DA66A)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/bathroom,interior?lock=1041') center/cover no-repeat, linear-gradient(135deg, #B5E8D5, #3DA66A)",
     postedAt: hoursAgo(3),
     targetStatus: 'open' as const,
     targetOffers: 4,
@@ -82,7 +82,7 @@ const DEMO_JOBS = [
     availableDates: ['2 May', '9 May', '16 May'],
     budgetMin: 5500,
     budgetMax: 7500,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #FFD5B5, #E07C4F)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/kitchen,cabinets?lock=1042') center/cover no-repeat, linear-gradient(135deg, #FFD5B5, #E07C4F)",
     postedAt: daysAgo(2),
     targetStatus: 'in_progress' as const,
     targetOffers: 6,
@@ -101,7 +101,7 @@ const DEMO_JOBS = [
     availableDates: ['28 Apr', '2 May'],
     budgetMin: 280,
     budgetMax: 380,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #FFE69E, #F5A623)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/electrician,wiring?lock=1043') center/cover no-repeat, linear-gradient(135deg, #FFE69E, #F5A623)",
     postedAt: hoursAgo(8),
     targetStatus: 'open' as const,
     targetOffers: 7,
@@ -120,7 +120,7 @@ const DEMO_JOBS = [
     availableDates: ['9 May', '16 May', '23 May'],
     budgetMin: 1100,
     budgetMax: 1500,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #C5E8A8, #4ADE80)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/gardener,landscaping?lock=1044') center/cover no-repeat, linear-gradient(135deg, #C5E8A8, #4ADE80)",
     postedAt: daysAgo(1),
     targetStatus: 'open' as const,
     targetOffers: 2,
@@ -138,7 +138,7 @@ const DEMO_JOBS = [
     availableDates: ['16 May', '23 May'],
     budgetMin: 600,
     budgetMax: 800,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #E5C8FF, #9468E0)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/decorating,wall?lock=1045') center/cover no-repeat, linear-gradient(135deg, #E5C8FF, #9468E0)",
     postedAt: daysAgo(5),
     targetStatus: 'completed' as const,
     targetOffers: 3,
@@ -159,7 +159,7 @@ const DEMO_JOBS = [
     availableDates: ['25 Apr', '28 Apr'],
     budgetMin: 2200,
     budgetMax: 3000,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #A8DAFF, #5B8DEF)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/boiler,radiator?lock=1046') center/cover no-repeat, linear-gradient(135deg, #A8DAFF, #5B8DEF)",
     postedAt: hoursAgo(20),
     targetStatus: 'open' as const,
     targetOffers: 5,
@@ -238,6 +238,14 @@ async function main() {
           postedAt: spec.postedAt,
           offerCount: 0,
         },
+      });
+    } else if (job.photoBg !== spec.photoBg) {
+      // Backfill: refresh photoBg on existing demo rows so a single
+      // re-run picks up the latest loremflickr image for the home
+      // and projects feeds without needing to wipe.
+      job = await prisma.marketplaceJob.update({
+        where: { id: job.id },
+        data: { photoBg: spec.photoBg },
       });
     }
 

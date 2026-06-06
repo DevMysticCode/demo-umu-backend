@@ -61,7 +61,7 @@ const DEMO_JOBS = [
     budgetMin: 2500,
     budgetMax: 4000,
     offerCount: 5,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #B5E8D5, #3DA66A)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/bathroom,interior?lock=1021') center/cover no-repeat, linear-gradient(135deg, #B5E8D5, #3DA66A)",
     photoBgs: [
       'linear-gradient(135deg, #352D5C, #008A84)',
       'linear-gradient(135deg, #352D5C, #008A84)',
@@ -83,7 +83,7 @@ const DEMO_JOBS = [
     budgetMin: 8000,
     budgetMax: 12000,
     offerCount: 3,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #FFD5B5, #E07C4F)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/kitchen,cabinets?lock=1022') center/cover no-repeat, linear-gradient(135deg, #FFD5B5, #E07C4F)",
     photoBgs: [
       'linear-gradient(135deg, #FFD5B5, #E07C4F)',
       'linear-gradient(135deg, #FFD5B5, #E07C4F)',
@@ -104,7 +104,7 @@ const DEMO_JOBS = [
     budgetMin: 850,
     budgetMax: null as number | null,
     offerCount: 7,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #FFE69E, #F5A623)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/electrician,wiring?lock=1023') center/cover no-repeat, linear-gradient(135deg, #FFE69E, #F5A623)",
     photoBgs: [
       'linear-gradient(135deg, #FFE69E, #F5A623)',
       'linear-gradient(135deg, #FFE69E, #F5A623)',
@@ -124,7 +124,7 @@ const DEMO_JOBS = [
     budgetMin: 1200,
     budgetMax: null as number | null,
     offerCount: 2,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #C5E8A8, #4ADE80)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/gardener,landscaping?lock=1024') center/cover no-repeat, linear-gradient(135deg, #C5E8A8, #4ADE80)",
     photoBgs: [
       'linear-gradient(135deg, #C5E8A8, #4ADE80)',
       'linear-gradient(135deg, #C5E8A8, #4ADE80)',
@@ -144,7 +144,7 @@ const DEMO_JOBS = [
     budgetMin: 420,
     budgetMax: null as number | null,
     offerCount: 4,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #A8DAFF, #5B8DEF)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/boiler,radiator?lock=1029') center/cover no-repeat, linear-gradient(135deg, #A8DAFF, #5B8DEF)",
     photoBgs: ['linear-gradient(135deg, #A8DAFF, #5B8DEF)'],
     postedAt: hoursAgo(24),
   },
@@ -161,7 +161,7 @@ const DEMO_JOBS = [
     budgetMin: 680,
     budgetMax: null as number | null,
     offerCount: 1,
-    photoBg: 'linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), linear-gradient(135deg, #E5C8FF, #9468E0)',
+    photoBg: "linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.05)), url('https://loremflickr.com/700/300/decorating,wall?lock=1030') center/cover no-repeat, linear-gradient(135deg, #E5C8FF, #9468E0)",
     photoBgs: ['linear-gradient(135deg, #E5C8FF, #9468E0)'],
     postedAt: hoursAgo(48),
   },
@@ -182,6 +182,22 @@ async function main() {
     });
   }
   console.log(`[seed-marketplace] ${CATEGORIES.length} categories ready`);
+
+  // Backfill: existing seeded jobs predate the loremflickr photoBg
+  // change. We re-apply each title's photoBg from DEMO_JOBS so a
+  // single re-run gives the home/browse feeds real images, even when
+  // the rows themselves already exist.
+  let backfilled = 0;
+  for (const spec of DEMO_JOBS) {
+    const result = await prisma.marketplaceJob.updateMany({
+      where: { title: spec.title },
+      data: { photoBg: spec.photoBg },
+    });
+    backfilled += result.count;
+  }
+  if (backfilled > 0) {
+    console.log(`[seed-marketplace] backfilled photoBg on ${backfilled} existing job(s)`);
+  }
 
   const existing = await prisma.marketplaceJob.count();
   if (existing > 0) {
