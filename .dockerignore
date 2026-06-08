@@ -1,0 +1,51 @@
+# Match .gitignore in spirit — only ship build inputs to the daemon.
+# Keeps build context small (faster) and ensures secrets that exist
+# only on disk don't sneak into image layers.
+
+node_modules
+dist
+coverage
+.git
+.github
+.vscode
+.idea
+.claude
+.husky
+.cursor
+.bolt
+
+# env + secrets
+.env
+.env.*
+secrets/
+*.pfx
+*.pem
+*.cer
+*.key
+
+# tests + ad-hoc scripts that don't run in production
+test/
+**/*.spec.ts
+**/*.test.ts
+
+# uploads — local-dev artifacts, not bake into image
+uploads/
+
+# tooling output
+*.log
+*.tsbuildinfo
+.gitleaks-report.json
+.gitleaks-report.sarif
+
+# docs / status that don't need to be in the image
+*.md
+docs/
+prisma/*.html
+prisma/*.pdf
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Confidential reports (defence in depth — also gitignored)
+*Gap-Analysis*
