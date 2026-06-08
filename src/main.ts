@@ -7,11 +7,17 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateEnv } from './common/env.validation';
+import { initSentry } from './common/sentry';
 
 // Fail fast if the runtime env is misconfigured — better to crash on
 // boot than to discover at first request that DATABASE_URL or
 // JWT_SECRET is missing. See ./common/env.validation for the schema.
 validateEnv(process.env);
+
+// Sentry must be initialised BEFORE NestFactory.create so its
+// http/express auto-instrumentation can monkey-patch the runtime.
+// No-op when SENTRY_DSN is unset.
+initSentry();
 
 async function bootstrap() {
   // rawBody: true tells Nest's body-parser to keep the raw bytes on
