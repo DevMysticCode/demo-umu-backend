@@ -16,22 +16,33 @@ async function bootstrap() {
   // Serve uploaded files statically at /uploads/*
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
-  // app.enableCors({
-  //   origin: [
-  //     'http://localhost:3000',
-  //     'http://localhost:3002',
-  //     'https://demo-umu-frontend.vercel.app',
-  //     'https://demo-umu-frontend-dly7s9uz1-devmysticcodes-projects.vercel.app',
-  //     'http://localhost',
-  //     'https://localhost',
-  //     'capacitor://localhost',
-  //   ],
-  //   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  //   credentials: true,
-  // });
+  // CORS allow-list driven by env. Comma-separated origins (full
+  // scheme+host, no trailing slash). Falls back to a sensible default
+  // covering local dev and the Capacitor mobile shells when the env
+  // var is unset — never permits the audit-flagged `origin: true,
+  // credentials: true` combo, which would let any site read responses
+  // from authenticated browsers.
+  //
+  // Set CORS_ORIGINS on Railway to your real production hosts:
+  //   CORS_ORIGINS=https://app.umovingu.com,https://www.umovingu.com,capacitor://localhost
+  const defaultOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3002',
+    'https://demo-umu-frontend.vercel.app',
+    'capacitor://localhost', // iOS Capacitor webview
+    'ionic://localhost',     // legacy Capacitor scheme on Android
+    'http://localhost',
+    'https://localhost',
+  ];
+  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  const allowList = corsOrigins.length ? corsOrigins : defaultOrigins;
 
   app.enableCors({
-    origin: true,
+    origin: allowList,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 

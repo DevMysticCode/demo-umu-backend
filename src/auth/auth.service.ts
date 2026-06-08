@@ -562,34 +562,4 @@ export class AuthService {
     return { message: 'Password updated successfully' };
   }
 
-  /** Dev-only: skips Apple token verification — localhost testing only */
-  async appleDevMock(email: string, firstName?: string, lastName?: string) {
-    let user = await this.prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          password: '',
-          firstName: firstName ?? 'Apple',
-          lastName: lastName ?? 'Test',
-          isVerified: true,
-        },
-      });
-    }
-
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
-
-    return {
-      message: 'Apple login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isVerified: user.isVerified,
-      },
-    };
-  }
 }
