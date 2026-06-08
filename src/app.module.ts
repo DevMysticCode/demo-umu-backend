@@ -23,6 +23,7 @@ import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
 import { KycModule } from './kyc/kyc.module';
 import { VerifierApiModule } from './verifier-api/verifier-api.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
+import { HealthModule } from './health/health.module';
 
 // MaintenanceModule exposes destructive endpoints (`DELETE
 // /maintenance/all` nukes every passport + property) gated only by a
@@ -69,6 +70,7 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     KycModule,
     VerifierApiModule,
     MarketplaceModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
