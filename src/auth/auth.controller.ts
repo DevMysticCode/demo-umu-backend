@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, HttpCode } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
   RequestOtpDto,
@@ -11,6 +12,11 @@ import {
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
 
+// Credential-sensitive endpoints use the `auth` bucket (5 req/min/IP).
+// Defined as a constant so we can keep the rules visible at the top
+// of the file instead of repeating the literal on every handler.
+const AUTH_THROTTLE = { auth: { limit: 5, ttl: 60_000 } };
+
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
@@ -20,31 +26,37 @@ export class AuthController {
     return this.authService.checkEmail(email);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('request-otp')
   async requestOtp(@Body() dto: RequestOtpDto) {
     return this.authService.requestOtp(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('verify-otp')
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('login')
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('google')
   async googleLogin(@Body('credential') credential: string) {
     return this.authService.googleLogin(credential);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('apple')
   async appleLogin(
     @Body('idToken') idToken: string,
@@ -64,18 +76,21 @@ export class AuthController {
     return { success: true, message: 'Logged out successfully' };
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('forgot-password')
   @HttpCode(200)
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('verify-reset-otp')
   @HttpCode(200)
   async verifyResetOtp(@Body() dto: VerifyResetOtpDto) {
     return this.authService.verifyResetOtp(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('reset-password')
   @HttpCode(200)
   async resetPassword(@Body() dto: ResetPasswordDto) {

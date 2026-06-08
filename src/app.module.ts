@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +26,20 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
 
 @Module({
   imports: [
+    // Global rate limit applied via the APP_GUARD below. Named buckets
+    // let controllers/handlers opt into stricter limits with @Throttle
+    // — see AuthController, where OTP/login/register tighten to a few
+    // requests/min on top of the default. Tune ttl/limit by env if you
+    // need to: ttl is in milliseconds in throttler v6+.
+    ThrottlerModule.forRoot([
+      // Default bucket: 60 req / minute / IP — generous for the
+      // mostly-CRUD surface, but blocks bots hammering arbitrary
+      // endpoints from a single IP.
+      { name: 'default', ttl: 60_000, limit: 60 },
+      // Tight bucket for credential-sensitive endpoints. Brute force
+      // an OTP at 5/min and it'll take a year to cover a 6-digit space.
+      { name: 'auth',    ttl: 60_000, limit: 5  },
+    ]),
     PrismaModule,
     AuthModule,
     PassportModule,
@@ -46,6 +62,12 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
     MarketplaceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Apply the throttler as a global guard so every route gets the
+    // default bucket unless it opts in to a named one. JwtAuthGuard
+    // stays per-controller; this guard runs alongside it.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
