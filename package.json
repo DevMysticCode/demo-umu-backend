@@ -33,6 +33,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.2",
     "@types/nodemailer": "^7.0.11",
     "apple-signin-auth": "^2.0.0",
