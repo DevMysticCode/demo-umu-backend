@@ -15,10 +15,8 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { createUploadStorage } from '../common/storage';
 import { ProfileService } from './profile.service';
 import {
   UpdateProfileDto,
@@ -39,20 +37,7 @@ export class ProfileController {
 
   @Post('avatar')
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads', 'avatars');
-          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
-      }),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
-    }),
+    FileInterceptor('file', createUploadStorage({ bucket: 'avatars', maxMb: 5 })),
   )
   uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
     return this.profileService.uploadAvatar(req.user.id, file, req.hostname);

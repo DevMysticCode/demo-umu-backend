@@ -13,10 +13,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
-import { diskStorage } from 'multer';
-import { existsSync, mkdirSync } from 'fs';
-import { extname, join } from 'path';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { createUploadStorage, publicUrlFor } from '../common/storage';
 import { MarketplaceService } from './marketplace.service';
 import { MarketplaceMessagesService } from './messages.service';
 import { EscrowService } from './escrow.service';
@@ -96,28 +94,24 @@ export class MarketplaceController {
   @Post('upload-photo')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const dest = join(process.cwd(), 'uploads', 'job-photos');
-          if (!existsSync(dest)) mkdirSync(dest, { recursive: true });
-          cb(null, dest);
-        },
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
+    FileInterceptor(
+      'file',
+      createUploadStorage({
+        bucket: 'job-photos',
+        maxMb: 8,
+        mimeAllowList: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
       }),
-      limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB per photo
-    }),
+    ),
   )
   uploadPhoto(@UploadedFile() file: any) {
-    if (!file) throw new BadRequestException('No file uploaded');
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-    if (!allowed.includes(file.mimetype)) {
-      throw new BadRequestException('Only image files are allowed (jpg, png, webp, heic)');
+    if (!file) {
+      // null from fileFilter (rejected MIME) lands here too — give the
+      // user a clearer message than multer's generic empty-file error.
+      throw new BadRequestException(
+        'Upload missing or unsupported file type (allowed: jpg, png, webp, heic)',
+      );
     }
-    return { url: `/uploads/job-photos/${file.filename}` };
+    return { url: publicUrlFor('job-photos', file.filename) };
   }
 
   // Param routes last so they don't capture /me or /upload-photo.

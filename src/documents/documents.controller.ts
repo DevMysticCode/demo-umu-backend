@@ -11,10 +11,8 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { createUploadStorage } from '../common/storage';
 import { DocumentsService } from './documents.service';
 
 @Controller('documents')
@@ -29,20 +27,7 @@ export class DocumentsController {
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads', 'documents');
-          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
-      }),
-      limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
-    }),
+    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20 })),
   )
   uploadDocument(
     @Req() req: any,

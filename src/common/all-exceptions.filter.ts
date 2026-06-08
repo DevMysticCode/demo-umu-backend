@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Request, Response } from 'express';
+import { captureException } from './sentry';
 
 /**
  * Catch-all exception filter.
@@ -79,6 +80,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `Unhandled ${err?.name ?? 'Error'} on ${req.method} ${req.url} — ${err?.message ?? exception}`,
       err?.stack,
     );
+    // Forward to Sentry if SENTRY_DSN is configured (no-op otherwise).
+    // We deliberately do this only for the unhandled path — HttpException
+    // and Prisma known-error responses are intentional, not bugs.
+    captureException(err, { route: `${req.method} ${req.url}` });
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       message: 'Internal server error.',

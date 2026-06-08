@@ -14,11 +14,9 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import { PassportService } from './passport.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { createUploadStorage } from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -242,27 +240,14 @@ export class PassportController {
   @Post(':id/upload-image')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (_req, _file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads', 'property-images');
-          if (!existsSync(uploadPath))
-            mkdirSync(uploadPath, { recursive: true });
-          cb(null, uploadPath);
-        },
-        filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
+    FileInterceptor(
+      'file',
+      createUploadStorage({
+        bucket: 'property-images',
+        maxMb: 20,
+        mimePrefix: ['image/'],
       }),
-      limits: { fileSize: 20 * 1024 * 1024 },
-      fileFilter: (_req, file, cb) => {
-        if (!file.mimetype.startsWith('image/')) {
-          return cb(new Error('Only image files are allowed'), false);
-        }
-        cb(null, true);
-      },
-    }),
+    ),
   )
   async uploadPropertyImage(
     @Param('id') passportId: string,
