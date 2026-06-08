@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Concurrency: cancel in-flight runs on the same branch when a new
+# commit lands. Saves CI minutes when you push twice in quick succession.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ──────────────────────────────────────────────────────────────
+  # secrets: scan working tree + diff for committed secrets.
+  # Runs first because it's fast and a failure here means halt
+  # everything else (don't waste minutes building a leaky tree).
+  # ──────────────────────────────────────────────────────────────
+  secrets:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can scan everything, not just HEAD.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE only needed for org-private repos with
+          # >25 collaborators; leave unset for personal/small projects.
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # ──────────────────────────────────────────────────────────────
+  # build: install, prisma generate, compile, run any tests.
+  # Builds against the committed lockfile (`npm ci`) so we catch
+  # drift between package.json and package-lock.json.
+  # ──────────────────────────────────────────────────────────────
+  build:
+    name: build & test
+    runs-on: ubuntu-latest
+    needs: secrets
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: install deps
+        run: npm ci --ignore-scripts
+
+      - name: prisma generate
+        run: npx prisma generate
+
+      - name: build
+        run: npm run build
+
+      - name: test
+        run: npm test -- --passWithNoTests
+        env:
+          # Tests don't need a real DB connection (sentinel-only suite
+          # at this point) but the validator and Prisma client both
+          # expect at least the env var to exist.
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          JWT_SECRET: ci-jwt-secret-at-least-sixteen-chars-please
+          NODE_ENV: test
