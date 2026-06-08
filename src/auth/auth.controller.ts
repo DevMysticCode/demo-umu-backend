@@ -96,17 +96,4 @@ export class AuthController {
     );
   }
 
-  /** Dev-only: bypasses Apple token verification for local testing */
-  @Post('apple/mock')
-  appleMockLogin(
-    @Body('email') email: string,
-    @Body('firstName') firstName?: string,
-    @Body('lastName') lastName?: string,
-  ) {
-    return this.authService.appleDevMock(
-      email || 'apple-test@dev.local',
-      firstName,
-      lastName,
-    );
-  }
 }
