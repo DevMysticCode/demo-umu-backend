@@ -24,6 +24,14 @@ import { KycModule } from './kyc/kyc.module';
 import { VerifierApiModule } from './verifier-api/verifier-api.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 
+// MaintenanceModule exposes destructive endpoints (`DELETE
+// /maintenance/all` nukes every passport + property) gated only by a
+// shared `x-admin-secret` header. That's fine for local dev seeding,
+// dangerous in production — a single secret leak = total data loss.
+// Until we replace the header gate with real admin auth + audit log,
+// the module simply doesn't load in production builds.
+const PROD_BUILD = process.env.NODE_ENV === 'production';
+
 @Module({
   imports: [
     // Global rate limit applied via the APP_GUARD below. Named buckets
@@ -55,7 +63,8 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
     SupportModule,
     LearnModule,
     PaymentModule,
-    MaintenanceModule,
+    // Only available in non-production envs — see PROD_BUILD comment above.
+    ...(PROD_BUILD ? [] : [MaintenanceModule]),
     BuyerProfileModule,
     KycModule,
     VerifierApiModule,

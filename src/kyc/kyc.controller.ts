@@ -8,6 +8,7 @@ import {
   Request,
   HttpCode,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { KycService } from './kyc.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import type { Request as ExpressRequest } from 'express';
@@ -40,7 +41,11 @@ export class KycController {
   /**
    * Persona webhook receiver. Public, but every request is HMAC-verified
    * against PERSONA_WEBHOOK_SECRET before any state is touched.
+   *
+   * SkipThrottle so webhook retries during an outage / surge aren't
+   * rate-limited away. HMAC verification is the real gate here.
    */
+  @SkipThrottle()
   @Post('webhook')
   @HttpCode(200)
   async webhook(
