@@ -3,7 +3,15 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { join } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
+import { validateEnv } from './common/env.validation';
+
+// Fail fast if the runtime env is misconfigured — better to crash on
+// boot than to discover at first request that DATABASE_URL or
+// JWT_SECRET is missing. See ./common/env.validation for the schema.
+validateEnv(process.env);
 
 async function bootstrap() {
   // rawBody: true tells Nest's body-parser to keep the raw bytes on
@@ -12,6 +20,23 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
+
+  // helmet — security headers. crossOriginResourcePolicy is loosened
+  // because the mobile webapp + Capacitor shells fetch /uploads/* from
+  // a different origin; the default 'same-origin' would break image
+  // rendering. CSP is intentionally OFF: this is an API, not a page
+  // server, and a CSP for HTML responses wouldn't apply to JSON.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: false,
+    }),
+  );
+
+  // Global exception filter — strips Prisma error internals and stack
+  // traces from client responses while logging the full detail server-
+  // side. Without this, unhandled throws leak table/column names.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Serve uploaded files statically at /uploads/*
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });

@@ -15,9 +15,17 @@ model User {
   dob                           DateTime?
   firstName                     String?
   gender                        String?
+  // ⚠ `isVerified` means SIGNUP completed (OTP verified OR social
+  // login). It is NOT a KYC signal. Persona KYC sets it to true as a
+  // side-effect (legacy behaviour), so checking it alone proves nothing
+  // about identity verification. To gate on real KYC, check
+  // `kycStatus === 'approved'` (use the isKycVerified() helper in
+  // src/common/kyc.ts so the rule stays consistent across modules).
   isVerified                    Boolean                @default(false)
   // Persona KYC — per-user, one-time. Once kycStatus is "approved" we skip
   // the KYC steps in the claim flow on every subsequent property claim.
+  // `kycStatus === 'approved'` is the canonical "real identity verified"
+  // signal — DO NOT use isVerified for that.
   kycStatus                     String? // pending | approved | declined | needs_review | failed
   kycInquiryId                  String? // Persona inquiry/case id (inq_… or case_…)
   kycCompletedAt                DateTime?
