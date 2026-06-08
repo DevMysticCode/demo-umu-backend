@@ -1,0 +1,60 @@
+# gitleaks config — UMU backend
+#
+# Inherits the upstream default ruleset (covers AWS, Stripe, OpenAI,
+# Anthropic, Google API keys, Postgres connection strings, JWTs, PEM
+# private keys, etc.) and extends it with project-specific allowlists
+# so we don't get drowned in false positives from seeded test data.
+#
+# Run locally:
+#   gitleaks detect --source . --no-banner --config .gitleaks.toml
+#
+# Pre-commit hook (see .githooks/pre-commit in this repo) and CI both
+# point at this config so a single source-of-truth governs all sweeps.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Project-wide allowlist for known-safe matches"
+
+# Test fixtures + seed data + Prisma client output should never contain
+# real secrets — but they do contain shapes that fire false positives
+# (UUIDs that resemble JWTs, long random strings inside generated DTOs,
+# the JWT payload we already rotated, etc.). Skip them.
+paths = [
+  '''^node_modules/''',
+  '''^dist/''',
+  '''^generated/''',
+  '''^prisma/migrations/''',
+  '''^prisma/seed.*\.ts$''',
+  '''^src/scripts/seed-.*\.ts$''',
+  '''(?i)\.lock$''',
+  '''(?i)package-lock\.json$''',
+]
+
+# Known-safe placeholders + the now-rotated secrets that may still
+# appear in git history reports (rewrite is pending; allowlist by
+# value so the report is actionable, not noise).
+regexTarget = "match"
+regexes = [
+  # Postgres password already rotated — listed so post-rewrite scans
+  # against archived snapshots don't re-flag it. Remove this line
+  # once `git filter-repo` has purged it from history.
+  '''XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX''',
+  # Google Maps key already revoked (pending rewrite — same reason).
+  '''AIzaSyA_lEpLKWJl6BS7rv2Fni3cR0NxuT8mGhk''',
+  # User JWT from the leak (rotated via JWT_SECRET — same reason).
+  '''eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUi''',
+]
+
+# Stop noisy patterns from triggering on real source. Generic
+# "password" assignments in seed data, fixture JSON, and the like
+# can be silenced with stopwords without weakening real detection.
+stopwords = [
+  "example",
+  "placeholder",
+  "your_key_here",
+  "YOUR_IOS_CLIENT_ID",
+  "demo-only-no-login",
+  "apple-test@dev.local",
+]
