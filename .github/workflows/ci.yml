@@ -62,9 +62,11 @@ jobs:
       - name: test
         run: npm test -- --passWithNoTests
         env:
-          # Tests don't need a real DB connection (sentinel-only suite
-          # at this point) but the validator and Prisma client both
-          # expect at least the env var to exist.
+          # Tests don't hit a real DB (Prisma + Stripe are stubbed) but
+          # the validators and Stripe SDK instantiation need values.
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
           JWT_SECRET: ci-jwt-secret-at-least-sixteen-chars-please
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_WEBHOOK_SECRET: whsec_dummy
+          NODE_ENV: test
           NODE_ENV: test
