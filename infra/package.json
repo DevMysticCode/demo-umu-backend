@@ -1,0 +1,28 @@
+{
+  "name": "umu-infra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS CDK infrastructure for the UMU backend (eu-west-2). Deploys: ECR + App Runner + RDS Postgres + S3 + Secrets Manager. App Runner connects to RDS via a VPC connector; nothing in this stack is publicly reachable except App Runner's HTTPS endpoint.",
+  "bin": {
+    "umu-infra": "bin/umu-infra.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --require-approval never",
+    "destroy": "cdk destroy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "aws-cdk": "^2.1126.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.219.0",
+    "constructs": "^10.4.2",
+    "@aws-cdk/aws-apprunner-alpha": "^2.219.0-alpha.0"
+  }
+}

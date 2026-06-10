@@ -1,0 +1,11 @@
+node_modules/
+cdk.out/
+*.js
+!jest.config.js
+*.d.ts
+*.log
+.cdk.staging/
+
+# Local secret files used for `aws secretsmanager put-secret-value`
+prod-secrets.json
+*-secrets.json
