@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { captureException } from '../common/sentry';
 import {
   RequestOtpDto,
   VerifyOtpDto,
@@ -99,6 +100,10 @@ export class AuthService {
       // Log the SMTP error but don't crash the request.
       // In development the OTP is logged to console so you can still test.
       console.error('[OTP] Failed to send email:', mailErr?.message ?? mailErr);
+      // Report to Sentry so an OTP outage shows up on the alert dash.
+      // The exception filter only catches unhandled errors — this is a
+      // handled "graceful degrade" path that would otherwise be silent.
+      captureException(mailErr, { route: 'auth/request-otp', email });
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[OTP DEV] Code for ${email}: ${otp}`);
       }
@@ -337,6 +342,9 @@ export class AuthService {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[PASSWORD RESET] Failed to send email:', msg);
+      // Same reasoning as the OTP path — silent SMTP failure should
+      // raise a Sentry alert even though the request returns 200.
+      captureException(err, { route: 'auth/forgot-password', email });
       if (process.env.NODE_ENV !== 'production') {
         console.log(`[PASSWORD RESET DEV] Code for ${email}: ${otp}`);
       }

@@ -12,6 +12,7 @@ canonical source — if you see a mismatch, the validator wins.
 | `DATABASE_URL` | ✓ | | `postgres(ql)://user:pass@host:port/db` | Railway provides this automatically |
 | `JWT_SECRET` | ✓ | | string ≥ 16 chars | `openssl rand -hex 32`. Rotating invalidates every existing token |
 | `STRIPE_SECRET_KEY` | | ✓ | `sk_test_*` or `sk_live_*` | Production must use a live key |
+| `STRIPE_WEBHOOK_SECRET` | | ✓ | `whsec_*` | From Stripe → Webhooks → endpoint signing secret. **Required**: without it the paywall webhook rejects every event |
 | `RESEND_API_KEY` | | ✓ | string | Without it, OTP send fails (dev falls back to console.log) |
 | `ADMIN_SECRET` | | ✓ | string ≥ 16 chars, not "123" | Used by verifier-api admin endpoints |
 | `CORS_ORIGINS` | | ✓ | comma-separated origins | e.g. `https://demo-umu-frontend.vercel.app,capacitor://localhost` |
@@ -125,22 +126,73 @@ opportunistically when touching the file — once they're all on the
 NestJS logger, structured logging shipping (Datadog, Better Stack)
 becomes a one-config change.
 
+## Stripe webhook setup (required before live)
+
+1. Stripe Dashboard → Developers → Webhooks → **Add endpoint**
+2. URL: `https://<your-api-host>/payment/webhook`
+3. Events to send:
+   - `payment_intent.succeeded`
+   - `payment_intent.payment_failed`
+   - `payment_intent.canceled`
+   - `charge.refunded`
+4. Save → copy the signing secret (`whsec_...`)
+5. Set as `STRIPE_WEBHOOK_SECRET` on Railway
+
+Without this, the £99 passport-unlock paywall **gracefully degrades**
+because `createBuyerAccess` falls back to a synchronous Stripe API
+re-fetch — but you lose the async webhook safety net. Set it before
+flipping to `sk_live_*`.
+
+## Mobile (iOS) build modes
+
+Today's TestFlight build runs in **REMOTE** mode: the Capacitor shell
+opens a WKWebView pointing at the Vercel deployment. Apple may flag
+this on full review as "minimum functionality" (Guideline 4.2).
+
+For App Store submission switch to **BUNDLED** mode:
+
+```sh
+# build the SPA bundle into .output/public + sync to ios/
+npm run mobile:build:bundled
+
+# in your env, before re-running cap sync from a fresh shell:
+$env:CAPACITOR_USE_REMOTE = "false"
+
+# open Xcode for signing + archive + submit
+npx cap open ios
+```
+
+Both modes coexist via env vars:
+- `CAPACITOR_BUILD=true` → nuxt.config.ts disables SSR (SPA bundle)
+- `CAPACITOR_USE_REMOTE=false` → capacitor.config.ts drops `server.url`
+
+The default (no env vars) keeps remote-mode behaviour so the existing
+TestFlight pipeline doesn't break until you explicitly switch.
+
 ## Known gaps (audit follow-ups)
 
-These are docs-now / code-later — see commits `51c1538` onwards for the
-hardening already shipped, and the DF4 Labs gap analysis PDF for the
-full inventory.
+These are docs-now / code-later — see commit history from `51c1538`
+onwards for the hardening already shipped, and the DF4 Labs gap
+analysis PDF for the full inventory.
 
-- **Payment paywall not enforced** — `passport.service.ts:createBuyerAccess` does
-  not check payment state; Stripe webhook handler does not exist. Live
-  Stripe deploy needs both before flipping to `sk_live_*`.
-- **Uploads on local disk** — `./uploads/*` is lost on Railway redeploy.
-  Migrating to S3/R2 is now a one-class change via
-  [src/common/storage.ts](src/common/storage.ts).
-- **`/uploads/*` is publicly served** — sensitive files (documents,
-  KYC) reachable by URL. Either gate via a `GET /files/:id` endpoint
-  or migrate to S3 with pre-signed URLs.
+- **Claim-flow payment gate** — `createBuyerAccess` is now gated
+  (commit `33ecd81`), but the plain `POST /passport` (owner-claim)
+  flow has no payment check. DF4 only named buyer-unlock; revisit
+  if owners should also pay to claim.
 - **`isKycVerified()` exists but isn't wired** to anything that should
   require KYC. Helper is at [src/common/kyc.ts](src/common/kyc.ts).
-- **Land Registry Price Paid import** — `pricePaidTransaction` table is
-  queried but never populated.
+  Needs product decision on what KYC gates (recommendation: claim +
+  buyer-unlock).
+- **Uploads on local disk** — `./uploads/*` is lost on Railway
+  redeploy. Migrating to S3/R2 is now a one-class change via
+  [src/common/storage.ts](src/common/storage.ts).
+- **Sensitive uploads bucket-by-bucket**: `documents/` is now gated
+  via signed URLs (commit `f90e25b`). `kyc/` (when created) and
+  marketplace `evidence/` (currently sharing `job-photos/`) should
+  follow the same pattern.
+- **Land Registry Price Paid import** — `pricePaidTransaction` table
+  is queried but never populated.
+- **Land Registry Title Number Discovery** — `Property.titleNumber`
+  is now null until HMLR confirms (commit `46e4c1b`). Adding the
+  paid HMLR Title Number Discovery subscription (~£40/mo) populates
+  it for unclaimed properties too.
