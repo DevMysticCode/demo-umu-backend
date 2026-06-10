@@ -1979,10 +1979,11 @@ export class PropertyService {
       if (!(property as any).lodgementDate && epcData.lodgementDate)
         updateData.lodgementDate = epcData.lodgementDate;
 
-      // Generate titleNumber if missing
-      if (!property.titleNumber) {
-        updateData.titleNumber = this.generateTitleNumber(property);
-      }
+      // titleNumber is intentionally NOT populated here. The only
+      // trustworthy source is HMLR (set by verifyOwnershipWithLandRegistry
+      // on a SINGLE_MATCH). OS Places / EPC don't return it; synthesising
+      // one would poison the HMLR lookup later (queries fake number,
+      // gets NO_MATCHES) and present fabricated register IDs to the user.
 
       if (Object.keys(updateData).length > 0) {
         updateData.epcEnrichedAt = new Date();
@@ -2042,23 +2043,8 @@ export class PropertyService {
       }
     }
 
-    // Generate titleNumber even if no EPC data found
-    if (!property.titleNumber) {
-      const titleNumber = this.generateTitleNumber(property);
-      console.log(
-        `[Enrich] Generating titleNumber for property: ${titleNumber}`,
-      );
-      try {
-        const updated = await this.prisma.property.update({
-          where: { id: property.id },
-          data: { titleNumber },
-        });
-        property = updated;
-      } catch (error) {
-        console.error(`[Enrich] Failed to update titleNumber: ${error}`);
-        property = { ...property, titleNumber } as Property;
-      }
-    }
+    // titleNumber stays null until HMLR confirms one (see comment on
+    // the earlier call site).
 
     // ── Council Tax Finder API ─────────────────────────────────────────────
     // Per-address band + £ figure. Cached on the row for 30 days. Skipped when
@@ -2110,28 +2096,6 @@ export class PropertyService {
         error,
       );
     }
-  }
-
-  /**
-   * Generate a meaningful titleNumber for properties that don't have one.
-   * Format: Postcode (2 chars) + UPRN (6 chars) or Postcode + hash
-   */
-  private generateTitleNumber(property: Property): string {
-    const postcode =
-      property.postcode?.replace(/\s/g, '').substring(0, 2) ?? 'XX';
-    if (property.uprn) {
-      const uprnEnd = property.uprn
-        .toString()
-        .replace(/\D/g, '')
-        .slice(-6)
-        .padStart(6, '0');
-      return `${postcode}${uprnEnd}`;
-    }
-    // Fallback: use property ID hash
-    const hash =
-      property.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) %
-      1000000;
-    return `${postcode}${hash.toString().padStart(6, '0')}`;
   }
 
   /**
@@ -2716,12 +2680,8 @@ export class PropertyService {
               ? { constructionAgeBand: epc.constructionAgeBand }
               : {}),
             ...(epc.builtForm ? { builtForm: epc.builtForm } : {}),
-            // Generate titleNumber if missing
-            ...(epc.uprn && !property.titleNumber
-              ? {
-                  titleNumber: `${property.postcode?.replace(/\s/g, '').substring(0, 2) ?? 'XX'}${epc.uprn.toString().replace(/\D/g, '').slice(-6).padStart(6, '0')}`,
-                }
-              : {}),
+            // titleNumber omitted on purpose — only HMLR can give us
+            // a trustworthy one. See verifyOwnershipWithLandRegistry().
             epcEnrichedAt: new Date(),
           },
         })
@@ -2736,26 +2696,6 @@ export class PropertyService {
         })
         .catch(() => {
           /* non-critical back-fill */
-        });
-    } else if (!property.titleNumber && (property.uprn || property.postcode)) {
-      // Ensure titleNumber is generated even if no EPC data
-      const postcode =
-        property.postcode?.replace(/\s/g, '').substring(0, 2) ?? 'XX';
-      const uprn = property.uprn
-        ?.toString()
-        .replace(/\D/g, '')
-        .slice(-6)
-        .padStart(6, '0');
-      const titleNumber = uprn
-        ? `${postcode}${uprn}`
-        : `${postcode}${property.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % 1000000}`;
-      this.prisma.property
-        .update({
-          where: { id: propertyId },
-          data: { titleNumber },
-        })
-        .catch(() => {
-          /* non-critical */
         });
     }
     // ── Land Registry HPI estimate ──────────────────────────────────────────
@@ -5017,6 +4957,31 @@ export class PropertyService {
         landRegistryCheckedAt: new Date(),
       },
     });
+
+    // Promote the HMLR-returned title number to Property.titleNumber so
+    // every downstream surface (claim, buyer view, TA6 form, costs page)
+    // shows the real register ID — not the per-OV-row copy. We only
+    // promote on a confirmed VERIFIED match: ADDITIONAL_INFO_NEEDED can
+    // come from MULTIPLE_MATCHES where `topMatch` is ambiguous, and we
+    // don't want to lock the property to one of several possible titles.
+    if (
+      status === 'VERIFIED' &&
+      topMatch?.titleNumber &&
+      topMatch.titleNumber !== property.titleNumber
+    ) {
+      try {
+        await this.prisma.property.update({
+          where: { id: propertyId },
+          data: { titleNumber: topMatch.titleNumber },
+        });
+      } catch (err) {
+        // Non-blocking — the OV row already records the title number.
+        console.error(
+          `[OV] Failed to promote HMLR title number to Property ${propertyId}:`,
+          err,
+        );
+      }
+    }
 
     return {
       status,
