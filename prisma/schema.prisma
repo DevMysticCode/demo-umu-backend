@@ -64,6 +64,7 @@ model User {
   marketplacePaymentsAsSupplier MarketplacePayment[]   @relation("MarketplacePaymentSupplier")
   marketplaceReviewsAuthored    MarketplaceReview[]    @relation("MarketplaceReviewFrom")
   marketplaceReviewsReceived    MarketplaceReview[]    @relation("MarketplaceReviewTo")
+  passportPayments              PassportPayment[]
 }
 
 model UserAddress {
@@ -356,6 +357,7 @@ model Passport {
   sharedLinks       SharedPassportLink[]
   buyerNotes        BuyerNote[]
   activities        PassportActivity[]
+  passportPayments  PassportPayment[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -1172,4 +1174,35 @@ model MarketplaceReview {
 
   @@unique([jobId, fromUserId])
   @@index([toUserId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Passport unlock payments (£99 buyer access)
+//
+// Persists every Stripe PaymentIntent created for a buyer-unlock,
+// linking it to the buying user + the passport they want access to.
+// `createBuyerAccess` checks for a `succeeded` row before granting.
+//
+// Status lifecycle:
+//   pending   → intent created, awaiting Stripe.js confirmation
+//   succeeded → webhook (or sync re-fetch on unlock) confirmed Stripe
+//               agrees the charge cleared. Access can be granted.
+//   failed    → Stripe says the intent is failed/canceled. Don't grant.
+//   refunded  → manual refund path (no automated trigger yet).
+// ─────────────────────────────────────────────────────────────────────
+model PassportPayment {
+  id                    String    @id @default(uuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passportId            String
+  passport              Passport  @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  amount                Int // pence — £99 = 9900
+  status                String    @default("pending") // pending | succeeded | failed | refunded
+  stripePaymentIntentId String    @unique
+  createdAt             DateTime  @default(now())
+  succeededAt           DateTime?
+  refundedAt            DateTime?
+
+  @@index([userId, passportId])
+  @@index([status])
 }

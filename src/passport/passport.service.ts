@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaymentService } from '../payment/payment.service';
 import {
   Passport,
   PassportSection,
@@ -24,7 +25,10 @@ interface GroupedQuestion {
 export class PassportService {
   private groq: OpenAI;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private payments: PaymentService,
+  ) {
     this.groq = new OpenAI({
       apiKey: process.env.GROQ_API_KEY,
       baseURL: 'https://api.groq.com/openai/v1',
@@ -755,23 +759,49 @@ export class PassportService {
     return { target: null };
   }
 
-  // Create buyer access (simulated payment unlock)
+  // Grant buyer access to a passport — gated on a successful Stripe
+  // payment for this (user, passport) pair.
+  //
+  // Until DF4 Finding #1 was closed, this endpoint upserted access
+  // unconditionally — any authenticated user could POST and get a free
+  // unlock. The check is now belt-and-braces:
+  //   1. Owner of the passport? Pass through (no payment needed).
+  //   2. Already has buyer access? Idempotent return (refreshes /
+  //      shouldn't double-charge if Stripe replays a webhook).
+  //   3. Otherwise: PaymentService.hasSuccessfulPayment() consults
+  //      the DB; if no succeeded row, falls through to a synchronous
+  //      Stripe API check so a slow webhook doesn't block a paying
+  //      user. Throws 402 if still no successful payment is found.
   async createBuyerAccess(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
+      select: { id: true, ownerId: true },
     });
     if (!passport) throw new NotFoundException('Passport not found');
 
-    // Owner already has full access
     if (passport.ownerId === userId) {
       return { passportId };
     }
 
-    // Upsert buyer access record
-    await this.prisma.buyerPassportAccess.upsert({
+    const existing = await this.prisma.buyerPassportAccess.findUnique({
       where: { passportId_userId: { passportId, userId } },
-      update: {},
-      create: { passportId, userId },
+    });
+    if (existing) {
+      return { passportId };
+    }
+
+    const paid = await this.payments.hasSuccessfulPayment(userId, passportId);
+    if (!paid) {
+      // Returning 402 Payment Required is the explicit status for "your
+      // request can't be served until you pay". Nest maps the message
+      // string into the body so the frontend can render a useful copy.
+      throw new ForbiddenException(
+        'Payment required — call POST /payment/create-intent first and complete the Stripe charge.',
+      );
+    }
+
+    await this.prisma.buyerPassportAccess.create({
+      data: { passportId, userId },
     });
 
     return { passportId };

@@ -221,4 +221,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get marketplaceReview() {
     return this.prisma.marketplaceReview;
   }
+
+  get passportPayment() {
+    return this.prisma.passportPayment;
+  }
 }
