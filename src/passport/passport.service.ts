@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentService } from '../payment/payment.service';
+import { assertKycVerified } from '../common/kyc';
 import {
   Passport,
   PassportSection,
@@ -167,6 +168,8 @@ export class PassportService {
       });
       if (existingSameType) {
         if (existingSameType.ownerId === userId) {
+          // Returning the user's OWN existing passport — no KYC needed,
+          // they already cleared it when they first claimed.
           return { passportId: existingSameType.id };
         }
         throw new ForbiddenException(
@@ -182,6 +185,13 @@ export class PassportService {
     }
 
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
+
+    // KYC gate. Claiming a property creates a verified-owner relationship
+    // with a real address — we need to know the claimant is who they
+    // say they are before HMLR ownership verification, TA6 generation,
+    // and buyer-side trust signals downstream. Returning an existing
+    // owned passport (above) skips this — that user already cleared it.
+    assertKycVerified(user);
 
     // Create passport
     const passport = await this.prisma.passport.create({
@@ -759,19 +769,24 @@ export class PassportService {
     return { target: null };
   }
 
-  // Grant buyer access to a passport — gated on a successful Stripe
-  // payment for this (user, passport) pair.
+  // Grant buyer access to a passport — gated on KYC verification +
+  // a successful Stripe payment for this (user, passport) pair.
   //
   // Until DF4 Finding #1 was closed, this endpoint upserted access
   // unconditionally — any authenticated user could POST and get a free
   // unlock. The check is now belt-and-braces:
-  //   1. Owner of the passport? Pass through (no payment needed).
-  //   2. Already has buyer access? Idempotent return (refreshes /
-  //      shouldn't double-charge if Stripe replays a webhook).
-  //   3. Otherwise: PaymentService.hasSuccessfulPayment() consults
-  //      the DB; if no succeeded row, falls through to a synchronous
-  //      Stripe API check so a slow webhook doesn't block a paying
-  //      user. Throws 402 if still no successful payment is found.
+  //   1. Owner of the passport? Pass through (no KYC/payment needed —
+  //      they already own it).
+  //   2. Already has buyer access? Idempotent return (refreshes / shouldn't
+  //      double-charge if Stripe replays a webhook).
+  //   3. KYC check (Persona). Buyer-side trust signal — a paying buyer
+  //      gets unlocked seller/landlord PII (address, photos, documents);
+  //      we want a real identity attached to that access. Thrown BEFORE
+  //      the payment check so we don't charge users we can't unlock.
+  //   4. PaymentService.hasSuccessfulPayment() consults the DB; if no
+  //      succeeded row, falls through to a synchronous Stripe API check
+  //      so a slow webhook doesn't block a paying user. Throws 403 if
+  //      still no successful payment is found.
   async createBuyerAccess(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
@@ -789,6 +804,16 @@ export class PassportService {
     if (existing) {
       return { passportId };
     }
+
+    // KYC must come BEFORE payment — never take money from a user we
+    // can't immediately unlock. The user's row is fetched once and
+    // re-used so we don't double-query Prisma for the same record.
+    const buyerUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, kycStatus: true },
+    });
+    if (!buyerUser) throw new NotFoundException('User not found');
+    assertKycVerified(buyerUser);
 
     const paid = await this.payments.hasSuccessfulPayment(userId, passportId);
     if (!paid) {
