@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -26,7 +26,15 @@ export class PaymentController {
    * with stripe.confirmCardPayment(); paymentId is informational (not
    * used for unlock — the link is reconstructed server-side via
    * Stripe metadata).
+   *
+   * Tighter throttle than the default 60/min — even a paying user
+   * should never need to mint more than a handful of intents per
+   * minute (drawer-reopen reuses the pending intent). 10/min/IP
+   * is generous enough for genuine retries but rejects scripted
+   * intent-spam, which would otherwise hit our Stripe rate limits
+   * and rack up logged-event noise.
    */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('create-intent')
   @UseGuards(JwtAuthGuard)
   createIntent(
