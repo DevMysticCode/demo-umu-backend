@@ -50,22 +50,6 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  @Throttle(AUTH_THROTTLE)
-  @Post('google')
-  async googleLogin(@Body('credential') credential: string) {
-    return this.authService.googleLogin(credential);
-  }
-
-  @Throttle(AUTH_THROTTLE)
-  @Post('apple')
-  async appleLogin(
-    @Body('idToken') idToken: string,
-    @Body('firstName') firstName?: string,
-    @Body('lastName') lastName?: string,
-  ) {
-    return this.authService.appleLogin(idToken, firstName, lastName);
-  }
-
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)

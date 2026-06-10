@@ -8,14 +8,6 @@ import {
 import * as bcrypt from 'bcrypt';
 import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
-import { OAuth2Client } from 'google-auth-library';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const appleSignin = require('apple-signin-auth') as {
-  verifyIdToken: (
-    idToken: string,
-    options: { audience: string; ignoreExpiration: boolean },
-  ) => Promise<{ sub: string; email?: string }>;
-};
 import { PrismaService } from '../prisma/prisma.service';
 import {
   RequestOtpDto,
@@ -30,9 +22,6 @@ import {
 @Injectable()
 export class AuthService {
   private readonly OTP_EXPIRY_MINUTES = 10;
-  private readonly googleClient = new OAuth2Client(
-    process.env.GOOGLE_CLIENT_ID,
-  );
   private readonly resend: Resend;
 
   constructor(
@@ -290,113 +279,6 @@ export class AuthService {
     };
   }
 
-  async googleLogin(credential: string) {
-    const ticket = await this.googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      throw new UnauthorizedException('Invalid Google token');
-    }
-
-    const { email, given_name, family_name } = payload;
-
-    let user = await this.prisma.user.findUnique({ where: { email } });
-
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          password: '',
-          firstName: given_name ?? '',
-          lastName: family_name ?? '',
-          isVerified: true,
-        },
-      });
-    }
-
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
-
-    return {
-      message: 'Google login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isVerified: user.isVerified,
-      },
-    };
-  }
-
-  async appleLogin(idToken: string, firstName?: string, lastName?: string) {
-    let claims: { sub: string; email?: string };
-    try {
-      // Accept both the web Service ID (io.umovingu.webapp) and the native
-      // Bundle ID (io.umovingu.app) — Apple signs with different audience
-      // depending on whether the user signed in via web SDK or native iOS.
-      const audiences = [
-        process.env.APPLE_CLIENT_ID ?? '',
-        process.env.APPLE_BUNDLE_ID ?? 'io.umovingu.app',
-      ].filter(Boolean);
-      claims = await appleSignin.verifyIdToken(idToken, {
-        audience: audiences.length === 1 ? audiences[0] : (audiences as any),
-        ignoreExpiration: false,
-      });
-    } catch {
-      throw new UnauthorizedException('Invalid Apple token');
-    }
-
-    const sub: string = claims.sub;
-    const email: string | undefined = claims.email;
-
-    if (!sub) throw new UnauthorizedException('Invalid Apple token: missing sub');
-
-    // Use real email, or a stable address derived from Apple's sub
-    const userEmail = email ?? `${sub}@apple.private`;
-
-    let user = await this.prisma.user.findUnique({
-      where: { email: userEmail },
-    });
-
-    if (!user) {
-      user = await this.prisma.user.create({
-        data: {
-          email: userEmail,
-          password: '',
-          firstName: firstName ?? '',
-          lastName: lastName ?? '',
-          isVerified: true,
-        },
-      });
-    } else if ((firstName || lastName) && !user.firstName && !user.lastName) {
-      // Apple sends name only on first auth — update if profile is still blank
-      user = await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          firstName: firstName ?? user.firstName ?? '',
-          lastName: lastName ?? user.lastName ?? '',
-        },
-      });
-    }
-
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
-
-    return {
-      message: 'Apple login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isVerified: user.isVerified,
-      },
-    };
-  }
 
   // ── Password Reset ───────────────────────────────────────────────────────
 
