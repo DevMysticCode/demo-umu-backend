@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
+import { captureException } from '../common/sentry';
 
 // £99 in pence. Mirrored once so the create-intent + display copy never drift.
 export const PASSPORT_UNLOCK_AMOUNT_PENCE = 9900;
@@ -225,6 +226,10 @@ export class PaymentService {
       }
     } catch (err) {
       this.logger.warn(`[payment] sync re-fetch failed: ${(err as any)?.message}`);
+      // Sentry: this is the failover path that lets paying users unlock
+      // when the webhook hasn't fired. If it's failing, the user is
+      // either blocked (we return false) or double-charging risk. Alert.
+      captureException(err, { route: 'payment.hasSuccessfulPayment' });
     }
     return false;
   }
