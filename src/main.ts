@@ -44,8 +44,21 @@ async function bootstrap() {
   // side. Without this, unhandled throws leak table/column names.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Serve uploaded files statically at /uploads/*
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  // Static serving — PUBLIC buckets only. Sensitive buckets
+  // (documents/, anything containing user PII like passport answer
+  // files) deliberately MISS this mount, so a direct GET /uploads/
+  // /documents/abc.pdf 404s. Those files must be fetched via the
+  // signed-URL endpoint /files/:bucket/:filename (see FilesController).
+  //
+  // Per-bucket mount also means that adding a new public bucket is an
+  // explicit decision rather than a default — if you forget to list a
+  // bucket here it'll just fail to load, which is the safer failure
+  // mode for a privacy-sensitive product.
+  const uploadsRoot = join(process.cwd(), 'uploads');
+  const publicBuckets = ['avatars', 'job-photos', 'property-images'];
+  for (const bucket of publicBuckets) {
+    app.useStaticAssets(join(uploadsRoot, bucket), { prefix: `/uploads/${bucket}` });
+  }
 
   // CORS allow-list driven by env. Comma-separated origins (full
   // scheme+host, no trailing slash). Falls back to a sensible default

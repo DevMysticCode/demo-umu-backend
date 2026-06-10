@@ -7,12 +7,20 @@ import {
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
-function resolveUrl(fileUrl: string): string {
-  if (fileUrl?.startsWith('/uploads/')) return `${BASE_URL}${fileUrl}`;
-  return fileUrl;
+// `documents/` is a private bucket — access goes via /files/* signed URLs
+// rather than the static /uploads/* mount (which intentionally doesn't
+// serve sensitive buckets — see main.ts).
+const PRIVATE_BUCKETS = new Set(['documents']);
+
+function bucketOf(fileUrl: string | null | undefined): string | null {
+  if (!fileUrl) return null;
+  // Path shape: /uploads/<bucket>/<filename>
+  const match = fileUrl.match(/^\/uploads\/([^/]+)\//);
+  return match ? match[1] : null;
 }
 
 function formatSize(bytes: number | null): string {
@@ -32,7 +40,39 @@ function formatDate(d: Date): string {
 
 @Injectable()
 export class DocumentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private files: FilesService,
+  ) {}
+
+  /**
+   * Convert a stored fileUrl into the URL the client should hit:
+   *   - public bucket (avatars, job-photos, property-images, …): the
+   *     existing /uploads/<bucket>/<file> path → served by the static
+   *     middleware in main.ts. No auth attached.
+   *   - private bucket (documents/, future kyc/, evidence/): /files/...
+   *     with a freshly-minted HMAC signature scoped to this userId.
+   *     The signature is valid for 1 hour by default — long enough for
+   *     the docs page to render every attachment, short enough that a
+   *     pasted URL stops working quickly.
+   *
+   * Caller MUST pass the requesting user's id so the signed URL is
+   * scoped to them (the /files endpoint verifies the URL was issued
+   * for the same userId in the query). Passing the wrong userId would
+   * leak access to whoever the signed URL was issued for.
+   */
+  private resolveUrl(fileUrl: string | null | undefined, viewerUserId: string): string {
+    if (!fileUrl) return '';
+    if (!fileUrl.startsWith('/uploads/')) return fileUrl;
+
+    const bucket = bucketOf(fileUrl);
+    if (bucket && PRIVATE_BUCKETS.has(bucket)) {
+      // strip the /uploads/ prefix — /files/<bucket>/<filename>
+      const relPath = fileUrl.replace(/^\/uploads\//, '');
+      return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
+    }
+    return `${BASE_URL}${fileUrl}`;
+  }
 
   async getDocuments(userId: string) {
     // 1. User-uploaded documents
@@ -87,7 +127,7 @@ export class DocumentsService {
       return {
         id: a.id,
         title: a.passportQuestion.questionTemplate.title,
-        fileUrl: resolveUrl(a.fileUrl!),
+        fileUrl: this.resolveUrl(a.fileUrl!, userId),
         size: '',
         mimeType: 'application/pdf',
         tags,
@@ -102,7 +142,7 @@ export class DocumentsService {
     const mappedUserDocs = userDocs.map((d) => ({
       id: d.id,
       title: d.name,
-      fileUrl: resolveUrl(d.fileUrl),
+      fileUrl: this.resolveUrl(d.fileUrl, userId),
       size: formatSize(d.fileSize ?? null),
       mimeType: d.mimeType ?? '',
       tags: (d.tags as string[]) ?? [],
@@ -152,7 +192,7 @@ export class DocumentsService {
     return {
       id: doc.id,
       title: doc.name,
-      fileUrl: resolveUrl(doc.fileUrl),
+      fileUrl: this.resolveUrl(doc.fileUrl, userId),
       size: formatSize(doc.fileSize ?? null),
       mimeType: doc.mimeType ?? '',
       tags: (doc.tags as string[]) ?? [],
