@@ -49,6 +49,13 @@ const checks: EnvCheck[] = [
         : "must start with sk_test_ or sk_live_",
   },
   {
+    name: 'STRIPE_WEBHOOK_SECRET',
+    description: 'Stripe webhook endpoint secret (whsec_*) for signature verification',
+    prodOnly: true,
+    shape: (v) =>
+      v.startsWith('whsec_') ? null : "must start with whsec_",
+  },
+  {
     name: 'RESEND_API_KEY',
     description: 'Resend API key for transactional email (OTPs)',
     prodOnly: true,

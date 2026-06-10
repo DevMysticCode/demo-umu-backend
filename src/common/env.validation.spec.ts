@@ -83,6 +83,7 @@ describe('validateEnv', () => {
         DATABASE_URL: 'postgresql://u:p@h:5432/d',
         JWT_SECRET: 'sixteen_chars_minimum_for_secret',
         STRIPE_SECRET_KEY: 'sk_test_x',
+        STRIPE_WEBHOOK_SECRET: 'whsec_x',
         RESEND_API_KEY: 'real_key',
         ADMIN_SECRET: '123',
         CORS_ORIGINS: 'https://x.com',
@@ -99,6 +100,7 @@ describe('validateEnv', () => {
         DATABASE_URL: 'postgresql://u:p@h:5432/d',
         JWT_SECRET: 'sixteen_chars_minimum_for_secret',
         STRIPE_SECRET_KEY: 'wrong_prefix',
+        STRIPE_WEBHOOK_SECRET: 'whsec_x',
         RESEND_API_KEY: 'real_key',
         ADMIN_SECRET: 'sixteen_chars_minimum_for_secret',
         CORS_ORIGINS: 'https://x.com',
@@ -106,5 +108,22 @@ describe('validateEnv', () => {
     ).toThrow('process.exit(1)');
     const printed = errSpy.mock.calls.map((c) => String(c[0])).join('\n');
     expect(printed).toContain('STRIPE_SECRET_KEY');
+  });
+
+  it('rejects malformed STRIPE_WEBHOOK_SECRET in production', () => {
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://u:p@h:5432/d',
+        JWT_SECRET: 'sixteen_chars_minimum_for_secret',
+        STRIPE_SECRET_KEY: 'sk_test_x',
+        STRIPE_WEBHOOK_SECRET: 'not_a_real_webhook_secret',
+        RESEND_API_KEY: 'real_key',
+        ADMIN_SECRET: 'sixteen_chars_minimum_for_secret',
+        CORS_ORIGINS: 'https://x.com',
+      } as any),
+    ).toThrow('process.exit(1)');
+    const printed = errSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(printed).toContain('STRIPE_WEBHOOK_SECRET');
   });
 });
