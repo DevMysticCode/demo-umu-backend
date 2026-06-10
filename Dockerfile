@@ -62,7 +62,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN apk add --no-cache openssl wget tini
+RUN apk add --no-cache openssl wget tini bash
 
 # Prod-only deps (no jest/eslint/etc.) and skip the prisma postinstall
 # again — we copy the generated client from the build stage.
@@ -75,6 +75,12 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/prisma ./prisma
+
+# Entrypoint shim — assembles DATABASE_URL from App Runner's individual
+# DB_* env vars (Secrets Manager delivers each JSON key separately).
+# See docker-entrypoint.sh for the why.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Persistent uploads dir — created with permissive perms so the
 # non-root `node` user can write. A real deployment should mount a
@@ -91,5 +97,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 # tini = PID 1 → forwards signals, reaps zombies. NestJS handles
 # SIGTERM cleanly but tini makes sure it actually receives it under
 # orchestrators that send signals to PID 1.
-ENTRYPOINT ["tini", "--"]
+ENTRYPOINT ["tini", "--", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/src/main.js"]
