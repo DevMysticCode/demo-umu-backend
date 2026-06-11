@@ -84,13 +84,26 @@ if ($json.ADMIN_SECRET.Length -lt 16 -or $json.ADMIN_SECRET -eq '123') {
 Write-Host "[populate-secrets] All $($required.Count) required keys present + shape-valid."
 Write-Host "[populate-secrets] Pushing to AWS Secrets Manager → $SecretId ($Region)..."
 
-# Re-serialise to compact JSON (Secrets Manager has a 64KB string limit)
-$payload = $json | ConvertTo-Json -Compress
-
-aws secretsmanager put-secret-value `
-  --secret-id $SecretId `
-  --region $Region `
-  --secret-string $payload | Out-Null
+# CRITICAL: pass via `file://...` rather than --secret-string $payload.
+# PowerShell native arg handling unquotes JSON keys when the payload
+# is passed as a CLI arg — the secret then arrives as
+# `{KEY:value,KEY2:value2}` instead of `{"KEY":"value"...}` and App
+# Runner returns "invalid character looking for beginning of object
+# key string" when it tries to parse. file:// reads bytes verbatim.
+$compact = $json | ConvertTo-Json -Compress
+$tmpDir  = "$env:USERPROFILE\AppData\Local\Temp"
+$tmpPath = Join-Path $tmpDir "umu-secrets-$(Get-Random).json"
+[System.IO.File]::WriteAllText($tmpPath, $compact)
+try {
+  aws secretsmanager put-secret-value `
+    --secret-id $SecretId `
+    --region $Region `
+    --secret-string "file://$tmpPath" | Out-Null
+} finally {
+  # Delete the temp file no matter what — never leave plaintext secrets
+  # on disk longer than the put call takes.
+  if (Test-Path $tmpPath) { [System.IO.File]::Delete($tmpPath) }
+}
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error "AWS Secrets Manager update failed (exit $LASTEXITCODE)"
