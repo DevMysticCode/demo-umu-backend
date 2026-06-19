@@ -35,7 +35,8 @@ function makeService() {
   const paymentsStub: any = {
     hasSuccessfulPayment: jest.fn().mockResolvedValue(false),
   };
-  return { svc: new PassportService(prismaStub, paymentsStub), prismaStub };
+  const pushStub: any = { send: jest.fn().mockResolvedValue(undefined) };
+  return { svc: new PassportService(prismaStub, paymentsStub, pushStub), prismaStub };
 }
 
 beforeAll(() => {

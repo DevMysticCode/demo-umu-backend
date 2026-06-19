@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentService } from '../payment/payment.service';
+import { PushService } from '../push/push.service';
 import { assertKycVerified } from '../common/kyc';
 import {
   Passport,
@@ -29,6 +30,7 @@ export class PassportService {
   constructor(
     private prisma: PrismaService,
     private payments: PaymentService,
+    private push: PushService,
   ) {
     this.groq = new OpenAI({
       apiKey: process.env.GROQ_API_KEY,
@@ -589,6 +591,15 @@ export class PassportService {
       },
     });
 
+    // Fire-and-forget so push latency never blocks the API response.
+    // PushService no-ops if Firebase isn't configured, so this is safe
+    // in dev / before the FCM credential lands in Secrets Manager.
+    void this.push.send(user.id, {
+      title: 'You were invited to a passport',
+      body: 'Tap to open the passport you can now collaborate on.',
+      data: { kind: 'collaborator_invite', passportId },
+    });
+
     return {
       message: 'Collaborator added successfully',
       collaborator: {
@@ -827,6 +838,16 @@ export class PassportService {
 
     await this.prisma.buyerPassportAccess.create({
       data: { passportId, userId },
+    });
+
+    // Notify the owner that a buyer just unlocked their passport —
+    // a high-signal event that justifies a push interruption. Errors
+    // are swallowed by PushService.send so this can't fail the
+    // unlock that the buyer just paid for.
+    void this.push.send(passport.ownerId, {
+      title: 'A buyer unlocked your passport',
+      body: 'Someone just paid to access your property passport.',
+      data: { kind: 'buyer_unlocked', passportId },
     });
 
     return { passportId };
