@@ -225,4 +225,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get passportPayment() {
     return this.prisma.passportPayment;
   }
+
+  get pushToken() {
+    return this.prisma.pushToken;
+  }
 }

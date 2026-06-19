@@ -65,6 +65,20 @@ model User {
   marketplaceReviewsAuthored    MarketplaceReview[]    @relation("MarketplaceReviewFrom")
   marketplaceReviewsReceived    MarketplaceReview[]    @relation("MarketplaceReviewTo")
   passportPayments              PassportPayment[]
+  pushTokens                    PushToken[]
+}
+
+model PushToken {
+  id         String   @id @default(uuid())
+  userId     String
+  token      String   @unique
+  platform   String
+  deviceId   String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserAddress {

@@ -27,7 +27,7 @@ function makeService(opts?: { user?: any }) {
     passportSection: { create: jest.fn() },
     questionTemplate: { findMany: jest.fn().mockResolvedValue([]) },
   };
-  return { svc: new PassportService(prismaStub, {} as any), prismaStub };
+  return { svc: new PassportService(prismaStub, {} as any, { send: jest.fn() } as any), prismaStub };
 }
 
 beforeAll(() => {
