@@ -8,6 +8,12 @@ import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
+import {
+  publicUrlFor,
+  storedFilename,
+  deleteStoredFile,
+  isS3Mode,
+} from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -175,7 +181,7 @@ export class DocumentsService {
   ) {
     if (!file) throw new BadRequestException('No file provided');
 
-    const fileUrl = `/uploads/documents/${file.filename}`;
+    const fileUrl = publicUrlFor('documents', storedFilename(file));
 
     const doc = await this.prisma.userDocument.create({
       data: {
@@ -210,11 +216,18 @@ export class DocumentsService {
     if (!doc) throw new NotFoundException('Document not found');
     if (doc.userId !== userId) throw new ForbiddenException();
 
-    const filePath = join(process.cwd(), doc.fileUrl);
-    if (existsSync(filePath)) {
-      try {
-        unlinkSync(filePath);
-      } catch {}
+    if (isS3Mode) {
+      // doc.fileUrl shape: '/uploads/documents/<filename>' — strip the
+      // leading /uploads/ to get the S3 key bucket/filename form.
+      const m = doc.fileUrl.match(/^\/uploads\/([^/]+)\/(.+)$/);
+      if (m) {
+        try { await deleteStoredFile(m[1], m[2]); } catch { /* ignore */ }
+      }
+    } else {
+      const filePath = join(process.cwd(), doc.fileUrl);
+      if (existsSync(filePath)) {
+        try { unlinkSync(filePath); } catch { /* ignore */ }
+      }
     }
 
     await this.prisma.userDocument.delete({ where: { id: documentId } });

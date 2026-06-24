@@ -60,14 +60,27 @@ export class UmuFoundationStack extends cdk.Stack {
     // S3 — private bucket for user uploads
     // ─────────────────────────────────────────────────────────────
     //
-    // FilesService hands out HMAC-signed URLs scoped to a user — no
-    // public ACLs needed. Versioning ON so a bad delete is
-    // recoverable for 30 days. Removal policy RETAIN means a CDK
-    // `destroy` leaves the bucket intact (manual delete to clean up).
+    // Two delivery models share one bucket:
+    //   - Private prefixes (documents/, passport-docs/, kyc/...) —
+    //     blocked from public-read; access only via HMAC-signed
+    //     /files/* URLs that we mint in FilesService.
+    //   - Public prefixes (avatars/, job-photos/, property-images/) —
+    //     uploaded with `public-read` ACL by multer-s3 so <img src>
+    //     can fetch them directly from S3 without our API in the path.
+    //
+    // BlockPublicAcls must be FALSE to let multer-s3 set per-object
+    // public-read. We keep blockPublicPolicy=true so nobody can
+    // accidentally make the WHOLE bucket public via a bucket policy.
     this.uploadsBucket = new s3.Bucket(this, 'UploadsBucket', {
       bucketName: `umu-prod-uploads-${this.account}`,
       removalPolicy: RemovalPolicy.RETAIN,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        ignorePublicAcls: false,
+        blockPublicPolicy: true,
+        restrictPublicBuckets: false,
+      }),
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: true,
       lifecycleRules: [

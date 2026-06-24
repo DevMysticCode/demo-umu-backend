@@ -13,6 +13,7 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { FilesService } from './files.service';
+import { isS3Mode, getS3Object } from '../common/storage';
 
 /**
  * Signed-URL file delivery for sensitive buckets.
@@ -74,24 +75,36 @@ export class FilesController {
       throw new ForbiddenException('Access denied');
     }
 
-    const absolute = normalize(join(this.uploadsRoot, bucket, filename));
-    if (!absolute.startsWith(this.uploadsRoot + sep)) {
-      // Belt-and-braces: if normalise(...) somehow lets the path escape
-      // uploads/, refuse. The earlier param check should make this
-      // impossible already.
-      throw new BadRequestException('Invalid file path');
+    res.set('Cache-Control', 'private, max-age=300');
+    res.set('Content-Disposition', 'inline');
+
+    if (isS3Mode) {
+      // S3 mode: stream the object straight from S3 → response. Skips
+      // the disk-existence check entirely; if the key doesn't exist S3
+      // raises NoSuchKey which we map to 404.
+      try {
+        const obj = await getS3Object(`${bucket}/${filename}`);
+        if (obj.contentType) res.set('Content-Type', obj.contentType);
+        if (obj.contentLength) res.set('Content-Length', String(obj.contentLength));
+        obj.body.pipe(res);
+        return;
+      } catch (err: any) {
+        if (err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404) {
+          throw new NotFoundException('File not found');
+        }
+        throw err;
+      }
     }
 
+    // Disk mode (local dev) — keep the original path-traversal-safe
+    // sendFile flow.
+    const absolute = normalize(join(this.uploadsRoot, bucket, filename));
+    if (!absolute.startsWith(this.uploadsRoot + sep)) {
+      throw new BadRequestException('Invalid file path');
+    }
     if (!existsSync(absolute)) {
       throw new NotFoundException('File not found');
     }
-
-    // Stream the file. Express infers Content-Type from the extension;
-    // attach a Content-Disposition: inline so PDFs render in-browser
-    // (the docs page renders <iframe src="..." />). Set a short cache
-    // because the URL has a 1-hour signature anyway.
-    res.set('Cache-Control', 'private, max-age=300');
-    res.set('Content-Disposition', 'inline');
     res.sendFile(absolute);
   }
 }
