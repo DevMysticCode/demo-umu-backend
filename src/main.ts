@@ -50,14 +50,16 @@ async function bootstrap() {
   // /documents/abc.pdf 404s. Those files must be fetched via the
   // signed-URL endpoint /files/:bucket/:filename (see FilesController).
   //
-  // Per-bucket mount also means that adding a new public bucket is an
-  // explicit decision rather than a default — if you forget to list a
-  // bucket here it'll just fail to load, which is the safer failure
-  // mode for a privacy-sensitive product.
-  const uploadsRoot = join(process.cwd(), 'uploads');
-  const publicBuckets = ['avatars', 'job-photos', 'property-images'];
-  for (const bucket of publicBuckets) {
-    app.useStaticAssets(join(uploadsRoot, bucket), { prefix: `/uploads/${bucket}` });
+  // In S3 mode (production), public buckets serve directly from S3 via
+  // the bucket's public DNS — App Runner never sees those requests, so
+  // we skip the static mount entirely. Disk mode (local dev) keeps the
+  // per-bucket allow-list so adding a new public bucket is explicit.
+  if (!process.env.S3_UPLOADS_BUCKET) {
+    const uploadsRoot = join(process.cwd(), 'uploads');
+    const publicBuckets = ['avatars', 'job-photos', 'property-images'];
+    for (const bucket of publicBuckets) {
+      app.useStaticAssets(join(uploadsRoot, bucket), { prefix: `/uploads/${bucket}` });
+    }
   }
 
   // CORS allow-list driven by env. Comma-separated origins (full

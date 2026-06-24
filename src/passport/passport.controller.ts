@@ -16,7 +16,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PassportService } from './passport.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage } from '../common/storage';
+import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -259,7 +259,11 @@ export class PassportController {
       req.user.id,
     );
     if (!hasAccess) throw new ForbiddenException('Access denied');
-    const url = `${BASE_URL}/uploads/property-images/${file.filename}`;
+    const relativeOrAbsolute = publicUrlFor('property-images', storedFilename(file));
+    // S3 mode returns an absolute URL; disk mode returns a relative
+    // path which we prefix with BASE_URL so mobile shells / native
+    // image loaders get a fetchable absolute URL.
+    const url = isS3Mode ? relativeOrAbsolute : `${BASE_URL}${relativeOrAbsolute}`;
     return {
       url,
       name: file.originalname,

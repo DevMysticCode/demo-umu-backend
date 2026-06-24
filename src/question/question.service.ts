@@ -9,6 +9,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
+import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
 
 @Injectable()
 export class QuestionService {
@@ -113,7 +114,14 @@ export class QuestionService {
     const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
     if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
 
-    const fileUrl = `${BASE_URL}/uploads/passport-docs/${file.filename}`;
+    // passport-docs is a PRIVATE bucket — publicUrlFor returns the
+    // relative `/uploads/passport-docs/<filename>` form in both modes,
+    // and FilesService later wraps it in a signed /files/... URL on
+    // read. We prepend BASE_URL only in disk mode to preserve legacy
+    // behaviour; S3 mode stores the relative form so the existing
+    // ownership lookup in FilesService.userOwnsFilePath matches.
+    const relative = publicUrlFor('passport-docs', storedFilename(file));
+    const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
 
     // Persist the upload as the question's answer + carry the original
     // filename in answerJson so the UI can show "Gas Safety 2026.pdf"

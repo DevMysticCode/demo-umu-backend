@@ -1,7 +1,13 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
-import { existsSync, mkdirSync, unlinkSync } from 'fs';
-import { join, extname } from 'path';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  publicUrlFor,
+  storedFilename,
+  deleteStoredFile,
+  isS3Mode,
+} from '../common/storage';
 import {
   UpdateProfileDto,
   CreateAddressDto,
@@ -25,16 +31,25 @@ export class ProfileService {
       throw new BadRequestException('Only image files are allowed (jpg, png, webp, gif)');
     }
 
-    // Delete old avatar file if it was locally stored
+    // Best-effort delete the previous avatar so we don't accumulate
+    // orphaned objects. S3 deletes go through deleteStoredFile (no-op
+    // in disk mode); disk deletes use fs.unlinkSync.
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user?.avatarUrl?.startsWith('/uploads/')) {
-      const oldPath = join(process.cwd(), user.avatarUrl);
-      if (existsSync(oldPath)) {
-        try { unlinkSync(oldPath); } catch { /* ignore */ }
+    if (user?.avatarUrl) {
+      if (isS3Mode && user.avatarUrl.includes('/avatars/')) {
+        const oldKey = user.avatarUrl.split('/avatars/').pop();
+        if (oldKey) {
+          try { await deleteStoredFile('avatars', oldKey); } catch { /* ignore */ }
+        }
+      } else if (user.avatarUrl.startsWith('/uploads/')) {
+        const oldPath = join(process.cwd(), user.avatarUrl);
+        if (existsSync(oldPath)) {
+          try { unlinkSync(oldPath); } catch { /* ignore */ }
+        }
       }
     }
 
-    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const avatarUrl = publicUrlFor('avatars', storedFilename(file));
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },

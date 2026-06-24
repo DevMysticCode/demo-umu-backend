@@ -30,6 +30,8 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
@@ -46,6 +48,7 @@
     "firebase-admin": "^14.0.0",
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
+    "multer-s3": "^3.0.1",
     "nodemailer": "^8.0.3",
     "openai": "^6.32.0",
     "prisma": "^6.19.2",
@@ -65,6 +68,7 @@
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer-s3": "^3.0.3",
     "@types/node": "^22.10.7",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
