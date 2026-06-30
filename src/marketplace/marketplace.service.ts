@@ -539,32 +539,36 @@ export class MarketplaceService {
     }
 
     // Accept this offer, decline all other pending siblings, flip the
-    // job to in_progress. Single transaction so we never end up with
-    // two accepted offers on the same job.
-    await this.prisma.$transaction([
-      this.prisma.marketplaceOffer.update({
-        where: { id: offerId },
+    // job to in_progress, and zero out offerCount (all are terminal).
+    //
+    // The first `updateMany` is the lock: it succeeds only if the
+    // offer is STILL pending at SQL-execution time. Two concurrent
+    // accepts on the same offer hit a single statement, the second
+    // gets 0 rows, and we throw — no possibility of two accepted
+    // offers on the same job. The previous version did a findUnique
+    // → update which left a TOCTOU window.
+    const result = await this.prisma.$transaction(async (tx) => {
+      const acceptResult = await tx.marketplaceOffer.updateMany({
+        where: { id: offerId, status: 'pending' },
         data: { status: 'accepted' },
-      }),
-      this.prisma.marketplaceOffer.updateMany({
-        where: {
-          jobId: offer.jobId,
-          id: { not: offerId },
-          status: 'pending',
-        },
+      });
+      if (acceptResult.count === 0) {
+        throw new BadRequestException('Offer is no longer pending');
+      }
+      await tx.marketplaceOffer.updateMany({
+        where: { jobId: offer.jobId, id: { not: offerId }, status: 'pending' },
         data: { status: 'declined' },
-      }),
-      this.prisma.marketplaceJob.update({
+      });
+      await tx.marketplaceJob.update({
         where: { id: offer.jobId },
-        data: { status: 'in_progress' },
-      }),
-    ]);
-
-    const refreshed = await this.prisma.marketplaceOffer.findUniqueOrThrow({
-      where: { id: offerId },
-      include: { supplier: true },
+        data: { status: 'in_progress', offerCount: 0 },
+      });
+      return tx.marketplaceOffer.findUniqueOrThrow({
+        where: { id: offerId },
+        include: { supplier: true },
+      });
     });
-    return this.toOfferDto(refreshed);
+    return this.toOfferDto(result);
   }
 
   async declineOffer(viewerUserId: string, offerId: string): Promise<MarketplaceOfferDto> {
@@ -580,10 +584,27 @@ export class MarketplaceService {
       throw new BadRequestException(`Offer is already ${offer.status}`);
     }
 
-    const updated = await this.prisma.marketplaceOffer.update({
-      where: { id: offerId },
-      data: { status: 'declined' },
-      include: { supplier: true },
+    // Atomic flip + offerCount decrement. Same race-safety logic as
+    // acceptOffer: the updateMany only matches if the offer is still
+    // pending at SQL time, and we only decrement when that flip
+    // actually happens. Prevents over- and under-counting under
+    // concurrent decline + accept.
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const flip = await tx.marketplaceOffer.updateMany({
+        where: { id: offerId, status: 'pending' },
+        data: { status: 'declined' },
+      });
+      if (flip.count === 0) {
+        throw new BadRequestException('Offer is no longer pending');
+      }
+      await tx.marketplaceJob.update({
+        where: { id: offer.jobId },
+        data: { offerCount: { decrement: 1 } },
+      });
+      return tx.marketplaceOffer.findUniqueOrThrow({
+        where: { id: offerId },
+        include: { supplier: true },
+      });
     });
     return this.toOfferDto(updated);
   }
