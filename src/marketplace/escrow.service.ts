@@ -76,19 +76,27 @@ export class EscrowService {
     const platformFee = Math.round((amount * PLATFORM_FEE_BPS) / 10_000);
     const total = amount + platformFee;
 
-    const intent = await this.stripe.paymentIntents.create({
-      amount: total,
-      currency: 'gbp',
-      description: `UProtect escrow · job ${offer.jobId}`,
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        umuType: 'marketplace_escrow',
-        jobId: offer.jobId,
-        offerId: offer.id,
-        supplierId: offer.supplierId,
-        customerId: viewerUserId,
+    // Idempotency key scoped to the offer so a retry (network blip,
+    // double-click, refresh after the request fired but before the
+    // response landed) re-fetches the same PaymentIntent instead of
+    // creating a second one. Without this, a closed browser mid-flow
+    // leaked PaymentIntents that nothing ever confirmed or cancelled.
+    const intent = await this.stripe.paymentIntents.create(
+      {
+        amount: total,
+        currency: 'gbp',
+        description: `UProtect escrow · job ${offer.jobId}`,
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          umuType: 'marketplace_escrow',
+          jobId: offer.jobId,
+          offerId: offer.id,
+          supplierId: offer.supplierId,
+          customerId: viewerUserId,
+        },
       },
-    });
+      { idempotencyKey: `escrow:${offer.id}` },
+    );
 
     // Single DB transaction: accept the offer, decline siblings,
     // flip job to in_progress, create Payment row.
@@ -143,6 +151,19 @@ export class EscrowService {
     const intent = await this.stripe.paymentIntents.retrieve(payment.stripePaymentIntentId);
     if (intent.status !== 'succeeded') {
       throw new BadRequestException(`Stripe says payment is ${intent.status}`);
+    }
+    // Defence-in-depth: the PaymentIntent is fetched server-side from
+    // Stripe (so the client can't lie about its status), but a sloppy
+    // metadata edit or a future code path that reuses an intent could
+    // still pair our record with one charging a different amount or
+    // currency. Reject anything that doesn't match the row exactly.
+    if (intent.amount !== payment.total) {
+      throw new BadRequestException(
+        `Stripe charged ${intent.amount}p but we expected ${payment.total}p`,
+      );
+    }
+    if ((intent.currency ?? '').toLowerCase() !== 'gbp') {
+      throw new BadRequestException(`Stripe charged in ${intent.currency}, not GBP`);
     }
 
     const updated = await this.prisma.marketplacePayment.update({
@@ -206,9 +227,34 @@ export class EscrowService {
   ): Promise<MarketplacePaymentDto> {
     const payment = await this.findVisiblePayment(viewerUserId, paymentId);
 
+    // Terminal payments are settled — evidence at this point can't
+    // influence the release/refund flow and is mostly a way to inflate
+    // the photo array after the fact. Refuse cleanly.
+    if (payment.status === 'released' || payment.status === 'refunded') {
+      throw new BadRequestException(
+        `Payment is ${payment.status} — evidence is locked once funds settle`,
+      );
+    }
+
+    // Accept either:
+    //   - relative paths into our own bucket: /uploads/job-photos/<file>
+    //   - direct S3 URLs from publicUrlFor() in S3 mode
+    // Everything else (arbitrary external links, data: URIs, attempts
+    // to point at a different bucket) is rejected so the evidence
+    // array can't be used as a free hotlink store.
+    const expectedS3Prefix = process.env.S3_UPLOADS_BUCKET
+      ? `https://${process.env.S3_UPLOADS_BUCKET}.s3.`
+      : null;
     const cleaned = (photos ?? [])
       .map((p) => (p ?? '').toString().trim())
-      .filter((p) => p.startsWith('/uploads/'));
+      .filter((p) => {
+        if (p.includes('..')) return false;
+        if (p.startsWith('/uploads/job-photos/')) return true;
+        if (expectedS3Prefix && p.startsWith(expectedS3Prefix) && p.includes('/job-photos/')) {
+          return true;
+        }
+        return false;
+      });
     if (!cleaned.length) {
       throw new BadRequestException('No valid photo URLs provided');
     }

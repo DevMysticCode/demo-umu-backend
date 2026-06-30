@@ -69,4 +69,3 @@ jobs:
           STRIPE_SECRET_KEY: sk_test_dummy
           STRIPE_WEBHOOK_SECRET: whsec_dummy
           NODE_ENV: test
-          NODE_ENV: test

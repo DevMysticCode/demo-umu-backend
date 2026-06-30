@@ -81,6 +81,15 @@ export class ReviewsService {
       throw new ForbiddenException('You are not a party to this job');
     }
 
+    // Defence-in-depth: refuse self-reviews even though createOffer
+    // blocks customer==supplier at the booking stage. A job seeded
+    // with customerId=null and later self-served, or a future code
+    // path that doesn't re-check, would otherwise let a user inflate
+    // their own public rating with a 5-star self-review.
+    if (toUserId === viewerUserId) {
+      throw new ForbiddenException('You cannot review yourself');
+    }
+
     // Normalise the tag list — trim each entry, drop blanks, cap length
     // per chip. Keeps the column compact and predictable for downstream
     // search/filter even if the client sends sloppy data.
