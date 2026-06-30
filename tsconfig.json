@@ -1,4 +1,10 @@
 {
+  // infra/ is the AWS CDK project — separate package.json + node_modules,
+  // its own tsconfig.json. Without this exclude, Nest/TS in the backend
+  // root tries to compile CDK files and fails on Railway/CI where
+  // infra/node_modules isn't installed (we only `npm install` the
+  // backend's deps).
+  "exclude": ["infra", "node_modules", "dist"],
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext",
