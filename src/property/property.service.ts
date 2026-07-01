@@ -5,6 +5,7 @@ import { LandRegistryService } from '../land-registry/land-registry.service';
 import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
 import { Property } from '@prisma/client';
 import { Resend } from 'resend';
+import { buildStreetViewUrl, resolveStreetViewUrl } from './street-view';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
 
@@ -1439,6 +1440,9 @@ export class PropertyService {
           addressLine2: p.addressLine2 ? titleCase(p.addressLine2) : p.addressLine2,
           city: p.city ? titleCase(p.city) : p.city,
           county: p.county ? titleCase(p.county) : p.county,
+          // Override the stored imageUrl with a live-built one so a key
+          // rotation heals every cached row without any DB mutation.
+          imageUrl: resolveStreetViewUrl(p),
           hasPassport: !!passport,
           passportPublished: isPublished,
           passportCompletion,
@@ -1544,11 +1548,11 @@ export class PropertyService {
           : `${dpa.BUILDING_NUMBER ?? ''} ${dpa.THOROUGHFARE_NAME ?? ''}`.trim();
         const addressLine1 = titleCase(rawAddress1);
 
-        // Use Google Street View for a real property photo
-        const googleKey = process.env.GOOGLE_API_KEY ?? '';
-        const imageUrl = googleKey
-          ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${coords.lat},${coords.lon}&key=${googleKey}&fov=90&pitch=5&radius=200&source=outdoor&return_error_codes=true`
-          : null;
+        // Google Street View — built via the shared util so future key
+        // rotations only need a .env swap. Stored in the DB as a cache,
+        // but resolveStreetViewUrl in the response layer will override
+        // whatever's stored with a fresh URL anyway.
+        const imageUrl = buildStreetViewUrl(coords.lat, coords.lon);
 
         const globalIndex = offset + i;
 
@@ -2568,11 +2572,9 @@ export class PropertyService {
       lat && lon ? this.fetchCrimeStats(lat, lon) : Promise.resolve(null),
     ]);
 
-    const googleKey = process.env.GOOGLE_API_KEY ?? '';
-    const streetViewUrl =
-      lat && lon && googleKey
-        ? `https://maps.googleapis.com/maps/api/streetview?size=800x500&location=${lat},${lon}&key=${googleKey}&fov=90&pitch=10&radius=200&source=outdoor&return_error_codes=true`
-        : null;
+    // Detail-page hero uses a slightly higher pitch than the search
+    // card thumbnail, but everything else is identical.
+    const streetViewUrl = buildStreetViewUrl(lat, lon, { pitch: 10 });
 
     const floodData =
       floodRiskRaw.status === 'fulfilled' ? floodRiskRaw.value : null;
