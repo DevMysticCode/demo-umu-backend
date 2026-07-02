@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>HomeScore · No-EPC Estimate</title>
+<style>
+  :root{
+    --teal:#1FA295; --teal-dark:#15837a; --teal-light:#e2f4f2;
+    --navy:#2E2A50; --navy2:#3a3563;
+    --orange:#C77A31; --orange2:#b5691f;
+    --amber:#E8A33D; --red:#E4574F; --green:#3FAE6A;
+    --ink:#2E2A50; --grey:#8b8fa3; --bg:#ECEEF3; --card:#fff;
+    --radius:22px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:#d8dbe3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);display:flex;justify-content:center;min-height:100vh}
+  .phone{width:100%;max-width:430px;background:var(--bg);min-height:100vh;padding:18px 16px 40px;position:relative;overflow-x:hidden}
+  .screen{display:none;animation:fade .3s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .circle-btn{width:44px;height:44px;border-radius:50%;background:#fff;border:none;font-size:18px;color:var(--ink);box-shadow:0 2px 8px rgba(46,42,80,.08);cursor:pointer}
+  .topbar h1{font-size:19px;font-weight:700}
+  .topbar .sub{font-size:12.5px;color:var(--grey);text-align:center;font-weight:500}
+
+  .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 2px 10px rgba(46,42,80,.06);margin-bottom:14px}
+
+  /* property header */
+  .hero{background:linear-gradient(160deg,#cd8038,#b96f26);border-radius:26px;padding:22px 18px 18px;color:#fff;margin-bottom:14px}
+  .hero h2{font-size:23px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .hero .meta{font-size:14px;opacity:.9;margin:4px 0 14px}
+  .hero hr{border:none;border-top:1px solid rgba(255,255,255,.25);margin-bottom:14px}
+  .hero-tiles{display:flex;gap:10px}
+  .hero-tile{flex:1;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:16px;padding:14px}
+  .hero-tile .lbl{font-size:13px;font-weight:600;opacity:.95;margin-bottom:10px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:7px;font-weight:800;font-size:15px}
+  .badge.unknown{background:rgba(255,255,255,.25);color:#fff}
+  .hero-tile .big{font-size:24px;font-weight:800}
+  .hero-tile .big small{font-size:13px;font-weight:600;opacity:.8}
+  .hero-tile .cap{font-size:12px;opacity:.85;margin-top:8px}
+
+  .navy-card{background:var(--navy);border-radius:26px;padding:22px 20px;color:#fff;margin-bottom:14px}
+  .navy-card h3{font-size:19px;font-weight:800;margin-bottom:6px}
+  .navy-card p{font-size:14px;opacity:.85;line-height:1.45}
+  .btn{display:block;width:100%;border:none;border-radius:999px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;text-align:center}
+  .btn.white{background:#fff;color:var(--navy);margin-top:16px}
+  .btn.teal{background:var(--teal);color:#fff}
+  .btn.ghost{background:transparent;color:var(--teal-dark);font-weight:700}
+  .tiny{font-size:12px;text-align:center;opacity:.7;margin-top:10px}
+
+  .info-row{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--grey);line-height:1.45;padding:0 4px}
+  .info-row .i{flex:none;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--grey);font-size:11px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+
+  /* quiz */
+  .progress-wrap{margin:4px 0 16px}
+  .progress-track{height:8px;background:#dde0e8;border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:var(--teal);border-radius:99px;width:0;transition:width .3s ease}
+  .progress-meta{display:flex;justify-content:space-between;font-size:12.5px;color:var(--grey);margin-top:7px;font-weight:600}
+  .live-pill{display:flex;justify-content:center;margin-bottom:14px}
+  .live-pill span{background:var(--teal-light);color:var(--teal-dark);font-size:13px;font-weight:700;padding:8px 16px;border-radius:99px}
+  .section-chip{font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--grey);text-transform:uppercase;margin-bottom:8px}
+  .q-title{font-size:21px;font-weight:800;line-height:1.3;margin-bottom:4px}
+  .q-sub{font-size:14px;color:var(--grey);margin-bottom:16px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:2px solid transparent;border-radius:18px;padding:15px 16px;margin-bottom:10px;font-size:15.5px;font-weight:600;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 2px 8px rgba(46,42,80,.05);transition:border-color .15s, transform .1s}
+  .opt:active{transform:scale(.985)}
+  .opt.sel{border-color:var(--teal);background:var(--teal-light)}
+  .opt .em{font-size:20px;flex:none}
+  .opt .sub{display:block;font-size:12.5px;color:var(--grey);font-weight:500;margin-top:2px}
+  .opt.unsure{background:#f2f3f7;box-shadow:none;color:#6a6e83}
+  .quiz-nav{display:flex;gap:10px;margin-top:6px}
+  .quiz-nav .btn{flex:1}
+  .btn.back{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(46,42,80,.06)}
+  .btn.disabled{opacity:.4;pointer-events:none}
+
+  /* results */
+  .result-card{border:2px solid var(--teal);background:#f6fbfa;border-radius:26px;padding:22px 20px;margin-bottom:14px}
+  .brandline{font-size:12px;letter-spacing:.18em;font-weight:800;color:var(--teal-dark);margin-bottom:16px}
+  .brandline sup{font-size:8px}
+  .result-top{display:flex;gap:18px;align-items:center}
+  .ring{position:relative;width:118px;height:118px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .val b{font-size:33px;font-weight:800}
+  .ring .val span{font-size:12px;color:var(--grey);font-weight:600}
+  .result-title{font-size:21px;font-weight:800;margin-bottom:6px}
+  .result-body{font-size:14px;color:#5b5f75;line-height:1.5}
+  .result-body b{color:var(--teal-dark)}
+  .range-bar{margin-top:18px}
+  .range-track{position:relative;height:10px;border-radius:99px;background:linear-gradient(90deg,#e4574f,#e8a33d,#f4d03f,#8dc63f,#3fae6a);opacity:.95}
+  .range-window{position:absolute;top:-4px;height:18px;border-radius:99px;border:3px solid var(--navy);background:rgba(255,255,255,.35)}
+  .range-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--grey);font-weight:700;margin-top:6px}
+  .conf-row{display:flex;align-items:center;gap:10px;margin-top:16px}
+  .conf-row .lbl{font-size:13px;font-weight:700}
+  .conf-track{flex:1;height:8px;background:#dde0e8;border-radius:99px;overflow:hidden}
+  .conf-fill{height:100%;background:var(--navy);border-radius:99px;transition:width .5s ease}
+  .conf-pct{font-size:13px;font-weight:800;color:var(--navy)}
+  .divider{border:none;border-top:1px solid #e3e6ee;margin:16px 0}
+
+  .tiles{display:flex;gap:12px;margin-bottom:14px}
+  .tile{flex:1;background:#fff;border:1.5px solid #dfe8e7;border-radius:20px;padding:16px;text-align:center}
+  .tile .lbl{font-size:11.5px;letter-spacing:.1em;font-weight:700;color:var(--grey);text-transform:uppercase;margin-bottom:6px}
+  .tile .big{font-size:22px;font-weight:800}
+  .tile .big small{font-size:13px;font-weight:600;color:var(--grey)}
+  .tile .cap{font-size:12px;color:var(--teal-dark);font-weight:600;margin-top:5px}
+  .tile .cap.red{color:var(--red)}
+
+  .sect-head{display:flex;justify-content:space-between;align-items:center;margin:20px 4px 12px}
+  .sect-head .t{font-size:13.5px;letter-spacing:.14em;font-weight:700;color:#5b5f75;text-transform:uppercase}
+  .sect-head .a{font-size:14px;font-weight:700;color:var(--teal-dark)}
+  .split-row{display:flex;align-items:center;gap:12px;padding:13px 4px}
+  .split-row+.split-row{border-top:1px solid #f0f1f6}
+  .split-row .em{font-size:19px;width:26px}
+  .split-row .name{width:86px;font-size:15px;font-weight:700}
+  .split-track{flex:1;height:9px;background:#e8eaf0;border-radius:99px;overflow:hidden}
+  .split-fill{height:100%;border-radius:99px;width:0;transition:width .7s ease}
+  .split-pts{width:52px;text-align:right;font-size:14.5px;font-weight:800}
+  .split-est{font-size:10.5px;color:var(--grey);font-weight:600;display:block}
+
+  .step{display:flex;align-items:center;gap:12px;padding:13px 4px}
+  .step+.step{border-top:1px solid #f0f1f6}
+  .step .em{font-size:19px}
+  .step .txt{flex:1}
+  .step .txt b{font-size:14.5px;display:block}
+  .step .txt span{font-size:12.5px;color:var(--grey)}
+  .step .pts{font-size:14px;font-weight:800;color:var(--teal-dark);background:var(--teal-light);padding:5px 10px;border-radius:99px}
+  .estchip{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em;padding:5px 11px;border-radius:99px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============ SCREEN 1 · LANDING ============ -->
+  <div class="screen active" id="s-landing">
+    <div class="topbar">
+      <button class="circle-btn">&#8249;</button>
+      <div><h1>Your HomeScore</h1><div class="sub">Your home's energy snapshot</div></div>
+      <button class="circle-btn">?</button>
+    </div>
+
+    <div class="hero">
+      <h2>&#9675;&nbsp; 49 Woodfield Road</h2>
+      <div class="meta">CV5 6AJ · House · 109m²</div>
+      <hr>
+      <div class="hero-tiles">
+        <div class="hero-tile">
+          <div class="lbl">EPC rating</div>
+          <span class="badge unknown">None</span>
+          <div class="cap">No EPC on record</div>
+        </div>
+        <div class="hero-tile">
+          <div class="lbl">⚡ HomeScore</div>
+          <div class="big">?<small>/100</small></div>
+          <div class="cap">Answer 20 questions</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navy-card">
+      <h3>This property has no EPC</h3>
+      <p>No problem — answer 20 quick questions about the home and we'll build an <b>estimated HomeScore</b>, the same way an assessor fills gaps using the property's age.</p>
+      <button class="btn white" onclick="startQuiz()">Estimate my score &nbsp;&rarr;</button>
+      <div class="tiny">Takes ~2 minutes · No documents needed · "Not sure" is always OK</div>
+    </div>
+
+    <div class="card">
+      <div class="info-row"><div class="i">i</div><div>Where you're not sure, we assume what's <b>typical for the property's age</b> — exactly like the official RdSAP method. Every confident answer tightens your estimate.</div></div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2 · QUIZ ============ -->
+  <div class="screen" id="s-quiz">
+    <div class="topbar">
+      <button class="circle-btn" onclick="prevQ()">&#8249;</button>
+      <div><h1>Estimate quiz</h1><div class="sub">49 Woodfield Road</div></div>
+      <button class="circle-btn" onclick="goto('s-landing')">&times;</button>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="pfill"></div></div>
+      <div class="progress-meta"><span id="pcount">Question 1 of 20</span><span id="psect"></span></div>
+    </div>
+
+    <div class="live-pill"><span id="livepill">Current estimate: —</span></div>
+
+    <div id="qbox"></div>
+
+    <div class="quiz-nav">
+      <button class="btn back" onclick="prevQ()">Back</button>
+      <button class="btn teal disabled" id="nextbtn" onclick="nextQ()">Next</button>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3 · RESULTS ============ -->
+  <div class="screen" id="s-results">
+    <div class="topbar">
+      <button class="circle-btn" onclick="goto('s-landing')">&#8249;</button>
+      <div><h1>Your HomeScore</h1><div class="sub">Estimated · no EPC required</div></div>
+      <button class="circle-btn">?</button>
+    </div>
+
+    <div class="result-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="brandline">HOMESCORE<sup>™</sup></div>
+        <span class="estchip">✦ Estimated</span>
+      </div>
+      <div class="result-top">
+        <div class="ring">
+          <svg width="118" height="118">
+            <circle cx="59" cy="59" r="50" fill="none" stroke="#e3e6ee" stroke-width="11"/>
+            <circle id="ringfill" cx="59" cy="59" r="50" fill="none" stroke="#1FA295" stroke-width="11" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" style="transition:stroke-dashoffset 1s ease"/>
+          </svg>
+          <div class="val"><b id="r-mid">—</b><span id="r-range">/100</span></div>
+        </div>
+        <div>
+          <div class="result-title" id="r-title">—</div>
+          <div class="result-body" id="r-body">—</div>
+        </div>
+      </div>
+
+      <div class="range-bar">
+        <div class="range-track"><div class="range-window" id="rwindow"></div></div>
+        <div class="range-labels"><span>G</span><span>F</span><span>E</span><span>D</span><span>C</span><span>B</span><span>A</span></div>
+      </div>
+
+      <div class="conf-row">
+        <span class="lbl">Confidence</span>
+        <div class="conf-track"><div class="conf-fill" id="conffill"></div></div>
+        <span class="conf-pct" id="confpct">—</span>
+      </div>
+
+      <hr class="divider">
+      <div class="info-row"><div class="i">i</div><div id="r-note">Estimated from your answers. Book an accredited assessment to make it official.</div></div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="lbl">Est. bills</div><div class="big" id="t-bills">—</div><div class="cap" id="t-save">—</div></div>
+      <div class="tile"><div class="lbl">CO₂</div><div class="big" id="t-co2">—</div><div class="cap red">UK avg 6.0t</div></div>
+    </div>
+
+    <div class="sect-head"><div class="t" id="splithead">How your estimate splits</div><div class="a">Points breakdown</div></div>
+    <div class="card" id="splits"></div>
+
+    <div class="sect-head"><div class="t">Biggest score boosters</div><div class="a" id="boostsum"></div></div>
+    <div class="card" id="steps"></div>
+
+    <button class="btn teal" onclick="alert('Prototype: this would hand off to an accredited-assessor booking flow.')">Book a real EPC assessment</button>
+    <button class="btn ghost" onclick="startQuiz()">Retake the quiz</button>
+  </div>
+
+</div>
+
+<script>
+/* ---------------- question model ----------------
+   Each question: category, weight (points), options with quality 0–1.
+   Category maxima match the app: Structure 25, Heating 20,
+   Plumbing 20, Electrics 20, Efficiency 15.               */
+const U = "Not sure — use typical for this home's age";
+const QS = [
+ {s:"🏠 Property basics", t:"What type of property is it?", cat:"structure", w:1, opts:[
+   ["Detached house","🏡",.5],["Semi-detached","🏘️",.6],["Mid-terrace","🏚️",.75],["Bungalow","🛖",.45],["Flat / maisonette","🏢",.85]]},
+ {s:"🏠 Property basics", t:"Roughly when was it built?", sub:"The age band sets the assumptions for anything you're unsure about.", cat:"structure", w:3, opts:[
+   ["Before 1900","🕰️",.15],["1900–1929","",.2],["1930–1949","",.3],["1950–1966","",.4],["1967–1982","",.5],["1983–1995","",.65],["1996–2011","",.8],["2012 or later","✨",.95]]},
+ {s:"🏠 Property basics", t:"How big is it, roughly?", cat:"efficiency", w:3, opts:[
+   ["Under 70m² · 1–2 bed","",.8],["70–100m² · 2–3 bed","",.65],["100–150m² · 3–4 bed","",.5],["Over 150m² · 4+ bed","",.35],[U,"🤷",.55,1]]},
+ {s:"🏠 Property basics", t:"Any extensions?", cat:"structure", w:1, opts:[
+   ["No extensions","",.7],["Yes — built after 2000","",.8],["Yes — older extension","",.5],[U,"🤷",.6,1]]},
+ {s:"🧱 Walls, roof & floor", t:"What are the external walls?", sub:"Tip: bricks in an alternating long/short pattern usually means solid walls.", cat:"structure", w:5, opts:[
+   ["Cavity (two layers with a gap)","🧱",.7],["Solid brick","🧱",.25],["Stone","🪨",.2],["Timber frame","🪵",.65],[U,"🤷",.45,1]]},
+ {s:"🧱 Walls, roof & floor", t:"Have the walls been insulated?", cat:"structure", w:4, opts:[
+   ["Yes — cavity or solid-wall insulation","✅",.9],["No","❌",.3],["No cavity to fill (solid walls)","",.2],[U,"🤷",.5,1]]},
+ {s:"🧱 Walls, roof & floor", t:"How much loft insulation is there?", cat:"structure", w:5, opts:[
+   ["270mm+ (over ankle deep)","🧤",.95],["100–250mm","",.65],["A thin layer (under 100mm)","",.35],["None","❌",.1],["No loft (flat roof / top-floor flat)","",.5],[U,"🤷",.5,1]]},
+ {s:"🧱 Walls, roof & floor", t:"Is there a loft conversion?", cat:"structure", w:1, opts:[
+   ["No conversion","",.7],["Yes — insulated when converted","✅",.8],["Yes — not insulated","❌",.3],[U,"🤷",.55,1]]},
+ {s:"🧱 Walls, roof & floor", t:"What's under the ground floor?", cat:"structure", w:2, opts:[
+   ["Solid concrete, insulated","",.9],["Solid concrete, uninsulated","",.55],["Suspended timber, insulated","",.8],["Suspended timber, uninsulated","",.35],[U,"🤷",.5,1]]},
+ {s:"🪟 Windows", t:"What glazing does it have?", cat:"structure", w:2, opts:[
+   ["Triple glazing","❄️",.95],["Double glazing throughout","",.8],["Mostly double, some single","",.6],["Mostly single glazed","🥶",.2],[U,"🤷",.6,1]]},
+ {s:"🪟 Windows", t:"How old are the windows?", cat:"structure", w:1, opts:[
+   ["Fitted 2002 or later","",.85],["Before 2002","",.5],["A mix","",.65],[U,"🤷",.6,1]]},
+ {s:"🔥 Heating & hot water", t:"What's the main heating system?", cat:"heating", w:7, opts:[
+   ["Gas boiler + radiators","🔥",.75],["Heat pump","💚",.95],["Oil boiler","🛢️",.5],["Electric storage heaters","",.35],["Plug-in electric heaters","⚡",.15],[U,"🤷",.5,1]]},
+ {s:"🔥 Heating & hot water", t:"How old is the boiler?", cat:"heating", w:6, opts:[
+   ["Under 5 years","✨",.95],["5–15 years","",.7],["Over 15 years","",.35],["Back boiler (behind a fire)","🕰️",.15],["No boiler","",.5],[U,"🤷",.5,1]]},
+ {s:"🔥 Heating & hot water", t:"What heating controls are there?", cat:"heating", w:3, opts:[
+   ["Smart thermostat + radiator valves","📱",.95],["Programmer + thermostat + TRVs","",.8],["Programmer + thermostat","",.6],["Programmer only","",.35],["None","❌",.1],[U,"🤷",.5,1]]},
+ {s:"🔥 Heating & hot water", t:"How is hot water heated?", cat:"plumbing", w:20, opts:[
+   ["Combi boiler — no cylinder","🚿",.85],["Cylinder with factory foam insulation","",.7],["Cylinder with a loose jacket","",.55],["Cylinder, uninsulated","❌",.25],["Electric immersion only","⚡",.35],[U,"🤷",.55,1]]},
+ {s:"🔥 Heating & hot water", t:"Any secondary heating?", cat:"heating", w:2, opts:[
+   ["None","",.8],["Wood-burning stove","🪵",.6],["Open fireplace in use","🔥",.3],["Portable electric heaters","",.4],[U,"🤷",.6,1]]},
+ {s:"🔥 Heating & hot water", t:"Is the property on mains gas?", cat:"heating", w:2, opts:[
+   ["Yes","",.85],["No","",.35],[U,"🤷",.6,1]]},
+ {s:"⚡ Energy & extras", t:"How much lighting is LED?", cat:"efficiency", w:6, opts:[
+   ["All of it","💡",.95],["Most of it","",.75],["Some","",.5],["Hardly any","",.2],[U,"🤷",.5,1]]},
+ {s:"⚡ Energy & extras", t:"Any renewables?", cat:"electrics", w:20, opts:[
+   ["Solar panels + battery","🔋",.95],["Solar panels (PV)","☀️",.85],["Solar hot water","",.7],["None","",.5],[U,"🤷",.5,1]]},
+ {s:"⚡ Energy & extras", t:"Smart meter & draught-proofing?", cat:"efficiency", w:6, opts:[
+   ["Both","✅",.9],["Smart meter only","",.7],["Draught-proofed only","",.65],["Neither","",.4],[U,"🤷",.5,1]]}
+];
+
+const CATMAX = {heating:20, structure:25, efficiency:15, electrics:20, plumbing:20};
+const CATMETA = [["heating","🔥","Heating"],["structure","🧱","Structure"],["efficiency","💡","Efficiency"],["electrics","⚡","Electrics"],["plumbing","💧","Plumbing"]];
+const BOOSTS = {5:["🧱","Insulate the walls","Cavity fill or solid-wall insulation"],6:["🏔️","Top up loft insulation to 270mm","One-day job, big fabric win"],9:["🪟","Upgrade the glazing","Move to full double glazing"],11:["💚","Upgrade the main heating system","e.g. modern boiler or heat pump"],12:["🔥","Replace the ageing boiler","New condensing boilers are ~90%+ efficient"],13:["📱","Fit smart heating controls","Thermostat + radiator valves"],14:["🚿","Insulate the hot water cylinder","A fitted jacket costs under £30"],17:["💡","Switch remaining bulbs to LED","Cheapest fix on the list"],18:["☀️","Add solar panels","Generates and offsets electricity"],19:["🌬️","Draught-proof doors and windows","Strips and seals, under £50"]};
+
+let idx = 0, answers = new Array(QS.length).fill(null);
+
+/* ---------------- scoring ---------------- */
+function calc(){
+  const cats = {heating:0,structure:0,efficiency:0,electrics:0,plumbing:0};
+  let certain = 0;
+  QS.forEach((q,i)=>{
+    const a = answers[i];
+    let quality = .55;              // unanswered baseline
+    if(a!==null){ quality = q.opts[a][2]; if(!q.opts[a][3]) certain++; else certain+=.4; }
+    cats[q.cat]+= quality*q.w;
+  });
+  const mid = Math.round(Object.values(cats).reduce((a,b)=>a+b,0));
+  const half = Math.max(3, Math.round(16 - 13*(certain/QS.length)));
+  return {cats, mid, lo:Math.max(1,mid-half), hi:Math.min(100,mid+half), conf:Math.round(100*certain/QS.length)};
+}
+function band(s){return s>=92?"A":s>=81?"B":s>=69?"C":s>=55?"D":s>=39?"E":s>=21?"F":"G";}
+function bandCol(s){return s>=81?"#3FAE6A":s>=69?"#8dc63f":s>=55?"#E8A33D":s>=39?"#e07b39":"#E4574F";}
+
+/* ---------------- navigation ---------------- */
+function goto(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");window.scrollTo(0,0);}
+function startQuiz(){idx=0;answers.fill(null);goto("s-quiz");renderQ();}
+function prevQ(){ if(idx===0){goto("s-landing");return;} idx--; renderQ(); }
+function nextQ(){ if(answers[idx]===null)return; if(idx===QS.length-1){showResults();return;} idx++; renderQ(); }
+
+function renderQ(){
+  const q = QS[idx];
+  document.getElementById("pfill").style.width = (100*idx/QS.length)+"%";
+  document.getElementById("pcount").textContent = `Question ${idx+1} of ${QS.length}`;
+  document.getElementById("psect").textContent = q.s;
+  const est = calc();
+  document.getElementById("livepill").textContent = `Current estimate: ${est.lo}–${est.hi} · ${band(est.hi)}–${band(est.lo)}` .replace(/([A-G])–\1/,"likely $1");
+  let h = `<div class="section-chip">${q.s}</div><div class="q-title">${q.t}</div>`;
+  h += q.sub?`<div class="q-sub">${q.sub}</div>`:`<div style="height:12px"></div>`;
+  q.opts.forEach((o,i)=>{
+    h += `<button class="opt ${o[3]?'unsure':''} ${answers[idx]===i?'sel':''}" onclick="pick(${i})">${o[1]?`<span class="em">${o[1]}</span>`:''}<span>${o[0]}</span></button>`;
+  });
+  document.getElementById("qbox").innerHTML = h;
+  document.getElementById("nextbtn").classList.toggle("disabled", answers[idx]===null);
+  document.getElementById("nextbtn").textContent = idx===QS.length-1 ? "See my estimate ✦" : "Next";
+}
+function pick(i){
+  answers[idx]=i; renderQ();
+  if(idx<QS.length-1) setTimeout(()=>{ if(answers[idx]===i){idx++;renderQ();} },280);
+}
+
+/* ---------------- results ---------------- */
+function showResults(){
+  const r = calc();
+  goto("s-results");
+  const col = bandCol(r.mid);
+  document.getElementById("r-mid").textContent = r.mid;
+  document.getElementById("r-range").textContent = `est. ${r.lo}–${r.hi}`;
+  const rf = document.getElementById("ringfill");
+  rf.setAttribute("stroke", col);
+  requestAnimationFrame(()=>rf.setAttribute("stroke-dashoffset", 314*(1-r.mid/100)));
+  const sameBand = band(r.lo)===band(r.hi);
+  document.getElementById("r-title").textContent = sameBand ? `Likely band ${band(r.mid)}` : `Likely ${band(r.hi)}–${band(r.lo)}`;
+  const boosts = topBoosts(r);
+  document.getElementById("r-body").innerHTML =
+    `We estimate <b>${r.lo}–${r.hi} out of 100</b>. ${boosts.length? `<b>${boosts.length} step${boosts.length>1?'s':''}</b> below could lift it further.`:"This home is already performing strongly."}`;
+  const w = document.getElementById("rwindow");
+  w.style.left = r.lo+"%"; w.style.width = Math.max(4,(r.hi-r.lo))+"%";
+  document.getElementById("conffill").style.width = r.conf+"%";
+  document.getElementById("confpct").textContent = r.conf+"%";
+  const unsure = answers.filter((a,i)=>a!==null&&QS[i].opts[a][3]).length;
+  document.getElementById("r-note").innerHTML = `Estimated from <b>your answers today</b> — no EPC exists for this property. ${unsure?`${unsure} answer${unsure>1?'s':''} used age-typical defaults; confirming them tightens the range. `:''}Book an accredited assessment to make it official.`;
+
+  const bills = Math.max(400, Math.round((2400 - r.mid*18)/10)*10);
+  const saveAmt = boosts.reduce((s,b)=>s+b.pts,0)*12;
+  document.getElementById("t-bills").innerHTML = `£${bills.toLocaleString()}<small>/yr</small>`;
+  document.getElementById("t-save").textContent = saveAmt? `Save up to £${saveAmt}/yr` : "Hard to beat";
+  document.getElementById("t-co2").innerHTML = `${Math.max(.8,(8 - r.mid*.06)).toFixed(1)}<small>t/yr</small>`;
+  document.getElementById("splithead").textContent = `How your ~${r.mid} splits`;
+
+  document.getElementById("splits").innerHTML = CATMETA.map(([k,em,name])=>{
+    const pts = Math.round(r.cats[k]), max = CATMAX[k], pct = pts/max;
+    return `<div class="split-row"><span class="em">${em}</span><span class="name">${name}</span>
+      <div class="split-track"><div class="split-fill" data-w="${pct*100}" style="background:${pct<.6?'#E8A33D':'#1FA295'}"></div></div>
+      <span class="split-pts">${pts}/${max}<span class="split-est">est.</span></span></div>`;
+  }).join("");
+  requestAnimationFrame(()=>setTimeout(()=>document.querySelectorAll(".split-fill").forEach(el=>el.style.width=el.dataset.w+"%"),60));
+
+  document.getElementById("boostsum").textContent = boosts.length? `+${boosts.reduce((s,b)=>s+b.pts,0)} pts available` : "";
+  document.getElementById("steps").innerHTML = boosts.length? boosts.map(b=>
+    `<div class="step"><span class="em">${b.em}</span><div class="txt"><b>${b.title}</b><span>${b.sub}</span></div><span class="pts">+${b.pts}</span></div>`).join("")
+    : `<div class="step"><span class="em">🏆</span><div class="txt"><b>No obvious quick wins</b><span>Your answers already score near the top of each category.</span></div></div>`;
+}
+function topBoosts(r){
+  const out=[];
+  QS.forEach((q,i)=>{
+    if(!(i in BOOSTS)) return;
+    const a=answers[i]; const quality = a===null?.55:q.opts[a][2];
+    const gain = Math.round(q.w*(0.9-quality));
+    if(gain>=1) out.push({em:BOOSTS[i][0],title:BOOSTS[i][1],sub:BOOSTS[i][2],pts:gain});
+  });
+  return out.sort((a,b)=>b.pts-a.pts).slice(0,4);
+}
+</script>
+</body>
+</html>

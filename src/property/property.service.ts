@@ -8,11 +8,52 @@ import { Resend } from 'resend';
 import { buildStreetViewUrl, resolveStreetViewUrl } from './street-view';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
+//
+// EPC Open Data Communities was retired ~2026-Q3. Every call to the old
+// host now 301s to the user-facing gov.uk website (HTML), which caused
+// every new-postcode lookup to silently fail (JSON.parse chokes, we
+// eat the error and return "no EPC"). The new API base is
+//   https://api.get-energy-performance-data.communities.gov.uk
+// but it uses a different auth format — the current EPC_API_KEY /
+// EPC_EMAIL don't work against it (403 "Bad authentication header").
+// Registration for the new API is manual on the gov.uk portal; once
+// the client re-registers we swap the auth header format in
+// epcAuthHeader() and every consumer just works.
+const EPC_API_BASE =
+  process.env.EPC_API_BASE ??
+  'https://api.get-energy-performance-data.communities.gov.uk';
 
 function epcAuthHeader(): string {
   const email = process.env.EPC_EMAIL ?? '';
   const key = process.env.EPC_API_KEY ?? '';
   return `Basic ${Buffer.from(`${email}:${key}`).toString('base64')}`;
+}
+
+/**
+ * Fetch JSON from the EPC API. Returns null if:
+ *   - the API is unreachable
+ *   - the API is unauthenticated (auth mismatch after migration)
+ *   - the response is HTML (the redirect-to-website failure mode)
+ *
+ * Never throws. Consumers treat null as "no EPC data available".
+ */
+async function fetchEpcJson<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${EPC_API_BASE}${path}`, {
+      headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      redirect: 'follow',
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') ?? '';
+    if (!ct.includes('json')) {
+      // HTML response = auth failed / endpoint retired. Log once so
+      // the operator sees it in the console without spamming per row.
+      return null;
+    }
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
 }
 
 interface EpcRow {
@@ -1608,7 +1649,7 @@ export class PropertyService {
       // large page (a single UK postcode is always far below 200) and
       // count returned rows. Falls back to whatever `data.total` is if
       // a future revision restores the field.
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(query)}&size=200&from=0`;
+      const url = `${EPC_API_BASE}/domestic/search?postcode=${encodeURIComponent(query)}&size=200&from=0`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -1631,7 +1672,7 @@ export class PropertyService {
   ): Promise<{ items: Property[]; total: number }> {
     try {
       const clean = query.replace(/\s/g, '').toUpperCase();
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(query)}&size=${limit}&from=${offset}`;
+      const url = `${EPC_API_BASE}/domestic/search?postcode=${encodeURIComponent(query)}&size=${limit}&from=${offset}`;
 
       const res = await fetch(url, {
         headers: {
@@ -3778,7 +3819,7 @@ export class PropertyService {
     addressLine1: string,
   ): Promise<EpcCert | null> {
     try {
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=10`;
+      const url = `${EPC_API_BASE}/domestic/search?postcode=${encodeURIComponent(postcode)}&size=10`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -3816,7 +3857,7 @@ export class PropertyService {
 
   private async fetchEpcData(uprn: string): Promise<EpcCert | null> {
     try {
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${uprn}&size=1`;
+      const url = `${EPC_API_BASE}/domestic/search?uprn=${uprn}&size=1`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -3905,7 +3946,7 @@ export class PropertyService {
     try {
       // The EPC search endpoint supports filtering on `lmk-key` directly,
       // which returns the single row for that certificate.
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?lmk-key=${encodeURIComponent(lmkKey)}&size=1`;
+      const url = `${EPC_API_BASE}/domestic/search?lmk-key=${encodeURIComponent(lmkKey)}&size=1`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -3937,8 +3978,8 @@ export class PropertyService {
     // it's more explicit about scoping to a single cert; fall back to
     // the query-string filter form if that 404s.
     const urls = [
-      `https://epc.opendatacommunities.org/api/v1/domestic/certificate/${encodeURIComponent(lmkKey)}/recommendations`,
-      `https://epc.opendatacommunities.org/api/v1/domestic/recommendations?lmk-key=${encodeURIComponent(lmkKey)}`,
+      `${EPC_API_BASE}/domestic/certificate/${encodeURIComponent(lmkKey)}/recommendations`,
+      `${EPC_API_BASE}/domestic/recommendations?lmk-key=${encodeURIComponent(lmkKey)}`,
     ];
 
     for (const url of urls) {
@@ -4109,7 +4150,7 @@ export class PropertyService {
   > {
     try {
       // Fetch up to 25 EPC records for the postcode — many include council-tax-band
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=25`;
+      const url = `${EPC_API_BASE}/domestic/search?postcode=${encodeURIComponent(postcode)}&size=25`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -5225,7 +5266,7 @@ export class PropertyService {
 
     try {
       // Fetch up to 100 EPC records for the postcode
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?postcode=${encodeURIComponent(postcode)}&size=100`;
+      const url = `${EPC_API_BASE}/domestic/search?postcode=${encodeURIComponent(postcode)}&size=100`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
@@ -6165,7 +6206,7 @@ export class PropertyService {
     if (!property?.uprn) return null;
 
     try {
-      const url = `https://epc.opendatacommunities.org/api/v1/domestic/search?uprn=${property.uprn}&size=1`;
+      const url = `${EPC_API_BASE}/domestic/search?uprn=${property.uprn}&size=1`;
       const res = await fetch(url, {
         headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
       });
