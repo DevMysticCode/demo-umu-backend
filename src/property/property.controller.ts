@@ -17,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { join, extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PropertyService } from './property.service';
 import { RunningCostsService } from './running-costs.service';
 import { BillParserService } from './bill-parser.service';
@@ -30,6 +31,11 @@ export class PropertyController {
     private billParser: BillParserService,
   ) {}
 
+  // Read-only property discovery — no reason to throttle here. Bots
+  // scraping our public postcode search are cheaper to detect via
+  // upstream OS Places / EPC quota consumption than to block at our
+  // door, and the shared bucket kept 429-ing legit dev sessions.
+  @SkipThrottle()
   @Get('search')
   async searchProperties(
     @Query('q') query: string,
@@ -113,6 +119,12 @@ export class PropertyController {
     return this.propertyService.getSavedProperties(req.user.id);
   }
 
+  // Feed endpoint — fires from the explore page mount alongside every
+  // other cold read. Not sensible to throttle: JWT already gates it
+  // per-user, and the fan-out inside getForYou can trigger 5+ upstream
+  // API calls (OS Places + EPC + enrichment). Being throttled here
+  // just cascades into empty explore feeds for legit users.
+  @SkipThrottle()
   @Get('for-you')
   @UseGuards(JwtAuthGuard)
   async getForYou(@Request() req: any) {
