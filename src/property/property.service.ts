@@ -56,21 +56,28 @@ interface EpcNewRow {
 interface EpcNewResponse { data?: EpcNewRow[]; pagination?: unknown }
 
 /**
- * Rough SAP score midpoint per band. Used when the /search endpoint
- * returns the band letter but no numeric score — the score we pass
- * into HomeScore V1 is still directionally correct, just no better
- * than the band's precision. Anything more accurate needs the
- * (currently 404-ing) detailed certificate endpoint.
+ * Approximate SAP score per band — deliberately the LOWER bound of
+ * each band so we never over-report a property's efficiency. The
+ * new /search endpoint only exposes the band letter; a midpoint
+ * would inflate a genuine 'C=69' property to 75 which reads as
+ * meaningfully better in the UI. Lower bound = accurate at the
+ * band boundary (e.g. 18 Broadfern shows 69, matches gov.uk) and
+ * under-estimates otherwise, which is the safer direction for a
+ * consumer-facing HomeScore.
+ *   SAP band cutoffs: A 92–100 · B 81–91 · C 69–80 · D 55–68
+ *                     E 39–54  · F 21–38 · G 1–20
+ * Once the detailed certificate endpoint opens to our tier we
+ * swap this out for the real currentEnergyEfficiency figure.
  */
 function bandToScore(band?: string | null): number | null {
   switch ((band ?? '').toUpperCase()) {
-    case 'A': return 96;
-    case 'B': return 86;
-    case 'C': return 75;
-    case 'D': return 65;
-    case 'E': return 50;
-    case 'F': return 30;
-    case 'G': return 15;
+    case 'A': return 92;
+    case 'B': return 81;
+    case 'C': return 69;
+    case 'D': return 55;
+    case 'E': return 39;
+    case 'F': return 21;
+    case 'G': return 1;
     default:  return null;
   }
 }

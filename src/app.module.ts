@@ -43,17 +43,24 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     // requests/min on top of the default. Tune ttl/limit by env if you
     // need to: ttl is in milliseconds in throttler v6+.
     ThrottlerModule.forRoot([
-      // Default bucket: 300 req / minute / IP. A single explore-page
-      // mount fans out to a dozen API calls (profile, saved, wishlist,
-      // feed, notifications, homescore lookup, enrichment sub-calls),
-      // and behind a CDN the throttler often groups multiple real
-      // users behind one edge IP — 60/min tripped the "Too many
-      // requests" toast for genuine users. 300 still stops a bot
-      // hammering a single endpoint (that would be 5/sec sustained,
-      // trivial to detect elsewhere).
-      { name: 'default', ttl: 60_000, limit: 300 },
+      // Default bucket: 300 req / minute / IP in prod. In dev everything
+      // runs against a single loopback IP, and rapid iteration with a
+      // browser open (hot-reload triggering re-fetches, DevTools
+      // network panel re-issuing requests) blew past 60 within seconds.
+      // Bumped to a very generous limit in dev so `npm run start:dev`
+      // never surfaces 429 to the engineer testing a real request.
+      // Prod still enforces 300/min so a bot hammering one endpoint
+      // trips the guard at ~5 rps sustained — plenty for real traffic
+      // (an explore-page mount fans out to ~a dozen API calls) but
+      // trivial to detect.
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: process.env.NODE_ENV === 'production' ? 300 : 10_000,
+      },
       // Tight bucket for credential-sensitive endpoints. Brute force
       // an OTP at 5/min and it'll take a year to cover a 6-digit space.
+      // Kept tight even in dev to catch validator regressions early.
       { name: 'auth',    ttl: 60_000, limit: 5  },
     ]),
     PrismaModule,
