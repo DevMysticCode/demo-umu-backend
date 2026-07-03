@@ -3085,12 +3085,41 @@ export class PropertyService {
     // ── OS NGD: Education sites (schools, nurseries, colleges, universities) ──
     const delta = 0.018; // ~2 km bounding box
     const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+    // OS Features API — NGD Land Use Sites v2 filtered to Education.
+    // This is a separate subscription on OS DataHub from OS Places API
+    // (which drives postcode search): the client's project needs
+    // 'OS Features API' *and* NGD access enabled specifically. When
+    // it's not enabled the endpoint returns 401/403 or plain HTML,
+    // and we used to swallow that as "no schools" — the operator only
+    // saw silent zeros in the UI. Now every failure mode logs once
+    // with the response status so the fix is obvious.
     const schoolsPromise = osKey
       ? fetch(
           `https://api.os.uk/features/ngd/ofa/v1/collections/lus-fts-site-2/items?bbox=${bbox}&filter=oslandusetiera%3D'Education'&limit=25&key=${osKey}`,
         )
-          .then((r) => r.json())
-          .catch(() => ({ features: [] }))
+          .then(async (r) => {
+            if (!r.ok) {
+              const preview = (await r.text()).slice(0, 200);
+              console.warn(
+                `[schools] OS Features API returned ${r.status} — check that 'OS Features API' + NGD access are enabled on the project owning OS_API_KEY. Body: ${preview}`,
+              );
+              return { features: [] };
+            }
+            const ct = r.headers.get('content-type') ?? '';
+            if (!ct.includes('json')) {
+              console.warn(
+                `[schools] OS Features API returned non-JSON (content-type=${ct}) — likely an auth or endpoint redirect issue.`,
+              );
+              return { features: [] };
+            }
+            return r.json();
+          })
+          .catch((err) => {
+            console.warn(
+              `[schools] OS Features API fetch failed: ${err?.message ?? err}`,
+            );
+            return { features: [] };
+          })
       : Promise.resolve({ features: [] });
 
     // ── Overpass: split into FOUR parallel queries ──

@@ -43,10 +43,15 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     // requests/min on top of the default. Tune ttl/limit by env if you
     // need to: ttl is in milliseconds in throttler v6+.
     ThrottlerModule.forRoot([
-      // Default bucket: 60 req / minute / IP — generous for the
-      // mostly-CRUD surface, but blocks bots hammering arbitrary
-      // endpoints from a single IP.
-      { name: 'default', ttl: 60_000, limit: 60 },
+      // Default bucket: 300 req / minute / IP. A single explore-page
+      // mount fans out to a dozen API calls (profile, saved, wishlist,
+      // feed, notifications, homescore lookup, enrichment sub-calls),
+      // and behind a CDN the throttler often groups multiple real
+      // users behind one edge IP — 60/min tripped the "Too many
+      // requests" toast for genuine users. 300 still stops a bot
+      // hammering a single endpoint (that would be 5/sec sustained,
+      // trivial to detect elsewhere).
+      { name: 'default', ttl: 60_000, limit: 300 },
       // Tight bucket for credential-sensitive endpoints. Brute force
       // an OTP at 5/min and it'll take a year to cover a 6-digit space.
       { name: 'auth',    ttl: 60_000, limit: 5  },
