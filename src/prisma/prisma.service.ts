@@ -26,9 +26,35 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit() {
-    console.log('Connecting to database...');
-    await this.prisma.$connect();
-    console.log('Database connected successfully!');
+    // Retry connect with exponential backoff. Transient DNS resolver
+    // hiccups on dev machines (and cold Railway proxy warm-ups on prod
+    // cold-start) previously crashed the whole app boot on the first
+    // failure, leaving the developer looking at "Can't reach database
+    // server" for a config that was working seconds earlier. Five
+    // attempts spanning ~15 seconds catches every real transient we've
+    // seen; a persistent misconfiguration still surfaces the underlying
+    // error at the end.
+    const MAX_ATTEMPTS = 5;
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        console.log(
+          `Connecting to database${attempt === 1 ? '' : ` (attempt ${attempt}/${MAX_ATTEMPTS})`}...`,
+        );
+        await this.prisma.$connect();
+        console.log('Database connected successfully!');
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (attempt === MAX_ATTEMPTS) break;
+        const delayMs = Math.min(1_000 * Math.pow(2, attempt - 1), 8_000);
+        console.warn(
+          `Database connect failed (${(err as Error)?.message ?? err}). Retrying in ${delayMs}ms…`,
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
+    throw lastErr;
   }
 
   async onModuleDestroy() {
