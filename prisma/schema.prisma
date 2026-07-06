@@ -69,14 +69,20 @@ model User {
 }
 
 model PushToken {
-  id         String   @id @default(uuid())
-  userId     String
-  token      String   @unique
-  platform   String
-  deviceId   String?
-  createdAt  DateTime @default(now())
-  lastSeenAt DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique
+  platform    String
+  deviceId    String?
+  // AWS SNS Platform Endpoint ARN — created on first token registration
+  // and stored so subsequent Publish calls skip the CreatePlatformEndpoint
+  // round-trip. Null when the endpoint hasn't been provisioned yet
+  // (e.g. SNS was down at registration time) — Push.send() retries the
+  // create on the fly in that case.
+  endpointArn String?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

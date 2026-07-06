@@ -242,6 +242,28 @@ export class UmuComputeStack extends cdk.Stack {
     db.secret!.grantRead(instanceRole);
     uploadsBucket.grantReadWrite(instanceRole);
 
+    // Push notifications via SNS Mobile Push. Scoped to only the two
+    // actions PushService actually uses, and to platform-applications
+    // + endpoints under this account+region only. Not a wildcard on
+    // sns:* because SNS is region-global and a wildcard would let a
+    // future runtime bug publish to unrelated topics.
+    instanceRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'sns:CreatePlatformEndpoint',
+          'sns:SetEndpointAttributes',
+          'sns:DeleteEndpoint',
+          'sns:Publish',
+        ],
+        resources: [
+          `arn:aws:sns:${this.region}:${this.account}:app/APNS/*`,
+          `arn:aws:sns:${this.region}:${this.account}:app/APNS_SANDBOX/*`,
+          `arn:aws:sns:${this.region}:${this.account}:app/GCM/*`,
+          `arn:aws:sns:${this.region}:${this.account}:endpoint/*`,
+        ],
+      }),
+    );
+
     // VPC connector lets App Runner reach RDS inside the VPC.
     // The security group + ingress rule on RDS live in the foundation
     // stack (see comment there) to avoid a cross-stack cyclic reference.
@@ -279,6 +301,11 @@ export class UmuComputeStack extends cdk.Stack {
             GROQ_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'GROQ_API_KEY'),
             SENTRY_DSN: apprunner.Secret.fromSecretsManager(appSecret, 'SENTRY_DSN'),
             S3_UPLOADS_BUCKET: apprunner.Secret.fromSecretsManager(appSecret, 'S3_UPLOADS_BUCKET'),
+            // SNS Platform Application ARNs — one per store. Empty
+            // string is a valid "not configured yet" state that the
+            // PushService treats as a no-op.
+            AWS_SNS_APNS_PLATFORM_ARN: apprunner.Secret.fromSecretsManager(appSecret, 'AWS_SNS_APNS_PLATFORM_ARN'),
+            AWS_SNS_FCM_PLATFORM_ARN: apprunner.Secret.fromSecretsManager(appSecret, 'AWS_SNS_FCM_PLATFORM_ARN'),
             // RDS credential pieces — entrypoint assembles DATABASE_URL.
             DB_HOST: apprunner.Secret.fromSecretsManager(db.secret!, 'host'),
             DB_PORT: apprunner.Secret.fromSecretsManager(db.secret!, 'port'),
