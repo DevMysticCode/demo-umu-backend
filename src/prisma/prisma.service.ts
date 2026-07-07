@@ -255,4 +255,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get pushToken() {
     return this.prisma.pushToken;
   }
+
+  get captureEvent() {
+    return this.prisma.captureEvent;
+  }
 }
