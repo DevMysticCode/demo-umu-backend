@@ -259,4 +259,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get captureEvent() {
     return this.prisma.captureEvent;
   }
+
+  get llcSearch() {
+    return this.prisma.llcSearch;
+  }
+
+  get llcCharge() {
+    return this.prisma.llcCharge;
+  }
 }

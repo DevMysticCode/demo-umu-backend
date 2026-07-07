@@ -27,6 +27,7 @@ import { HealthModule } from './health/health.module';
 import { FilesModule } from './files/files.module';
 import { PushModule } from './push/push.module';
 import { CaptureModule } from './capture/capture.module';
+import { LlcModule } from './llc/llc.module';
 
 // MaintenanceModule exposes destructive endpoints (`DELETE
 // /maintenance/all` nukes every passport + property) gated only by a
@@ -89,6 +90,7 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     FilesModule,
     PushModule,
     CaptureModule,
+    LlcModule,
   ],
   controllers: [AppController],
   providers: [
