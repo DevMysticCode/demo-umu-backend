@@ -291,6 +291,7 @@ model Property {
   savedBy                UserSavedProperty[]
   searchLogs             PropertySearchLog[]
   captureEvents          CaptureEvent[]
+  llcSearch              LlcSearch?
 
   @@index([postcode])
   @@index([uprn])
@@ -1253,4 +1254,65 @@ model PassportPayment {
 
   @@index([userId, passportId])
   @@index([status])
+}
+
+
+// ── HM Land Registry Local Land Charges (LLC) ──────────────────────────
+// Snapshot of the LLC External Search API result for a property. One row
+// per Property (unique). Refreshed on user request or when older than the
+// TTL enforced by the service layer (currently 30 days). status carries
+// the outcome so the UI can show honest empty states (not-migrated vs
+// no-charges), not just "nothing here yet".
+model LlcSearch {
+  id            String   @id @default(uuid())
+  propertyId    String   @unique
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  // OK_WITH_CHARGES | OK_EMPTY | NOT_MIGRATED | MULTI_GEOMETRY | ERROR
+  status        String
+  // Raw HMLR error_code (e.g. E435, E425) — null on success.
+  errorCode     String?
+  errorMessage  String?
+  // Address HMLR actually searched — may differ from the property row
+  // if we sent by UPRN and HMLR resolved to a different address string.
+  searchAddress String?
+  // GeoJSON GeometryCollection in BNG (EPSG:27700) — reproject client-
+  // side if we ever want to overlay on Mapbox.
+  extentGeoJson Json?
+  extentAreaSqm Float?
+  warnings      String[]
+  charges       LlcCharge[]
+  searchedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([searchedAt])
+}
+
+// One LLC charge (direct or boundary) attached to an LlcSearch. Fields
+// mirror the HMLR response shape 1:1 so we can display verbatim without
+// interpretation — HMLR redacts sensitive fields (Housing Grant / LON /
+// Pipeline) with the literal string "Viewable on official search result"
+// which we store as-is and render with a "View on official search"
+// affordance.
+model LlcCharge {
+  id                 String    @id @default(uuid())
+  searchId           String
+  search             LlcSearch @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  // false = direct charge on the property, true = charge on a
+  // neighbouring parcel that touches the boundary. Same shape, different
+  // section on the UI.
+  boundary           Boolean
+  category           String
+  subCategory        String?
+  law                String?
+  legalDocument      String?
+  description        String?
+  location           String?
+  reference          String
+  authorityReference String?
+  creationDate       DateTime?
+  registrationDate   DateTime?
+
+  @@index([searchId])
+  @@index([category, subCategory])
 }

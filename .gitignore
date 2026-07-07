@@ -94,3 +94,5 @@ enrich*.json
 prod-secrets.json
 *-secrets.json
 !*.example.json
+# Local dev-only smoke tests — hit real HMLR endpoints, not for CI.
+scripts/hmlr-llc-smoketest.mjs
