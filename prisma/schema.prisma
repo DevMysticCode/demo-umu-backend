@@ -66,6 +66,7 @@ model User {
   marketplaceReviewsReceived    MarketplaceReview[]    @relation("MarketplaceReviewTo")
   passportPayments              PassportPayment[]
   pushTokens                    PushToken[]
+  captureEvents                 CaptureEvent[]
 }
 
 model PushToken {
@@ -85,6 +86,32 @@ model PushToken {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Demand-capture events fired from the installer / marketplace flow
+// while the real marketplace is still off — grant_check, match_request,
+// early_access. Anonymous is allowed (userId is nullable) because the
+// grant-check step fires before contact details are collected. The
+// shape lines up 1:1 with the prototype's emitEvent envelope so a
+// future consumer (dashboard, CRM export) can read a single stream.
+model CaptureEvent {
+  id         String   @id @default(uuid())
+  type       String   // 'grant_check' | 'match_request' | 'early_access'
+  source     String   // e.g. 'pathway.find_installers'
+  userId     String?  // null while the user is anonymous
+  propertyId String?  // context property when available
+  postcode   String?  // fallback for early-access without a property
+  contact    Json?    // { name, contact, consentToContact }
+  data       Json     // producer-specific payload (answers / measure / interests)
+  createdAt  DateTime @default(now())
+
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([userId])
+  @@index([propertyId])
+  @@index([postcode])
 }
 
 model UserAddress {
@@ -263,6 +290,7 @@ model Property {
   wishlistedBy           UserWishlist[]
   savedBy                UserSavedProperty[]
   searchLogs             PropertySearchLog[]
+  captureEvents          CaptureEvent[]
 
   @@index([postcode])
   @@index([uprn])
