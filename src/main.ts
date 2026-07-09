@@ -94,6 +94,15 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  await app.listen(process.env.PORT ?? 3000);
+  // Bind explicitly to 0.0.0.0 so Railway's edge proxy (IPv4) can
+  // reach us. Without the host arg, Express on Node 17+ can end up
+  // bound only to ::1 (IPv6 localhost) inside the container, which
+  // is why the "Nest application successfully started" line never
+  // reached the logs and the public URL returned ERR_NAME_NOT_RESOLVED
+  // / gateway errors even though the app was clearly booting.
+  const port = Number(process.env.PORT ?? 3000);
+  await app.listen(port, '0.0.0.0');
+  // eslint-disable-next-line no-console
+  console.log(`[main] listening on 0.0.0.0:${port}`);
 }
 bootstrap();
