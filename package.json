@@ -26,9 +26,6 @@
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
     "hmlr:wsdl": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/fetch-hmlr-wsdl.ts"
   },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
-  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/client-sns": "^3.1079.0",
