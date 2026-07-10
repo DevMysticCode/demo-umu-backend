@@ -1585,7 +1585,30 @@ export class PropertyService {
           homeScore,
         };
       });
-      const sorted = naturalSortByAddress(items);
+      // Dedupe by (postcode, addressLine1) — both EPC and OS write to the
+      // Property table with distinct UDPRN prefixes, so the same house
+      // ends up as two rows when we query both upstreams for a postcode.
+      // Prefer the OS row when both exist because OS Places addresses
+      // come from Royal Mail PAF and read cleaner ("3 Galmington Drive"
+      // vs EPC's "Flat 3, Galmington Drive").
+      const dedupeKey = (p: { addressLine1?: string | null; postcode?: string | null }) =>
+        `${(p.postcode ?? '').toLowerCase().replace(/\s+/g, '')}|` +
+        `${(p.addressLine1 ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      const preferred = new Map<string, (typeof items)[number]>();
+      for (const it of items) {
+        const key = dedupeKey(it);
+        const prior = preferred.get(key);
+        if (!prior) {
+          preferred.set(key, it);
+          continue;
+        }
+        // Row with an OS-prefixed udprn wins over EPC-prefixed.
+        const priorIsOs = String(prior.udprn ?? '').startsWith('OS-');
+        const currentIsOs = String(it.udprn ?? '').startsWith('OS-');
+        if (currentIsOs && !priorIsOs) preferred.set(key, it);
+      }
+      const deduped = Array.from(preferred.values());
+      const sorted = naturalSortByAddress(deduped);
       // For postcode queries we fetched the whole result set above so we
       // can take the requested window from the post-sort list. This is
       // what guarantees a contiguous "1, 2, 3 …" sequence as the user
@@ -1593,7 +1616,9 @@ export class PropertyService {
       const windowed = isPostcodeQuery
         ? sorted.slice(offset, offset + limit)
         : sorted;
-      return { items: windowed, total: effectiveTotal };
+      // effectiveTotal came from the pre-dedupe row count; use the
+      // deduped length so the frontend paginates against reality.
+      return { items: windowed, total: isPostcodeQuery ? sorted.length : effectiveTotal };
     }
 
     // 2. No real data cached — try OS Places API first.
@@ -1604,14 +1629,28 @@ export class PropertyService {
     //    (served from the now-populated cache) won't align with it.
     const isPostcodeQueryFresh = looksLikeUkPostcode(q);
     if (isPostcodeQueryFresh) {
+      // For a postcode query we now hit BOTH upstream sources so the
+      // dropdown includes every deliverable address on the street, not
+      // just the ones with an EPC on file. Tester feedback: users
+      // couldn't find their house because it had no EPC (rental, new
+      // build, previously-unrated) and EPC-only search returned 4
+      // when the postcode has ~30 real properties. OS Places has full
+      // UK residential coverage from Royal Mail PAF; EPC still runs
+      // so we cache the energy figures for enrichment cards.
+      //
+      // Both fetchers upsert into the DB with distinct UDPRN prefixes
+      // (`OS-` vs `EPC-`), so the cache-serving code below can serve
+      // the merged set. We Promise.allSettled them so a slow/failing
+      // upstream doesn't drop the other's results.
       try {
-        const upstreamTotal = await this.fetchEpcTotal(q);
-        if (upstreamTotal > 0) {
-          // Fetch and persist ALL rows for the postcode, then re-enter the
-          // cache path so the slicing uses the post-sort window.
-          await this.fetchFromEpc(q, 0, upstreamTotal);
-          return this.searchProperties(q, offset, limit);
-        }
+        const epcTotal = await this.fetchEpcTotal(q).catch(() => 0);
+        await Promise.allSettled([
+          epcTotal > 0 ? this.fetchFromEpc(q, 0, epcTotal) : Promise.resolve(),
+          // OS Places is paginated (100 max per call). For a UK postcode
+          // 100 is well above any realistic single-postcode count.
+          this.fetchFromOsPlaces(q, 0, 100),
+        ]);
+        return this.searchProperties(q, offset, limit);
       } catch {
         /* fall through to existing per-batch behaviour */
       }
