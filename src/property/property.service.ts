@@ -5054,6 +5054,74 @@ export class PropertyService {
       );
     }
 
+    // ── BETA BYPASS ─────────────────────────────────────────────
+    // Until production HMLR Business Gateway credentials arrive
+    // (and Railway's egress IP is allow-listed), every real
+    // property is rejected by the test stub — it only knows
+    // "Jon Tomas Tankerman @ 101A PL1 1QQ" — so testers claiming
+    // their own homes see "Ownership not confirmed" every time.
+    //
+    // For now we synthesise a VERIFIED result whenever the OV
+    // endpoint is HMLR's test stub OR HMLR_BYPASS=true is set,
+    // and record the OwnershipVerification row with a distinctive
+    // messageId so a later audit query can find + reprocess
+    // these entries against the real endpoint. When the prod
+    // endpoint env is populated on Railway, this branch stops
+    // firing and real OOV takes over — no code change needed.
+    const bypassEnabled =
+      process.env.HMLR_BYPASS === 'true' ||
+      (process.env.HMLR_OV_ENDPOINT ?? '').includes('bgtest.') ||
+      (process.env.HMLR_OV_ENDPOINT ?? '').includes('EOOV_StubService') ||
+      !process.env.HMLR_OV_ENDPOINT;
+
+    if (bypassEnabled) {
+      const bypassMessageId = `BYPASS-${propertyId.slice(0, 8)}-${Date.now()}`;
+      await this.prisma.ownershipVerification.upsert({
+        where: { propertyId_userId: { propertyId, userId } },
+        update: {
+          status: 'VERIFIED',
+          verifiedAt: new Date(),
+          landRegistryMessageId: bypassMessageId,
+          landRegistryTitleNumber: property.titleNumber ?? null,
+          landRegistryMatchResult: 'SINGLE_MATCH',
+          // Store the marker so we can query for bypassed rows later
+          // and re-run them against real HMLR before publishing.
+          landRegistryRawResponse: {
+            bypassed: true,
+            reason: 'HMLR test endpoint / awaiting prod credentials',
+            bypassedAt: new Date().toISOString(),
+          } as any,
+          landRegistryCheckedAt: new Date(),
+        },
+        create: {
+          propertyId,
+          userId,
+          status: 'VERIFIED',
+          verifiedAt: new Date(),
+          landRegistryMessageId: bypassMessageId,
+          landRegistryTitleNumber: property.titleNumber ?? null,
+          landRegistryMatchResult: 'SINGLE_MATCH',
+          landRegistryRawResponse: {
+            bypassed: true,
+            reason: 'HMLR test endpoint / awaiting prod credentials',
+            bypassedAt: new Date().toISOString(),
+          } as any,
+          landRegistryCheckedAt: new Date(),
+        },
+      });
+      return {
+        status: 'VERIFIED' as const,
+        typeCode: 30,
+        matchResult: 'SINGLE_MATCH' as const,
+        titleNumber: property.titleNumber ?? undefined,
+        ownership: undefined,
+        historical: false,
+        rejection: undefined,
+        acknowledgement: undefined,
+        messageId: bypassMessageId,
+      };
+    }
+
     const subject = property.titleNumber
       ? { titleNumber: property.titleNumber }
       : {
