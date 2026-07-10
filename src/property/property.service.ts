@@ -5042,17 +5042,6 @@ export class PropertyService {
     ]);
     if (!user) throw new NotFoundException('User not found');
     if (!property) throw new NotFoundException('Property not found');
-    if (!user.firstName || !user.lastName) {
-      throw new BadRequestException(
-        'First name and surname are required on the user profile before ' +
-          'running a Land Registry ownership check.',
-      );
-    }
-    if (!property.postcode && !property.titleNumber) {
-      throw new BadRequestException(
-        'Property needs either a title number or a postcode for HMLR lookup.',
-      );
-    }
 
     // ── BETA BYPASS ─────────────────────────────────────────────
     // Until production HMLR Business Gateway credentials arrive
@@ -5068,6 +5057,12 @@ export class PropertyService {
     // these entries against the real endpoint. When the prod
     // endpoint env is populated on Railway, this branch stops
     // firing and real OOV takes over — no code change needed.
+    //
+    // Positioned BEFORE the firstName/surname + postcode/title
+    // guards because those exist to protect the real HMLR call
+    // from missing inputs. In bypass mode we're not calling HMLR
+    // at all, and testers on fresh OTP-only signups (no name
+    // captured yet) shouldn't be blocked from claiming.
     const bypassEnabled =
       process.env.HMLR_BYPASS === 'true' ||
       (process.env.HMLR_OV_ENDPOINT ?? '').includes('bgtest.') ||
@@ -5120,6 +5115,21 @@ export class PropertyService {
         acknowledgement: undefined,
         messageId: bypassMessageId,
       };
+    }
+
+    // Real-HMLR input guards — only checked when we're actually
+    // calling out. The bypass path above doesn't need these
+    // because it doesn't build an OOV request.
+    if (!user.firstName || !user.lastName) {
+      throw new BadRequestException(
+        'First name and surname are required on the user profile before ' +
+          'running a Land Registry ownership check.',
+      );
+    }
+    if (!property.postcode && !property.titleNumber) {
+      throw new BadRequestException(
+        'Property needs either a title number or a postcode for HMLR lookup.',
+      );
     }
 
     const subject = property.titleNumber
