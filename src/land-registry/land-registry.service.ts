@@ -178,7 +178,7 @@ export class LandRegistryService {
     const xml = await this.post(envelope)
     try {
       const parsed = this.parseResponse(xml)
-      return { ...parsed, raw: xml, messageId }
+      return { ...parsed, raw: xml, rawRequest: envelope, messageId }
     } catch (e) {
       // Re-throw with the request body appended so it's obvious which bytes
       // produced the schema fault.
@@ -356,7 +356,7 @@ export class LandRegistryService {
 
   private parseResponse(
     xml: string,
-  ): Omit<VerifyOwnershipResult, 'raw' | 'messageId'> {
+  ): Omit<VerifyOwnershipResult, 'raw' | 'rawRequest' | 'messageId'> {
     const parser = new XMLParser({
       ignoreAttributes: false,
       attributeNamePrefix: '@_',

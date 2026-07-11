@@ -96,3 +96,9 @@ prod-secrets.json
 !*.example.json
 # Local dev-only smoke tests — hit real HMLR endpoints, not for CI.
 scripts/hmlr-llc-smoketest.mjs
+
+scripts/find-llc-testable.mjs
+scripts/hmlr-live-probe.mjs
+
+# HMLR UAT evidence pack — real HMLR test data + our BGUser credentials + response payloads. Not for GitHub.
+evidence/
