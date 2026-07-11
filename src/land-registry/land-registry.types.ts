@@ -96,6 +96,10 @@ export interface VerifyOwnershipResult {
   result?: OvResult
   /** Raw response XML — kept for audit logging. */
   raw: string
+  /** Raw SOAP envelope we sent — surfaced so UAT evidence packs can
+   *  capture request + response as a single artefact per scenario
+   *  without duplicating envelope construction outside the service. */
+  rawRequest: string
   /** MessageId we sent — needed for retry idempotency. */
   messageId: string
 }

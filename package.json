@@ -24,6 +24,8 @@
     "seed:marketplace:demo": "ts-node -r tsconfig-paths/register src/scripts/seed-marketplace-demo.ts",
     "script:null-fake-title-numbers": "ts-node -r tsconfig-paths/register src/scripts/null-synthesised-title-numbers.ts",
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
+    "hmlr:uat": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov-matrix.ts",
+    "hmlr:tls-evidence": "node src/scripts/hmlr-tls-evidence.mjs",
     "hmlr:wsdl": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/fetch-hmlr-wsdl.ts"
   },
   "dependencies": {
