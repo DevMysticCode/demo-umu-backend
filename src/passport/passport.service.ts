@@ -1349,7 +1349,15 @@ export class PassportService {
       data: { passportId, token, expiresAt, scope },
     });
 
-    const baseUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+    // Prefer the explicit env var; otherwise fall back to the
+    // production Vercel host in non-dev environments. Localhost was
+    // the previous fallback which shipped through to the mobile
+    // share sheet on prod when FRONTEND_URL wasn't set on Railway.
+    const baseUrl =
+      process.env.FRONTEND_URL ??
+      (process.env.NODE_ENV === 'production'
+        ? 'https://demo-umu-frontend.vercel.app'
+        : 'http://localhost:3000');
     const url =
       scope === 'tenant'
         ? `${baseUrl}/shared-tenant/${token}`

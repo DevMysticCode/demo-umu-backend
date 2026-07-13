@@ -1473,6 +1473,33 @@ export class PropertyService {
       } catch {
         /* non-critical: serve what we have */
       }
+      // Also top up from OS Places on the cache-hit path — otherwise
+      // postcodes indexed before the OS merge shipped (or long streets
+      // where the initial OS call truncated at 100 rows) permanently
+      // serve an incomplete set. Cheap: single OS call for a
+      // postcode is ~200ms and idempotent under the OS-<UDPRN>
+      // upsert key. Tester reported #200 Hay Lane missing on B90 4EQ
+      // — this was the branch that ran.
+      try {
+        const cachedOsCount = await this.prisma.property.count({
+          where: {
+            AND: [
+              searchCondition,
+              { udprn: { startsWith: 'OS-' } },
+            ],
+          },
+        });
+        // First cheap call to learn the true OS Places total.
+        const { total: osTotal } = await this.fetchFromOsPlaces(q, 0, 100);
+        // If OS reports more than we have OS-prefixed rows cached,
+        // repaginate the whole street. Idempotent upsert makes the
+        // repeat safe.
+        if (osTotal > cachedOsCount) {
+          await this.fetchAllFromOsPlacesForPostcode(q);
+        }
+      } catch {
+        /* non-critical: serve what we have */
+      }
     }
 
     // Re-count after the optional top-up so the response total reflects the
@@ -1629,26 +1656,26 @@ export class PropertyService {
     //    (served from the now-populated cache) won't align with it.
     const isPostcodeQueryFresh = looksLikeUkPostcode(q);
     if (isPostcodeQueryFresh) {
-      // For a postcode query we now hit BOTH upstream sources so the
-      // dropdown includes every deliverable address on the street, not
-      // just the ones with an EPC on file. Tester feedback: users
-      // couldn't find their house because it had no EPC (rental, new
-      // build, previously-unrated) and EPC-only search returned 4
-      // when the postcode has ~30 real properties. OS Places has full
-      // UK residential coverage from Royal Mail PAF; EPC still runs
-      // so we cache the energy figures for enrichment cards.
+      // For a postcode query we hit BOTH upstream sources so the
+      // dropdown includes every deliverable address on the street.
+      // OS Places has full UK residential coverage from Royal Mail
+      // PAF; EPC still runs so we cache the energy figures.
       //
       // Both fetchers upsert into the DB with distinct UDPRN prefixes
       // (`OS-` vs `EPC-`), so the cache-serving code below can serve
-      // the merged set. We Promise.allSettled them so a slow/failing
+      // the merged set. Promise.allSettled so one slow/failing
       // upstream doesn't drop the other's results.
+      //
+      // OS Places caps at 100 results per call; long streets like
+      // "Hay Lane, B90 4EQ" have 200+ addresses so a single call
+      // silently drops the tail. Tester feedback confirmed #200
+      // was missing. Now we paginate until totalresults is covered
+      // or we hit a safety cap (500 addresses = 5 requests).
       try {
         const epcTotal = await this.fetchEpcTotal(q).catch(() => 0);
         await Promise.allSettled([
           epcTotal > 0 ? this.fetchFromEpc(q, 0, epcTotal) : Promise.resolve(),
-          // OS Places is paginated (100 max per call). For a UK postcode
-          // 100 is well above any realistic single-postcode count.
-          this.fetchFromOsPlaces(q, 0, 100),
+          this.fetchAllFromOsPlacesForPostcode(q),
         ]);
         return this.searchProperties(q, offset, limit);
       } catch {
@@ -1670,6 +1697,31 @@ export class PropertyService {
     // to surface "no results" so the user knows the gov register has
     // nothing for this postcode (or is currently unavailable).
     return { items: [], total: 0 };
+  }
+
+  /**
+   * Paginate through OS Places' /postcode endpoint until every
+   * address on the postcode has been fetched (or a safety cap
+   * kicks in). OS caps at 100 rows per call — long streets like
+   * "Hay Lane, B90 4EQ" have 200+ addresses and one call silently
+   * truncates the tail. Called by the postcode-search fast path
+   * so the cache is fully populated for the natural-sort slice
+   * that serves the frontend.
+   */
+  private async fetchAllFromOsPlacesForPostcode(postcode: string) {
+    const PER_PAGE = 100;
+    const MAX_PAGES = 5; // hard stop at ~500 addresses
+    let offset = 0;
+    let pagesFetched = 0;
+    while (pagesFetched < MAX_PAGES) {
+      const { total } = await this.fetchFromOsPlaces(postcode, offset, PER_PAGE);
+      pagesFetched++;
+      offset += PER_PAGE;
+      // Stop when we've fetched past the header-reported total, or
+      // when OS reports fewer results than the page size (no more
+      // data to page through).
+      if (total <= offset) break;
+    }
   }
 
   private async fetchFromOsPlaces(
