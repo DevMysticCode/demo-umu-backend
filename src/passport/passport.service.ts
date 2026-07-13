@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
 import OpenAI from 'openai';
+import { Resend } from 'resend';
 
 interface GroupedQuestion {
   sectionKey: string;
@@ -26,6 +27,9 @@ interface GroupedQuestion {
 @Injectable()
 export class PassportService {
   private groq: OpenAI;
+  private resend: Resend;
+  private readonly EMAIL_FROM =
+    process.env.RESEND_FROM ?? 'UMovingU <onboarding@resend.dev>';
 
   constructor(
     private prisma: PrismaService,
@@ -36,6 +40,113 @@ export class PassportService {
       apiKey: process.env.GROQ_API_KEY,
       baseURL: 'https://api.groq.com/openai/v1',
     });
+    this.resend = new Resend(process.env.RESEND_API_KEY ?? '');
+  }
+
+  /**
+   * Frontend URL builder for links included in outbound emails. Same
+   * env-driven fallback pattern the share-link builder uses so a
+   * missing FRONTEND_URL never ships localhost links to real users.
+   */
+  private frontendBaseUrl(): string {
+    return (
+      process.env.FRONTEND_URL ??
+      (process.env.NODE_ENV === 'production'
+        ? 'https://demo-umu-frontend.vercel.app'
+        : 'http://localhost:3000')
+    );
+  }
+
+  private async sendCollaboratorAddedEmail(params: {
+    to: string;
+    inviteeFirstName: string | null;
+    ownerFirstName: string | null;
+    ownerLastName: string | null;
+    passportId: string;
+    propertyAddressLine1: string | null;
+    propertyPostcode: string | null;
+  }) {
+    if (!process.env.RESEND_API_KEY) return; // no-op if email isn't configured
+    const link = `${this.frontendBaseUrl()}/passportview/${params.passportId}`;
+    const ownerName =
+      [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
+      'The property owner';
+    const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
+      .filter(Boolean)
+      .join(', ');
+    const greeting = params.inviteeFirstName
+      ? `Hi ${params.inviteeFirstName},`
+      : 'Hi,';
+    try {
+      await this.resend.emails.send({
+        from: this.EMAIL_FROM,
+        to: params.to,
+        subject: `${ownerName} added you as a collaborator on their Property Passport`,
+        html: `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="color:#1f2024;font-size:22px;margin:0 0 12px;">You've been added as a collaborator</h2>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 16px;">${greeting}</p>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 20px;">
+    <strong>${ownerName}</strong> has added you as a collaborator on the Property Passport
+    ${propertyLine ? `for <strong>${propertyLine}</strong>` : ''}.
+    You can now view and help complete the passport.
+  </p>
+  <div style="text-align:center;margin:28px 0;">
+    <a href="${link}" style="display:inline-block;background:#00a19a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;">Open the Passport</a>
+  </div>
+  <p style="color:#8f9094;font-size:13px;line-height:1.5;margin:0;">If the button doesn't work, paste this link into your browser:<br/><span style="word-break:break-all;color:#00857f;">${link}</span></p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">You're receiving this because ${ownerName} added you on UMovingU.</p>
+</div>`,
+      });
+    } catch (err) {
+      // Non-blocking: collaborator record is already saved.
+      // eslint-disable-next-line no-console
+      console.warn(`[collaborator email] add failed for ${params.to}: ${(err as Error).message}`);
+    }
+  }
+
+  private async sendCollaboratorRemovedEmail(params: {
+    to: string;
+    inviteeFirstName: string | null;
+    ownerFirstName: string | null;
+    ownerLastName: string | null;
+    propertyAddressLine1: string | null;
+    propertyPostcode: string | null;
+  }) {
+    if (!process.env.RESEND_API_KEY) return;
+    const ownerName =
+      [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
+      'The property owner';
+    const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
+      .filter(Boolean)
+      .join(', ');
+    const greeting = params.inviteeFirstName
+      ? `Hi ${params.inviteeFirstName},`
+      : 'Hi,';
+    try {
+      await this.resend.emails.send({
+        from: this.EMAIL_FROM,
+        to: params.to,
+        subject: `Your access to a Property Passport was removed`,
+        html: `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="color:#1f2024;font-size:22px;margin:0 0 12px;">Access removed</h2>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 16px;">${greeting}</p>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 20px;">
+    <strong>${ownerName}</strong> has removed your collaborator access
+    ${propertyLine ? `to the Property Passport for <strong>${propertyLine}</strong>` : 'to their Property Passport'}.
+    You can no longer view or edit the passport.
+  </p>
+  <p style="color:#8f9094;font-size:13px;line-height:1.5;margin:0;">If you think this is a mistake, please get in touch with the property owner directly.</p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">You're receiving this because ${ownerName} removed you on UMovingU.</p>
+</div>`,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[collaborator email] remove failed for ${params.to}: ${(err as Error).message}`);
+    }
   }
 
   async getPassport(passportId: string) {
@@ -600,6 +711,34 @@ export class PassportService {
       data: { kind: 'collaborator_invite', passportId },
     });
 
+    // Also notify by email so the invitee sees the invitation in
+    // their inbox even if push is off / device isn't registered.
+    // Fetch the owner + property once so the email can carry the
+    // "who added you" + "which property" context.
+    void (async () => {
+      const [owner, property] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: requesterId },
+          select: { firstName: true, lastName: true },
+        }),
+        passport.propertyId
+          ? this.prisma.property.findUnique({
+              where: { id: passport.propertyId },
+              select: { addressLine1: true, postcode: true },
+            })
+          : Promise.resolve(null),
+      ]);
+      await this.sendCollaboratorAddedEmail({
+        to: user.email,
+        inviteeFirstName: user.firstName,
+        ownerFirstName: owner?.firstName ?? null,
+        ownerLastName: owner?.lastName ?? null,
+        passportId,
+        propertyAddressLine1: property?.addressLine1 ?? null,
+        propertyPostcode: property?.postcode ?? null,
+      });
+    })();
+
     return {
       message: 'Collaborator added successfully',
       collaborator: {
@@ -973,6 +1112,9 @@ export class PassportService {
     // Verify requester is the owner
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
+      include: {
+        property: { select: { addressLine1: true, postcode: true } },
+      },
     });
 
     if (!passport) {
@@ -983,10 +1125,42 @@ export class PassportService {
       throw new ForbiddenException('Only the owner can remove collaborators');
     }
 
+    // Fetch the collaborator's user info BEFORE deletion so we can
+    // still notify them by email afterwards. Without this we'd have
+    // to keep the row around to know where to write.
+    const collaborator = await this.prisma.passportCollaborator.findUnique({
+      where: { id: collaboratorId },
+      include: {
+        user: {
+          select: { email: true, firstName: true },
+        },
+      },
+    });
+
     // Delete collaborator
     await this.prisma.passportCollaborator.delete({
       where: { id: collaboratorId },
     });
+
+    // Notify the (now-former) collaborator by email so they aren't
+    // surprised when they lose access. Fire-and-forget so email
+    // latency doesn't hold the API response.
+    if (collaborator?.user?.email) {
+      void (async () => {
+        const owner = await this.prisma.user.findUnique({
+          where: { id: requesterId },
+          select: { firstName: true, lastName: true },
+        });
+        await this.sendCollaboratorRemovedEmail({
+          to: collaborator.user.email,
+          inviteeFirstName: collaborator.user.firstName,
+          ownerFirstName: owner?.firstName ?? null,
+          ownerLastName: owner?.lastName ?? null,
+          propertyAddressLine1: passport.property?.addressLine1 ?? null,
+          propertyPostcode: passport.property?.postcode ?? null,
+        });
+      })();
+    }
 
     return {
       message: 'Collaborator removed successfully',
