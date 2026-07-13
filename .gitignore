@@ -102,3 +102,5 @@ scripts/hmlr-live-probe.mjs
 
 # HMLR UAT evidence pack — real HMLR test data + our BGUser credentials + response payloads. Not for GitHub.
 evidence/
+scripts/os-places-diagnose.mjs
+scripts/os-hay-lane-target.mjs

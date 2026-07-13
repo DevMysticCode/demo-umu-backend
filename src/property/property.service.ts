@@ -1748,9 +1748,31 @@ export class PropertyService {
       const results: any[] = data.results ?? [];
       const total: number = data.header?.totalresults ?? results.length;
 
-      // Filter to residential dwellings only
+      // Filter down to plausibly-residential addresses. Previously we
+      // only accepted `RD*` (Residential Dwelling), which silently
+      // dropped houses that OS has classified as `M*` (multi-
+      // occupancy — common during HMO conversion), `P*` (Parent
+      // Shell — an address being subdivided into flats), or other
+      // R-prefix categories like `RC*` communal residence. Tester
+      // couldn't find #200 Hay Lane, B90 4EQ which was likely one
+      // of those edge classifications. Now we accept anything that
+      // ISN'T clearly non-residential (commercial/land/utility/
+      // garage). Slight noise risk (a mixed-use shop-with-flat
+      // showing up) is preferable to missing houses entirely.
+      const NON_RESIDENTIAL_PREFIXES = [
+        'CA', 'CB', 'CC', 'CE', 'CF', 'CG', 'CH', 'CI', 'CL', 'CM',
+        'CN', 'CO', 'CP', 'CR', 'CS', 'CT', 'CU', 'CV', 'CX', 'CZ', // C* commercial (excluding C99 dual-use)
+        'L',   // L* land parcels, garages, industrial land
+        'RG',  // Residential garage
+        'X',   // X* planning constraints / non-buildings
+        'Z',   // Z* uncategorised (rare, often non-address)
+      ];
+      const isResidentialish = (code: string) => {
+        if (!code) return true; // no classification → keep, better safe
+        return !NON_RESIDENTIAL_PREFIXES.some((p) => code.startsWith(p));
+      };
       const residential = results.filter((r) =>
-        r.DPA?.CLASSIFICATION_CODE?.startsWith('RD'),
+        isResidentialish(r.DPA?.CLASSIFICATION_CODE ?? ''),
       );
       if (residential.length === 0) return { items: [], total: 0 };
 
