@@ -1058,6 +1058,14 @@ export class PassportService {
         addressLine1: passport.addressLine1,
         postcode: passport.postcode,
         ownerName,
+        // Flag surfaced to the frontend so the buyer-passport page
+        // can offer an owner-only "Switch to Seller view" toggle
+        // (owners occasionally land on this route via a share link
+        // or historical navigation and can't otherwise flip back
+        // to their editable seller passport). Also drives whether
+        // buyer-specific CTAs like "Save to Profile" / "Ask the
+        // seller" render — the owner shouldn't be asking themself.
+        isOwner,
       },
       property: { ...(passport.property as any), isLeasehold },
       sections: visibleSections.map((s) => {
