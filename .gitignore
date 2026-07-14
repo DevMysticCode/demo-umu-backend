@@ -104,3 +104,9 @@ scripts/hmlr-live-probe.mjs
 evidence/
 scripts/os-places-diagnose.mjs
 scripts/os-hay-lane-target.mjs
+scripts/export-users.mjs
+
+# HMLR external documentation shipped by the Land Registry — not for GitHub.
+prisma/external_search_api_documentation*.pdf
+# Design prototypes / private HTML mockups from the client — kept local.
+prisma/installer-flow*.html
