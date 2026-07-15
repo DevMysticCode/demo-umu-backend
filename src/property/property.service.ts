@@ -1466,12 +1466,19 @@ export class PropertyService {
       try {
         const upstreamTotal = await this.fetchEpcTotal(q);
         if (upstreamTotal > cachedTotal) {
+          console.log(
+            `[search:epc-topup] ${q}: cache=${cachedTotal} upstream=${upstreamTotal} → fetching ${upstreamTotal - cachedTotal} more rows`,
+          );
           // Pull the missing slice (EPC offsets are 0-based) and let the
           // upsert in fetchFromEpc keep the cache consistent.
           await this.fetchFromEpc(q, cachedTotal, upstreamTotal - cachedTotal);
         }
-      } catch {
-        /* non-critical: serve what we have */
+      } catch (err) {
+        // Log so throttle / auth failures are visible instead of
+        // silently no-op'ing. Non-fatal: serve what we already have.
+        console.warn(
+          `[search:epc-topup] ${q}: skipped — ${(err as Error)?.message ?? err}`,
+        );
       }
       // Also top up from OS Places on the cache-hit path — otherwise
       // postcodes indexed before the OS merge shipped (or long streets
@@ -1495,10 +1502,21 @@ export class PropertyService {
         // repaginate the whole street. Idempotent upsert makes the
         // repeat safe.
         if (osTotal > cachedOsCount) {
+          console.log(
+            `[search:os-topup] ${q}: cachedOs=${cachedOsCount} osTotal=${osTotal} → repaginating`,
+          );
           await this.fetchAllFromOsPlacesForPostcode(q);
+        } else {
+          console.log(
+            `[search:os-topup] ${q}: cachedOs=${cachedOsCount} osTotal=${osTotal} → no top-up needed`,
+          );
         }
-      } catch {
-        /* non-critical: serve what we have */
+      } catch (err) {
+        // Same rationale as the EPC block — log the throttle / auth /
+        // network error but don't fail the whole search.
+        console.warn(
+          `[search:os-topup] ${q}: skipped — ${(err as Error)?.message ?? err}`,
+        );
       }
     }
 
@@ -1742,11 +1760,26 @@ export class PropertyService {
         : `https://api.os.uk/search/places/v1/find?query=${encodedQuery}&dataset=DPA&maxresults=${limit}&offset=${offset}&key=${key}`;
 
       const res = await fetch(url);
-      if (!res.ok) return { items: [], total: 0 };
+      if (!res.ok) {
+        // Preview the first slice of the body so throttle / auth
+        // errors are diagnosable. OS Places returns JSON like
+        // {"fault":{"faultstring":"Rate limit quota violation..."}}
+        // on both per-minute (50/min) and daily quota exhaustion.
+        const preview = await res.text().catch(() => '');
+        console.warn(
+          `[OS Places] ${isPostcode ? 'postcode' : 'find'}="${formattedQuery}" offset=${offset} → HTTP ${res.status}: ${preview.slice(0, 220)}`,
+        );
+        return { items: [], total: 0 };
+      }
 
       const data = await res.json();
       const results: any[] = data.results ?? [];
       const total: number = data.header?.totalresults ?? results.length;
+      if (isPostcode && offset === 0) {
+        console.log(
+          `[OS Places] postcode="${formattedQuery}" totalresults=${total} inPage=${results.length}`,
+        );
+      }
 
       // Filter down to plausibly-residential addresses. Previously we
       // only accepted `RD*` (Residential Dwelling), which silently
