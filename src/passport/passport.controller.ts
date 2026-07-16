@@ -20,6 +20,32 @@ import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode } from '../
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
+/**
+ * Build an absolute upload URL. Prefers a request-derived scheme+host
+ * over the BASE_URL env var — this keeps images loadable on Railway
+ * and preview deployments where BASE_URL is often either unset (falls
+ * back to `http://localhost:3002` and every uploaded URL breaks on
+ * real devices) or lags behind the current deploy's actual hostname.
+ * S3-mode public URLs are already absolute and returned unchanged.
+ */
+function absoluteUploadUrl(req: any, relativeOrAbsolute: string): string {
+  if (isS3Mode) return relativeOrAbsolute;
+  // Trust request headers first — every reverse-proxied deploy (Railway,
+  // Vercel, Cloudflare) sets x-forwarded-proto/x-forwarded-host, and Express
+  // parses those when trust proxy is on. Fall back to req.protocol / host
+  // for local dev, and finally the env var if req isn't available.
+  const proto =
+    req?.headers?.['x-forwarded-proto'] ??
+    req?.protocol ??
+    (BASE_URL.startsWith('https') ? 'https' : 'http');
+  const host =
+    req?.headers?.['x-forwarded-host'] ??
+    req?.get?.('host') ??
+    req?.headers?.host ??
+    BASE_URL.replace(/^https?:\/\//, '');
+  return `${proto}://${host}${relativeOrAbsolute}`;
+}
+
 interface CreatePassportDto {
   addressLine1: string;
   postcode: string;
@@ -261,9 +287,9 @@ export class PassportController {
     if (!hasAccess) throw new ForbiddenException('Access denied');
     const relativeOrAbsolute = publicUrlFor('property-images', storedFilename(file));
     // S3 mode returns an absolute URL; disk mode returns a relative
-    // path which we prefix with BASE_URL so mobile shells / native
-    // image loaders get a fetchable absolute URL.
-    const url = isS3Mode ? relativeOrAbsolute : `${BASE_URL}${relativeOrAbsolute}`;
+    // path which we resolve against the incoming request so URLs work
+    // on whatever host the app is actually being served from.
+    const url = absoluteUploadUrl(req, relativeOrAbsolute);
     return {
       url,
       name: file.originalname,
