@@ -97,6 +97,13 @@ function mapNewRowToLegacy(row: EpcNewRow): EpcRow {
     county: row.council ?? undefined,
     postcode: row.postcode ?? '',
     uprn: row.uprn != null ? String(row.uprn) : undefined,
+    // Same identifier under two different names across the API
+    // versions: the legacy dataset called it `lmk-key`, the new
+    // API returns it as `certificateNumber`. Without this mapping
+    // every EPC row loses its cert id after the shape adapter runs,
+    // so `epcLmkKey` stays null on the Property row and the download
+    // + recommendations endpoints can never resolve it.
+    'lmk-key': row.certificateNumber,
     'current-energy-rating': row.currentEnergyEfficiencyBand,
     // Band → midpoint numeric so HomeScore has SOMETHING to work with.
     'current-energy-efficiency': bandToScore(row.currentEnergyEfficiencyBand) ?? undefined,
@@ -152,6 +159,10 @@ function epcSearchPath(query: URLSearchParams | string): string {
 }
 
 interface EpcRow {
+  // The EPC cert identifier. Legacy API called this `lmk-key`; the new
+  // API returns `certificateNumber` and `mapNewRowToLegacy` copies it
+  // into this slot so every consumer downstream reads the same field.
+  'lmk-key'?: string;
   address1: string;
   address2?: string;
   address3?: string;
@@ -6515,21 +6526,57 @@ export class PropertyService {
 
   async getEpcDownloadInfo(propertyId: string): Promise<{ certUrl: string; lmkKey: string } | null> {
     const property = await this.prisma.property.findUnique({ where: { id: propertyId } });
-    if (!property?.uprn) return null;
+    if (!property) return null;
 
-    try {
-      const url = `${EPC_API_BASE}/api/domestic/search?uprn=${property.uprn}&size=1`;
-      const res = await fetch(url, {
-        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      const row = data.rows?.[0];
-      if (!row?.['lmk-key']) return null;
-      const lmkKey = row['lmk-key'];
-      return { lmkKey, certUrl: `https://epc.opendatacommunities.org/files/${lmkKey}` };
-    } catch {
-      return null;
+    // The consumer-facing cert URL every UK portal now uses. The old
+    // opendatacommunities.org/files/{lmk} host was retired with the EPC
+    // API migration — no PDF endpoint on the new API — so we hand the
+    // user off to find-energy-certificate.service.gov.uk which serves
+    // the cert HTML with its own print / download flow.
+    const certUrlFor = (lmk: string) =>
+      `https://find-energy-certificate.service.gov.uk/energy-certificate/${lmk}`;
+
+    // 1. Prefer the persisted LMK key on the property row. Cheapest
+    //    path, avoids an EPC API round-trip, and works even when the
+    //    EPC API is throttled.
+    const persisted = (property as any).epcLmkKey as string | null | undefined;
+    if (persisted) return { lmkKey: persisted, certUrl: certUrlFor(persisted) };
+
+    // 2. UPRN lookup — most precise. Uses fetchEpcJson so the new-API
+    //    { data: [ { certificateNumber } ] } shape is converted to the
+    //    legacy { rows: [ { 'lmk-key' } ] } shape the rest of the code
+    //    expects.
+    if (property.uprn) {
+      const data = await fetchEpcJson<{ rows: EpcRow[] }>(
+        `/api/domestic/search?uprn=${encodeURIComponent(property.uprn)}&size=1`,
+      );
+      const lmk = (data?.rows?.[0] as any)?.['lmk-key'] as string | undefined;
+      if (lmk) return { lmkKey: lmk, certUrl: certUrlFor(lmk) };
     }
+
+    // 3. Address fallback — postcode search + best-match against the
+    //    property's addressLine1. Handles rows where UPRN is missing or
+    //    doesn't match any EPC record (common for older certs).
+    if (property.postcode && property.addressLine1) {
+      const cert = await this.fetchEpcDataByAddress(
+        property.postcode,
+        property.addressLine1,
+      );
+      if (cert?.lmkKey) {
+        // Persist the newly-discovered key so future clicks hit the
+        // fast path in step 1 without re-fetching.
+        try {
+          await this.prisma.property.update({
+            where: { id: propertyId },
+            data: { epcLmkKey: cert.lmkKey },
+          });
+        } catch {
+          /* non-critical */
+        }
+        return { lmkKey: cert.lmkKey, certUrl: certUrlFor(cert.lmkKey) };
+      }
+    }
+
+    return null;
   }
 }
