@@ -378,24 +378,18 @@ export class PropertyController {
     return this.propertyService.tapOwner(id, req.user.id, body);
   }
 
-  @Get(':id/epc-download')
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async downloadEpc(@Param('id') id: string, @Res() res: any) {
+  // Resolve the EPC LMK key for a property (via UPRN lookup on the EPC
+  // Register) so the frontend can build a link to the gov.uk consumer
+  // certificate page: find-energy-certificate.service.gov.uk/energy-
+  // certificate/{lmk}. The previous /epc-download endpoint tried to
+  // proxy a PDF from opendatacommunities.org, but that host was retired
+  // with the EPC API migration and no equivalent PDF endpoint exists on
+  // the new API — so we hand the user off to the gov.uk cert page (which
+  // has its own print / save flow) instead.
+  @Get(':id/epc-download-info')
+  async epcDownloadInfo(@Param('id') id: string) {
     const info = await this.propertyService.getEpcDownloadInfo(id);
     if (!info) throw new NotFoundException('EPC certificate not available for this property');
-
-    const email = process.env.EPC_EMAIL ?? '';
-    const key = process.env.EPC_API_KEY ?? '';
-    const authHeader = `Basic ${Buffer.from(`${email}:${key}`).toString('base64')}`;
-
-    const certRes = await fetch(info.certUrl, {
-      headers: { Authorization: authHeader },
-    });
-    if (!certRes.ok) throw new NotFoundException('EPC certificate could not be retrieved');
-
-    res.setHeader('Content-Disposition', `attachment; filename="epc-certificate.pdf"`);
-    res.setHeader('Content-Type', 'application/pdf');
-    const buffer = Buffer.from(await certRes.arrayBuffer());
-    res.send(buffer);
+    return { lmkKey: info.lmkKey };
   }
 }
