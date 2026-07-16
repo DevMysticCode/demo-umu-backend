@@ -22,7 +22,9 @@ const SECTION_TEMPLATES = [
     title: 'Ownership Profile',
     subtitle: 'Set out the ownership structure for this property',
     description: 'Learn how to complete your property passport',
-    icon: 'instructions',
+    // Matches the icon key in the frontend OPIcon iconMap; must stay
+    // in sync with public/op-icons/passportview/ownerShipProfile.png.
+    icon: 'ownershipProfile',
     order: 1,
   },
   {
