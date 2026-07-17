@@ -127,23 +127,44 @@ export class ConversationsService {
    * Messages in a single conversation, oldest first. Enforces
    * participant membership so a leaked conversationId can't be tailed
    * by a non-participant.
+   *
+   * Returns `participants` alongside `messages` so the frontend can
+   * compute per-message read state (WhatsApp-style ticks) without a
+   * second round-trip: for MY message M, if every OTHER participant
+   * has lastReadAt >= M.createdAt then M has been read.
+   *
+   * Marks the conversation read for the current user as a side-effect
+   * of the fetch — opening a thread is a strong "I've seen this"
+   * signal so we roll it into the same call.
    */
   async listMessages(conversationId: string, userId: string) {
     await this.assertParticipant(conversationId, userId);
-    const messages = await this.prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        sender: {
-          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
-        },
-      },
-    });
-    // Piggy-back on the read call so opening a thread marks it read.
+
+    // Mark read FIRST so the participants payload we return already
+    // reflects the current user's fresh lastReadAt. Otherwise the
+    // sender-side receipt would lag one refresh behind reality when
+    // they poll immediately after their own open.
     await this.markRead(conversationId, userId).catch(() => {
       /* non-critical */
     });
-    return messages;
+
+    const [messages, participants] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          sender: {
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
+          },
+        },
+      }),
+      this.prisma.conversationParticipant.findMany({
+        where: { conversationId },
+        select: { userId: true, lastReadAt: true, role: true },
+      }),
+    ]);
+
+    return { messages, participants };
   }
 
   /**
