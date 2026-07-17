@@ -6162,14 +6162,47 @@ export class PropertyService {
   // ── Matched buyers ─────────────────────────────────────────────────────────
 
   async getMatchedBuyers(propertyId: string) {
+    // Pull the property AND its passport team in one round-trip so we
+    // can filter matched buyers to strictly external users. Without
+    // this, the seller sees their own collaborators (and themselves)
+    // listed as "potential buyers" and can send them Invite / Share /
+    // Message actions targeting people already on the passport, which
+    // makes no sense.
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      select: { estimatedPrice: true, propertyType: true, bedrooms: true, postcode: true },
+      select: {
+        estimatedPrice: true,
+        propertyType: true,
+        bedrooms: true,
+        postcode: true,
+        passports: {
+          select: {
+            ownerId: true,
+            collaborators: { select: { userId: true } },
+          },
+        },
+      },
     });
     if (!property) return { buyers: [], total: 0 };
 
+    // Build the exclusion set — owner(s) + every collaborator across
+    // every passport on this property (seller + landlord). If any
+    // passport type ever gets a "viewers" role, add it here.
+    const excludedUserIds = new Set<string>();
+    for (const p of property.passports) {
+      if (p.ownerId) excludedUserIds.add(p.ownerId);
+      for (const c of p.collaborators) excludedUserIds.add(c.userId);
+    }
+
     const prefs = await this.prisma.userPreference.findMany({
-      where: { budgetMax: { not: null } },
+      where: {
+        budgetMax: { not: null },
+        // Skip owner + collaborators at the query level so we don't
+        // waste rows on the JS filter that has to come later anyway.
+        ...(excludedUserIds.size > 0
+          ? { userId: { notIn: Array.from(excludedUserIds) } }
+          : {}),
+      },
       take: 30,
       select: {
         budgetMin: true,

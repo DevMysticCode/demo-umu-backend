@@ -540,7 +540,10 @@ export class PassportService {
     return grouped;
   }
 
-  // Get all passports the user owns or collaborates on
+  // Get all passports the user owns or collaborates on. Each row is
+  // tagged with `isOwner` so the collections screen can gate destructive
+  // actions (only the owner can delete a passport; a collaborator has
+  // edit rights but not admin rights).
   async getUserPassports(userId: string) {
     const owned = await this.prisma.passport.findMany({
       where: { ownerId: userId },
@@ -571,10 +574,12 @@ export class PassportService {
       },
     });
 
-    const result = [...owned];
+    const result: Array<
+      (typeof owned)[number] & { isOwner: boolean }
+    > = owned.map((p) => ({ ...p, isOwner: true }));
     for (const c of collaborated) {
       if (!result.find((p) => p.id === c.passport.id)) {
-        result.push(c.passport);
+        result.push({ ...c.passport, isOwner: false });
       }
     }
     return result;
