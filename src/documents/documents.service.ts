@@ -139,6 +139,13 @@ export class DocumentsService {
         tags,
         passportId: passport.id,
         passportAddress: addressShort,
+        sectionTitle: section.title,
+        // PUBLIC (default) → the doc is included in the published
+        // passport that unlocked buyers can see. PRIVATE → owner-only
+        // even after publish. The section-level toggle already exists;
+        // this field just exposes it to the vault UI so users can see
+        // at a glance where each doc is visible.
+        visibility: section.visibility,
         createdAt: a.createdAt,
         uploadedAt: formatDate(a.createdAt),
         source: 'passport' as const,
@@ -153,6 +160,10 @@ export class DocumentsService {
       mimeType: d.mimeType ?? '',
       tags: (d.tags as string[]) ?? [],
       expiresAt: d.expiresAt,
+      // Owner-uploaded vault docs are stored in the private documents/
+      // bucket and served via signed URLs — nobody else can see them.
+      // Explicit field so the frontend can treat every doc uniformly.
+      visibility: 'PRIVATE' as const,
       createdAt: d.createdAt,
       uploadedAt: formatDate(d.createdAt),
       source: 'user' as const,
