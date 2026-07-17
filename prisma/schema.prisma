@@ -67,6 +67,17 @@ model User {
   passportPayments              PassportPayment[]
   pushTokens                    PushToken[]
   captureEvents                 CaptureEvent[]
+
+  // Generic messaging + notifications (Phase 1) — shared with the
+  // marketplace once its adapter migrates. Discriminated by
+  // Conversation.context ('marketplace_job' | 'passport_match' |
+  // 'property_enquiry').
+  conversationParticipations    ConversationParticipant[]
+  messagesSent                  Message[]                 @relation("MessageSender")
+  notifications                 Notification[]
+  notificationPreference        NotificationPreference?
+  viewingRequestsSent           ViewingRequest[]          @relation("ViewingRequestProposedBy")
+  viewingRequestsReceived       ViewingRequest[]          @relation("ViewingRequestInvited")
 }
 
 model PushToken {
@@ -292,6 +303,7 @@ model Property {
   searchLogs             PropertySearchLog[]
   captureEvents          CaptureEvent[]
   llcSearch              LlcSearch?
+  viewingRequests        ViewingRequest[]
 
   @@index([postcode])
   @@index([uprn])
@@ -1140,6 +1152,136 @@ model MarketplaceMessage {
   readAt    DateTime?
 
   @@index([threadId])
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Phase 1 — generic messaging + notifications (shared across marketplace,
+// passport-matched buyers, and property enquiries). The `context`
+// discriminator + `contextId` polymorphic-fk lets one table serve every
+// conversation type in the app. A later ticket will backfill the existing
+// MarketplaceThread/MarketplaceMessage rows into these tables and remove
+// the marketplace-specific ones; for now the two live side-by-side so
+// this migration is 100% additive and safe under `prisma db push`.
+// ─────────────────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String   @id @default(uuid())
+  // What the conversation is about. Determines how contextId is
+  // interpreted downstream — 'marketplace_job' → MarketplaceJob.id,
+  // 'passport_match' → Passport.id (matched-buyer thread),
+  // 'property_enquiry' → Property.id (replaces "tap the owner").
+  context       String
+  contextId     String
+  createdAt     DateTime @default(now())
+  // Denormalised for cheap inbox sort — updated on every message insert.
+  lastMessageAt DateTime?
+
+  participants ConversationParticipant[]
+  messages     Message[]
+  viewingRequests ViewingRequest[]
+
+  @@index([context, contextId])
+}
+
+// Two rows per 1:1 conversation. Junction table (instead of pair of
+// FK columns on Conversation) so a future group thread doesn't need a
+// schema change.
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Role hint for UI (which side of the thread you're on). Optional but
+  // avoids re-deriving from context on every render.
+  role           String?      // 'owner' | 'buyer' | 'supplier' | 'customer'
+  lastReadAt     DateTime?
+  mutedAt        DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
+  // 'text' — plain body. 'system' — server-authored event (join/leave/
+  // status change). 'viewing_request' / 'share_passport' /
+  // 'payment_prompt' — structured cards; payload holds the data.
+  kind           String       @default("text")
+  body           String
+  payload        Json?
+  createdAt      DateTime     @default(now())
+  // Server-authored `system` messages have senderId = the acting user,
+  // but readBy is tracked per-recipient (small object, inline JSON is
+  // fine at 1:1 scale — refactor to a join table only if we go 1:many).
+  readBy         Json?
+
+  @@index([conversationId])
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // 'new_message' | 'viewing_request' | 'viewing_response' |
+  // 'passport_shared' | 'passport_unlocked' | 'invite_accepted'
+  type       String
+  title      String
+  body       String
+  // Deep-link the app should navigate to on tap. Format is a relative
+  // path so the Capacitor deep-link handler and the web-app router both
+  // resolve it the same way (e.g. '/inbox/<conversationId>').
+  actionUrl  String
+  entityType String?  // 'conversation' | 'viewing' | 'passport' | 'property'
+  entityId   String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+// Per-user opt-outs for each channel. Absence of a row = defaults on
+// (see notifications.service for the default map). JSON blobs keep the
+// shape flexible while we're still adding notification types.
+model NotificationPreference {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // { messages: true, viewings: true, share_passport: true, marketing: false }
+  push   Json
+  email  Json
+  inApp  Json
+}
+
+model ViewingRequest {
+  id             String    @id @default(uuid())
+  propertyId     String
+  property       Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  proposedById   String
+  proposedBy     User      @relation("ViewingRequestProposedBy", fields: [proposedById], references: [id])
+  invitedUserId  String
+  invitedUser    User      @relation("ViewingRequestInvited", fields: [invitedUserId], references: [id])
+  // Every viewing request is anchored to a Conversation so the seller
+  // and buyer can chat around the arrangement without leaving the
+  // proposal. Nullable so we can create the request first, then attach
+  // the conversation, if the flow ever needs it.
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  // [{ startISO, endISO, label? }, …] — 1-5 proposed slots.
+  slots          Json
+  status         String    @default("pending")  // 'pending' | 'accepted' | 'declined' | 'rescheduled'
+  chosenSlot     Json?
+  createdAt      DateTime  @default(now())
+  respondedAt    DateTime?
+
+  @@index([propertyId])
+  @@index([invitedUserId])
+  @@index([proposedById])
 }
 
 // ─────────────────────────────────────────────────────────────────────

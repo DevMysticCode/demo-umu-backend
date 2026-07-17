@@ -6177,7 +6177,13 @@ export class PropertyService {
         propertyTypes: true,
         buyingTimeline: true,
         importantFeatures: true,
-        user: { select: { firstName: true, lastName: true, postcode: true } },
+        // userId is needed for the seller to invite/share/message this
+        // buyer — every action endpoint takes a targetUserId. The
+        // "stays anonymous" copy on the drawer refers to the SELLER
+        // side (buyer doesn't see the seller until they act), so
+        // exposing the buyer's id to the seller doesn't leak anything
+        // the drawer isn't already surfacing (name, area, budget).
+        user: { select: { id: true, firstName: true, lastName: true, postcode: true } },
       },
     });
 
@@ -6220,6 +6226,7 @@ export class PropertyService {
         }
 
         return {
+          userId: p.user.id,
           name: `${firstName} ${lastInit}`.trim(),
           area,
           budget: bMax ? `Up to £${Math.round(bMax / 1000)}k` : 'Flexible',
