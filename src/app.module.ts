@@ -26,6 +26,8 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
 import { HealthModule } from './health/health.module';
 import { FilesModule } from './files/files.module';
 import { PushModule } from './push/push.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { ConversationsModule } from './conversations/conversations.module';
 import { CaptureModule } from './capture/capture.module';
 import { LlcModule } from './llc/llc.module';
 
@@ -89,6 +91,8 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     HealthModule,
     FilesModule,
     PushModule,
+    NotificationsModule,
+    ConversationsModule,
     CaptureModule,
     LlcModule,
   ],

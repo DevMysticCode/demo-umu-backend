@@ -172,6 +172,25 @@ export class PassportController {
     return this.passportService.createBuyerAccess(passportId, req.user.id);
   }
 
+  // Owner/collaborator shares the passport with a specific buyer —
+  // opens (or reuses) a conversation between them and posts a
+  // share_passport card. Does NOT grant BuyerPassportAccess; the buyer
+  // still has to pay via /buyer-unlock. See sharePassportWithBuyer.
+  @Post(':id/share-with-buyer')
+  @UseGuards(JwtAuthGuard)
+  async sharePassportWithBuyer(
+    @Param('id') passportId: string,
+    @Body() body: { buyerUserId: string; note?: string },
+    @Request() req: any,
+  ) {
+    return this.passportService.sharePassportWithBuyer(
+      passportId,
+      req.user.id,
+      body.buyerUserId,
+      body.note,
+    );
+  }
+
   @Get(':id/buyer-view')
   @UseGuards(JwtAuthGuard)
   async getBuyerView(@Param('id') passportId: string, @Request() req: any) {

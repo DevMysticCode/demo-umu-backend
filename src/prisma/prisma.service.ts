@@ -248,6 +248,37 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.marketplaceReview;
   }
 
+  // ── Phase 1 messaging + notifications ────────────────────────────
+  // Shared conversation infra used by matched-buyer messaging, viewing
+  // requests, share-passport CTAs, and (Phase 4) the marketplace once
+  // its adapter migrates. Each getter is a straight pass-through to
+  // the generated Prisma client — the manual re-export exists because
+  // the Windows Prisma build won't hot-pick new models via `this[key]`
+  // without a getter, per the project's schema-change workflow.
+  get conversation() {
+    return this.prisma.conversation;
+  }
+
+  get conversationParticipant() {
+    return this.prisma.conversationParticipant;
+  }
+
+  get message() {
+    return this.prisma.message;
+  }
+
+  get notification() {
+    return this.prisma.notification;
+  }
+
+  get notificationPreference() {
+    return this.prisma.notificationPreference;
+  }
+
+  get viewingRequest() {
+    return this.prisma.viewingRequest;
+  }
+
   get passportPayment() {
     return this.prisma.passportPayment;
   }

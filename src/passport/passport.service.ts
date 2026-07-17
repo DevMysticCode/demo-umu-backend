@@ -7,6 +7,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentService } from '../payment/payment.service';
 import { PushService } from '../push/push.service';
+import { ConversationsService } from '../conversations/conversations.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { assertKycVerified } from '../common/kyc';
 import {
   Passport,
@@ -35,6 +37,8 @@ export class PassportService {
     private prisma: PrismaService,
     private payments: PaymentService,
     private push: PushService,
+    private conversations: ConversationsService,
+    private notifications: NotificationsService,
   ) {
     this.groq = new OpenAI({
       apiKey: process.env.GROQ_API_KEY,
@@ -937,6 +941,123 @@ export class PassportService {
   //      succeeded row, falls through to a synchronous Stripe API check
   //      so a slow webhook doesn't block a paying user. Throws 403 if
   //      still no successful payment is found.
+  /**
+   * Owner (or collaborator) shares this passport with a specific buyer.
+   * Opens or reuses a passport_match conversation between them and
+   * posts a share_passport system card the buyer can act on.
+   *
+   * Critically: this does NOT grant BuyerPassportAccess. The card just
+   * prompts the buyer to unlock via the existing paid flow
+   * (POST /passport/:id/buyer-unlock) or, if they already have access,
+   * renders as a direct link into the passport. The paid gate is
+   * preserved end-to-end — sharing a passport is a marketing nudge,
+   * not a bypass.
+   */
+  async sharePassportWithBuyer(
+    passportId: string,
+    fromUserId: string,
+    toUserId: string,
+    note?: string,
+  ) {
+    if (fromUserId === toUserId) {
+      throw new BadRequestException(
+        'You cannot share this passport with yourself.',
+      );
+    }
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: {
+        property: {
+          select: { addressLine1: true, postcode: true },
+        },
+        collaborators: { select: { userId: true } },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    const isOwner = passport.ownerId === fromUserId;
+    const isCollaborator = passport.collaborators.some(
+      (c) => c.userId === fromUserId,
+    );
+    if (!isOwner && !isCollaborator) {
+      throw new ForbiddenException(
+        'Only the passport owner or a collaborator can share it.',
+      );
+    }
+
+    // Does the recipient already have paid access? If yes the card
+    // renders as a direct "View passport" quick-link; if no, it
+    // renders as a "Preview + unlock" prompt. Storing this on the
+    // payload lets the frontend decide without a second round-trip.
+    const existingAccess = await this.prisma.buyerPassportAccess.findUnique({
+      where: { passportId_userId: { passportId, userId: toUserId } },
+    });
+    const hasAccess = !!existingAccess;
+
+    const conversation = await this.conversations.findOrCreate({
+      context: 'passport_match',
+      contextId: passportId,
+      participants: [
+        { userId: fromUserId, role: isOwner ? 'owner' : 'collaborator' },
+        { userId: toUserId, role: 'buyer' },
+      ],
+    });
+
+    const senderNameRow = await this.prisma.user.findUnique({
+      where: { id: fromUserId },
+      select: { firstName: true, lastName: true },
+    });
+    const senderName =
+      [senderNameRow?.firstName, senderNameRow?.lastName]
+        .filter(Boolean)
+        .join(' ') || 'The owner';
+
+    const address = passport.property?.addressLine1 ?? passport.addressLine1;
+
+    await this.conversations.sendMessage({
+      conversationId: conversation.id,
+      senderId: fromUserId,
+      body:
+        note?.trim() ||
+        (hasAccess
+          ? `${senderName} shared this passport with you.`
+          : `${senderName} shared this passport. Unlock full access to view every section.`),
+      kind: 'share_passport',
+      payload: {
+        passportId,
+        propertyId: passport.propertyId,
+        propertyAddress: address,
+        postcode: passport.property?.postcode ?? passport.postcode,
+        hasAccess,
+      },
+      skipNotification: true,
+    });
+
+    await this.notifications.sendNotification({
+      userId: toUserId,
+      type: 'passport_shared',
+      title: `${senderName} shared a Property Passport with you`,
+      body: address ?? 'Open to view or unlock full access.',
+      actionUrl: `/inbox/${conversation.id}`,
+      entityType: 'passport',
+      entityId: passportId,
+      data: {
+        conversationId: conversation.id,
+        passportId,
+      },
+      email: {
+        subject: `${senderName} shared a Property Passport with you`,
+        html: `<p>${senderName} shared the passport for <strong>${
+          address ?? 'a property'
+        }</strong> with you.</p><p>Open UMovingU to ${
+          hasAccess ? 'view it directly' : 'preview and unlock full access'
+        }.</p>`,
+      },
+    });
+
+    return { conversationId: conversation.id, hasAccess };
+  }
+
   async createBuyerAccess(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
