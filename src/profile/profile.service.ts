@@ -244,6 +244,20 @@ export class ProfileService {
       const completionPercentage =
         totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
+      // Prefer a saved HomeScore, else fall back to the property's
+      // stored epcScore (same precedence PropertyService.searchProperties
+      // uses on the search dropdown). Sellers who haven't run the quiz
+      // still see a meaningful number based on their EPC certificate
+      // rather than a dash — because for most properties the EPC score
+      // IS a reasonable proxy for the HomeScore they'd get.
+      const savedScore = p.propertyId
+        ? (homeScoreByProperty.get(p.propertyId) ?? null)
+        : null;
+      const fallbackEpc =
+        p.property && typeof p.property.epcScore === 'number'
+          ? p.property.epcScore
+          : null;
+
       return {
         id: p.id,
         addressLine1: p.addressLine1,
@@ -251,12 +265,10 @@ export class ProfileService {
         address: p.property
           ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
           : p.addressLine1,
-        // Score gauge on the explore summary card — 0-100 HomeScore
-        // for the passport's property. Null when nobody's run one yet
-        // OR when the passport isn't linked to a property row at all.
-        homeScore: p.propertyId
-          ? (homeScoreByProperty.get(p.propertyId) ?? null)
-          : null,
+        // Score gauge on the explore summary card. Null when there's
+        // no saved HomeScore AND no EPC score on file — the gauge
+        // then renders a dash.
+        homeScore: savedScore ?? fallbackEpc,
         // Progress on filling out the passport itself. Separate metric
         // from HomeScore; drives the "Complete X%" line below the
         // gauge.
