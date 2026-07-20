@@ -173,18 +173,84 @@ export class ProfileService {
   async getUserPassports(userId: string) {
     const passports = await this.prisma.passport.findMany({
       where: { ownerId: userId },
-      include: { property: true },
+      include: {
+        property: true,
+        // Sections + their tasks + their questions + answers so we can
+        // derive completionPercentage per passport without an N+1 call
+        // (the explore card renders "Complete X%" alongside the score
+        // gauge). Only the answer.id is needed — presence, not content.
+        sections: {
+          select: {
+            tasks: {
+              select: {
+                passportQuestions: {
+                  select: { answer: { select: { id: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
 
-    return passports.map((p) => ({
-      id: p.id,
-      addressLine1: p.addressLine1,
-      postcode: p.postcode,
-      address: p.property
-        ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
-        : p.addressLine1,
-    }));
+    // Best-available HomeScore per property — owner's own score first,
+    // else the latest published score anyone else has produced. Same
+    // preference PropertyService.getPublicHomeScore uses, so both
+    // surfaces agree on which number to show.
+    const propertyIds = passports.map((p) => p.propertyId).filter(Boolean);
+    const homeScoreRows = propertyIds.length
+      ? await this.prisma.homeScoreResult.findMany({
+          where: { propertyId: { in: propertyIds } },
+          select: { propertyId: true, userId: true, total: true, updatedAt: true },
+        })
+      : [];
+    const homeScoreByProperty = new Map<string, number>();
+    for (const p of passports) {
+      const forProp = homeScoreRows.filter((r) => r.propertyId === p.propertyId);
+      if (!forProp.length) continue;
+      const ownerScore = forProp.find((r) => r.userId === p.ownerId);
+      const chosen =
+        ownerScore ??
+        [...forProp].sort(
+          (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
+        )[0];
+      if (chosen) homeScoreByProperty.set(p.propertyId, chosen.total);
+    }
+
+    return passports.map((p) => {
+      // Completion % — a task counts as complete when every one of its
+      // questions has an answer. Matches the same rule the property
+      // page uses via passportProgress so both surfaces read the
+      // same number.
+      let totalTasks = 0;
+      let doneTasks = 0;
+      for (const s of p.sections) {
+        for (const t of s.tasks) {
+          if (t.passportQuestions.length === 0) continue;
+          totalTasks += 1;
+          if (t.passportQuestions.every((q) => q.answer)) doneTasks += 1;
+        }
+      }
+      const completionPercentage =
+        totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+      return {
+        id: p.id,
+        addressLine1: p.addressLine1,
+        postcode: p.postcode,
+        address: p.property
+          ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
+          : p.addressLine1,
+        // Score gauge on the explore summary card — 0-100 HomeScore
+        // for the passport's property. Null when nobody's run one yet.
+        homeScore: homeScoreByProperty.get(p.propertyId) ?? null,
+        // Progress on filling out the passport itself. Separate metric
+        // from HomeScore; drives the "Complete X%" line below the
+        // gauge.
+        completionPercentage,
+      };
+    });
   }
 
   async searchUsers(query: string, currentUserId: string) {
