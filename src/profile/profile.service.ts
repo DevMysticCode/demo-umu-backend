@@ -198,7 +198,15 @@ export class ProfileService {
     // else the latest published score anyone else has produced. Same
     // preference PropertyService.getPublicHomeScore uses, so both
     // surfaces agree on which number to show.
-    const propertyIds = passports.map((p) => p.propertyId).filter(Boolean);
+    //
+    // Passport.propertyId is nullable (legacy rows exist without a
+    // linked property), so we narrow to non-null explicitly before
+    // feeding the array to Prisma's `in` operator. Without the type
+    // guard tsc complains that `(string | null)[]` can't satisfy
+    // `string[]`.
+    const propertyIds = passports
+      .map((p) => p.propertyId)
+      .filter((id): id is string => !!id);
     const homeScoreRows = propertyIds.length
       ? await this.prisma.homeScoreResult.findMany({
           where: { propertyId: { in: propertyIds } },
@@ -207,6 +215,7 @@ export class ProfileService {
       : [];
     const homeScoreByProperty = new Map<string, number>();
     for (const p of passports) {
+      if (!p.propertyId) continue;
       const forProp = homeScoreRows.filter((r) => r.propertyId === p.propertyId);
       if (!forProp.length) continue;
       const ownerScore = forProp.find((r) => r.userId === p.ownerId);
@@ -243,8 +252,11 @@ export class ProfileService {
           ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
           : p.addressLine1,
         // Score gauge on the explore summary card — 0-100 HomeScore
-        // for the passport's property. Null when nobody's run one yet.
-        homeScore: homeScoreByProperty.get(p.propertyId) ?? null,
+        // for the passport's property. Null when nobody's run one yet
+        // OR when the passport isn't linked to a property row at all.
+        homeScore: p.propertyId
+          ? (homeScoreByProperty.get(p.propertyId) ?? null)
+          : null,
         // Progress on filling out the passport itself. Separate metric
         // from HomeScore; drives the "Complete X%" line below the
         // gauge.
