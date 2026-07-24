@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stamp duty — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45; --navy-60:#75757C; --navy-40:#A2A2A9;
+  --teal:#00A19A; --teal-dk:#00817C; --teal-wash:#E9F6F5;
+  --line:#E4E4E7; --wash:#F3F3F5;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#17122E;color:var(--navy);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;background:#fff;min-height:100vh;overflow:hidden}
+.backdrop{height:96px;background:var(--navy)}
+.sheet{background:#fff;border-radius:28px 28px 0 0;margin-top:-28px;position:relative;padding:0 20px 40px}
+.grabber{width:44px;height:5px;border-radius:99px;background:var(--line);margin:12px auto 18px}
+
+.sheet-head{display:flex;align-items:center;gap:13px;margin-bottom:16px;background:var(--teal-wash);border-radius:18px;padding:13px 15px}
+.sheet-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12px;color:var(--navy-60);font-weight:500}
+.mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 5px 9px rgba(35,29,69,.18))}
+
+/* headline */
+.head{background:linear-gradient(160deg,var(--teal-wash),#F7FBFB);border-radius:20px;padding:20px 18px;margin-bottom:16px;text-align:center}
+.head .lab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-60)}
+.head .big{font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums}
+.head .sub{font-size:13px;color:var(--navy-60);font-weight:600;margin-top:8px;line-height:1.45}
+.head .sub b{color:var(--navy);font-weight:800}
+.eff{display:flex;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(35,29,69,.09)}
+.eff div{flex:1}
+.eff b{display:block;font-size:17px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.eff span{font-size:10.5px;color:var(--navy-40);font-weight:600;display:block;margin-top:3px;line-height:1.3}
+
+/* price input */
+.field{border:1.5px solid var(--line);border-radius:16px;padding:12px 16px;margin-bottom:10px;transition:.18s}
+.field:focus-within{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,161,154,.12)}
+.field label{display:block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--navy-40);margin-bottom:2px}
+.inrow{display:flex;align-items:baseline;gap:6px}
+.inrow .cur{font-size:22px;font-weight:700;color:var(--navy-40)}
+#price{border:0;outline:0;font:inherit;font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--navy);width:100%;padding:0;background:none;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;margin:12px 0 18px;accent-color:var(--teal);height:22px}
+
+.seg{display:flex;background:var(--wash);border-radius:12px;padding:3px;gap:2px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-60);padding:9px 4px;border-radius:9px;cursor:pointer;transition:.18s}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(35,29,69,.14)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+
+.switch{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.switch span{font-size:13.5px;font-weight:600}
+.switch small{display:block;font-size:11.5px;color:var(--navy-40);font-weight:500;margin-top:2px}
+.tog{width:46px;height:27px;border-radius:99px;border:0;background:var(--line);position:relative;cursor:pointer;flex:none;transition:.2s}
+.tog[aria-pressed="true"]{background:var(--teal)}
+.tog:after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tog[aria-pressed="true"]:after{left:22px}
+
+/* alert */
+.alert{display:none;background:var(--navy);color:#fff;border-radius:16px;padding:14px 16px;margin-bottom:16px;font-size:12.5px;line-height:1.55;font-weight:600}
+.alert.on{display:block}
+.alert b{font-weight:800}
+
+/* stacked band bar */
+.stack-wrap{margin-bottom:18px}
+.stack-lab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40);margin-bottom:9px}
+.stack{display:flex;height:14px;border-radius:99px;overflow:hidden;background:var(--wash)}
+.stack i{display:block;height:100%;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.stack-key{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.k{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--navy-60)}
+.k s{width:9px;height:9px;border-radius:3px;display:block}
+
+/* band rows */
+.band{padding:12px 0;border-bottom:1px solid var(--line)}
+.band.off{opacity:.4}
+.brow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.brate{font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.bamt{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.bbar{height:5px;border-radius:99px;background:var(--wash);overflow:hidden;margin-top:8px}
+.bbar i{display:block;height:100%;border-radius:99px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+.bmeta{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;color:var(--navy-40);font-weight:600}
+
+.total{display:flex;justify-content:space-between;align-items:baseline;padding:16px 0 4px;font-size:15px;font-weight:800}
+.total span:last-child{font-size:19px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+
+.links{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
+.links a{font-size:12.5px;font-weight:700;color:var(--teal-dk);text-decoration:none}
+.note{margin-top:20px;padding:16px;background:var(--wash);border-radius:16px;font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500}
+.note b{color:var(--navy);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <svg class="mark" viewBox="0 0 72 72" role="img" aria-label="Stamp duty">
+        <polygon points="36,60 62,47 36,34 10,47" fill="#F3F3F5"/>
+        <polygon points="10,47 36,60 36,66 10,53" fill="#E1E1E5"/>
+        <polygon points="62,47 36,60 36,66 62,53" fill="#CFCFD5"/>
+        <polygon points="36,44 56,34 36,24 16,34" fill="#00A19A"/>
+        <polygon points="16,34 36,44 36,50 16,40" fill="#00817C"/>
+        <polygon points="56,34 36,44 36,50 56,40" fill="#00615C"/>
+        <polygon points="36,34 52,25 36,16 20,25" fill="#4A4468"/>
+        <polygon points="20,25 36,34 36,39 20,30" fill="#332C57"/>
+        <polygon points="52,25 36,34 36,39 52,30" fill="#231D45"/>
+        <circle cx="36" cy="16" r="9" fill="#231D45"/>
+        <text x="36" y="21" text-anchor="middle" font-family="Plus Jakarta Sans,sans-serif" font-size="12" font-weight="800" fill="#00A19A">£</text>
+      </svg>
+      <div>
+        <h1>Stamp duty</h1>
+        <p>England &amp; NI · rates from 1 April 2025</p>
+      </div>
+    </div>
+
+    <section class="head" aria-live="polite">
+      <div class="lab">Estimated stamp duty</div>
+      <div class="big" id="total">£21,250</div>
+      <p class="sub" id="onprice">On a price of <b>£625,000</b></p>
+      <div class="eff">
+        <div><b id="effrate">3.4%</b><span>Effective rate</span></div>
+        <div><b id="per100">£3.40</b><span>Per £100 of price</span></div>
+        <div><b id="topband">5%</b><span>Top band reached</span></div>
+      </div>
+    </section>
+
+    <div class="field">
+      <label for="price">Purchase price</label>
+      <div class="inrow"><span class="cur">£</span><input id="price" inputmode="numeric" value="625,000"></div>
+    </div>
+    <input type="range" id="slider" min="50000" max="2000000" step="5000" value="625000" aria-label="Purchase price slider">
+
+    <div class="seg" role="group" aria-label="Buyer type">
+      <button data-type="standard" aria-pressed="true">Moving home</button>
+      <button data-type="ftb" aria-pressed="false">First-time</button>
+      <button data-type="add" aria-pressed="false">Additional</button>
+    </div>
+
+    <div class="switch">
+      <div><span>Non-UK resident</span><small>Adds 2% to every band</small></div>
+      <button class="tog" id="nonres" aria-pressed="false" aria-label="Non-UK resident surcharge"></button>
+    </div>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="stack-wrap">
+      <div class="stack-lab">How the price is taxed</div>
+      <div class="stack" id="stack"></div>
+      <div class="stack-key" id="key"></div>
+    </div>
+
+    <div id="bands"></div>
+
+    <div class="total"><span>Total due within 14 days of completion</span><span id="total2">£21,250</span></div>
+
+    <div class="links">
+      <a href="#" onclick="return false">Full rates on GOV.UK →</a>
+      <a href="#" onclick="return false">Buying in Scotland or Wales? →</a>
+    </div>
+
+    <p class="note">
+      <b>An estimate, not advice.</b> Assumes a freehold residential purchase with no linked transactions, shared ownership or multiple dwellings. Scotland uses LBTT and Wales uses LTT, both with different bands. Your solicitor files the return and confirms the final figure.
+    </p>
+  </main>
+</div>
+
+<script>
+const STD=[[125000,0],[250000,.02],[925000,.05],[1500000,.10],[Infinity,.12]];
+const FTB=[[300000,0],[500000,.05]];
+const SHADE=['#F3F3F5','#B7E4E1','#00A19A','#4A4468','#231D45'];
+let price=625000, type='standard', nonres=false;
+
+const fmt=n=>'£'+Math.round(n).toLocaleString('en-GB');
+const short=n=>n>=1e6?'£'+(n/1e6).toFixed(n%1e6?2:1)+'m':'£'+Math.round(n/1000)+'k';
+
+function bandsFor(){
+  const ftbApplies = type==='ftb' && price<=500000;
+  let b = ftbApplies ? FTB.map(x=>[...x]) : STD.map(x=>[...x]);
+  if(!ftbApplies && type==='ftb') b = STD.map(x=>[...x]);
+  let bump = 0;
+  if(type==='add' && price>=40000) bump += .05;
+  if(nonres) bump += .02;
+  return {rows:b.map(([cap,r])=>[cap,r+bump]), ftbApplies};
+}
+
+function calc(){
+  const {rows,ftbApplies}=bandsFor();
+  let prev=0,total=0,out=[];
+  rows.forEach(([cap,rate])=>{
+    const slice=Math.max(0,Math.min(price,cap)-prev);
+    const tax=slice*rate;
+    out.push({from:prev,to:cap,rate,slice,tax});
+    total+=tax; prev=cap;
+  });
+  return {out,total,ftbApplies};
+}
+
+function render(){
+  const {out,total,ftbApplies}=calc();
+  document.getElementById('total').textContent=fmt(total);
+  document.getElementById('total2').textContent=fmt(total);
+  document.getElementById('onprice').innerHTML=`On a price of <b>${fmt(price)}</b>`;
+  const eff=price?total/price*100:0;
+  document.getElementById('effrate').textContent=eff.toFixed(1)+'%';
+  document.getElementById('per100').textContent='£'+eff.toFixed(2);
+  const top=[...out].filter(b=>b.slice>0).pop();
+  document.getElementById('topband').textContent=top?(top.rate*100).toFixed(0)+'%':'0%';
+
+  // stacked bar
+  const stack=document.getElementById('stack'), key=document.getElementById('key');
+  stack.innerHTML=''; key.innerHTML='';
+  out.forEach((b,i)=>{
+    if(b.slice<=0)return;
+    const el=document.createElement('i');
+    el.style.background=SHADE[i%SHADE.length];
+    el.style.width='0%';
+    el.title=`${(b.rate*100).toFixed(0)}% on ${fmt(b.slice)}`;
+    stack.appendChild(el);
+    requestAnimationFrame(()=>el.style.width=(b.slice/price*100)+'%');
+    key.insertAdjacentHTML('beforeend',
+      `<span class="k"><s style="background:${SHADE[i%SHADE.length]}"></s>${(b.rate*100).toFixed(0)}% on ${short(b.slice)}</span>`);
+  });
+
+  // band rows
+  const maxTax=Math.max(...out.map(b=>b.tax),1);
+  document.getElementById('bands').innerHTML=out.map((b,i)=>`
+    <div class="band ${b.slice>0?'':'off'}">
+      <div class="brow"><span class="brate">${(b.rate*100).toFixed(0)}%</span><span class="bamt">${fmt(b.tax)}</span></div>
+      <div class="bbar"><i style="width:${b.tax/maxTax*100}%;background:${SHADE[i%SHADE.length]}"></i></div>
+      <div class="bmeta"><span>${short(b.from)} – ${b.to===Infinity?'above':short(b.to)}</span><span>${b.slice>0?fmt(b.slice)+' of your price':'—'}</span></div>
+    </div>`).join('');
+
+  // contextual alert
+  const a=document.getElementById('alert');
+  a.className='alert';
+  if(type==='ftb' && price>500000){
+    const saved=(()=>{ // what relief would have been worth at the cap
+      let t=0,prev=0; FTB.forEach(([cap,r])=>{const s=Math.max(0,Math.min(500000,cap)-prev);t+=s*r;prev=cap});
+      let s2=0,p2=0; STD.forEach(([cap,r])=>{const s=Math.max(0,Math.min(500000,cap)-p2);s2+=s*r;p2=cap});
+      return s2-t;
+    })();
+    a.className='alert on';
+    a.innerHTML=`<b>No first-time buyer relief above £500,000.</b> At this price you pay full standard rates. Relief is worth up to ${fmt(saved)} — but only on purchases of £500,000 or less.`;
+  } else if(type==='ftb' && price>480000 && price<=500000){
+    a.className='alert on';
+    a.innerHTML=`<b>You're close to the £500,000 cliff edge.</b> One pound over and relief disappears entirely — the bill jumps by roughly £5,000 for a £1 increase in price.`;
+  } else if(type==='add'){
+    a.className='alert on';
+    a.innerHTML=`<b>Includes the 5% additional-property surcharge</b> on every band. If you sell your previous main home within three years you may be able to reclaim it.`;
+  }
+}
+
+const pf=document.getElementById('price'), sl=document.getElementById('slider');
+pf.addEventListener('input',e=>{
+  const raw=e.target.value.replace(/[^\d]/g,'');
+  price=Math.min(5000000,+raw||0);
+  e.target.value=price?price.toLocaleString('en-GB'):'';
+  sl.value=Math.min(2000000,Math.max(50000,price));
+  render();
+});
+sl.addEventListener('input',e=>{price=+e.target.value;pf.value=price.toLocaleString('en-GB');render()});
+document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-type]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  type=b.dataset.type; render();
+});
+document.getElementById('nonres').onclick=e=>{
+  nonres=!nonres; e.currentTarget.setAttribute('aria-pressed',nonres); render();
+};
+render();
+</script>
+</body>
+</html>

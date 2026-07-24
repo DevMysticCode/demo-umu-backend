@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buses — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45; --navy-60:rgba(35,29,69,.66); --navy-40:rgba(35,29,69,.46);
+  --teal:#00A19A; --teal-dk:#231D45; --teal-wash:#E9F6F5;
+  --line:rgba(35,29,69,.11); --wash:rgba(35,29,69,.045);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* iOS Safari gives buttons, inputs and links a default system-blue colour — force inherit */
+button,a,input,select,textarea{color:inherit;-webkit-text-fill-color:currentColor;font-family:inherit}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#17122E;color:var(--navy);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;background:#fff;min-height:100vh;overflow:hidden}
+.backdrop{height:96px;background:var(--navy)}
+.sheet{background:#fff;border-radius:28px 28px 0 0;margin-top:-28px;position:relative;padding:0 20px 40px}
+.grabber{width:44px;height:5px;border-radius:99px;background:var(--line);margin:12px auto 18px}
+
+.sheet-head{display:flex;align-items:center;gap:13px;margin-bottom:16px;background:var(--teal-wash);border-radius:18px;padding:13px 15px}
+.sheet-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12px;color:var(--navy-60);font-weight:500}
+.mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 5px 9px rgba(35,29,69,.18))}
+
+.head{background:linear-gradient(160deg,var(--teal-wash),#F7FBFB);border-radius:20px;padding:20px 18px;margin-bottom:16px;text-align:center}
+.head .lab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-60)}
+.head .big{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-top:6px}
+.head .sub{font-size:13px;color:var(--navy-60);font-weight:600;margin-top:8px;line-height:1.5}
+.head .sub b{color:var(--navy);font-weight:800}
+.eff{display:flex;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.eff div{flex:1}
+.eff b{display:block;font-size:18px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.eff span{font-size:10.5px;color:var(--navy-40);font-weight:600;display:block;margin-top:3px;line-height:1.3}
+
+h2.sec{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40);margin:22px 0 3px}
+p.secsub{font-size:12.5px;color:var(--navy-60);margin:0 0 10px;font-weight:500;line-height:1.5}
+
+.sortbar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px}
+.sortbar span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40)}
+.sortbtn{border:0;background:none;font:inherit;font-size:12.5px;font-weight:800;color:var(--navy);cursor:pointer;padding:6px 0;text-decoration:underline;text-decoration-color:#00A19A;text-decoration-thickness:2px;text-underline-offset:3px}
+
+/* destinations */
+.dest{padding:12px 0;border-bottom:1px solid var(--line)}
+.dtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.dname{font-size:14.5px;font-weight:600}
+.dtime{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;flex:none}
+.dbar{height:5px;border-radius:99px;background:var(--wash);overflow:hidden;margin-top:8px}
+.dbar i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.dmeta{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;color:var(--navy-40);font-weight:600;gap:10px}
+
+/* stop rows */
+.stop{border:0;background:none;width:100%;text-align:left;font:inherit;cursor:pointer;padding:14px 0;border-bottom:1px solid var(--line);display:block;color:var(--navy)}
+.stop:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:8px}
+.srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.sname{font-size:14.5px;font-weight:700;flex:1;line-height:1.35}
+.swalk{font-size:13.5px;font-weight:700;flex:none;font-variant-numeric:tabular-nums}
+.routes{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;align-items:center}
+.rt{font-size:11.5px;font-weight:800;padding:3.5px 9px;border-radius:7px;background:var(--navy);color:#fff;-webkit-text-fill-color:#fff}
+.rt.sec{background:var(--teal);color:#fff;-webkit-text-fill-color:#fff}
+.freq{font-size:11.5px;font-weight:700;color:var(--navy-60);margin-left:2px}
+.dirs{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.dir{font-size:11px;font-weight:700;padding:3.5px 9px;border-radius:99px;background:var(--wash);color:var(--navy-60)}
+.sdet{display:none;margin-top:11px;padding:13px;background:var(--wash);border-radius:13px;border-left:3px solid var(--teal);font-size:12.5px;line-height:1.55;font-weight:500;color:var(--navy-60)}
+.stop[aria-expanded="true"] .sdet{display:block}
+.sdet b{color:var(--navy);font-weight:700}
+.sdet table{width:100%;border-collapse:collapse;margin-top:8px}
+.sdet td{padding:5px 0;border-top:1px solid var(--line);font-size:12px}
+.sdet td:last-child{text-align:right;font-weight:700;color:var(--navy)}
+
+.excl{margin-top:14px;padding:13px 15px;background:var(--wash);border-radius:14px;font-size:12px;line-height:1.55;color:var(--navy-60);font-weight:500}
+.excl b{color:var(--navy);font-weight:700}
+.note{margin-top:18px;padding:16px;background:var(--wash);border-radius:16px;font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500}
+.note b{color:var(--navy);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <svg class="mark" viewBox="0 0 72 72" role="img" aria-label="Buses">
+        <polygon points="36,60 62,47 36,34 10,47" fill="rgba(35,29,69,.045)"/>
+        <polygon points="10,47 36,60 36,66 10,53" fill="#E3E1E9"/>
+        <polygon points="62,47 36,60 36,66 62,53" fill="#CBC8D6"/>
+        <!-- shelter roof -->
+        <polygon points="36,26 58,14 36,2 14,14" fill="#231D45"/>
+        <polygon points="36,26 58,14 58,17 36,29" fill="#3A3163"/>
+        <polygon points="36,26 14,14 14,17 36,29" fill="#2C2551"/>
+        <!-- posts -->
+        <rect x="17" y="16" width="2.4" height="26" fill="#4A4468"/>
+        <rect x="52.6" y="16" width="2.4" height="26" fill="#332C57"/>
+        <!-- bus -->
+        <polygon points="34,42 50,33 40,27 24,36" fill="#00A19A"/>
+        <polygon points="24,36 34,42 34,49 24,43" fill="#00817C"/>
+        <polygon points="50,33 34,42 34,49 50,40" fill="#00615C"/>
+        <polygon points="28,37 33,39.5 33,42.5 28,40" fill="#231D45"/>
+        <polygon points="37,42 45,37.5 45,40.5 37,45" fill="#231D45"/>
+      </svg>
+      <div>
+        <h1>Buses</h1>
+        <p>NaPTAN stops · Bus Open Data Service timetables</p>
+      </div>
+    </div>
+
+    <section class="head">
+      <div class="lab">Best stop</div>
+      <div class="big">Canley Rd / Burnsall Rd</div>
+      <p class="sub"><b>4 minutes' walk</b>, with up to 14 buses an hour towards the city centre and the university.</p>
+      <div class="eff">
+        <div><b>6</b><span>Stops within 10 min walk</span></div>
+        <div><b>7</b><span>Routes reachable</span></div>
+        <div><b>4 min</b><span>To the best stop</span></div>
+      </div>
+    </section>
+
+    <h2 class="sec">Where the buses go</h2>
+    <p class="secsub">Typical weekday daytime journey time from this address, including the walk to the stop.</p>
+    <div id="dests"></div>
+
+    <div class="sortbar">
+      <span id="count">6 stops</span>
+      <button class="sortbtn" id="sort">Sort: Walk time ▾</button>
+    </div>
+    <p class="secsub">Both directions are shown together. Tap a stop for its routes and frequency.</p>
+    <div id="stops"></div>
+
+    <p class="excl"><b>Four duplicate entries were merged.</b> Rochester Rd, Beechwood Ave and Sir Henry Parkes Rd each appeared twice in the raw data — those are the two sides of the same road, not separate stops.</p>
+
+    <p class="note">
+      <b>Sample data for layout purposes.</b> Stop locations come from NaPTAN and timetables from the Bus Open Data Service. Frequencies are weekday daytime and drop substantially in the evening and on Sundays — worth checking if anyone would rely on the bus for a commute.
+    </p>
+  </main>
+</div>
+
+<script>
+const DESTS=[
+ {to:'University of Warwick',mins:11,via:'12X · direct',f:'Every 10 min'},
+ {to:'Cannon Park shops',mins:9,via:'11 / 12 · direct',f:'Every 8 min'},
+ {to:'Coventry city centre',mins:18,via:'11 / 12 / 12X · direct',f:'Every 6 min'},
+ {to:'Coventry station',mins:16,via:'12X · direct',f:'Every 10 min'},
+ {to:'University Hospital',mins:34,via:'Change in city centre',f:'Every 12 min'},
+ {to:'Kenilworth',mins:29,via:'18 · direct',f:'Every 30 min'}
+];
+const STOPS=[
+ {n:'Canley Rd / Burnsall Rd',walk:4,tph:14,best:true,
+  routes:[['11',1],['12',1],['12X',1],['18',0]],
+  dirs:['Towards city centre','Towards university'],
+  tt:[['11','City centre via Earlsdon','Every 8 min'],['12','Cannon Park · University','Every 10 min'],['12X','Coventry station · University','Every 10 min'],['18','Kenilworth','Every 30 min']],
+  d:'The main corridor stop and the one worth knowing about. <b>Shelter, seating and live departure display.</b> Both directions are served from facing stops on either side of the road.'},
+ {n:'Rochester Rd / St Andrews Rd',walk:5,tph:6,
+  routes:[['11',1],['12',1]],
+  dirs:['Towards city centre','Towards Canley'],
+  tt:[['11','City centre via Earlsdon','Every 8 min'],['12','Cannon Park · University','Every 10 min']],
+  d:'Residential stop, pole only with no shelter. <b>Useful in the city-centre direction</b> if you are on this side of Canley Road.'},
+ {n:'Beechwood Ave / Shaftesbury Rd',walk:6,tph:6,
+  routes:[['11',1],['12',1]],
+  dirs:['Towards city centre','Towards Canley'],
+  tt:[['11','City centre via Earlsdon','Every 8 min'],['12','Cannon Park · University','Every 10 min']],
+  d:'Pole only. Same route pattern as Rochester Road.'},
+ {n:'Sir Henry Parkes Rd / Canley Rd',walk:7,tph:8,
+  routes:[['12',1],['12X',1],['18',0]],
+  dirs:['Towards university','Towards city centre'],
+  tt:[['12','Cannon Park · University','Every 10 min'],['12X','Coventry station · University','Every 10 min'],['18','Kenilworth','Every 30 min']],
+  d:'<b>The best option for the university</b> if you are heading south — it avoids doubling back along Canley Road.'},
+ {n:'Canley Rd / Canley Station',walk:8,tph:14,
+  routes:[['11',1],['12',1],['12X',1],['18',0]],
+  dirs:['Towards city centre','Towards university'],
+  tt:[['11','City centre via Earlsdon','Every 8 min'],['12','Cannon Park · University','Every 10 min'],['12X','Coventry station · University','Every 10 min'],['18','Kenilworth','Every 30 min']],
+  d:'Adjacent to Canley rail station. <b>The obvious interchange</b> if you are combining bus and train.'},
+ {n:'Canley Rd / Park & Ride',walk:9,tph:4,
+  routes:[['18',0],['18A',0]],
+  dirs:['Towards Kenilworth'],
+  tt:[['18','Kenilworth','Every 30 min'],['18A','Kenilworth via Burton Green','Every 60 min']],
+  d:'Lower frequency and mainly southbound. <b>Park and ride capacity fills early</b> during university term time.'}
+];
+let sort='walk', open=-1;
+
+function render(){
+  const maxd=Math.max(...DESTS.map(d=>d.mins));
+  document.getElementById('dests').innerHTML=DESTS.map(d=>`
+    <div class="dest">
+      <div class="dtop"><span class="dname">${d.to}</span><span class="dtime">${d.mins} min</span></div>
+      <div class="dbar"><i style="width:${d.mins/maxd*100}%;background:${d.mins<=15?'#00A19A':'#231D45'}"></i></div>
+      <div class="dmeta"><span>${d.via}</span><span>${d.f}</span></div>
+    </div>`).join('');
+
+  const list=[...STOPS].sort((a,b)=> sort==='walk' ? a.walk-b.walk : b.tph-a.tph || a.walk-b.walk);
+  document.getElementById('count').textContent=list.length+' stops';
+  document.getElementById('sort').textContent='Sort: '+(sort==='walk'?'Walk time':'Frequency')+' ▾';
+
+  document.getElementById('stops').innerHTML=list.map(s=>{
+    const i=STOPS.indexOf(s);
+    return `<button class="stop" aria-expanded="${open===i}">
+      <div class="srow"><span class="sname">${s.n}</span><span class="swalk">${s.walk} min walk</span></div>
+      <div class="routes">${s.routes.map(([r,p])=>`<span class="rt ${p?'':'sec'}">${r}</span>`).join('')}<span class="freq">${s.tph} buses an hour</span></div>
+      <div class="dirs">${s.dirs.map(d=>`<span class="dir">${d}</span>`).join('')}</div>
+      <div class="sdet">${s.d}
+        <table>${s.tt.map(([r,dest,f])=>`<tr><td><b>${r}</b> ${dest}</td><td>${f}</td></tr>`).join('')}</table>
+      </div>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('.stop').forEach((el,idx)=>{
+    const s=list[idx], i=STOPS.indexOf(s);
+    el.onclick=()=>{open=open===i?-1:i;render()};
+  });
+}
+document.getElementById('sort').onclick=()=>{sort=sort==='walk'?'freq':'walk';open=-1;render()};
+render();
+</script>
+</body>
+</html>

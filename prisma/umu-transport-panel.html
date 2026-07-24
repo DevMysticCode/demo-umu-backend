@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Transport — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45; --navy-60:rgba(35,29,69,.66); --navy-40:rgba(35,29,69,.46);
+  --teal:#00A19A; --teal-dk:#231D45; --teal-wash:#E9F6F5;
+  --line:rgba(35,29,69,.11); --wash:rgba(35,29,69,.045);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#17122E;color:var(--navy);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;background:#fff;min-height:100vh;overflow:hidden}
+.backdrop{height:96px;background:var(--navy)}
+.sheet{background:#fff;border-radius:28px 28px 0 0;margin-top:-28px;position:relative;padding:0 20px 40px}
+.grabber{width:44px;height:5px;border-radius:99px;background:var(--line);margin:12px auto 18px}
+
+.sheet-head{display:flex;align-items:center;gap:13px;margin-bottom:16px;background:var(--teal-wash);border-radius:18px;padding:13px 15px}
+.sheet-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12px;color:var(--navy-60);font-weight:500}
+.mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 5px 9px rgba(35,29,69,.18))}
+
+.head{background:linear-gradient(160deg,var(--teal-wash),#F7FBFB);border-radius:20px;padding:20px 18px;margin-bottom:16px;text-align:center}
+.head .lab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-60)}
+.head .big{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:6px}
+.head .sub{font-size:13px;color:var(--navy-60);font-weight:600;margin-top:8px;line-height:1.5}
+.head .sub b{color:var(--navy);font-weight:800}
+
+.seg{display:flex;background:var(--wash);border-radius:12px;padding:3px;gap:2px;margin-bottom:14px}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-60);padding:9px 4px;border-radius:9px;cursor:pointer;transition:.18s}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(35,29,69,.14)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+
+h2.sec{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40);margin:20px 0 3px}
+p.secsub{font-size:12.5px;color:var(--navy-60);margin:0 0 10px;font-weight:500;line-height:1.5}
+
+/* commute rows */
+.cm{padding:12px 0;border-bottom:1px solid var(--line)}
+.cmtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.cmname{font-size:14.5px;font-weight:600}
+.cmtime{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;flex:none}
+.cmbar{height:5px;border-radius:99px;background:var(--wash);overflow:hidden;margin-top:8px}
+.cmbar i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.cmmeta{display:flex;justify-content:space-between;margin-top:7px;font-size:11.5px;color:var(--navy-40);font-weight:600;gap:10px}
+
+/* station rows */
+.st{border:0;background:none;width:100%;text-align:left;font:inherit;cursor:pointer;padding:13px 0;border-bottom:1px solid var(--line);display:block}
+.st:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:8px}
+.strow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.stname{font-size:14.5px;font-weight:700;flex:1}
+.stwalk{font-size:13.5px;font-weight:700;flex:none;font-variant-numeric:tabular-nums}
+.sttags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.tag{font-size:11px;font-weight:700;padding:3.5px 9px;border-radius:99px;background:var(--wash);color:var(--navy-60)}
+.tag.hub{background:var(--navy);color:#fff}
+.tag.fib{background:var(--teal-wash);color:var(--teal-dk)}
+.stdet{display:none;margin-top:11px;padding:13px;background:var(--wash);border-radius:13px;border-left:3px solid var(--teal);font-size:12.5px;line-height:1.55;font-weight:500;color:var(--navy-60)}
+.st[aria-expanded="true"] .stdet{display:block}
+.stdet b{color:var(--navy);font-weight:700}
+
+.excl{margin-top:12px;padding:13px 15px;background:var(--wash);border-radius:14px;font-size:12px;line-height:1.55;color:var(--navy-60);font-weight:500}
+.excl b{color:var(--navy);font-weight:700}
+
+.note{margin-top:20px;padding:16px;background:var(--wash);border-radius:16px;font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500}
+.note b{color:var(--navy);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <svg class="mark" viewBox="0 0 72 72" role="img" aria-label="Transport">
+        <polygon points="36,60 62,47 36,34 10,47" fill="rgba(35,29,69,.045)"/>
+        <polygon points="10,47 36,60 36,66 10,53" fill="#E3E1E9"/>
+        <polygon points="62,47 36,60 36,66 62,53" fill="#CBC8D6"/>
+        <!-- platform -->
+        <polygon points="36,48 60,34 36,20 12,34" fill="#E3E1E9"/>
+        <!-- train body -->
+        <polygon points="34,38 52,28 40,21 22,31" fill="#00A19A"/>
+        <polygon points="22,31 34,38 34,47 22,40" fill="#00817C"/>
+        <polygon points="52,28 34,38 34,47 52,37" fill="#00615C"/>
+        <!-- cab / windows -->
+        <polygon points="27,33 33,36.5 33,40 27,36.5" fill="#231D45"/>
+        <polygon points="37,38 45,33.5 45,37 37,41.5" fill="#231D45"/>
+        <!-- roof stripe -->
+        <polygon points="34,38 52,28 49,26 31,36" fill="#231D45"/>
+      </svg>
+      <div>
+        <h1>Transport</h1>
+        <p>National Rail · Traveline · Ordnance Survey</p>
+      </div>
+    </div>
+
+    <section class="head">
+      <div class="lab">Nearest station</div>
+      <div class="big">Canley · 8 min walk</div>
+      <p class="sub"><b>Birmingham in 27 minutes, London in 1h 12m</b> with one change at Coventry.</p>
+    </section>
+
+    <div class="seg" role="group" aria-label="Mode">
+      <button data-mode="rail" aria-pressed="true">Rail</button>
+      <button data-mode="bus" aria-pressed="false">Bus</button>
+      <button data-mode="road" aria-pressed="false">Road</button>
+    </div>
+
+    <div id="body"></div>
+
+    <p class="note">
+      <b>Sample data for layout purposes.</b> Journey times are typical weekday peak times door-to-platform, not straight-line distance. Services vary by time of day and are subject to timetable changes — check National Rail before relying on a specific connection.
+    </p>
+  </main>
+</div>
+
+<script>
+const RAIL={
+ commutes:[
+  {to:'Coventry',mins:4,via:'Direct from Canley',tph:'2 per hour'},
+  {to:'Birmingham New Street',mins:27,via:'Direct',tph:'2 per hour'},
+  {to:'Leamington Spa',mins:22,via:'Change at Coventry',tph:'3 per hour'},
+  {to:'London Euston',mins:72,via:'Change at Coventry · Avanti',tph:'3 per hour'},
+  {to:'Manchester Piccadilly',mins:134,via:'Change at Birmingham',tph:'2 per hour'}
+ ],
+ stations:[
+  {n:'Canley',walk:8,ops:['West Midlands Railway'],tags:[],tph:2,
+   d:'Two trains an hour towards Coventry and Birmingham. <b>Unstaffed, with a single ticket machine</b> and step-free access to both platforms.'},
+  {n:'Coventry',walk:26,ops:['Avanti West Coast','West Midlands Railway','CrossCountry'],tags:['hub'],tph:12,
+   d:'The main interchange. <b>Direct Avanti services to London Euston in about an hour</b>, plus CrossCountry to Bristol and the North East. Around 8 minutes by bus or 6 by car from this address.'},
+  {n:'Tile Hill',walk:44,ops:['West Midlands Railway'],tags:[],tph:2,
+   d:'Similar service pattern to Canley. <b>Useful mainly for its car park</b>, which is larger and often has space when Coventry is full.'}
+ ]
+};
+const BUS={
+ commutes:[
+  {to:'University of Warwick',mins:11,via:'12X from Charter Avenue',tph:'Every 10 min'},
+  {to:'Coventry city centre',mins:18,via:'11 / 12 from Charter Avenue',tph:'Every 8 min'},
+  {to:'Coventry station',mins:14,via:'12X',tph:'Every 10 min'},
+  {to:'Cannon Park shops',mins:5,via:'Walk or 12',tph:'Every 8 min'}
+ ],
+ stations:[
+  {n:'Charter Avenue',walk:4,ops:['National Express West Midlands'],tags:['fib'],tph:14,
+   d:'The main corridor stop. <b>Very high frequency</b> because of the university traffic — in practice you rarely wait more than a few minutes in the daytime.'},
+  {n:'Sycamore Road',walk:7,ops:['National Express West Midlands'],tags:[],tph:6,
+   d:'Quieter stop with fewer routes. Useful in the opposite direction.'}
+ ]
+};
+const ROAD={
+ commutes:[
+  {to:'A45',mins:4,via:'Direct',tph:'Dual carriageway'},
+  {to:'M6 junction 2',mins:12,via:'Via A46',tph:'Motorway'},
+  {to:'M40 junction 15',mins:21,via:'Via A46',tph:'Motorway'},
+  {to:'Birmingham centre',mins:38,via:'A45 / A45(M)',tph:'Peak traffic'},
+  {to:'Birmingham Airport',mins:19,via:'A45',tph:'Off-peak'}
+ ],
+ stations:[
+  {n:'On-street parking',walk:0,ops:['Unrestricted'],tags:[],tph:0,
+   d:'No permit scheme on this road at present. <b>University term-time parking pressure is a known local issue</b> — worth visiting on a weekday morning.'},
+  {n:'Nearest EV rapid charger',walk:0,ops:['Cannon Park · 1.1 miles'],tags:[],tph:0,
+   d:'Four rapid chargers at the retail park. <b>No off-street charging at the property</b> unless a driveway supply is installed.'}
+ ]
+};
+const SETS={rail:RAIL,bus:BUS,road:ROAD};
+const LABELS={
+ rail:['Where you can get to','Typical weekday peak journey time from Canley, including the walk to the platform.','Stations','Walking time from this address. Heritage and miniature railways are excluded.'],
+ bus:['Where you can get to','Typical weekday daytime journey time including the walk to the stop.','Stops','Walking time from this address.'],
+ road:['Driving times','Typical weekday morning peak driving time by car.','Parking and charging','What is available at or near the property.']
+};
+let mode='rail', open=-1;
+
+function render(){
+  const d=SETS[mode], L=LABELS[mode];
+  const max=Math.max(...d.commutes.map(c=>c.mins));
+  let html=`<h2 class="sec">${L[0]}</h2><p class="secsub">${L[1]}</p>`;
+  html+=d.commutes.map(c=>`
+    <div class="cm">
+      <div class="cmtop"><span class="cmname">${c.to}</span><span class="cmtime">${c.mins<60?c.mins+' min':Math.floor(c.mins/60)+'h '+(c.mins%60)+'m'}</span></div>
+      <div class="cmbar"><i style="width:${c.mins/max*100}%;background:${c.mins<=30?'#00A19A':'#231D45'}"></i></div>
+      <div class="cmmeta"><span>${c.via}</span><span>${c.tph}</span></div>
+    </div>`).join('');
+
+  html+=`<h2 class="sec">${L[2]}</h2><p class="secsub">${L[3]}</p>`;
+  html+=d.stations.map((s,i)=>`
+    <button class="st" aria-expanded="${open===i}">
+      <div class="strow"><span class="stname">${s.n}</span>${s.walk?`<span class="stwalk">${s.walk} min walk</span>`:''}</div>
+      <div class="sttags">
+        ${s.tags.includes('hub')?'<span class="tag hub">Main interchange</span>':''}
+        ${s.tags.includes('fib')?'<span class="tag fib">High frequency</span>':''}
+        ${s.ops.map(o=>`<span class="tag">${o}</span>`).join('')}
+        ${s.tph?`<span class="tag">${s.tph} per hour</span>`:''}
+      </div>
+      <div class="stdet">${s.d}</div>
+    </button>`).join('');
+
+  if(mode==='rail'){
+    html+=`<p class="excl"><b>Three nearby entries were excluded.</b> Grotto Halt, Midgeway and one unnamed entry are miniature or heritage railway features in the mapping data, not National Rail stations.</p>`;
+  }
+  document.getElementById('body').innerHTML=html;
+  document.querySelectorAll('.st').forEach((el,i)=>el.onclick=()=>{open=open===i?-1:i;render()});
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-mode]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  mode=b.dataset.mode; open=-1; render();
+});
+render();
+</script>
+</body>
+</html>
