@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schools nearby — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45;
+  --navy-60:#75757C;
+  --navy-40:#A2A2A9;
+  --teal:#00A19A;
+  --teal-dk:#00817C;
+  --teal-wash:#E9F6F5;
+  --line:#E4E4E7;
+  --wash:#F3F3F5;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#17122E;color:var(--navy);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;background:#fff;min-height:100vh;overflow:hidden}
+.backdrop{height:96px;background:var(--navy)}
+.sheet{background:#fff;border-radius:28px 28px 0 0;margin-top:-28px;position:relative;padding:0 20px 40px}
+.grabber{width:44px;height:5px;border-radius:99px;background:var(--line);margin:12px auto 18px}
+
+/* header pill — same treatment as the crime panel */
+.sheet-head{display:flex;align-items:center;gap:13px;margin-bottom:18px;background:var(--teal-wash);border-radius:18px;padding:13px 15px}
+.sheet-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12px;color:var(--navy-60);font-weight:500}
+.mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 5px 9px rgba(35,29,69,.18))}
+
+/* headline block — mirrors the crime panel's stat card */
+.summary{background:linear-gradient(160deg,var(--teal-wash),#F7FBFB);border-radius:20px;padding:20px 18px;margin-bottom:16px;text-align:center}
+.summary .big{font-size:40px;font-weight:800;letter-spacing:-.035em;line-height:1}
+.summary .cap{font-size:13px;color:var(--navy-60);font-weight:600;margin-top:8px;line-height:1.45}
+.summary .cap em{font-style:normal;font-weight:800;color:var(--navy)}
+.mini{display:flex;gap:14px;margin-top:16px;padding-top:16px;border-top:1px solid rgba(35,29,69,.09)}
+.mini div{flex:1}
+.mini b{display:block;font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.mini b small{font-size:12px;font-weight:700;color:var(--navy-60)}
+.mini span{font-size:10.5px;color:var(--navy-40);font-weight:600;line-height:1.35;display:block;margin-top:4px}
+
+.seg{display:flex;background:var(--wash);border-radius:12px;padding:3px;gap:2px;margin-bottom:12px}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--navy-60);padding:8px 4px;border-radius:9px;cursor:pointer;transition:.18s}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(35,29,69,.14)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+
+.sortbar{display:flex;justify-content:space-between;align-items:center;margin:4px 0 2px}
+.sortbar span{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40)}
+.sortbtn{border:0;background:none;font:inherit;font-size:12.5px;font-weight:700;color:var(--teal-dk);cursor:pointer;padding:6px 0}
+
+.school{border:0;background:none;width:100%;text-align:left;font:inherit;cursor:pointer;padding:13px 0;border-bottom:1px solid var(--line);display:block}
+.school:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:8px}
+.row1{display:flex;gap:10px;align-items:baseline}
+.name{font-size:14.5px;font-weight:600;flex:1;line-height:1.35}
+.dist{font-size:14.5px;font-weight:700;color:var(--navy);flex:none;font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:99px;background:var(--wash);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.row2{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center}
+
+.tag{font-size:11px;font-weight:700;padding:3.5px 9px;border-radius:99px;background:var(--wash);color:var(--navy-60)}
+.tag.likely{background:var(--teal-wash);color:var(--teal-dk)}
+.tag.border{background:transparent;color:var(--navy-60);box-shadow:inset 0 0 0 1.5px var(--line)}
+.tag.unlikely{background:transparent;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+
+.ofsted{font-size:11px;font-weight:800;padding:3.5px 9px;border-radius:99px}
+.o-out{background:var(--navy);color:#fff}
+.o-good{background:var(--teal);color:#fff}
+.o-req{background:transparent;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.o-inad{background:#3C3C40;color:#fff}
+.o-none{background:var(--wash);color:var(--navy-40)}
+.walk{font-size:11.5px;font-weight:600;color:var(--navy-40)}
+
+.detail{display:none;margin-top:12px;padding:14px;background:var(--wash);border-radius:14px;border-left:3px solid var(--teal)}
+.school[aria-expanded="true"] .detail{display:block}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:12.5px;margin:0}
+.dl dt{color:var(--navy-40);font-weight:600}
+.dl dd{margin:0;font-weight:600}
+.catch{margin:12px 0 0;font-size:12.5px;line-height:1.5;font-weight:500;color:var(--navy-60)}
+.catch b{color:var(--navy);font-weight:700}
+.link{display:inline-block;margin-top:11px;font-size:12.5px;font-weight:700;color:var(--teal-dk);text-decoration:none}
+
+.empty{padding:28px 4px;font-size:13.5px;color:var(--navy-60);font-weight:500;line-height:1.6}
+.note{margin-top:24px;padding:16px;background:var(--wash);border-radius:16px;font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500}
+.note b{color:var(--navy);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <svg class="mark" viewBox="0 0 72 72" role="img" aria-label="Schools">
+        <polygon points="36,60 62,47 36,34 10,47" fill="#F3F3F5"/>
+        <polygon points="10,47 36,60 36,66 10,53" fill="#E1E1E5"/>
+        <polygon points="62,47 36,60 36,66 62,53" fill="#CFCFD5"/>
+        <polygon points="36,44 56,34 36,24 16,34" fill="#00A19A"/>
+        <polygon points="16,34 36,44 36,50 16,40" fill="#00817C"/>
+        <polygon points="56,34 36,44 36,50 56,40" fill="#00615C"/>
+        <polygon points="36,36 53,27.5 36,19 19,27.5" fill="#4A4468"/>
+        <polygon points="19,27.5 36,36 36,41 19,32.5" fill="#332C57"/>
+        <polygon points="53,27.5 36,36 36,41 53,32.5" fill="#231D45"/>
+        <polygon points="36,28 58,17 36,6 14,17" fill="#231D45"/>
+        <polygon points="36,28 47,22.5 47,26 36,31.5" fill="#3A3163"/>
+        <polygon points="36,28 25,22.5 25,26 36,31.5" fill="#2C2551"/>
+        <path d="M36 17 L54 18.5 L54 27" fill="none" stroke="#00A19A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="54" cy="29" r="2.6" fill="#00A19A"/>
+        <circle cx="36" cy="17" r="2" fill="#7FD0CC"/>
+      </svg>
+      <div>
+        <h1>Schools nearby</h1>
+        <p>DfE Get Information About Schools · Ofsted · Feb 2026</p>
+      </div>
+    </div>
+
+    <section class="summary">
+      <div class="big">8 schools</div>
+      <p class="cap">Within 2 miles of this address — <em>three primaries rated Good or better</em> inside a 20-minute walk.</p>
+      <div class="mini">
+        <div><b>4</b><span>Primaries within 1 mile</span></div>
+        <div><b>2</b><span>Secondaries within 2 miles</span></div>
+        <div><b>0.6<small> mi</small></b><span>To nearest primary</span></div>
+      </div>
+    </section>
+
+    <div class="seg" role="group" aria-label="School phase">
+      <button data-phase="all" aria-pressed="true">All</button>
+      <button data-phase="nursery" aria-pressed="false">Nursery</button>
+      <button data-phase="primary" aria-pressed="false">Primary</button>
+      <button data-phase="secondary" aria-pressed="false">Secondary</button>
+    </div>
+
+    <div class="sortbar">
+      <span id="count">Showing 8 schools</span>
+      <button class="sortbtn" id="sort">Sort: Distance ▾</button>
+    </div>
+
+    <div id="list"></div>
+
+    <p class="note">
+      <b>Sample data for layout purposes.</b> Walking times are estimated from the road network, not straight-line distance. Being close to a school does not guarantee a place — most admissions are decided by the local authority on the year's actual applications, so treat the catchment note as history rather than a promise.
+    </p>
+  </main>
+</div>
+
+<script>
+const S=[
+ {n:'Cannon Park Primary School',p:'primary',mi:0.6,walk:13,o:'Good',oy:2023,ages:'4–11',roll:210,cap:'Full',auth:'Coventry City Council',catch:'Furthest offer last year was 0.9 miles. This address was inside the distance in each of the last three years.',likely:'Likely',lc:'likely'},
+ {n:'Kenderdine Montessori School',p:'primary',mi:0.7,walk:15,o:null,oy:null,ages:'3–11',roll:64,cap:'Places available',auth:'Independent',catch:'Independent school — admission by application, no catchment. Fees apply.',likely:null,lc:''},
+ {n:'Earlsdon Primary School',p:'primary',mi:0.8,walk:17,o:'Outstanding',oy:2024,ages:'4–11',roll:420,cap:'Oversubscribed',auth:'Coventry City Council',catch:'Furthest offer last year was 0.5 miles. This address sat outside the distance in each of the last three years.',likely:'Unlikely',lc:'unlikely'},
+ {n:'Stivichall Primary School',p:'primary',mi:0.8,walk:18,o:'Good',oy:2022,ages:'4–11',roll:396,cap:'Oversubscribed',auth:'Coventry City Council',catch:'Furthest offer last year was 0.8 miles. This address was borderline — inside in two of the last three years.',likely:'Borderline',lc:'border'},
+ {n:'All Souls Roman Catholic Primary School',p:'primary',mi:0.9,walk:19,o:'Good',oy:2023,ages:'4–11',roll:238,cap:'Places available',auth:'Archdiocese of Birmingham',catch:'Faith-based criteria are applied before distance. Practising families are prioritised regardless of how far they live.',likely:'Faith criteria',lc:''},
+ {n:'Moor House Nursery',p:'nursery',mi:0.9,walk:19,o:'Good',oy:2024,ages:'0–4',roll:52,cap:'Places available',auth:'Private',catch:'Private nursery — no catchment. Government-funded hours accepted.',likely:null,lc:''},
+ {n:'Finham Park School',p:'secondary',mi:1.4,walk:30,o:'Outstanding',oy:2023,ages:'11–18',roll:1480,cap:'Oversubscribed',auth:'Academy trust',catch:'Furthest offer last year was 1.2 miles. This address sat outside the distance last year.',likely:'Unlikely',lc:'unlikely'},
+ {n:'Woodlands Academy',p:'secondary',mi:1.8,walk:38,o:'Good',oy:2022,ages:'11–18',roll:1120,cap:'Places available',auth:'Academy trust',catch:'Has admitted from beyond 2 miles in each of the last three years.',likely:'Likely',lc:'likely'}
+];
+const CLS={'Outstanding':'o-out','Good':'o-good','Requires improvement':'o-req','Inadequate':'o-inad'};
+const PHASE={nursery:'Nursery',primary:'Primary',secondary:'Secondary'};
+const PCOL={primary:'#00A19A',secondary:'#231D45',nursery:'#9A9AA1'};
+const MAXW=40; // minutes, for the proximity bar
+let phase='all', sort='distance', open=-1;
+
+function render(){
+  let list=phase==='all'?[...S]:S.filter(s=>s.p===phase);
+  if(sort==='rating'){
+    const rank={'Outstanding':0,'Good':1,'Requires improvement':2,'Inadequate':3};
+    list.sort((a,b)=>(rank[a.o]??9)-(rank[b.o]??9)||a.mi-b.mi);
+  } else list.sort((a,b)=>a.mi-b.mi);
+
+  document.getElementById('count').textContent=`Showing ${list.length} school${list.length===1?'':'s'}`;
+  document.getElementById('sort').textContent=`Sort: ${sort==='distance'?'Distance':'Ofsted'} ▾`;
+
+  const el=document.getElementById('list'); el.innerHTML='';
+  if(!list.length){el.innerHTML='<p class="empty">No schools of this phase within 2 miles. Try widening the search or switching phase.</p>';return}
+
+  list.forEach(s=>{
+    const i=S.indexOf(s);
+    const b=document.createElement('button');
+    b.className='school'; b.setAttribute('aria-expanded',open===i);
+    const ofsted=s.o?`<span class="ofsted ${CLS[s.o]}">${s.o}</span>`:`<span class="ofsted o-none">Not inspected</span>`;
+    b.innerHTML=`
+      <div class="row1"><span class="name">${s.n}</span><span class="dist">${s.walk} min</span></div>
+      <div class="bar"><i style="width:0%;background:${PCOL[s.p]}"></i></div>
+      <div class="row2">${ofsted}<span class="tag">${PHASE[s.p]}</span><span class="tag">Ages ${s.ages}</span>
+        ${s.likely?`<span class="tag ${s.lc}">${s.likely}</span>`:''}
+        <span class="walk">· ${s.mi} mi</span></div>
+      <div class="detail">
+        <dl class="dl">
+          <dt>Ofsted</dt><dd>${s.o?`${s.o} · inspected ${s.oy}`:'No published inspection'}</dd>
+          <dt>Pupils</dt><dd>${s.roll} on roll · ${s.cap}</dd>
+          <dt>Admissions</dt><dd>${s.auth}</dd>
+        </dl>
+        <p class="catch"><b>Getting a place:</b> ${s.catch}</p>
+        <a class="link" href="#" onclick="return false">Open on GOV.UK →</a>
+      </div>`;
+    b.onclick=()=>{open=open===i?-1:i;render()};
+    el.appendChild(b);
+    requestAnimationFrame(()=>{ b.querySelector('i').style.width=Math.max(6,(1-s.walk/MAXW)*100)+'%'; });
+  });
+}
+document.querySelectorAll('[data-phase]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-phase]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  phase=b.dataset.phase; open=-1; render();
+});
+document.getElementById('sort').onclick=()=>{sort=sort==='distance'?'rating':'distance';render()};
+render();
+</script>
+</body>
+</html>

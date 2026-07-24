@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flood &amp; environmental risk — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45; --navy-60:#75757C; --navy-40:#A2A2A9;
+  --teal:#00A19A; --teal-dk:#00817C; --teal-wash:#E9F6F5;
+  --line:#E4E4E7; --wash:#F3F3F5;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0}
+body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#17122E;color:var(--navy);display:flex;justify-content:center}
+.phone{width:100%;max-width:430px;background:#fff;min-height:100vh;overflow:hidden}
+.backdrop{height:96px;background:var(--navy)}
+.sheet{background:#fff;border-radius:28px 28px 0 0;margin-top:-28px;position:relative;padding:0 20px 40px}
+.grabber{width:44px;height:5px;border-radius:99px;background:var(--line);margin:12px auto 18px}
+
+.sheet-head{display:flex;align-items:center;gap:13px;margin-bottom:14px;background:var(--teal-wash);border-radius:18px;padding:13px 15px}
+.sheet-head h1{font-size:19px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12px;color:var(--navy-60);font-weight:500}
+.mark{width:58px;height:58px;flex:none;filter:drop-shadow(0 5px 9px rgba(35,29,69,.18))}
+
+/* demo state switcher — prototype only */
+.demo{display:flex;gap:6px;margin-bottom:16px;padding:9px 11px;background:var(--wash);border-radius:12px;align-items:center;flex-wrap:wrap}
+.demo b{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--navy-40)}
+.demo button{border:1px solid var(--line);background:#fff;font:inherit;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:99px;cursor:pointer;color:var(--navy-60)}
+.demo button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* headline */
+.head{border-radius:20px;padding:20px 18px;margin-bottom:8px;text-align:center;background:linear-gradient(160deg,var(--teal-wash),#F7FBFB)}
+.head.pending{background:var(--wash)}
+.head .lab{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-60)}
+.head .big{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-top:7px}
+.head .sub{font-size:13px;color:var(--navy-60);font-weight:600;margin-top:9px;line-height:1.5}
+.cta{margin-top:14px;border:0;background:var(--navy);color:#fff;font:inherit;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:12px;cursor:pointer;width:100%}
+.stamp{font-size:11.5px;color:var(--navy-40);font-weight:600;text-align:center;margin:0 0 18px}
+
+h2.sec{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40);margin:22px 0 3px}
+p.secsub{font-size:12.5px;color:var(--navy-60);margin:0 0 10px;font-weight:500;line-height:1.5}
+
+/* risk rows */
+.risk{border:0;background:none;width:100%;text-align:left;font:inherit;cursor:pointer;padding:13px 0;border-bottom:1px solid var(--line);display:block}
+.risk:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:8px}
+.rtop{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.rname{font-size:14.5px;font-weight:600}
+.pill{font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;flex:none}
+.p-low{background:var(--teal);color:#fff}
+.p-med{background:transparent;color:var(--navy);box-shadow:inset 0 0 0 1.5px var(--navy)}
+.p-high{background:var(--navy);color:#fff}
+.p-none{background:var(--wash);color:var(--navy-40);box-shadow:inset 0 0 0 1px var(--line)}
+.rmean{font-size:12.5px;color:var(--navy-60);font-weight:500;margin:7px 0 0;line-height:1.5}
+.rdet{display:none;margin-top:11px;padding:13px;background:var(--wash);border-radius:13px;border-left:3px solid var(--teal);font-size:12.5px;line-height:1.55;font-weight:500;color:var(--navy-60)}
+.risk[aria-expanded="true"] .rdet{display:block}
+.rdet b{color:var(--navy);font-weight:700}
+
+/* live warnings — visually demoted */
+.live{background:var(--wash);border-radius:16px;padding:4px 14px;margin-top:4px}
+.livehead{display:flex;justify-content:space-between;align-items:center;padding:12px 0;cursor:pointer;border:0;background:none;font:inherit;width:100%}
+.livehead span{font-size:13px;font-weight:700}
+.livehead small{font-size:11.5px;color:var(--navy-40);font-weight:600}
+.livebody{display:none;padding-bottom:8px}
+.live.open .livebody{display:block}
+.wrow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:12.5px}
+.wrow span:first-child{font-weight:600;color:var(--navy-60)}
+.wrow span:last-child{font-weight:700;flex:none}
+
+/* lookups */
+.lookup{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.lookup .lname{font-size:14.5px;font-weight:600}
+.lookup .lsub{font-size:11.5px;color:var(--navy-40);font-weight:600;margin-top:3px}
+.lookup .go{font-size:12.5px;font-weight:700;color:var(--teal-dk);flex:none}
+
+.impact{margin-top:20px;background:var(--teal-wash);border-radius:16px;padding:16px}
+.impact h3{font-size:13.5px;font-weight:800;margin:0 0 9px}
+.impact ul{margin:0;padding-left:17px;font-size:12.5px;line-height:1.65;font-weight:500;color:var(--navy-60)}
+.impact li{margin-bottom:5px}
+.impact b{color:var(--navy);font-weight:700}
+
+.note{margin-top:20px;padding:16px;background:var(--wash);border-radius:16px;font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500}
+.note b{color:var(--navy);font-weight:700}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <svg class="mark" viewBox="0 0 72 72" role="img" aria-label="Flood and environmental risk">
+        <polygon points="36,60 62,47 36,34 10,47" fill="#F3F3F5"/>
+        <polygon points="10,47 36,60 36,66 10,53" fill="#E1E1E5"/>
+        <polygon points="62,47 36,60 36,66 62,53" fill="#CFCFD5"/>
+        <!-- water -->
+        <polygon points="36,50 58,38 36,26 14,38" fill="#00A19A"/>
+        <polygon points="14,38 36,50 36,56 14,44" fill="#00817C"/>
+        <polygon points="58,38 36,50 36,56 58,44" fill="#00615C"/>
+        <!-- house, half submerged -->
+        <polygon points="36,40 48,33 36,26 24,33" fill="#4A4468"/>
+        <polygon points="24,33 36,40 36,46 24,39" fill="#332C57"/>
+        <polygon points="48,33 36,40 36,46 48,39" fill="#231D45"/>
+        <polygon points="36,26 50,18 36,10 22,18" fill="#231D45"/>
+        <polygon points="36,26 50,18 50,21 36,29" fill="#3A3163"/>
+        <polygon points="36,26 22,18 22,21 36,29" fill="#2C2551"/>
+        <!-- ripples -->
+        <path d="M18 44 q4 -2 8 0" stroke="#7FD0CC" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <path d="M46 44 q4 -2 8 0" stroke="#7FD0CC" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Flood &amp; environmental risk</h1>
+        <p>Environment Agency · BGS · UKHSA · DEFRA</p>
+      </div>
+    </div>
+
+    <div class="demo">
+      <b>Prototype state</b>
+      <button data-state="ok" aria-pressed="true">Assessed</button>
+      <button data-state="risk" aria-pressed="false">At risk</button>
+      <button data-state="pending" aria-pressed="false">Not yet checked</button>
+    </div>
+
+    <section id="head" class="head"></section>
+    <p class="stamp" id="stamp"></p>
+
+    <h2 class="sec">Long-term flood risk</h2>
+    <p class="secsub">The likelihood of flooding over the lifetime of ownership. This is what lenders and insurers use.</p>
+    <div id="risks"></div>
+
+    <h2 class="sec">Live status today</h2>
+    <p class="secsub">Real-time Environment Agency warnings for nearby watercourses. This tells you about conditions right now — it is not a measure of long-term risk.</p>
+    <div class="live" id="live">
+      <button class="livehead" id="livetoggle">
+        <span>No active warnings nearby</span>
+        <small id="livecount">3 monitored · show</small>
+      </button>
+      <div class="livebody">
+        <div class="wrow"><span>Middle Avon, Rugby to Bidford</span><span>No warning</span></div>
+        <div class="wrow"><span>R Sowe, R Sherbourne, Canley &amp; Finham Bk</span><span>No warning</span></div>
+        <div class="wrow"><span>Canley Brook at Canley</span><span>No warning</span></div>
+        <div class="wrow"><span style="color:var(--navy-40)">Checked 16:38 today</span><span style="color:var(--navy-40);font-weight:600">Refresh</span></div>
+      </div>
+    </div>
+
+    <div class="impact">
+      <h3>What this means when you buy</h3>
+      <ul>
+        <li><b>Insurance.</b> Properties built before 2009 in a flood-risk area are usually eligible for Flood Re, which caps premiums. Newer builds are not.</li>
+        <li><b>Mortgage.</b> Some lenders decline or require a specialist survey where river and sea risk is High.</li>
+        <li><b>Ask your conveyancer</b> for a full flood report and the seller's answers on past flooding in the property information form.</li>
+      </ul>
+    </div>
+
+    <h2 class="sec">Other environmental checks</h2>
+    <p class="secsub">Not yet included in your report. These open the official postcode lookup.</p>
+    <a class="lookup" href="#" onclick="return false"><div><div class="lname">Radon</div><div class="lsub">UKHSA — not checked</div></div><span class="go">Look up →</span></a>
+    <a class="lookup" href="#" onclick="return false"><div><div class="lname">Subsidence &amp; clay shrink-swell</div><div class="lsub">British Geological Survey — not checked</div></div><span class="go">Look up →</span></a>
+    <a class="lookup" href="#" onclick="return false"><div><div class="lname">Ground stability</div><div class="lsub">BGS GeoSure — not checked</div></div><span class="go">Look up →</span></a>
+    <a class="lookup" href="#" onclick="return false"><div><div class="lname">Air quality</div><div class="lsub">DEFRA UK-AIR — not checked</div></div><span class="go">Look up →</span></a>
+
+    <p class="note">
+      <b>Sample data for layout purposes.</b> Environment Agency flood mapping gives a statistical likelihood for an area, not a prediction for an individual building — ground levels, flood defences and property-level protection all vary within a single postcode. It is not a substitute for a conveyancer's flood report.
+    </p>
+  </main>
+</div>
+
+<script>
+const DATA={
+ ok:{
+  head:'Low',lab:'Overall flood risk',
+  sub:'No source of flooding is rated above Low at this address.',
+  stamp:'Assessed 18 July 2026 · Environment Agency RoFRS',
+  pending:false,
+  rows:[
+   {n:'Rivers &amp; the sea',s:'Low',c:'p-low',m:'Less than 1 in 1,000 chance of flooding in any given year.',d:'The nearest main river is Canley Brook, roughly 400m away and around 8m below the property in elevation. <b>Lenders rarely raise questions at this rating.</b>'},
+   {n:'Surface water',s:'Low',c:'p-low',m:'Less than 1 in 1,000 chance from heavy rainfall overwhelming drainage.',d:'Surface water is the most common cause of flooding in urban areas and the one buyers most often overlook. <b>Worth asking whether the road has flooded in heavy storms.</b>'},
+   {n:'Groundwater',s:'Unlikely',c:'p-low',m:'Not in an area where groundwater flooding is a recorded issue.',d:'Groundwater flooding affects basements and cellars first. If the property has one, <b>ask specifically about damp history.</b>'},
+   {n:'Reservoirs',s:'No risk',c:'p-none',m:'Not within the modelled inundation area of any large reservoir.',d:'Reservoir flooding is extremely unlikely but would be rapid. This address is outside all modelled zones.'}
+  ]},
+ risk:{
+  head:'High',lab:'Overall flood risk',
+  sub:'Rivers and the sea are rated High at this address. This will affect insurance and may affect lending.',
+  stamp:'Assessed 18 July 2026 · Environment Agency RoFRS',
+  pending:false,
+  rows:[
+   {n:'Rivers &amp; the sea',s:'High',c:'p-high',m:'Greater than 1 in 30 chance of flooding in any given year.',d:'<b>Get a flood report before you offer.</b> At this rating expect insurers to ask for a Flood Re declaration and some lenders to require a specialist survey. Ask the seller directly whether the property has flooded and whether a claim was made.'},
+   {n:'Surface water',s:'Medium',c:'p-med',m:'Between 1 in 100 and 1 in 30 chance from heavy rainfall.',d:'Check whether the property has any property-level protection fitted — flood doors, airbrick covers, non-return valves. <b>These reduce premiums materially.</b>'},
+   {n:'Groundwater',s:'Unlikely',c:'p-low',m:'Not in an area where groundwater flooding is a recorded issue.',d:'Groundwater flooding affects basements and cellars first.'},
+   {n:'Reservoirs',s:'No risk',c:'p-none',m:'Not within the modelled inundation area of any large reservoir.',d:'This address is outside all modelled zones.'}
+  ]},
+ pending:{
+  head:'Not yet checked',lab:'Overall flood risk',
+  sub:"We haven't been able to retrieve an Environment Agency classification for this address. Nothing here should be read as a low risk — it simply hasn't been checked.",
+  stamp:'Last attempted 16:38 today',
+  pending:true,cta:'Check flood risk now',
+  rows:[
+   {n:'Rivers &amp; the sea',s:'Not checked',c:'p-none',m:'',d:''},
+   {n:'Surface water',s:'Not checked',c:'p-none',m:'',d:''},
+   {n:'Groundwater',s:'Not checked',c:'p-none',m:'',d:''},
+   {n:'Reservoirs',s:'Not checked',c:'p-none',m:'',d:''}
+  ]}
+};
+let state='ok', open=-1;
+
+function render(){
+  const d=DATA[state];
+  const h=document.getElementById('head');
+  h.className='head'+(d.pending?' pending':'');
+  h.innerHTML=`<div class="lab">${d.lab}</div><div class="big">${d.head}</div><p class="sub">${d.sub}</p>`+
+    (d.cta?`<button class="cta">${d.cta}</button>`:'');
+  document.getElementById('stamp').textContent=d.stamp;
+
+  document.getElementById('risks').innerHTML=d.rows.map((r,i)=>`
+    <button class="risk" aria-expanded="${open===i&&!!r.d}">
+      <div class="rtop"><span class="rname">${r.n}</span><span class="pill ${r.c}">${r.s}</span></div>
+      ${r.m?`<p class="rmean">${r.m}</p>`:''}
+      ${r.d?`<div class="rdet">${r.d}</div>`:''}
+    </button>`).join('');
+  document.querySelectorAll('.risk').forEach((el,i)=>el.onclick=()=>{
+    if(!d.rows[i].d)return; open=open===i?-1:i; render();
+  });
+}
+document.querySelectorAll('[data-state]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-state]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  state=b.dataset.state; open=-1; render();
+});
+const live=document.getElementById('live');
+document.getElementById('livetoggle').onclick=()=>{
+  live.classList.toggle('open');
+  document.getElementById('livecount').textContent='3 monitored · '+(live.classList.contains('open')?'hide':'show');
+};
+render();
+</script>
+</body>
+</html>

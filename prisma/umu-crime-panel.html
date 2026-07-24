@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crime in this area — UMU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#231D45;
+  --navy-60:#6B6685;
+  --navy-40:#9B97AD;
+  --teal:#00A19A;
+  --gold:#C18A38;
+  --amber:#D9873B;
+  --rose:#C4586B;
+  --line:#EAE8F0;
+  --surface:#FFFFFF;
+  --wash:#F4F3F8;
+  --sheet-radius:28px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+  background:#DEDCE4;
+  color:var(--navy);
+  display:flex;justify-content:center;
+  padding:0;
+}
+.phone{
+  width:100%;max-width:430px;background:var(--surface);
+  min-height:100vh;position:relative;overflow:hidden;
+}
+
+/* ---- sheet chrome ---- */
+.backdrop{height:96px;background:linear-gradient(180deg,#6E6A82,#57536B)}
+.sheet{
+  background:var(--surface);border-radius:var(--sheet-radius) var(--sheet-radius) 0 0;
+  margin-top:-28px;position:relative;padding:0 20px 40px;
+}
+.grabber{width:44px;height:5px;border-radius:99px;background:#D6D3E0;margin:12px auto 18px}
+
+.sheet-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px}
+.sheet-head h1{font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0 0 3px}
+.sheet-head p{margin:0;font-size:12.5px;color:var(--navy-40);font-weight:500}
+.badge{
+  width:40px;height:40px;border-radius:12px;background:var(--wash);
+  display:grid;place-items:center;flex:none;
+}
+
+/* ---- controls ---- */
+.seg{
+  display:flex;background:var(--wash);border-radius:12px;padding:3px;gap:2px;margin-bottom:18px;
+}
+.seg button{
+  flex:1;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;
+  color:var(--navy-60);padding:8px 4px;border-radius:9px;cursor:pointer;transition:.18s;
+}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(35,29,69,.12)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+
+/* ---- headline ---- */
+.headline{border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:14px}
+.rate-row{display:flex;align-items:baseline;gap:8px}
+.rate{font-size:44px;font-weight:800;letter-spacing:-.035em;line-height:1;font-variant-numeric:tabular-nums}
+.rate-unit{font-size:13px;font-weight:600;color:var(--navy-60)}
+.verdict{margin:10px 0 0;font-size:14px;font-weight:600;line-height:1.45}
+.verdict em{font-style:normal;font-weight:800}
+.raw{margin:6px 0 0;font-size:12.5px;color:var(--navy-40);font-weight:500}
+
+/* ---- benchmark scale (signature) ---- */
+.scale-wrap{margin-top:20px}
+.scale{
+  position:relative;height:10px;border-radius:99px;
+  background:linear-gradient(90deg,#7FCFC9 0%,#CFE0C0 32%,#F0D9A8 62%,#E3A9A9 100%);
+}
+.tick{position:absolute;top:-5px;width:1px;height:20px;background:rgba(35,29,69,.22)}
+.marker{
+  position:absolute;top:50%;width:20px;height:20px;border-radius:50%;
+  background:var(--navy);border:3px solid #fff;box-shadow:0 2px 8px rgba(35,29,69,.35);
+  transform:translate(-50%,-50%);transition:left .5s cubic-bezier(.4,0,.2,1);
+}
+.scale-labels{display:flex;justify-content:space-between;margin-top:9px;font-size:10.5px;font-weight:600;color:var(--navy-40);letter-spacing:.02em}
+.scale-key{margin-top:8px;font-size:11.5px;color:var(--navy-60);font-weight:500}
+
+/* ---- trend ---- */
+.trend{border:1px solid var(--line);border-radius:20px;padding:16px 18px;margin-bottom:22px}
+.trend-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.trend-top span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--navy-40)}
+.chip{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,161,154,.12);color:#00817C}
+.chip.up{background:rgba(196,88,107,.12);color:var(--rose)}
+svg.spark{width:100%;height:52px;display:block;overflow:visible}
+.spark-x{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:var(--navy-40);font-weight:600}
+
+/* ---- categories ---- */
+.section-label{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--navy-40);margin:0 0 4px}
+.section-sub{font-size:12.5px;color:var(--navy-60);margin:0 0 14px;font-weight:500}
+
+.cat{padding:11px 0;border:0;background:none;width:100%;text-align:left;cursor:pointer;font:inherit;display:block}
+.cat:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:8px}
+.cat-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:7px}
+.cat-name{font-size:14.5px;font-weight:600}
+.cat-num{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+.bar{height:6px;border-radius:99px;background:var(--wash);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .55s cubic-bezier(.4,0,.2,1)}
+.cat-note{font-size:12.5px;color:var(--navy-60);line-height:1.5;margin:9px 0 2px;font-weight:500;display:none}
+.cat[aria-expanded="true"] .cat-note{display:block}
+
+.more{
+  width:100%;margin-top:14px;padding:13px;border:1px solid var(--line);background:#fff;
+  border-radius:14px;font:inherit;font-size:13.5px;font-weight:700;color:var(--navy);cursor:pointer;
+}
+.more:hover{background:var(--wash)}
+
+/* ---- footnote ---- */
+.note{
+  margin-top:26px;padding:16px;background:var(--wash);border-radius:16px;
+  font-size:12px;line-height:1.6;color:var(--navy-60);font-weight:500;
+}
+.note b{color:var(--navy);font-weight:700}
+.hidden{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="backdrop"></div>
+
+  <main class="sheet">
+    <div class="grabber"></div>
+
+    <div class="sheet-head">
+      <div class="badge" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#231D45" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 8.2-7 9-4-.8-7-4.5-7-9V6l7-3z"/></svg>
+      </div>
+      <div>
+        <h1>Crime in this area</h1>
+        <p>data.police.uk · 12 months to May 2026</p>
+      </div>
+    </div>
+
+    <div class="seg" role="group" aria-label="Search radius">
+      <button data-radius="0.5" aria-pressed="false">½ mile</button>
+      <button data-radius="1" aria-pressed="true">1 mile</button>
+      <button data-radius="2" aria-pressed="false">2 miles</button>
+    </div>
+
+    <section class="headline" aria-live="polite">
+      <div class="rate-row">
+        <span class="rate" id="rate">78</span>
+        <span class="rate-unit">crimes per 1,000 residents<br>per year</span>
+      </div>
+      <p class="verdict" id="verdict">About <em>13% below</em> the average for England &amp; Wales.</p>
+      <p class="raw" id="raw">1,449 recorded crimes · est. 18,600 residents</p>
+
+      <div class="scale-wrap">
+        <div class="scale" role="img" aria-label="This address sits in the lower third nationally">
+          <span class="tick" style="left:25%"></span>
+          <span class="tick" style="left:50%"></span>
+          <span class="tick" style="left:75%"></span>
+          <span class="marker" id="marker" style="left:38%"></span>
+        </div>
+        <div class="scale-labels"><span>QUIETEST 25%</span><span>AVERAGE</span><span>BUSIEST 25%</span></div>
+        <p class="scale-key" id="scale-key">Lower third of neighbourhoods nationally. Regional average: 89 per 1,000.</p>
+      </div>
+    </section>
+
+    <section class="trend">
+      <div class="trend-top">
+        <span>Direction of travel</span>
+        <span class="chip" id="trend-chip">↓ 9% year on year</span>
+      </div>
+      <svg class="spark" viewBox="0 0 300 52" preserveAspectRatio="none" role="img" aria-label="Monthly crime counts trending down over 12 months">
+        <defs><linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#00A19A" stop-opacity=".22"/><stop offset="100%" stop-color="#00A19A" stop-opacity="0"/>
+        </linearGradient></defs>
+        <path id="spark-fill" fill="url(#fade)"></path>
+        <path id="spark-line" fill="none" stroke="#00A19A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+      <div class="spark-x"><span>Jun 25</span><span>Nov 25</span><span>May 26</span></div>
+    </section>
+
+    <p class="section-label">What was reported</p>
+    <p class="section-sub">Tap a category for what it usually means locally.</p>
+
+    <div class="seg" role="group" aria-label="Filter categories">
+      <button data-group="all" aria-pressed="true">All</button>
+      <button data-group="property" aria-pressed="false">Property</button>
+      <button data-group="personal" aria-pressed="false">Personal</button>
+      <button data-group="public" aria-pressed="false">Public order</button>
+    </div>
+
+    <div id="cats"></div>
+    <button class="more" id="more">Show all 12 categories</button>
+
+    <p class="note">
+      <b>Read this as indicative, not exact.</b> Police data is mapped to anonymised snap-points on nearby streets, not to individual addresses. A 1-mile radius around a town centre will pick up retail and night-time economy crime that has little bearing on a residential street.
+    </p>
+  </main>
+</div>
+
+<script>
+const CATS = [
+  {name:'Violence & sexual offences', n:523, g:'personal', note:'Mostly night-time economy incidents concentrated around the high street, not residential streets.'},
+  {name:'Shoplifting', n:174, g:'public', note:'Retail crime from the shopping parade inside the radius. No bearing on the property itself.'},
+  {name:'Vehicle crime', n:138, g:'property', note:'Theft from vehicles, largely overnight on unlit roads. Off-street parking materially reduces risk.'},
+  {name:'Other theft', n:126, g:'property', note:'Includes theft from the person and unattended property in public places.'},
+  {name:'Criminal damage & arson', n:117, g:'property', note:'Predominantly minor damage to vehicles and fencing.'},
+  {name:'Burglary', n:99, g:'property', note:'The figure most relevant to a home purchase. This works out at roughly 5 per 1,000 households — near the national norm.'},
+  {name:'Public order', n:72, g:'public', note:'Disturbances and harassment reports, weighted to weekend evenings.'},
+  {name:'Anti-social behaviour', n:65, g:'public', note:'Under-reported nationally — treat the count as a floor rather than a total.'},
+  {name:'Other crime', n:31, g:'public', note:'Offences that do not fit the standard Home Office categories.'},
+  {name:'Robbery', n:28, g:'personal', note:'Theft involving force or threat. Low in absolute terms for an area this size.'},
+  {name:'Bicycle theft', n:22, g:'property', note:'Clustered near the station. Secure storage is the main mitigation.'},
+  {name:'Drugs', n:19, g:'personal', note:'Largely possession offences arising from stop and search, which reflects policing activity as much as prevalence.'}
+];
+const COLOUR = {property:'#231D45', personal:'#C4586B', public:'#C18A38'};
+const RADII = {
+  '0.5':{rate:64,total:412,pop:6400,pct:38,pos:28,verdict:'<em>29% below</em>',key:'Quietest third nationally. Regional average: 89 per 1,000.',scale:0.28},
+  '1':  {rate:78,total:1449,pop:18600,pct:13,pos:38,verdict:'<em>13% below</em>',key:'Lower third of neighbourhoods nationally. Regional average: 89 per 1,000.',scale:1},
+  '2':  {rate:96,total:5820,pop:60600,pct:7,pos:57,verdict:'<em>7% above</em>',key:'Slightly above the national midpoint — the radius now includes the town centre.',scale:4.02}
+};
+
+let radius='1', group='all', expandedAll=false, openIdx=-1;
+
+function visible(){
+  let list = group==='all' ? CATS : CATS.filter(c=>c.g===group);
+  return expandedAll||group!=='all' ? list : list.slice(0,5);
+}
+
+function render(){
+  const s = RADII[radius].scale;
+  const max = Math.max(...CATS.map(c=>c.n))*s;
+  const wrap = document.getElementById('cats');
+  wrap.innerHTML='';
+  visible().forEach(c=>{
+    const i = CATS.indexOf(c);
+    const n = Math.round(c.n*s);
+    const b = document.createElement('button');
+    b.className='cat'; b.setAttribute('aria-expanded', openIdx===i);
+    b.innerHTML = `<div class="cat-top"><span class="cat-name">${c.name}</span><span class="cat-num">${n.toLocaleString()}</span></div>
+      <div class="bar"><i style="width:0%;background:${COLOUR[c.g]}"></i></div>
+      <p class="cat-note">${c.note}</p>`;
+    b.onclick = ()=>{ openIdx = openIdx===i?-1:i; render(); };
+    wrap.appendChild(b);
+    requestAnimationFrame(()=>{ b.querySelector('i').style.width = (n/max*100)+'%'; });
+  });
+  const more = document.getElementById('more');
+  const full = group==='all' ? CATS.length : CATS.filter(c=>c.g===group).length;
+  more.classList.toggle('hidden', group!=='all');
+  more.textContent = expandedAll ? 'Show top 5 only' : `Show all ${full} categories`;
+}
+
+function setRadius(r){
+  radius=r;
+  const d=RADII[r];
+  document.getElementById('rate').textContent=d.rate;
+  document.getElementById('verdict').innerHTML=`About ${d.verdict} the average for England &amp; Wales.`;
+  document.getElementById('raw').textContent=`${d.total.toLocaleString()} recorded crimes · est. ${d.pop.toLocaleString()} residents`;
+  document.getElementById('marker').style.left=d.pos+'%';
+  document.getElementById('scale-key').textContent=d.key;
+  render();
+}
+
+document.querySelectorAll('[data-radius]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-radius]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  setRadius(b.dataset.radius);
+});
+document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-group]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  group=b.dataset.group; openIdx=-1; render();
+});
+document.getElementById('more').onclick=()=>{ expandedAll=!expandedAll; render(); };
+
+// sparkline
+(function(){
+  const v=[142,138,131,127,134,122,118,125,113,109,116,104];
+  const w=300,h=44,min=Math.min(...v)-12,max=Math.max(...v)+6;
+  const pts=v.map((n,i)=>[i*(w/(v.length-1)), h-((n-min)/(max-min))*h+4]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  document.getElementById('spark-line').setAttribute('d',d);
+  document.getElementById('spark-fill').setAttribute('d',d+` L${w} 52 L0 52 Z`);
+})();
+
+render();
+</script>
+</body>
+</html>
