@@ -320,3 +320,25 @@ analysis PDF for the full inventory.
   on the account.
 - **No CloudWatch alarms configured yet** — RUNBOOK has the
   `put-metric-alarm` command for a 5xx-rate alarm; not yet run.
+- **OS_API_KEY is on an exhausted OS Data Hub free-trial plan** —
+  confirmed by calling the OS Places API directly with the deployed
+  key: `{"faultstring":"Free Trial allowance exceeded"}` (also hits a
+  50-req/min rate limit on top of that). This is why property search
+  returns empty results even though the NAT gateway fix (below)
+  restored real network connectivity. Needs an OS Data Hub plan
+  upgrade or a new key — not something fixable from this repo/infra.
+- **Outbound internet from App Runner requires the VPC's NAT gateway**
+  (fixed 2026-07-27, commit `20fc758`) — the VPC connector needed for
+  RDS access routes ALL outbound traffic through the VPC, not just DB
+  calls. `natGateways: 0` meant every third-party API call (OS Places,
+  EPC, Resend, Stripe, Groq, HMLR, Persona) failed with a connect
+  timeout. Now `natGateways: 1` (~£30-35/mo) via a `private-egress`
+  subnet group; RDS stays in `isolated` (still no internet route).
+  Also added the missing `RESEND_FROM` secret value (was silently
+  falling back to Resend's sandbox sender). If OTP emails are still
+  not arriving after this, check `RESEND_API_KEY`'s own quota/domain
+  verification status on Resend's dashboard next — the "silent
+  failure" pattern in `sendOtpEmail` (see AuthService) doesn't check
+  the SDK's `{data, error}` return, so a rejected send is invisible in
+  logs. Worth fixing to `if (error) { throw ... }` so future failures
+  actually surface.
