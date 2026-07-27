@@ -317,7 +317,12 @@ analysis PDF for the full inventory.
   account isn't fully provisioned for the Online Owner Verification
   product yet (generic `System Error occurred` fault after a
   successful login). Needs a support ticket to HMLR to activate OOV
-  on the account.
+  on the account. The live cert/username/password are now correctly
+  deployed on AWS too (2026-07-27, commit `eeac6ae` — previously
+  `HMLR_OV_ENDPOINT` was a literal placeholder and no cert was set at
+  all), so testing via the app should get past the cert/auth stage
+  and hit this same `System Error occurred` fault, not a connection
+  failure. If it errors differently than that, something else changed.
 - **No CloudWatch alarms configured yet** — RUNBOOK has the
   `put-metric-alarm` command for a 5xx-rate alarm; not yet run.
 - **OS_API_KEY is on an exhausted OS Data Hub free-trial plan** —
