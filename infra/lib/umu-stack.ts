@@ -28,6 +28,7 @@ export class UmuFoundationStack extends cdk.Stack {
   public readonly vpc: ec2.IVpc;
   public readonly db: rds.DatabaseInstance;
   public readonly vpcConnectorSg: ec2.SecurityGroup;
+  public readonly vpcConnectorSg2: ec2.SecurityGroup;
   public readonly uploadsBucket: s3.Bucket;
   public readonly repo: ecr.Repository;
   public readonly appSecret: secretsmanager.Secret;
@@ -36,21 +37,56 @@ export class UmuFoundationStack extends cdk.Stack {
     super(scope, id, props);
 
     // ─────────────────────────────────────────────────────────────
-    // VPC — two AZs, public + isolated subnets, NO NAT
+    // VPC — two AZs, public + egress + isolated subnets, ONE NAT
     // ─────────────────────────────────────────────────────────────
     //
-    // Why no NAT gateway: NAT is ~£30/mo per AZ and we don't need
-    // outbound internet from RDS. S3 is reached via a gateway
-    // endpoint (free); App Runner doesn't live inside the VPC — it
-    // connects in via its own VPC connector. RDS lives in ISOLATED
-    // subnets which by definition have no internet route.
+    // Previously natGateways: 0, on the assumption that "App Runner
+    // doesn't live inside the VPC" would keep general internet traffic
+    // off it. That's wrong in practice: once App Runner is given a VPC
+    // connector (needed here so it can reach RDS), ALL outbound traffic
+    // — not just DB calls — routes through the VPC. With no NAT, every
+    // third-party call (OS Places, EPC, Resend, Stripe, Groq, HMLR,
+    // Persona) failed with a connect timeout. Confirmed via CloudWatch:
+    // "ConnectTimeoutError ... attempted address: api.os.uk:443".
+    //
+    // One NAT gateway (~£30-35/mo, shared across both AZs) now gives
+    // the App Runner VPC connector's subnet ('private-egress') a route
+    // out. RDS stays in 'isolated' (still zero internet route — it
+    // never needed one). S3 still goes via the free gateway endpoint.
     this.vpc = new ec2.Vpc(this, 'Vpc', {
       maxAzs: 2,
-      natGateways: 0,
+      natGateways: 1,
+      // Order matters: CDK allocates CIDR blocks sequentially per group,
+      // so 'isolated' MUST stay in the same position it was in before
+      // (2nd) to keep its existing subnets' CIDRs unchanged — RDS lives
+      // there and a CIDR change forces subnet replacement, which is not
+      // something to risk on a single-AZ (no failover) production DB.
+      // 'private-egress' goes last so it only claims new address space.
       subnetConfiguration: [
         { name: 'public', subnetType: ec2.SubnetType.PUBLIC, cidrMask: 24 },
         { name: 'isolated', subnetType: ec2.SubnetType.PRIVATE_ISOLATED, cidrMask: 24 },
+        { name: 'private-egress', subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS, cidrMask: 24 },
       ],
+    });
+
+    // Explicit, stably-named exports for the private-egress subnets —
+    // deliberately NOT relying on CDK's automatic cross-stack Ref/export
+    // (which only exists while some other stack's CURRENT code imports
+    // it). That auto-export appears/disappears based on what Compute's
+    // code references *right now*, which makes a same-deploy migration
+    // off the old isolated-subnet export impossible without an outage
+    // window: CloudFormation won't let Foundation drop an export that
+    // the still-deployed Compute stack is using. A fixed exportName
+    // exists unconditionally, so Foundation and Compute can be deployed
+    // as two independent, safe steps.
+    const privateEgressSubnetIds = this.vpc.selectSubnets({
+      subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+    }).subnetIds;
+    privateEgressSubnetIds.forEach((id, i) => {
+      new cdk.CfnOutput(this, `PrivateEgressSubnet${i + 1}Id`, {
+        value: id,
+        exportName: `UmuFoundation-PrivateEgressSubnet${i + 1}Id`,
+      });
     });
     this.vpc.addGatewayEndpoint('S3Endpoint', {
       service: ec2.GatewayVpcEndpointAwsService.S3,
@@ -120,6 +156,28 @@ export class UmuFoundationStack extends cdk.Stack {
       'Allow Postgres from App Runner VPC connector',
     );
 
+    // Second, functionally-identical connector SG for the NAT-gateway
+    // migration. AWS App Runner refuses to create a new VpcConnector
+    // that reuses the exact security-group combination of one that
+    // still exists ("security groups combination... already exists on
+    // existing vpc connector") — even with different subnets — so the
+    // old vpcConnectorSg can't be reused for the replacement connector
+    // while the old one is still being deleted. Exported the same way
+    // as the private-egress subnets, for the same reason (see there).
+    this.vpcConnectorSg2 = new ec2.SecurityGroup(this, 'VpcConnectorSg2', {
+      vpc: this.vpc,
+      description: 'App Runner egress SG v2 (allowed into RDS) - see comment above',
+      allowAllOutbound: true,
+    });
+    dbSecurityGroup.addIngressRule(
+      this.vpcConnectorSg2,
+      ec2.Port.tcp(5432),
+      'Allow Postgres from App Runner VPC connector v2',
+    );
+    new cdk.CfnOutput(this, 'VpcConnectorSg2Id', {
+      value: this.vpcConnectorSg2.securityGroupId,
+      exportName: 'UmuFoundation-VpcConnectorSg2Id',
+    });
     this.db = new rds.DatabaseInstance(this, 'Db', {
       engine: rds.DatabaseInstanceEngine.postgres({
         // 16.14 is the latest patch in eu-west-2 (CDK's VER_16_4 enum
@@ -232,7 +290,9 @@ export class UmuComputeStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
 
-    const { vpc, db, vpcConnectorSg, uploadsBucket, repo, appSecret } = props;
+    // vpcConnectorSg (props) is unused now — the VpcConnector uses the
+    // imported vpcConnectorSg2 below instead (see that section's comment).
+    const { vpc, db, uploadsBucket, repo, appSecret } = props;
 
     // Instance role: what the running container can do.
     const instanceRole = new iam.Role(this, 'AppRunnerInstanceRole', {
@@ -264,13 +324,38 @@ export class UmuComputeStack extends cdk.Stack {
       }),
     );
 
-    // VPC connector lets App Runner reach RDS inside the VPC.
+    // VPC connector lets App Runner reach RDS inside the VPC — and,
+    // since VPC egress carries ALL outbound traffic once enabled (not
+    // just DB calls), it needs to sit in the NAT-routed subnet so
+    // third-party API calls (OS Places, Resend, Stripe, etc.) actually
+    // reach the internet instead of timing out. See the VPC comment in
+    // the foundation stack for the full story.
     // The security group + ingress rule on RDS live in the foundation
     // stack (see comment there) to avoid a cross-stack cyclic reference.
+    //
+    // Imports the private-egress subnets via Foundation's explicit,
+    // stably-named exports (not vpc.selectSubnets(), whose auto-export
+    // only exists while some stack currently references it — unusable
+    // for migrating off a different subnet without a deploy deadlock).
+    const privateEgressSubnets = [1, 2].map((i) =>
+      ec2.Subnet.fromSubnetId(
+        this,
+        `PrivateEgressSubnet${i}`,
+        cdk.Fn.importValue(`UmuFoundation-PrivateEgressSubnet${i}Id`),
+      ),
+    );
+    // vpcConnectorSg2, not vpcConnectorSg — AWS App Runner won't let a
+    // new connector reuse the exact SG combination of one that still
+    // exists (see the SG's definition comment in the foundation stack).
+    const vpcConnectorSg2 = ec2.SecurityGroup.fromSecurityGroupId(
+      this,
+      'ImportedVpcConnectorSg2',
+      cdk.Fn.importValue('UmuFoundation-VpcConnectorSg2Id'),
+    );
     const vpcConnector = new apprunner.VpcConnector(this, 'VpcConnector', {
       vpc,
-      vpcSubnets: vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_ISOLATED }),
-      securityGroups: [vpcConnectorSg],
+      vpcSubnets: { subnets: privateEgressSubnets },
+      securityGroups: [vpcConnectorSg2],
     });
 
     const service = new apprunner.Service(this, 'BackendService', {
