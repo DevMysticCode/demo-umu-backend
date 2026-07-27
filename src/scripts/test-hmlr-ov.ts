@@ -64,18 +64,39 @@ async function main() {
   console.log('MessageId:', scenario, '(set HMLR_TEST_SCENARIO to override — bgtest scenario codes ONLY, never against live)')
   console.log('-----------------------------')
 
+  // Subject defaults to HMLR's own vendor test person (Jon Tankerman / 24
+  // Dovedale Road) — fine against bgtest, meaningless against production
+  // (it isn't a real title owner, so live will just return NO_MATCHES).
+  // Override via env vars to test a real subject against the live service.
+  const forename = process.env.HMLR_TEST_FORENAME?.trim() || 'Jon'
+  // Falsy-OR would coerce an intentionally empty override back to the
+  // default — use presence-check so HMLR_TEST_MIDDLENAME="" means "no
+  // middle name" rather than "unset".
+  const middleName =
+    process.env.HMLR_TEST_MIDDLENAME !== undefined
+      ? process.env.HMLR_TEST_MIDDLENAME.trim()
+      : 'Tomas'
+  const surname = process.env.HMLR_TEST_SURNAME?.trim() || 'Tankerman'
+  const buildingNumber = process.env.HMLR_TEST_BUILDING_NUMBER?.trim() || '24'
+  const streetName = process.env.HMLR_TEST_STREET?.trim() || 'Dovedale Road'
+  const cityName = process.env.HMLR_TEST_CITY?.trim() || 'Plymouth'
+  const postcode = process.env.HMLR_TEST_POSTCODE?.trim() || 'PL1 1QQ'
+  console.log('Subject  :', forename, middleName, surname)
+  console.log('Address  :', buildingNumber, streetName, cityName, postcode)
+  console.log('-----------------------------')
+
   const result = await svc.verifyOwnership({
     messageId: scenario,
     reference,
-    forename: 'Jon',
-    middleName: 'Tomas',
-    surname: 'Tankerman',
+    forename,
+    middleName,
+    surname,
     subject: {
       address: {
-        buildingNumber: '24',
-        streetName: 'Dovedale Road',
-        cityName: 'Plymouth',
-        postcode: 'PL1 1QQ',
+        buildingNumber,
+        streetName,
+        cityName,
+        postcode,
       },
     },
     options: {
