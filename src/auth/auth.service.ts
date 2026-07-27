@@ -42,7 +42,12 @@ export class AuthService {
   private async sendOtpEmail(email: string, otp: string): Promise<void> {
     const expiryMins = this.OTP_EXPIRY_MINUTES;
     const year = new Date().getFullYear();
-    await this.resend.emails.send({
+    // Resend's SDK returns { data, error } rather than throwing for
+    // API-level rejections (bad domain, unverified sender, over quota,
+    // etc.) — only throws for network-level failures. Without this
+    // check, a rejected send looked identical to a successful one: no
+    // exception, 201 response, and total silence in the logs.
+    const result = await this.resend.emails.send({
       from: this.FROM,
       to: email,
       subject: `Your UMovingU verification code: ${otp}`,
@@ -62,6 +67,9 @@ export class AuthService {
   <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">&#169; ${year} UMovingU. All rights reserved.</p>
 </div>`,
     });
+    if (result.error) {
+      throw new Error(`Resend rejected the send: ${JSON.stringify(result.error)}`);
+    }
   }
 
   async checkEmail(email: string): Promise<{ exists: boolean }> {
@@ -319,7 +327,7 @@ export class AuthService {
     const expiryMins = this.OTP_EXPIRY_MINUTES;
 
     try {
-      await this.resend.emails.send({
+      const result = await this.resend.emails.send({
         from: this.FROM,
         to: email,
         subject: `Reset your password — code: ${otp}`,
@@ -339,6 +347,9 @@ export class AuthService {
   <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">&#169; ${year} UMovingU. All rights reserved.</p>
 </div>`,
       });
+      if (result.error) {
+        throw new Error(`Resend rejected the send: ${JSON.stringify(result.error)}`);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[PASSWORD RESET] Failed to send email:', msg);
