@@ -323,6 +323,15 @@ analysis PDF for the full inventory.
   all), so testing via the app should get past the cert/auth stage
   and hit this same `System Error occurred` fault, not a connection
   failure. If it errors differently than that, something else changed.
+  **Ruled out (2026-07-27)**: external review flagged that
+  `src/scripts/test-hmlr-ov.ts` was sending `eoov-fm-1` — a bgtest
+  vendor-test-data scenario code, not a real MessageId — on every
+  request, including against the live endpoint (fixed in `4627cd1`,
+  now defaults to a fresh UUID per HMLR's reliable-messaging spec).
+  Retested live immediately with a genuine unique UUID and got the
+  byte-identical `System Error occurred` fault, so a reused/invalid
+  MessageId was NOT the cause of this fault — the OOV-provisioning
+  theory above remains the leading explanation.
 - **No CloudWatch alarms configured yet** — RUNBOOK has the
   `put-metric-alarm` command for a 5xx-rate alarm; not yet run.
 - **OS_API_KEY is on an exhausted OS Data Hub free-trial plan** —
