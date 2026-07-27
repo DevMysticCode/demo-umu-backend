@@ -42,6 +42,11 @@ export class PropertyController {
     @Query('offset') offset?: string,
     @Query('limit') limit?: string,
     @Query('radius') radius?: string,
+    @Query('propertyType') propertyType?: string,
+    @Query('minBedrooms') minBedrooms?: string,
+    @Query('minEpc') minEpc?: string,
+    @Query('minHomeScore') minHomeScore?: string,
+    @Query('passportOnly') passportOnly?: string,
   ) {
     if (!query || query.trim().length < 2) {
       return { items: [], total: 0 };
@@ -54,12 +59,30 @@ export class PropertyController {
     const r = radius ? parseFloat(radius) : undefined;
     const radiusMiles =
       r && !isNaN(r) && r > 0 && r <= 25 ? r : undefined;
-    return this.propertyService.searchProperties(
+    const result = await this.propertyService.searchProperties(
       query.trim(),
       off,
       lim,
       radiusMiles,
     );
+
+    // Explore's filter sheet (property type / bedrooms / EPC / HomeScore /
+    // passport-only) — filters whatever this call already fetched. Not a
+    // true server-side WHERE clause (see applyPropertyFilters comment), so
+    // it only sees the current page's pool, not the full match count.
+    if (!propertyType && !minBedrooms && !minEpc && !minHomeScore && !passportOnly) {
+      return result;
+    }
+    const filtered = this.propertyService.applyPropertyFilters(result.items, {
+      propertyTypes: propertyType
+        ? propertyType.split(',').filter((v) => v && v !== 'any')
+        : undefined,
+      minBedrooms: minBedrooms ? parseInt(minBedrooms, 10) : undefined,
+      minEpc: minEpc || undefined,
+      minHomeScore: minHomeScore ? parseInt(minHomeScore, 10) : undefined,
+      passportOnly: passportOnly === '1' || passportOnly === 'true',
+    });
+    return { items: filtered, total: filtered.length };
   }
 
   @Get(':id/passport-status')
@@ -127,8 +150,30 @@ export class PropertyController {
   @SkipThrottle()
   @Get('for-you')
   @UseGuards(JwtAuthGuard)
-  async getForYou(@Request() req: any) {
-    return this.propertyService.getForYou(req.user.id);
+  async getForYou(
+    @Request() req: any,
+    @Query('propertyType') propertyType?: string,
+    @Query('minBedrooms') minBedrooms?: string,
+    @Query('minEpc') minEpc?: string,
+    @Query('minHomeScore') minHomeScore?: string,
+    @Query('passportOnly') passportOnly?: string,
+  ) {
+    const hasFilters =
+      !!propertyType || !!minBedrooms || !!minEpc || !!minHomeScore || !!passportOnly;
+    return this.propertyService.getForYou(
+      req.user.id,
+      hasFilters
+        ? {
+            propertyTypes: propertyType
+              ? propertyType.split(',').filter((v) => v && v !== 'any')
+              : undefined,
+            minBedrooms: minBedrooms ? parseInt(minBedrooms, 10) : undefined,
+            minEpc: minEpc || undefined,
+            minHomeScore: minHomeScore ? parseInt(minHomeScore, 10) : undefined,
+            passportOnly: passportOnly === '1' || passportOnly === 'true',
+          }
+        : undefined,
+    );
   }
 
   @Get('verified-passports')
