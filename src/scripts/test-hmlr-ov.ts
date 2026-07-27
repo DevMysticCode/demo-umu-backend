@@ -7,9 +7,26 @@
  * sample request to the OOV stub. Prints the parsed result + the raw XML so
  * we can confirm mTLS, WS-Security and the OOV envelope are all valid before
  * wiring the service into the claim flow.
+ *
+ * IMPORTANT — MessageId: per HMLR's reliable-messaging spec, MessageId is a
+ * per-request idempotency key ("unique message ID" + "process request only
+ * once" — Business Gateway stores the response keyed by it and replays that
+ * stored response for any repeat with the same ID). The `eoov-*` codes below
+ * are a DIFFERENT thing — fixed scenario codes from HMLR's Vendor Test Data
+ * page that only the bgtest STUB pattern-matches on to pick a canned
+ * fixture. They are meaningless (and apparently harmful — see below) against
+ * the real production SOAP engine, which expects a genuinely unique ID like
+ * any other request. We spent a long time chasing a "System Error occurred"
+ * fault against production while defaulting to the fixed scenario code
+ * `eoov-fm-1` on every single call — reusing the exact same "unique" ID for
+ * weeks is very likely what actually caused that fault, not an HMLR-side
+ * account provisioning issue as we originally assumed. A real UUID is now
+ * the default; only pass HMLR_TEST_SCENARIO when deliberately testing
+ * against bgtest, never against the live endpoint.
  */
 // Run via `npm run hmlr:test` — the npm script passes `--env-file=.env`
 // so we don't pull in a dotenv dep just for one CLI.
+import { randomUUID } from 'node:crypto'
 import { LandRegistryService } from '../land-registry/land-registry.service'
 
 async function main() {
@@ -30,8 +47,8 @@ async function main() {
   console.log('Reference:', reference)
   console.log('-----------------------------')
 
-  // The OOV test stub matches on MessageId, not the actual inputs. Pick a
-  // scenario from the Vendor Test Data page:
+  // Only the bgtest STUB pattern-matches on these — pick one from the
+  // Vendor Test Data page ONLY when HMLR_OV_ENDPOINT points at bgtest:
   //   eoov-fm-1   Full Match   (TypeCode 30, SINGLE_MATCH, DN506574)
   //   eoov-snm-1  Surname-only match
   //   eoov-nm-1   NO_MATCHES
@@ -40,8 +57,11 @@ async function main() {
   //   eoov-ooh-1  Out of hours (rejection)
   //   eoov-ooh-2  Out of hours queued (acknowledgement)
   //   eoov-mam-1  Multiple matches
-  const scenario = process.env.HMLR_TEST_SCENARIO?.trim() || 'eoov-fm-1'
-  console.log('Scenario :', scenario, '(set HMLR_TEST_SCENARIO to switch)')
+  // Against the LIVE endpoint this must be a genuinely unique ID (see the
+  // file header) — default is a fresh UUID every run. Only override with
+  // HMLR_TEST_SCENARIO when you're deliberately pointed at bgtest.
+  const scenario = process.env.HMLR_TEST_SCENARIO?.trim() || randomUUID()
+  console.log('MessageId:', scenario, '(set HMLR_TEST_SCENARIO to override — bgtest scenario codes ONLY, never against live)')
   console.log('-----------------------------')
 
   const result = await svc.verifyOwnership({
