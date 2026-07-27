@@ -1415,6 +1415,54 @@ export class PropertyService {
   private overpassDownUntil = 0;
   private static readonly OVERPASS_COOLDOWN_MS = 5 * 60 * 1000; // 5 min
 
+  // Property type / bedrooms / EPC / HomeScore / passport-only filters.
+  // The Explore filter sheet has always sent these as query params, but
+  // neither `searchProperties` nor `getForYou` ever read them — every
+  // filter besides distance was a silent no-op. `searchProperties`'s
+  // multi-source fetch/cache/dedup logic is intricate enough that
+  // threading filters into every branch's DB query is riskier than it's
+  // worth right now, so this filters the already-assembled result set
+  // instead. Good enough to make the sheet actually work; a true
+  // server-side WHERE clause would be needed to filter beyond whatever
+  // page/pool was already fetched.
+  applyPropertyFilters(
+    items: any[],
+    filters: {
+      propertyTypes?: string[];
+      minBedrooms?: number;
+      minEpc?: string;
+      minHomeScore?: number;
+      passportOnly?: boolean;
+    },
+  ): any[] {
+    const EPC_RANK: Record<string, number> = {
+      A: 7, B: 6, C: 5, D: 4, E: 3, F: 2, G: 1,
+    };
+    return items.filter((p) => {
+      if (filters.propertyTypes?.length) {
+        const t = String(p.propertyType ?? '').toLowerCase();
+        const matches = filters.propertyTypes.some(
+          (want) => t.includes(want.toLowerCase()) || want.toLowerCase().includes(t),
+        );
+        if (!matches) return false;
+      }
+      if (filters.minBedrooms != null && (p.bedrooms ?? 0) < filters.minBedrooms) {
+        return false;
+      }
+      if (filters.minEpc) {
+        const want = EPC_RANK[filters.minEpc.toUpperCase()] ?? 0;
+        const have = EPC_RANK[String(p.epcRating ?? '').toUpperCase()] ?? 0;
+        if (have < want) return false;
+      }
+      if (filters.minHomeScore != null) {
+        const hs = p.homeScore ?? p.epcScore ?? null;
+        if (hs == null || hs < filters.minHomeScore) return false;
+      }
+      if (filters.passportOnly && !p.hasPassport) return false;
+      return true;
+    });
+  }
+
   async searchProperties(
     query: string,
     offset = 0,
@@ -5781,6 +5829,13 @@ export class PropertyService {
 
   async getForYou(
     userId: string,
+    filters?: {
+      propertyTypes?: string[];
+      minBedrooms?: number;
+      minEpc?: string;
+      minHomeScore?: number;
+      passportOnly?: boolean;
+    },
   ): Promise<{ items: any[]; total: number; needsPostcode?: boolean }> {
     const [user, preference] = await Promise.all([
       this.prisma.user.findUnique({
@@ -5794,7 +5849,13 @@ export class PropertyService {
     if (!postcode) {
       return { items: [], total: 0, needsPostcode: true };
     }
-    const { items } = await this.searchProperties(postcode, 0, 20);
+    const fetched = await this.searchProperties(postcode, 0, 20);
+    // Filter the candidate pool before scoring/truncating to top 5 —
+    // filtering after would let an unfiltered top match crowd out a
+    // lower-ranked property that actually satisfies the user's filters.
+    const items = filters
+      ? this.applyPropertyFilters(fetched.items, filters)
+      : fetched.items;
 
     const budgetMin = preference?.budgetMin ?? null;
     const budgetMax = preference?.budgetMax ?? null;

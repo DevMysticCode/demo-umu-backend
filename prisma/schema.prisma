@@ -648,12 +648,18 @@ model UserReminder {
   time      String? // "14:00" HH:mm format
   repeats   String   @default("never") // "never" | "annually"
   notes     String?
-  type      String   @default("manual") // "manual" | "tradesperson" | "business"
+  type      String   @default("manual") // "manual" | "tradesperson" | "business" | "compliance-renewal"
+  // Stable key for reminders auto-created from another feature (e.g.
+  // "landlord-compliance:<sectionId>") so re-saving an expiry date
+  // updates the existing calendar entry instead of duplicating it.
+  // Null for ordinary manually-created reminders.
+  sourceRef String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, date])
+  @@index([userId, sourceRef])
 }
 
 model UserDocument {

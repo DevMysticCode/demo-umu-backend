@@ -17,7 +17,15 @@ async function main() {
   const reference = `UMU-TEST-${Date.now().toString(36)}`
   console.log('--- HMLR OOV test request ---')
   console.log('Endpoint :', process.env.HMLR_OV_ENDPOINT || '(default test)')
-  console.log('PFX path :', process.env.HMLR_PFX_PATH || './secrets/hmlr/test.pfx')
+  if (process.env.HMLR_CERT_PATH && process.env.HMLR_KEY_PATH) {
+    console.log('Cert path:', process.env.HMLR_CERT_PATH)
+    console.log('Key path :', process.env.HMLR_KEY_PATH)
+    console.log('CA path  :', process.env.HMLR_CA_PATH || '(none)')
+  } else if (process.env.HMLR_CERT_PEM || process.env.HMLR_CERT_PEM_B64) {
+    console.log('Cert     : inline via HMLR_CERT_PEM(_B64)')
+  } else {
+    console.log('PFX path :', process.env.HMLR_PFX_PATH || './secrets/hmlr/test.pfx')
+  }
   console.log('Username :', process.env.HMLR_USERNAME || 'BGUser001')
   console.log('Reference:', reference)
   console.log('-----------------------------')

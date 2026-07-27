@@ -24,6 +24,10 @@ export class CreateReminderDto {
   @IsOptional()
   @IsString()
   type?: string;
+
+  @IsOptional()
+  @IsString()
+  sourceRef?: string;
 }
 
 export class UpdateReminderDto {
@@ -109,6 +113,29 @@ export class CalendarService {
     }
     const utcDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
 
+    // Reminders auto-created from another feature (sourceRef set) update
+    // their existing row on re-save instead of piling up duplicates —
+    // e.g. re-entering a compliance certificate's renewal date should
+    // move the one calendar entry, not leave a stale one behind.
+    if (dto.sourceRef) {
+      const existing = await this.prisma.userReminder.findFirst({
+        where: { userId, sourceRef: dto.sourceRef },
+      });
+      if (existing) {
+        return this.prisma.userReminder.update({
+          where: { id: existing.id },
+          data: {
+            title,
+            date: utcDate,
+            time: dto.time ?? null,
+            repeats: dto.repeats ?? existing.repeats,
+            notes: dto.notes ?? existing.notes,
+            type: dto.type ?? existing.type,
+          },
+        });
+      }
+    }
+
     return this.prisma.userReminder.create({
       data: {
         userId,
@@ -118,6 +145,7 @@ export class CalendarService {
         repeats: dto.repeats ?? 'never',
         notes: dto.notes ?? null,
         type: dto.type ?? 'manual',
+        sourceRef: dto.sourceRef ?? null,
       },
     });
   }
