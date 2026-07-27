@@ -381,6 +381,17 @@ export class UmuComputeStack extends cdk.Stack {
             PERSONA_TEMPLATE_ID: apprunner.Secret.fromSecretsManager(appSecret, 'PERSONA_TEMPLATE_ID'),
             HMLR_PFX_PASSPHRASE: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_PFX_PASSPHRASE'),
             HMLR_OV_ENDPOINT: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_OV_ENDPOINT'),
+            // Live mTLS cert, confirmed working against the production
+            // Business Gateway (see DEPLOYMENT.md). Inline base64 PEM,
+            // not HMLR_CERT_PATH — the /secrets folder is deliberately
+            // excluded from the Docker image (.dockerignore), so a file
+            // path would 404 inside the container. getAgent() checks
+            // these _PEM_B64 vars before falling back to a PFX path.
+            HMLR_CERT_PEM_B64: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_CERT_PEM_B64'),
+            HMLR_KEY_PEM_B64: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_KEY_PEM_B64'),
+            HMLR_CA_PEM_B64: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_CA_PEM_B64'),
+            HMLR_USERNAME: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_USERNAME'),
+            HMLR_PASSWORD: apprunner.Secret.fromSecretsManager(appSecret, 'HMLR_PASSWORD'),
             GOOGLE_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'GOOGLE_API_KEY'),
             OS_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'OS_API_KEY'),
             GROQ_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'GROQ_API_KEY'),
