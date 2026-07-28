@@ -23,6 +23,7 @@
     "seed:marketplace": "ts-node -r tsconfig-paths/register src/scripts/seed-marketplace.ts",
     "seed:marketplace:demo": "ts-node -r tsconfig-paths/register src/scripts/seed-marketplace-demo.ts",
     "script:null-fake-title-numbers": "ts-node -r tsconfig-paths/register src/scripts/null-synthesised-title-numbers.ts",
+    "backfill:valuations": "ts-node -r tsconfig-paths/register src/scripts/backfill-property-valuations.ts",
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
     "hmlr:uat": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov-matrix.ts",
     "hmlr:tls-evidence": "node src/scripts/hmlr-tls-evidence.mjs",

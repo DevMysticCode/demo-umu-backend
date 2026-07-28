@@ -648,7 +648,7 @@ function bngToLatLon(E: number, N: number): { lat: number; lon: number } {
  * RD = Residential Dwelling, RC = Residential Commercial, etc.
  */
 /** Normalise a postcode to "AA9 9AA" format — OS Places requires a space. */
-function normalisePostcode(raw: string): string {
+export function normalisePostcode(raw: string): string {
   const s = raw.replace(/\s+/g, '').toUpperCase();
   return s.length >= 5 ? `${s.slice(0, -3)} ${s.slice(-3)}` : s;
 }
@@ -1065,12 +1065,26 @@ function seededRandom(seed: number): number {
   return x - Math.floor(x);
 }
 
+/** A single parsed row from the Land Registry Price Paid CSV, pre-matching. */
+interface RawSaleRow {
+  id: string;
+  price: number;
+  date: string;
+  propType: string;
+  newBuild: boolean;
+  tenure: string;
+  saon: string;
+  paon: string;
+  street: string;
+  town: string;
+}
+
 /**
  * Approximate UK House Price Index multiplier to convert a historical sale price
  * to an estimated current (April 2026) value.
  * Based on ONS UK HPI (England & Wales residential).
  */
-function hpiMultiplier(soldYear: number): number {
+export function hpiMultiplier(soldYear: number): number {
   const factors: Record<number, number> = {
     1990: 5.2, 1991: 5.0, 1992: 5.2, 1993: 5.3, 1994: 4.8,
     1995: 4.2, 1996: 3.8, 1997: 3.5, 1998: 3.2, 1999: 2.9,
@@ -1930,6 +1944,11 @@ export class PropertyService {
         }
       }
 
+      // Fire-and-forget: replace the crude postcode-average synthetic
+      // estimate with a real HPI-adjusted figure as soon as possible,
+      // rather than leaving it stale until someone opens the property.
+      this.scheduleValuationCorrection(saved);
+
       return { items: naturalSortByAddress(saved), total };
     } catch (err) {
       console.error('OS Places API error:', err);
@@ -2118,6 +2137,11 @@ export class PropertyService {
           /* skip constraint violations */
         }
       }
+
+      // Fire-and-forget: replace the crude postcode-average synthetic
+      // estimate with a real HPI-adjusted figure as soon as possible,
+      // rather than leaving it stale until someone opens the property.
+      this.scheduleValuationCorrection(saved);
 
       return { items: naturalSortByAddress(saved), total: epcTotal };
     } catch (err) {
@@ -3026,32 +3050,8 @@ export class PropertyService {
     // ── Land Registry HPI estimate ──────────────────────────────────────────
     const salesData =
       salesHistory.status === 'fulfilled' ? salesHistory.value : null;
-    let landRegistryEstimate: number | null = null;
-    let landRegistrySource: string | null = null;
-
-    if (salesData?.thisProperty?.length) {
-      const mostRecent = salesData.thisProperty[0];
-      const soldYear = parseInt((mostRecent.date ?? '').substring(0, 4)) || 0;
-      if (soldYear >= 1990 && mostRecent.price > 0) {
-        const multiplier = hpiMultiplier(soldYear);
-        landRegistryEstimate = Math.round((mostRecent.price * multiplier) / 1000) * 1000;
-        landRegistrySource = `Land Registry sold price (${soldYear}), HPI adjusted`;
-      }
-    }
-
-    if (!landRegistryEstimate && salesData?.nearbySales?.length) {
-      // Fallback: median of nearby recent sales as proxy
-      const recent = salesData.nearbySales
-        .filter((s) => s.date >= `${new Date().getFullYear() - 5}-01-01` && s.price > 0)
-        .slice(0, 10);
-      if (recent.length >= 3) {
-        const sorted = [...recent].sort((a, b) => a.price - b.price);
-        const median = sorted[Math.floor(sorted.length / 2)].price;
-        const soldYear = parseInt((recent[0].date ?? '').substring(0, 4)) || 2022;
-        landRegistryEstimate = Math.round((median * hpiMultiplier(soldYear)) / 1000) * 1000;
-        landRegistrySource = 'Estimated from nearby Land Registry sales';
-      }
-    }
+    const { price: landRegistryEstimate, source: landRegistrySource } =
+      this.computeLandRegistryEstimate(salesData);
 
     // Non-blockingly update DB estimatedPrice if Land Registry gives us a better figure
     if (landRegistryEstimate && landRegistryEstimate !== property.estimatedPrice) {
@@ -4628,31 +4628,24 @@ export class PropertyService {
    * CSV column order: id, price, date, postcode, propType, newBuild, tenure,
    *                   saon, paon, street, locality, town, district, county, ppd_cat, status
    */
-  private async fetchPropertySalesHistory(
+  /**
+   * Fetch + parse the raw Land Registry Price Paid CSV for a postcode.
+   * Split out from fetchPropertySalesHistory so callers that need to match
+   * MANY properties against the same postcode (bulk ingestion, backfills)
+   * can fetch once and re-match in-process, instead of re-hitting the
+   * external API once per property on the same street.
+   */
+  private async fetchPostcodeSalesRows(
     postcode: string,
-    addressLine1: string,
-  ): Promise<{ thisProperty: any[]; nearbySales: any[] }> {
+  ): Promise<RawSaleRow[]> {
     try {
       const formatted = normalisePostcode(postcode);
       const url = `https://landregistry.data.gov.uk/app/ppd/ppd_data.csv?postcode=${encodeURIComponent(formatted)}&limit=100`;
       const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) return { thisProperty: [], nearbySales: [] };
+      if (!res.ok) return [];
 
       const csv = await res.text();
       const lines = csv.trim().split('\n').filter(Boolean);
-
-      const propTypeMap: Record<string, string> = {
-        D: 'Detached',
-        S: 'Semi-Detached',
-        T: 'Terraced',
-        F: 'Flat/Maisonette',
-        O: 'Other',
-      };
-      const tenureMap: Record<string, string> = {
-        F: 'Freehold',
-        L: 'Leasehold',
-        U: 'Unknown',
-      };
 
       function parseCsvRow(line: string): string[] {
         const result: string[] = [];
@@ -4672,24 +4665,7 @@ export class PropertyService {
         return result;
       }
 
-      // Extract PAON (house number/name) from our addressLine1 for matching.
-      // Handles: "14 Woodfield Road" → "14", "14A Woodfield" → "14A",
-      // "Flat 3, 14 ..." → "14" (skip flat prefix), "The Grange, ..." → "THE GRANGE"
-      const cleanAddr = addressLine1
-        .replace(/^(flat|apartment|unit|floor)\s+[\dA-Z]+[,\s]+/i, '')
-        .trim();
-      const paonRaw =
-        cleanAddr
-          .match(/^(\d+[A-Z]?)/i)?.[1]
-          ?.trim()
-          .toUpperCase() ??
-        cleanAddr
-          .match(/^([A-Z][^,\d]+?)(?:,|\s+\d)/i)?.[1]
-          ?.trim()
-          .toUpperCase() ??
-        '';
-
-      const allSales = lines
+      return lines
         .map((line) => {
           const cols = parseCsvRow(line);
           // cols: [id, price, date, postcode, propType, newBuild, tenure, saon, paon, street, locality, town, district, county, ...]
@@ -4722,41 +4698,169 @@ export class PropertyService {
         })
         .filter((r) => r.price > 0)
         .sort((a, b) => b.date.localeCompare(a.date));
-
-      const toRecord = (r: (typeof allSales)[0], isThisProperty: boolean) => ({
-        price: r.price,
-        date: r.date,
-        address: [r.saon, r.paon, r.street].filter(Boolean).join(', '),
-        town: r.town,
-        propertyType: propTypeMap[r.propType] ?? r.propType ?? null,
-        tenure: tenureMap[r.tenure] ?? r.tenure ?? null,
-        newBuild: r.newBuild,
-        isThisProperty,
-      });
-
-      const thisProperty = paonRaw
-        ? allSales.filter(
-            (r) =>
-              r.paon.toUpperCase() === paonRaw ||
-              r.saon.toUpperCase() === paonRaw,
-          )
-        : [];
-      const nearbySales = allSales
-        .filter(
-          (r) =>
-            !paonRaw ||
-            (r.paon.toUpperCase() !== paonRaw &&
-              r.saon.toUpperCase() !== paonRaw),
-        )
-        .slice(0, 30);
-
-      return {
-        thisProperty: thisProperty.map((r) => toRecord(r, true)),
-        nearbySales: nearbySales.map((r) => toRecord(r, false)),
-      };
     } catch {
-      return { thisProperty: [], nearbySales: [] };
+      return [];
     }
+  }
+
+  /**
+   * Match a postcode's already-fetched sale rows against one property's
+   * address — pure, no network. Split out alongside fetchPostcodeSalesRows
+   * for the same reason: reusable per-property matching without a re-fetch.
+   */
+  private matchSalesToAddress(
+    allSales: RawSaleRow[],
+    addressLine1: string,
+  ): { thisProperty: any[]; nearbySales: any[] } {
+    const propTypeMap: Record<string, string> = {
+      D: 'Detached',
+      S: 'Semi-Detached',
+      T: 'Terraced',
+      F: 'Flat/Maisonette',
+      O: 'Other',
+    };
+    const tenureMap: Record<string, string> = {
+      F: 'Freehold',
+      L: 'Leasehold',
+      U: 'Unknown',
+    };
+
+    // Extract PAON (house number/name) from our addressLine1 for matching.
+    // Handles: "14 Woodfield Road" → "14", "14A Woodfield" → "14A",
+    // "Flat 3, 14 ..." → "14" (skip flat prefix), "The Grange, ..." → "THE GRANGE"
+    const cleanAddr = addressLine1
+      .replace(/^(flat|apartment|unit|floor)\s+[\dA-Z]+[,\s]+/i, '')
+      .trim();
+    const paonRaw =
+      cleanAddr
+        .match(/^(\d+[A-Z]?)/i)?.[1]
+        ?.trim()
+        .toUpperCase() ??
+      cleanAddr
+        .match(/^([A-Z][^,\d]+?)(?:,|\s+\d)/i)?.[1]
+        ?.trim()
+        .toUpperCase() ??
+      '';
+
+    const toRecord = (r: RawSaleRow, isThisProperty: boolean) => ({
+      price: r.price,
+      date: r.date,
+      address: [r.saon, r.paon, r.street].filter(Boolean).join(', '),
+      town: r.town,
+      propertyType: propTypeMap[r.propType] ?? r.propType ?? null,
+      tenure: tenureMap[r.tenure] ?? r.tenure ?? null,
+      newBuild: r.newBuild,
+      isThisProperty,
+    });
+
+    const thisProperty = paonRaw
+      ? allSales.filter(
+          (r) =>
+            r.paon.toUpperCase() === paonRaw ||
+            r.saon.toUpperCase() === paonRaw,
+        )
+      : [];
+    const nearbySales = allSales
+      .filter(
+        (r) =>
+          !paonRaw ||
+          (r.paon.toUpperCase() !== paonRaw &&
+            r.saon.toUpperCase() !== paonRaw),
+      )
+      .slice(0, 30);
+
+    return {
+      thisProperty: thisProperty.map((r) => toRecord(r, true)),
+      nearbySales: nearbySales.map((r) => toRecord(r, false)),
+    };
+  }
+
+  private async fetchPropertySalesHistory(
+    postcode: string,
+    addressLine1: string,
+  ): Promise<{ thisProperty: any[]; nearbySales: any[] }> {
+    const allSales = await this.fetchPostcodeSalesRows(postcode);
+    return this.matchSalesToAddress(allSales, addressLine1);
+  }
+
+  /**
+   * Pure: turn matched sales data into an HPI-adjusted valuation. Shared by
+   * computeEnrichment (single-property, on view) and the ingestion/backfill
+   * paths (bulk, on create) so both use identical logic.
+   */
+  private computeLandRegistryEstimate(
+    salesData: { thisProperty: any[]; nearbySales: any[] } | null,
+  ): { price: number | null; source: string | null } {
+    if (salesData?.thisProperty?.length) {
+      const mostRecent = salesData.thisProperty[0];
+      const soldYear = parseInt((mostRecent.date ?? '').substring(0, 4)) || 0;
+      if (soldYear >= 1990 && mostRecent.price > 0) {
+        const multiplier = hpiMultiplier(soldYear);
+        return {
+          price: Math.round((mostRecent.price * multiplier) / 1000) * 1000,
+          source: `Land Registry sold price (${soldYear}), HPI adjusted`,
+        };
+      }
+    }
+
+    if (salesData?.nearbySales?.length) {
+      // Fallback: median of nearby recent sales as proxy
+      const recent = salesData.nearbySales
+        .filter((s) => s.date >= `${new Date().getFullYear() - 5}-01-01` && s.price > 0)
+        .slice(0, 10);
+      if (recent.length >= 3) {
+        const sorted = [...recent].sort((a, b) => a.price - b.price);
+        const median = sorted[Math.floor(sorted.length / 2)].price;
+        const soldYear = parseInt((recent[0].date ?? '').substring(0, 4)) || 2022;
+        return {
+          price: Math.round((median * hpiMultiplier(soldYear)) / 1000) * 1000,
+          source: 'Estimated from nearby Land Registry sales',
+        };
+      }
+    }
+
+    return { price: null, source: null };
+  }
+
+  /**
+   * Fire-and-forget: correct the crude ingestion-time synthetic estimate
+   * (postcode-area price/sqm × an assumed floor area) with a real
+   * HPI-adjusted figure as soon as possible after a batch of properties is
+   * created/updated, instead of only when someone opens that one
+   * property's own detail page (the old behaviour — see computeEnrichment).
+   * Fetches each unique postcode in the batch ONCE and matches every
+   * property against it in-process, so a 10-property street costs one
+   * external call, not ten. Never awaited by callers — must not slow down
+   * the search response it's attached to.
+   */
+  private scheduleValuationCorrection(properties: Property[]): void {
+    if (properties.length === 0) return;
+    void (async () => {
+      const byPostcode = new Map<string, Property[]>();
+      for (const p of properties) {
+        if (!p.postcode) continue;
+        const list = byPostcode.get(p.postcode) ?? [];
+        list.push(p);
+        byPostcode.set(p.postcode, list);
+      }
+      for (const [postcode, props] of byPostcode) {
+        try {
+          const allSales = await this.fetchPostcodeSalesRows(postcode);
+          if (allSales.length === 0) continue;
+          for (const p of props) {
+            const salesData = this.matchSalesToAddress(allSales, p.addressLine1);
+            const { price } = this.computeLandRegistryEstimate(salesData);
+            if (price && price !== p.estimatedPrice) {
+              await this.prisma.property
+                .update({ where: { id: p.id }, data: { estimatedPrice: price } })
+                .catch(() => { /* non-critical */ });
+            }
+          }
+        } catch {
+          /* non-critical — this postcode's batch just stays on the synthetic estimate */
+        }
+      }
+    })();
   }
 
   /** Public method for the sold-history endpoint — queries LR API directly, zero DB storage. */
