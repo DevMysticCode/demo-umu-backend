@@ -5942,12 +5942,18 @@ export class PropertyService {
       to.push(passport.owner.email);
     }
 
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from,
       to,
       subject: `Message about: ${property.addressLine1}, ${property.postcode}`,
       html,
     });
+    // Resend returns { data, error } rather than throwing for API-level
+    // rejections — without this check, a rejected send looked identical
+    // to a successful one and the caller got a false "Message sent".
+    if (result.error) {
+      throw new Error(`Resend rejected the tap-owner send: ${JSON.stringify(result.error)}`);
+    }
 
     return { success: true, ownerPhone: passport?.owner?.phone ?? null };
   }
