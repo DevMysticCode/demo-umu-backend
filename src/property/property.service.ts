@@ -5243,10 +5243,33 @@ export class PropertyService {
   }
 
   async startVerification(propertyId: string, userId: string) {
+    // Snapshot whether KYC was already approved BEFORE this claim attempt —
+    // used later to price the owner-claim charge (KYC+HMLR vs HMLR-only).
+    // Must be captured now: by the time payment happens, kycStatus is
+    // always 'approved' (this attempt's own Persona flow may have just
+    // completed it), so a live read at charge time can't tell the two
+    // cases apart. Re-snapshotted on every fresh start-verification call
+    // so a second claim attempt (e.g. a different property) prices off
+    // its own KYC-at-the-time state, not a stale one from a prior claim.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { kycStatus: true },
+    });
+    const kycAlreadyVerifiedAtStart = user?.kycStatus === 'approved';
+
     return this.prisma.ownershipVerification.upsert({
       where: { propertyId_userId: { propertyId, userId } },
-      update: { status: 'SUBMITTED', submittedAt: new Date() },
-      create: { propertyId, userId, status: 'SUBMITTED' },
+      update: {
+        status: 'SUBMITTED',
+        submittedAt: new Date(),
+        kycAlreadyVerifiedAtStart,
+      },
+      create: {
+        propertyId,
+        userId,
+        status: 'SUBMITTED',
+        kycAlreadyVerifiedAtStart,
+      },
     });
   }
 

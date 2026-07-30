@@ -261,7 +261,7 @@ export class PassportService {
     postcode: string,
     propertyId?: string,
     opts: { type?: 'SELLER' | 'LANDLORD'; isHmo?: boolean; convertedFromId?: string } = {},
-  ): Promise<{ passportId: string }> {
+  ): Promise<{ passportId: string; status: string }> {
     const passportType = opts.type ?? 'SELLER';
     const isHmo = !!opts.isHmo;
 
@@ -286,8 +286,10 @@ export class PassportService {
       if (existingSameType) {
         if (existingSameType.ownerId === userId) {
           // Returning the user's OWN existing passport — no KYC needed,
-          // they already cleared it when they first claimed.
-          return { passportId: existingSameType.id };
+          // they already cleared it when they first claimed. Include
+          // status so the frontend knows whether to resume payment
+          // (PENDING_PAYMENT) or just open the passport.
+          return { passportId: existingSameType.id, status: existingSameType.status };
         }
         throw new ForbiddenException(
           'This property already has a passport of this type owned by another user',
@@ -310,7 +312,50 @@ export class PassportService {
     // owned passport (above) skips this — that user already cleared it.
     assertKycVerified(user);
 
-    // Create passport
+    // Property claims (propertyId set, not a landlord→seller convert) cost
+    // us real money — Persona KYC and/or HM Land Registry Online Ownership
+    // Verification — so they're paid. HMLR must have already come back
+    // VERIFIED (the frontend's /claim/[id] flow runs it via
+    // /property/:id/land-registry-check before ever calling this) —
+    // enforced server-side too so a client can't skip straight here.
+    // The passport is created now in PENDING_PAYMENT so its id can be
+    // stamped into the PaymentIntent (PassportPayment.passportId is a
+    // required FK), but sections aren't seeded until activatePassport()
+    // confirms the charge succeeded — see that method below.
+    if (propertyId && !opts.convertedFromId) {
+      const ov = await this.prisma.ownershipVerification.findUnique({
+        where: { propertyId_userId: { propertyId, userId } },
+      });
+      if (!ov || ov.status !== 'VERIFIED') {
+        throw new BadRequestException(
+          'Ownership has not been verified against HM Land Registry yet.',
+        );
+      }
+
+      const passport = await this.prisma.passport.create({
+        data: {
+          addressLine1,
+          postcode,
+          ownerId: userId,
+          type: passportType as any,
+          isHmo,
+          propertyId,
+          status: 'PENDING_PAYMENT',
+        },
+      });
+
+      // Link back so the OV row (and any future audit query) can find the
+      // passport this claim attempt produced.
+      await this.prisma.ownershipVerification.update({
+        where: { id: ov.id },
+        data: { passportId: passport.id },
+      });
+
+      return { passportId: passport.id, status: passport.status };
+    }
+
+    // No propertyId (manual passport) or a landlord→seller convert: no
+    // HMLR/fresh-KYC cost is incurred, stays free and instant as before.
     const passport = await this.prisma.passport.create({
       data: {
         addressLine1,
@@ -319,10 +364,77 @@ export class PassportService {
         type: passportType as any,
         isHmo,
         ...(opts.convertedFromId ? { convertedFromId: opts.convertedFromId } : {}),
-        ...(propertyId ? { propertyId } : {}),
       },
     });
 
+    await this.seedPassportContent(passport.id, passportType, isHmo, isLeasehold);
+
+    return {
+      passportId: passport.id,
+      status: passport.status,
+    };
+  }
+
+  /**
+   * Confirm the owner-claim payment for a PENDING_PAYMENT passport and
+   * seed its sections/tasks/questions. Called by the frontend right after
+   * Stripe confirms the card payment from createOwnerClaimPaymentIntent.
+   *
+   * Idempotent: calling it again on an already-activated passport just
+   * returns the id, so a retried/duplicate frontend call is harmless.
+   */
+  async activatePassport(passportId: string, userId: string): Promise<{ passportId: string }> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this passport claim');
+    }
+    if (passport.status !== 'PENDING_PAYMENT') {
+      return { passportId: passport.id };
+    }
+
+    const paid = await this.payments.hasSuccessfulPayment(userId, passportId);
+    if (!paid) {
+      throw new ForbiddenException(
+        'Payment required — call POST /payment/create-claim-intent first and complete the Stripe charge.',
+      );
+    }
+
+    let propertyTenure: string | null = null;
+    if (passport.propertyId) {
+      const prop = await this.prisma.property.findUnique({
+        where: { id: passport.propertyId },
+        select: { tenure: true },
+      });
+      propertyTenure = prop?.tenure ?? null;
+    }
+    const isLeasehold = this.isLeaseholdTenure(propertyTenure);
+
+    await this.seedPassportContent(passport.id, passport.type, passport.isHmo, isLeasehold);
+    await this.prisma.passport.update({
+      where: { id: passport.id },
+      data: { status: 'IN_PROGRESS' },
+    });
+
+    return { passportId: passport.id };
+  }
+
+  /**
+   * Seed a freshly-created passport's sections, tasks, and questions from
+   * the current SectionTemplate/QuestionTemplate set. Extracted from
+   * createPassport so activatePassport can defer this work until an
+   * owner-claim payment has actually succeeded — a PENDING_PAYMENT
+   * passport that never gets paid for stays empty rather than wasting
+   * ~80 question-template writes.
+   */
+  private async seedPassportContent(
+    passportId: string,
+    passportType: string,
+    isHmo: boolean,
+    isLeasehold: boolean,
+  ): Promise<void> {
     // Belt-and-braces filter: prefer the section/template `type` column, but
     // also gate by key prefix so a landlord passport can never accidentally
     // be seeded with seller sections (or vice-versa) if the type column is
@@ -365,7 +477,7 @@ export class PassportService {
       // Create passport section with template metadata
       const section = await this.prisma.passportSection.create({
         data: {
-          passportId: passport.id,
+          passportId,
           key: sectionKey,
           title: sectionTemplate.title,
           subtitle: sectionTemplate.subtitle,
@@ -414,10 +526,6 @@ export class PassportService {
         }
       }
     }
-
-    return {
-      passportId: passport.id,
-    };
   }
 
   /**

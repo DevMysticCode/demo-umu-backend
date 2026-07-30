@@ -78,6 +78,16 @@ export class PassportController {
     );
   }
 
+  // Property owner-claims come back from createPassport in PENDING_PAYMENT
+  // status (KYC/HMLR cost real money — see PaymentService pricing). Call
+  // this after POST /payment/create-claim-intent's Stripe charge succeeds
+  // to seed the passport's sections and activate it.
+  @Post(':id/activate')
+  @UseGuards(JwtAuthGuard)
+  async activatePassport(@Param('id') id: string, @Request() req: any) {
+    return this.passportService.activatePassport(id, req.user.id);
+  }
+
   @Post(':id/convert-to-seller')
   @UseGuards(JwtAuthGuard)
   async convertToSeller(

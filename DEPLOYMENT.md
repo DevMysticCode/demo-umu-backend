@@ -351,8 +351,12 @@ analysis PDF for the full inventory.
   Also added the missing `RESEND_FROM` secret value (was silently
   falling back to Resend's sandbox sender). If OTP emails are still
   not arriving after this, check `RESEND_API_KEY`'s own quota/domain
-  verification status on Resend's dashboard next — the "silent
-  failure" pattern in `sendOtpEmail` (see AuthService) doesn't check
-  the SDK's `{data, error}` return, so a rejected send is invisible in
-  logs. Worth fixing to `if (error) { throw ... }` so future failures
-  actually surface.
+  verification status on Resend's dashboard next.
+  **Fixed 2026-07-30**: `sendOtpEmail` and the password-reset email in
+  `AuthService` now check the SDK's `{data, error}` return and throw/log/
+  Sentry-report on a rejected send instead of treating it as success.
+  Note the same silent-failure pattern still exists on the lower-stakes,
+  best-effort notification emails (collaborator-added/-removed in
+  `PassportService`, register-interest in `PropertyService`,
+  `NotificationsService`) — not fixed, since a dropped notification email
+  isn't user-blocking the way a missing OTP/reset code is.
