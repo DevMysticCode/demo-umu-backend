@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SEED_VIDEOS = [
@@ -56,8 +57,17 @@ const SEED_VIDEOS = [
   },
 ];
 
+// The global ValidationPipe runs with `whitelist: true`, which strips any
+// property that has no class-validator decorator — without these, every
+// PUT here silently discarded positionSecs/completed (request body
+// arrived as `{}`), so "continue watching" position never actually saved.
 export class UpdateProgressDto {
+  @IsInt()
+  @Min(0)
   positionSecs: number;
+
+  @IsOptional()
+  @IsBoolean()
   completed?: boolean;
 }
 
