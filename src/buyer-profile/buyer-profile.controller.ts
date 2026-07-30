@@ -7,9 +7,15 @@ import {
   Body,
   Param,
   Request,
+  Headers,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createUploadStorage } from '../common/storage';
 import {
   BuyerProfileService,
   UpdateBuyerProfileDto,
@@ -29,11 +35,63 @@ export class BuyerProfileController {
     return this.buyerProfileService.getMine(req.user.id);
   }
 
+  // POST /buyer-profile/ai-story  body: { existingDraft?: string }
+  @UseGuards(JwtAuthGuard)
+  @Post('ai-story')
+  async aiStory(@Request() req, @Body('existingDraft') existingDraft?: string) {
+    return this.buyerProfileService.generateStory(req.user.id, existingDraft);
+  }
+
   // PATCH /buyer-profile — upsert partial fields as the user progresses through the build
   @UseGuards(JwtAuthGuard)
   @Patch()
   async update(@Request() req, @Body() dto: UpdateBuyerProfileDto) {
     return this.buyerProfileService.upsert(req.user.id, dto);
+  }
+
+  // POST /buyer-profile/documents/:kind  (kind: "funds" | "mortgage")
+  // Uploads to the same private "documents" bucket the user's own document
+  // vault uses, and marks the profile's review status "pending" — the
+  // "✓ VERIFIED" badge only flips on once an admin approves it via the
+  // review queue below, never just from uploading.
+  @UseGuards(JwtAuthGuard)
+  @Post('documents/:kind')
+  @UseInterceptors(
+    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20 })),
+  )
+  async uploadReviewDocument(
+    @Request() req,
+    @Param('kind') kind: string,
+    @UploadedFile() file: any,
+  ) {
+    return this.buyerProfileService.uploadReviewDocument(req.user.id, kind, file);
+  }
+
+  // ── Admin review queue (x-admin-secret, same pattern as /maintenance) ──
+  private guardAdmin(secret: string | undefined) {
+    const expected = process.env.ADMIN_SECRET;
+    if (!expected || secret !== expected) {
+      throw new ForbiddenException('Invalid or missing admin secret');
+    }
+  }
+
+  // GET /buyer-profile/admin/review-queue
+  @Get('admin/review-queue')
+  async listReviewQueue(@Headers('x-admin-secret') secret: string) {
+    this.guardAdmin(secret);
+    return this.buyerProfileService.listPendingReviews();
+  }
+
+  // POST /buyer-profile/admin/review/:profileId  body: { kind, decision: "approve"|"reject" }
+  @Post('admin/review/:profileId')
+  async reviewDocument(
+    @Headers('x-admin-secret') secret: string,
+    @Param('profileId') profileId: string,
+    @Body('kind') kind: string,
+    @Body('decision') decision: string,
+  ) {
+    this.guardAdmin(secret);
+    return this.buyerProfileService.reviewDocument(profileId, kind, decision);
   }
 
   // POST /buyer-profile/publish — marks the profile as published.
@@ -67,7 +125,7 @@ export class BuyerProfileController {
   }
 
   // ── Tier upgrade (Stripe) ─────────────────────────────────────────────────
-  // POST /buyer-profile/tier/checkout  body: { tier: "VERIFIED" | "PREMIUM" }
+  // POST /buyer-profile/tier/checkout  body: { tier: "VERIFIED" }
   @UseGuards(JwtAuthGuard)
   @Post('tier/checkout')
   async createTierCheckout(

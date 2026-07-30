@@ -510,4 +510,52 @@ export class ProfileService {
     await this.prisma.user.delete({ where: { id: userId } });
     return { message: 'Account deleted' };
   }
+
+  // "Download your data" (Settings → Privacy & data) — was a dead button
+  // with no handler at all. Exports the user's own profile + the data
+  // they directly own, as one JSON document. Deliberately excludes
+  // `password` (hash) and other users' data (e.g. a collaborator's own
+  // profile, a buyer who unlocked one of this user's passports).
+  async exportData(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        addresses: true,
+        companies: true,
+        solicitors: true,
+        preference: true,
+        passports: {
+          include: {
+            sections: {
+              include: {
+                tasks: {
+                  include: {
+                    passportQuestions: {
+                      include: { answer: true, questionTemplate: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        userDocuments: true,
+        reminders: true,
+        buyerNotes: true,
+        buyerPassportAccesses: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    const { password: _password, ...safeUser } = user as any;
+    const [buyerProfile, homeScores] = await Promise.all([
+      this.prisma.buyerProfile.findUnique({ where: { userId } }),
+      this.prisma.homeScoreResult.findMany({ where: { userId } }),
+    ]);
+    return {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+      buyerProfile,
+      homeScores,
+    };
+  }
 }

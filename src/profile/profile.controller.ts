@@ -153,4 +153,9 @@ export class ProfileController {
   deleteAccount(@Req() req: any) {
     return this.profileService.deleteAccount(req.user.id);
   }
+
+  @Get('export')
+  exportData(@Req() req: any) {
+    return this.profileService.exportData(req.user.id);
+  }
 }

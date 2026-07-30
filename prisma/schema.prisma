@@ -886,6 +886,12 @@ model BuyerProfile {
   fundsType              String? // "mortgage" | "cash" | "help"
   fundsAmount            Int? // max budget in GBP
   fundsDocumentUrl       String?
+  // "pending" once a document is uploaded, "approved"/"rejected" once an
+  // admin has reviewed it via the maintenance review queue. null = nothing
+  // uploaded yet. fundsVerified (below) only ever flips true on approval —
+  // the UI used to show "✓ VERIFIED" the moment a user merely SELECTED a
+  // funds type (no document, no review at all), which was a false claim.
+  fundsReviewStatus      String?
   fundsVerified          Boolean             @default(false)
   // Phase 3 (Armalytix/TrueLayer) — mock-shaped fields persisted from day 1.
   fundsProvider          String? // "armalytix" | "truelayer" | "mock"
@@ -895,6 +901,12 @@ model BuyerProfile {
   amlStatus              String? // "CLEAR" | "FLAG" | "PENDING"
   affordabilityScore     Int? // 0–100
   sourceOfFundsJson      Json? // breakdown rows
+  // Mortgage Agreement in Principle — same upload + admin-review shape as
+  // Proof of Funds above.
+  mortgageAipUrl         String?
+  mortgageAipReviewStatus String?
+  mortgageAipVerified    Boolean             @default(false)
+  mortgageAipVerifiedAt  DateTime?
   // Step 3: Chain
   chainPosition          String? // "ftb" | "selling" | "sold" | "renting"
   // Step 4: Solicitor + timeline + property type

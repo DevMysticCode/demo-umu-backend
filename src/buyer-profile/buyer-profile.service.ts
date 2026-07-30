@@ -14,7 +14,10 @@ import {
 } from 'class-validator';
 import { randomBytes } from 'crypto';
 import Stripe from 'stripe';
+import { Resend } from 'resend';
+import OpenAI from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicUrlFor, storedFilename } from '../common/storage';
 
 // All fields decorated so that the global ValidationPipe (whitelist: true)
 // keeps them in the request body instead of stripping them.
@@ -45,12 +48,14 @@ export class CreateShareDto {
   @IsOptional() @IsInt() @Min(1) expiresInDays?: number; // agent-configurable
 }
 
-// Tier price book (GBP pence). Basic free, Verified £29, Premium £79.
+// Tier price book (GBP pence). Basic free (Persona identity only),
+// Verified £19.99 (identity + funds + AML) — collapsed from the previous
+// 3-tier Basic/Verified-£29/Premium-£79 book to match the single £19.99
+// KYC price point used app-wide (see PaymentService's owner-claim pricing).
 export const TIER_PRICES_GBP_PENCE: Record<string, number> = {
-  VERIFIED: 2900,
-  PREMIUM: 7900,
+  VERIFIED: 1999,
 };
-const ALLOWED_TIERS = new Set(['BASIC', 'VERIFIED', 'PREMIUM']);
+const ALLOWED_TIERS = new Set(['BASIC', 'VERIFIED']);
 
 // Strength score breakdown — single source of truth, used on every upsert.
 // Mirrors the prototype's 5-section weighting plus credentials.
@@ -67,7 +72,6 @@ function computeStrengthScore(p: any): number {
   if (p?.timeline) score += 3;
   if (p?.propertyType) score += 2;
   if (p?.statement && p.statement.length >= 30) score += 5;
-  if (p?.tier === 'PREMIUM') score += 5;
   return Math.min(100, Math.max(0, score));
 }
 
@@ -88,13 +92,152 @@ function generateShareToken(): string {
 @Injectable()
 export class BuyerProfileService {
   private stripe: Stripe | null;
+  private resend: Resend;
+  private groq: OpenAI;
+  private readonly EMAIL_FROM =
+    process.env.RESEND_FROM ?? 'UMovingU <onboarding@resend.dev>';
+
   constructor(private prisma: PrismaService) {
     const key = process.env.STRIPE_SECRET_KEY;
     this.stripe = key ? new Stripe(key, { apiVersion: '2024-06-20' as any }) : null;
+    this.resend = new Resend(process.env.RESEND_API_KEY ?? '');
+    this.groq = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: 'https://api.groq.com/openai/v1',
+    });
+  }
+
+  /** Same env-driven fallback pattern used elsewhere for outbound email links. */
+  private frontendBaseUrl(): string {
+    return (
+      process.env.FRONTEND_URL ??
+      (process.env.NODE_ENV === 'production'
+        ? 'https://demo-umu-frontend.vercel.app'
+        : 'http://localhost:3000')
+    );
   }
 
   async getMine(userId: string) {
     return this.prisma.buyerProfile.findUnique({ where: { userId } });
+  }
+
+  /**
+   * Upload a Proof of Funds or Mortgage in Principle document. Sets the
+   * matching review status to "pending" and explicitly clears any prior
+   * verified flag — a re-upload (e.g. after a rejection) must go through
+   * review again, not silently keep an old approval.
+   */
+  async uploadReviewDocument(userId: string, kind: string, file: any) {
+    if (!file) throw new BadRequestException('No file provided');
+    if (kind !== 'funds' && kind !== 'mortgage') {
+      throw new BadRequestException('kind must be "funds" or "mortgage"');
+    }
+    const fileUrl = publicUrlFor('documents', storedFilename(file));
+    const profile = await this.prisma.buyerProfile.upsert({
+      where: { userId },
+      create: {
+        userId,
+        publicRef: await this.mintUniquePublicRef(),
+        strengthScore: 0,
+        ...(kind === 'funds'
+          ? { fundsDocumentUrl: fileUrl, fundsReviewStatus: 'pending', fundsVerified: false }
+          : { mortgageAipUrl: fileUrl, mortgageAipReviewStatus: 'pending', mortgageAipVerified: false }),
+      },
+      update:
+        kind === 'funds'
+          ? { fundsDocumentUrl: fileUrl, fundsReviewStatus: 'pending', fundsVerified: false, fundsVerifiedAt: null }
+          : { mortgageAipUrl: fileUrl, mortgageAipReviewStatus: 'pending', mortgageAipVerified: false, mortgageAipVerifiedAt: null },
+    });
+    return { fileUrl, reviewStatus: 'pending', profile };
+  }
+
+  /** Admin queue: every profile with an uploaded doc still awaiting review. */
+  async listPendingReviews() {
+    const profiles = await this.prisma.buyerProfile.findMany({
+      where: { OR: [{ fundsReviewStatus: 'pending' }, { mortgageAipReviewStatus: 'pending' }] },
+      include: { user: { select: { firstName: true, lastName: true, email: true } } },
+      orderBy: { updatedAt: 'desc' },
+    });
+    // Flatten into one row per pending document so the admin UI doesn't
+    // need to know about the two-fields-per-profile shape.
+    const items: Array<Record<string, any>> = [];
+    for (const p of profiles as any[]) {
+      const buyerName = [p.user?.firstName, p.user?.lastName].filter(Boolean).join(' ') || p.user?.email;
+      if (p.fundsReviewStatus === 'pending') {
+        items.push({ profileId: p.id, kind: 'funds', buyerName, email: p.user?.email, documentUrl: p.fundsDocumentUrl, fundsType: p.fundsType, fundsAmount: p.fundsAmount });
+      }
+      if (p.mortgageAipReviewStatus === 'pending') {
+        items.push({ profileId: p.id, kind: 'mortgage', buyerName, email: p.user?.email, documentUrl: p.mortgageAipUrl });
+      }
+    }
+    return items;
+  }
+
+  /** Admin decision on one uploaded document — approve flips the verified flag, reject clears the upload so the user re-submits. */
+  async reviewDocument(profileId: string, kind: string, decision: string) {
+    if (kind !== 'funds' && kind !== 'mortgage') {
+      throw new BadRequestException('kind must be "funds" or "mortgage"');
+    }
+    if (decision !== 'approve' && decision !== 'reject') {
+      throw new BadRequestException('decision must be "approve" or "reject"');
+    }
+    const profile = await this.prisma.buyerProfile.findUnique({ where: { id: profileId } });
+    if (!profile) throw new NotFoundException('Buyer profile not found');
+
+    const approved = decision === 'approve';
+    const data =
+      kind === 'funds'
+        ? {
+            fundsReviewStatus: approved ? 'approved' : 'rejected',
+            fundsVerified: approved,
+            fundsVerifiedAt: approved ? new Date() : null,
+          }
+        : {
+            mortgageAipReviewStatus: approved ? 'approved' : 'rejected',
+            mortgageAipVerified: approved,
+            mortgageAipVerifiedAt: approved ? new Date() : null,
+          };
+    const updated = await this.prisma.buyerProfile.update({ where: { id: profileId }, data });
+    return { ...updated, strengthScore: computeStrengthScore(updated) };
+  }
+
+  /**
+   * "Let AI write a compelling story" on the buyer-profile builder used to
+   * POST straight to the general-purpose /chat endpoint with an OpenAI-style
+   * { messages: [...] } body — that endpoint's ChatDto requires a single
+   * `message` string, so every call failed validation with a 400 before it
+   * ever reached the model. It's also the wrong endpoint conceptually: /chat
+   * runs a property-assistant persona with tool-calling (get_passport_status
+   * etc.), not a plain short-form writing task. This is a dedicated,
+   * narrowly-scoped completion instead, built from the user's OWN saved
+   * profile signals (server-side truth) rather than trusting whatever the
+   * client claims about itself.
+   */
+  async generateStory(userId: string, existingDraft?: string): Promise<{ text: string }> {
+    const profile = await this.prisma.buyerProfile.findUnique({ where: { userId } });
+    const signals: string[] = [];
+    if (profile?.chainPosition) signals.push(`chain position: ${profile.chainPosition}`);
+    if (profile?.timeline) signals.push(`timeline: ${profile.timeline}`);
+    if (profile?.fundsType) signals.push(`funds type: ${profile.fundsType}`);
+    if (profile?.fundsAmount) signals.push(`max budget: £${profile.fundsAmount.toLocaleString('en-GB')}`);
+    if (profile?.solicitorStatus) signals.push(`solicitor: ${profile.solicitorStatus}`);
+    if (profile?.propertyType) signals.push(`looking for: ${profile.propertyType}`);
+
+    const draft = (existingDraft ?? '').trim();
+    const prompt = `You write short, sincere 80-120 word intros from UK home buyers to sellers. Plain English, no hype, first-person, no clichés. End with one line about being ready to move quickly. Do not invent personal details or numbers beyond what's given.
+
+Known profile signals: ${signals.join('; ') || 'none yet'}.
+${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${draft}` : 'Draft a short intro for a UK home buyer to share with a seller.'}`;
+
+    const completion = await this.groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 220,
+      temperature: 0.6,
+    });
+    const text = completion.choices[0]?.message?.content?.trim();
+    if (!text) throw new BadRequestException('AI did not return a draft — try again.');
+    return { text };
   }
 
   async upsert(userId: string, dto: UpdateBuyerProfileDto) {
@@ -227,16 +370,14 @@ export class BuyerProfileService {
   }
 
   // ── Tier upgrade (Stripe checkout) ─────────────────────────────────────────
-  // Creates a one-off PaymentIntent for the tier upgrade. £29 Verified / £79
-  // Premium. Front-end confirms the PI client-side, then calls
-  // confirmTierPayment() with the resulting paymentIntentId to flip the tier.
+  // Creates a one-off PaymentIntent for the tier upgrade — £19.99 Verified.
+  // Front-end confirms the PI client-side, then calls confirmTierPayment()
+  // with the resulting paymentIntentId to flip the tier.
   async createTierPaymentIntent(userId: string, targetTier: string) {
     const tier = (targetTier || '').toUpperCase();
     const amount = TIER_PRICES_GBP_PENCE[tier];
     if (!amount) {
-      throw new BadRequestException(
-        'Tier upgrade only available for VERIFIED or PREMIUM',
-      );
+      throw new BadRequestException('Tier upgrade only available for VERIFIED');
     }
     if (!this.stripe) {
       throw new BadRequestException(
@@ -350,7 +491,7 @@ export class BuyerProfileService {
         ? dto.scope
         : ['identity', 'deposit', 'sof', 'afford', 'credit', 'story'];
 
-    return this.prisma.buyerProfileShare.create({
+    const share = await this.prisma.buyerProfileShare.create({
       data: {
         profileId: profile.id,
         token: generateShareToken(),
@@ -360,6 +501,99 @@ export class BuyerProfileService {
         expiresAt,
       },
     });
+
+    // Notify the recipient (agent) by email — this used to only create the
+    // DB row, so the "Send to agent" flow showed a success confirmation
+    // ("James Cooper has been notified") without ever actually notifying
+    // anyone. Non-blocking: the share link itself is already valid even if
+    // the email fails to send, so a mail outage doesn't block the feature.
+    if (dto.recipientEmail) {
+      try {
+        await this.sendShareNotificationEmail(
+          profile,
+          share,
+          dto.recipientEmail,
+          dto.recipientName ?? null,
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn(`[buyer-profile share email] failed for ${dto.recipientEmail}: ${(err as Error).message}`);
+      }
+    }
+
+    return share;
+  }
+
+  /**
+   * Formal notification email to an agent/solicitor a buyer has shared
+   * their verified profile with. Tone is deliberately professional — this
+   * is read by an estate agent deciding whether to progress an offer, not
+   * a consumer marketing email.
+   */
+  private async sendShareNotificationEmail(
+    profile: { userId: string; idVerified: boolean; fundsVerified: boolean; tier: string; fundsAmount: number | null; chainPosition: string | null; amlStatus: string | null },
+    share: { token: string; expiresAt: Date },
+    recipientEmail: string,
+    recipientName: string | null,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: profile.userId },
+      select: { firstName: true, lastName: true, email: true },
+    });
+    const buyerName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A UMovingU buyer';
+    const link = `${this.frontendBaseUrl()}/shared-buyer/${share.token}`;
+    const expiryDate = share.expiresAt.toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'long', year: 'numeric',
+    });
+    const greeting = recipientName ? `Dear ${recipientName.split(' · ')[0]},` : 'Dear Sir/Madam,';
+
+    const statusRows = [
+      `<tr><td style="padding:6px 0;color:#4a4b52;">Identity verification</td><td style="padding:6px 0;text-align:right;font-weight:700;color:${profile.idVerified ? '#00a19a' : '#c73e36'};">${profile.idVerified ? 'Verified' : 'Not yet verified'}</td></tr>`,
+      `<tr><td style="padding:6px 0;color:#4a4b52;">Proof of funds</td><td style="padding:6px 0;text-align:right;font-weight:700;color:${profile.fundsVerified ? '#00a19a' : '#c73e36'};">${profile.fundsVerified ? 'Verified' : 'Not yet verified'}</td></tr>`,
+      profile.amlStatus
+        ? `<tr><td style="padding:6px 0;color:#4a4b52;">AML status</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#1f2024;">${profile.amlStatus}</td></tr>`
+        : '',
+      profile.fundsAmount
+        ? `<tr><td style="padding:6px 0;color:#4a4b52;">Stated budget</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#1f2024;">up to £${profile.fundsAmount.toLocaleString('en-GB')}</td></tr>`
+        : '',
+    ].filter(Boolean).join('');
+
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;color:#1f2024;">
+  <p style="margin:0 0 16px;">${greeting}</p>
+  <p style="margin:0 0 16px;line-height:1.6;">
+    ${buyerName} has shared their verified UMovingU Buyer Profile with you
+    ahead of a property enquiry. This profile confirms the buyer's identity
+    and financial credentials as verified below, so you can assess the
+    strength of any offer they make with confidence.
+  </p>
+  <table style="width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid #e5e5ea;border-bottom:1px solid #e5e5ea;padding:4px 0;">
+    ${statusRows}
+  </table>
+  <div style="text-align:center;margin:28px 0;">
+    <a href="${link}" style="display:inline-block;background:#00a19a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">View Verified Buyer Profile</a>
+  </div>
+  <p style="margin:0 0 16px;line-height:1.6;color:#4a5876;font-size:13px;">
+    This link is valid until ${expiryDate} and may be revoked by the buyer at
+    any time. The full profile, including a downloadable PDF, is available
+    at the link above.
+  </p>
+  <p style="margin:24px 0 0;line-height:1.6;">
+    Kind regards,<br />The UMovingU Team
+  </p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">UMovingU · This is an automated notification sent on behalf of a verified UMovingU user.</p>
+</div>`;
+
+    const result = await this.resend.emails.send({
+      from: this.EMAIL_FROM,
+      to: recipientEmail,
+      subject: `Verified Buyer Profile shared with you — ${buyerName}`,
+      html,
+    });
+    if (result.error) {
+      throw new Error(`Resend rejected the share-notification send: ${JSON.stringify(result.error)}`);
+    }
   }
 
   async revokeShare(userId: string, shareId: string) {
