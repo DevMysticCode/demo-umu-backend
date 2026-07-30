@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -11,6 +12,22 @@ import { captureException } from '../common/sentry';
 
 // £99 in pence. Mirrored once so the create-intent + display copy never drift.
 export const PASSPORT_UNLOCK_AMOUNT_PENCE = 9900;
+
+// Owner-claim pricing (KYC via Persona + HM Land Registry Online Ownership
+// Verification both cost us real money per call — these recover that cost).
+//
+//   - KYC_ONLY_AMOUNT_PENCE: KYC alone, for flows other than owner-claim
+//     (e.g. a future buyer-side KYC-only gate). Not currently wired to any
+//     endpoint — defined here so the price is centralised when one is built.
+//   - OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE: owner-claim where the user's
+//     KYC was NOT already approved before this claim — this claim pays for
+//     both a fresh Persona check and the HMLR ownership check.
+//   - OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE: owner-claim where the user already
+//     had approved KYC from an earlier claim — only the HMLR check is
+//     incurred this time.
+export const KYC_ONLY_AMOUNT_PENCE = 1999;
+export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 3599;
+export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 1599;
 
 @Injectable()
 export class PaymentService {
@@ -133,6 +150,127 @@ export class PaymentService {
   }
 
   /**
+   * Create a Stripe PaymentIntent for an owner-claim charge (KYC+HMLR or
+   * HMLR-only — see the pricing constants above) against a passport that
+   * PassportService.createPassport already created in PENDING_PAYMENT
+   * status. Mirrors createPassportPaymentIntent's structure, but the payer
+   * IS the owner here (that's the point), and the amount is tiered instead
+   * of flat.
+   *
+   * Refuses if:
+   *   - passport doesn't exist (404)
+   *   - the requesting user does NOT own the passport (403 — can't pay for
+   *     someone else's claim)
+   *   - the passport isn't in PENDING_PAYMENT (409 — already paid/activated,
+   *     or was never a paid claim in the first place)
+   */
+  async createOwnerClaimPaymentIntent(
+    userId: string,
+    passportId: string,
+  ): Promise<{ clientSecret: string; paymentId: string; amount: number }> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { id: true, ownerId: true, status: true, propertyId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this passport claim');
+    }
+    if (passport.status !== 'PENDING_PAYMENT') {
+      throw new ConflictException(
+        'This passport is not awaiting payment — it may already be active.',
+      );
+    }
+
+    const ov = passport.propertyId
+      ? await this.prisma.ownershipVerification.findUnique({
+          where: {
+            propertyId_userId: { propertyId: passport.propertyId, userId },
+          },
+          select: { kycAlreadyVerifiedAtStart: true },
+        })
+      : null;
+    // Missing snapshot shouldn't happen (startVerification always sets it
+    // before this point in the flow) — default to the higher tier rather
+    // than under-charging if it's ever null.
+    const amount = ov?.kycAlreadyVerifiedAtStart
+      ? OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE
+      : OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE;
+
+    const existingSuccess = await this.prisma.passportPayment.findFirst({
+      where: { userId, passportId, status: 'succeeded' },
+    });
+    if (existingSuccess) {
+      throw new ConflictException(
+        'A successful payment already exists — call /passport/:id/activate to finish claiming',
+      );
+    }
+
+    const pending = await this.prisma.passportPayment.findFirst({
+      where: { userId, passportId, status: 'pending' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (pending) {
+      const intent = await this.stripe.paymentIntents.retrieve(
+        pending.stripePaymentIntentId,
+      );
+      if (
+        intent.status !== 'canceled' &&
+        intent.status !== 'succeeded' &&
+        intent.client_secret
+      ) {
+        return {
+          clientSecret: intent.client_secret,
+          paymentId: pending.id,
+          amount: pending.amount,
+        };
+      }
+      await this.prisma.passportPayment.update({
+        where: { id: pending.id },
+        data: { status: 'failed' },
+      });
+    }
+
+    const payment = await this.prisma.passportPayment.create({
+      data: {
+        userId,
+        passportId,
+        amount,
+        status: 'pending',
+        stripePaymentIntentId: `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      },
+    });
+
+    const intent = await this.stripe.paymentIntents.create({
+      amount,
+      currency: 'gbp',
+      description:
+        amount === OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE
+          ? 'Property ownership verification (HM Land Registry) — UMovingU'
+          : 'Property ownership verification (identity + HM Land Registry) — UMovingU',
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        umuType: 'owner_claim',
+        paymentId: payment.id,
+        userId,
+        passportId,
+      },
+    });
+
+    if (!intent.client_secret) {
+      await this.prisma.passportPayment.delete({ where: { id: payment.id } });
+      throw new Error('Stripe returned no client_secret');
+    }
+
+    await this.prisma.passportPayment.update({
+      where: { id: payment.id },
+      data: { stripePaymentIntentId: intent.id },
+    });
+
+    return { clientSecret: intent.client_secret, paymentId: payment.id, amount };
+  }
+
+  /**
    * Webhook entry point. The controller hands us the raw body bytes and
    * the Stripe-Signature header; we verify with the endpoint secret and
    * update the matching PassportPayment row.
@@ -153,17 +291,20 @@ export class PaymentService {
       throw new BadRequestException('Invalid signature');
     }
 
-    // We only handle passport-unlock events here. Marketplace payments
-    // use their own metadata + their own state machine — the umuType
-    // tag keeps the two flows from cross-contaminating.
+    // We only handle passport-unlock + owner-claim events here — both
+    // write to the same PassportPayment table with the same status
+    // lifecycle. Marketplace payments use their own metadata + their own
+    // state machine — the umuType tag keeps the flows from cross-contaminating.
     const intent = event.data.object as Stripe.PaymentIntent;
     const umuType = intent.metadata?.umuType;
-    if (umuType !== 'passport_unlock') return { received: true };
+    if (umuType !== 'passport_unlock' && umuType !== 'owner_claim') {
+      return { received: true };
+    }
 
     const paymentId = intent.metadata?.paymentId;
     if (!paymentId) {
       this.logger.warn(
-        `[stripe webhook] passport_unlock event missing paymentId metadata (intent ${intent.id})`,
+        `[stripe webhook] ${umuType} event missing paymentId metadata (intent ${intent.id})`,
       );
       return { received: true };
     }

@@ -341,6 +341,14 @@ model OwnershipVerification {
   landRegistryMatchResult String? // SINGLE_MATCH | MULTIPLE_MATCHES | NO_MATCHES
   landRegistryRawResponse Json? // full parsed OVResult / OVRejection
   landRegistryCheckedAt   DateTime?
+  // Snapshot of `user.kycStatus === 'approved'` taken the moment this claim
+  // attempt called startVerification — i.e. BEFORE any fresh Persona flow
+  // this attempt might trigger could complete. Read at owner-claim payment
+  // time to price the charge: true → HMLR-only (already had KYC), false →
+  // KYC+HMLR bundle (this claim is paying for a fresh KYC too). Must be a
+  // point-in-time snapshot, not a live read of kycStatus, because by the
+  // time payment happens kycStatus is always 'approved' either way.
+  kycAlreadyVerifiedAtStart Boolean?
   property                Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([propertyId, userId])
@@ -678,6 +686,11 @@ model UserDocument {
 }
 
 enum PassportStatus {
+  // Draft row created after KYC + HM Land Registry verification succeed,
+  // before the owner-claim charge (KYC+HMLR or HMLR-only, see PaymentService)
+  // has been paid. Sections aren't seeded until PassportService.activatePassport
+  // confirms payment — see passport.service.ts.
+  PENDING_PAYMENT
   IN_PROGRESS
   COMPLETED
   PUBLISHED

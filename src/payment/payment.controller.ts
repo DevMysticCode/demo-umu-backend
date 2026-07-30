@@ -48,6 +48,29 @@ export class PaymentController {
   }
 
   /**
+   * Create a Stripe PaymentIntent for an owner-claim charge (KYC+HMLR or
+   * HMLR-only, depending on whether the user already had approved KYC
+   * before this claim — see PaymentService pricing constants).
+   *
+   * Body: { passportId: string } — the PENDING_PAYMENT passport that
+   * PassportService.createPassport already created for this claim.
+   *
+   * Returns: { clientSecret, paymentId, amount }.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('create-claim-intent')
+  @UseGuards(JwtAuthGuard)
+  createClaimIntent(
+    @Req() req: any,
+    @Body('passportId') passportId?: string,
+  ) {
+    if (!passportId || typeof passportId !== 'string') {
+      throw new BadRequestException('passportId is required');
+    }
+    return this.paymentService.createOwnerClaimPaymentIntent(req.user.id, passportId);
+  }
+
+  /**
    * Stripe webhook. Public (no JWT) — auth is performed by HMAC-verifying
    * the body against STRIPE_WEBHOOK_SECRET inside the service.
    *
