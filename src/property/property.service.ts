@@ -2761,6 +2761,9 @@ export class PropertyService {
           ? (this as any).fetchNearbyCouncilTax(postcode)
           : Promise.resolve(null),
       ),
+      probe('radon (BGS/UKHSA)', () =>
+        lat && lon ? (this as any).fetchRadonPotential(lat, lon) : Promise.resolve(null),
+      ),
     ]);
 
     // For the OS+Overpass combined fetch, also break out the sub-arrays so the
@@ -2858,7 +2861,7 @@ export class PropertyService {
     };
 
     // Scalars / objects: keep fresh when present, else fall back.
-    for (const key of ['broadband', 'mobileSignal', 'floodRisk', 'landRegistryEstimate', 'listedBuildings']) {
+    for (const key of ['broadband', 'mobileSignal', 'floodRisk', 'landRegistryEstimate', 'listedBuildings', 'radon']) {
       if (out[key] == null && prev[key] != null) out[key] = prev[key];
     }
     // Crime: a non-null object with zero total is effectively "no data this
@@ -2891,6 +2894,7 @@ export class PropertyService {
       nearbyCtData,
       titleBoundary,
       crimeStats,
+      radonData,
     ] = await Promise.allSettled([
       lat && lon
         ? this.fetchNearbyOS(lat, lon)
@@ -2917,6 +2921,7 @@ export class PropertyService {
       this.fetchNearbyCouncilTax(postcode),
       lat && lon ? this.fetchInspireBoundary(lat, lon) : Promise.resolve(null),
       lat && lon ? this.fetchCrimeStats(lat, lon) : Promise.resolve(null),
+      lat && lon ? this.fetchRadonPotential(lat, lon) : Promise.resolve(null),
     ]);
 
     // Detail-page hero uses a slightly higher pitch than the search
@@ -3134,6 +3139,9 @@ export class PropertyService {
 
       // data.police.uk — last 12 months of reported crime within 1mi
       crime: crimeStats.status === 'fulfilled' ? crimeStats.value : null,
+
+      // BGS/UKHSA Indicative Atlas of Radon
+      radon: radonData.status === 'fulfilled' ? radonData.value : null,
     };
   }
 
@@ -3934,6 +3942,44 @@ export class PropertyService {
       );
 
       return { rating, zones: zonesWithPolygons };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * BGS/UKHSA Indicative Atlas of Radon — free, no API key, OGL-licensed for
+   * commercial use. Returns the 1km-grid-square radon potential class (1 =
+   * lowest, higher = greater probability of homes exceeding the Action
+   * Level) plus BGS's own plain-English description — we surface their text
+   * verbatim rather than asserting our own probability cutoffs, since only
+   * BGS/UKHSA know the exact banding behind each class.
+   */
+  private async fetchRadonPotential(
+    lat: number,
+    lon: number,
+  ): Promise<{ classMax: number; band: string; description: string } | null> {
+    try {
+      const url =
+        `https://map.bgs.ac.uk/arcgis/rest/services/GeoIndex_Onshore/radon/MapServer/identify` +
+        `?geometry=${lon},${lat}&geometryType=esriGeometryPoint&sr=4326&tolerance=1` +
+        `&mapExtent=${lon - 0.05},${lat - 0.05},${lon + 0.05},${lat + 0.05}&imageDisplay=400,400,96&layers=all&f=json`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const hit = data.results?.[0];
+      if (!hit) return null;
+
+      const classMax = Number(hit.attributes?.CLASS_MAX ?? 0);
+      // Coarse traffic-light banding for badge colour only — the authoritative
+      // read is BGS's own `description` text, passed through verbatim below.
+      const band = classMax <= 1 ? 'Low' : classMax <= 4 ? 'Moderate' : 'Higher';
+
+      return {
+        classMax,
+        band,
+        description: hit.attributes?.Description ?? '',
+      };
     } catch {
       return null;
     }
@@ -5240,6 +5286,41 @@ export class PropertyService {
     } catch {
       return null;
     }
+  }
+
+  async selfDeclarePropertyDetails(
+    propertyId: string,
+    body: { tenure?: string; propertyType?: string },
+  ) {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+    });
+    if (!property) throw new NotFoundException('Property not found');
+
+    const data: { tenure?: string; propertyType?: string } = {};
+
+    const tenure = body.tenure?.trim();
+    if (tenure && !property.tenure) {
+      const ALLOWED_TENURES = ['Freehold', 'Leasehold', 'Commonhold'];
+      if (!ALLOWED_TENURES.includes(tenure)) {
+        throw new BadRequestException(
+          `tenure must be one of: ${ALLOWED_TENURES.join(', ')}`,
+        );
+      }
+      data.tenure = tenure;
+    }
+
+    const propertyType = body.propertyType?.trim();
+    if (propertyType && !property.propertyType) {
+      data.propertyType = propertyType;
+    }
+
+    if (Object.keys(data).length === 0) return property;
+
+    return this.prisma.property.update({
+      where: { id: propertyId },
+      data,
+    });
   }
 
   async startVerification(propertyId: string, userId: string) {

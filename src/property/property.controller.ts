@@ -98,6 +98,20 @@ export class PropertyController {
     return this.propertyService.startVerification(id, req.user.id);
   }
 
+  // Self-declared correction for tenure/propertyType when neither EPC nor OS
+  // Places has the data (a genuine gap in those upstream registers, not
+  // something enrichment can retry its way out of). Only ever fills a field
+  // that's currently null — never overwrites a value sourced from EPC/OS,
+  // so a claimant can't clobber verified data by mistake.
+  @Post(':id/self-declare')
+  @UseGuards(JwtAuthGuard)
+  async selfDeclarePropertyDetails(
+    @Param('id') id: string,
+    @Body() body: { tenure?: string; propertyType?: string },
+  ) {
+    return this.propertyService.selfDeclarePropertyDetails(id, body);
+  }
+
   @Get(':id/verification-status')
   @UseGuards(JwtAuthGuard)
   async getVerificationStatus(@Param('id') id: string, @Request() req: any) {

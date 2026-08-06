@@ -205,6 +205,9 @@ export class PassportService {
                     id: true,
                   },
                 },
+                questionTemplate: {
+                  select: { points: true },
+                },
               },
             },
           },
@@ -248,6 +251,16 @@ export class PassportService {
           answeredQuestions: task.passportQuestions.filter(
             (q) => q.answer !== null,
           ).length,
+          // Real reward-points totals for this task, sourced from
+          // QuestionTemplate.points — feeds the "X pts earned / available"
+          // display without the frontend needing to fetch the ledger.
+          totalPoints: task.passportQuestions.reduce(
+            (sum, q) => sum + (q.questionTemplate?.points ?? 0),
+            0,
+          ),
+          earnedPoints: task.passportQuestions
+            .filter((q) => q.answer !== null)
+            .reduce((sum, q) => sum + (q.questionTemplate?.points ?? 0), 0),
         })),
       };
     });

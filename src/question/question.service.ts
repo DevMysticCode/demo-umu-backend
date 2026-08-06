@@ -9,6 +9,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
+import { RewardsService } from '../rewards/rewards.service';
 import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class QuestionService {
   constructor(
     private prisma: PrismaService,
     private passportService: PassportService,
+    private rewardsService: RewardsService,
   ) {}
 
   async answerQuestion(
@@ -26,14 +28,11 @@ export class QuestionService {
     const question = await this.prisma.passportQuestion.findUnique({
       where: { id: questionId },
       include: {
+        questionTemplate: { select: { points: true, title: true } },
         passportSectionTask: {
           include: {
             passportSection: {
-              include: {
-                passport: {
-                  select: { ownerId: true },
-                },
-              },
+              select: { key: true, passportId: true },
             },
           },
         },
@@ -89,12 +88,37 @@ export class QuestionService {
       },
     });
 
+    const wasAlreadyCompleted = question.status === 'COMPLETED';
+
     await this.prisma.passportQuestion.update({
       where: { id: questionId },
       data: { status: "COMPLETED" },
     });
 
-    return { success: true };
+    // Award points the first time this question is ever completed. Never
+    // let a rewards hiccup fail the answer save — the DB unique constraint
+    // on passportQuestionId is the real idempotency guarantee regardless
+    // of this pre-check, so this is belt-and-suspenders, not load-bearing.
+    let pointsAwarded = 0;
+    if (!wasAlreadyCompleted) {
+      try {
+        const awarded = await this.rewardsService.awardForQuestion(
+          userId,
+          questionId,
+          question.questionTemplate.points,
+          `Answered: "${question.questionTemplate.title}"`,
+          {
+            passportId: question.passportSectionTask.passportSection.passportId,
+            sectionKey: question.passportSectionTask.passportSection.key,
+          },
+        );
+        if (awarded) pointsAwarded = awarded.amount;
+      } catch {
+        /* non-critical — the answer itself already saved successfully */
+      }
+    }
+
+    return { success: true, pointsAwarded };
   }
 
   async uploadQuestionFile(questionId: string, userId: string, file: any) {

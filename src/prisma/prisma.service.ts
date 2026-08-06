@@ -180,6 +180,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.homeScoreResult;
   }
 
+  get pointsLedgerEntry() {
+    return this.prisma.pointsLedgerEntry;
+  }
+
   get pricePaidTransaction() {
     return this.prisma.pricePaidTransaction;
   }

@@ -308,30 +308,89 @@ analysis PDF for the full inventory.
   pattern.
 - **Land Registry Price Paid import** — `pricePaidTransaction` table
   is queried but never populated.
+- **Companies House verification** — `ProfileService.verifyCompanyWithCompaniesHouse`
+  (wired into `POST/PATCH /profile/company`) silently no-ops until
+  `COMPANIES_HOUSE_API_KEY` is set. Free key from
+  https://developer.company-information.service.gov.uk/ — no cost, no
+  approval wait, just a signup. Once set, existing `UserCompany` rows
+  with a `companyNumber` stay unverified until next edit or a manual
+  `POST /profile/company/:id/verify` call; consider a one-off backfill
+  script if there's existing company data to retroactively verify.
 - **Land Registry Title Number Discovery** — `Property.titleNumber`
   is now null until HMLR confirms (commit `46e4c1b`). Adding the
   paid HMLR Title Number Discovery subscription (~£40/mo) populates
   it for unclaimed properties too.
-- **HMLR live account** — mTLS cert + username (`OpenProperty`) are
-  confirmed working against the production Business Gateway, but the
-  account isn't fully provisioned for the Online Owner Verification
-  product yet (generic `System Error occurred` fault after a
-  successful login). Needs a support ticket to HMLR to activate OOV
-  on the account. The live cert/username/password are now correctly
-  deployed on AWS too (2026-07-27, commit `eeac6ae` — previously
-  `HMLR_OV_ENDPOINT` was a literal placeholder and no cert was set at
-  all), so testing via the app should get past the cert/auth stage
-  and hit this same `System Error occurred` fault, not a connection
-  failure. If it errors differently than that, something else changed.
-  **Ruled out (2026-07-27)**: external review flagged that
-  `src/scripts/test-hmlr-ov.ts` was sending `eoov-fm-1` — a bgtest
-  vendor-test-data scenario code, not a real MessageId — on every
-  request, including against the live endpoint (fixed in `4627cd1`,
-  now defaults to a fresh UUID per HMLR's reliable-messaging spec).
-  Retested live immediately with a genuine unique UUID and got the
-  byte-identical `System Error occurred` fault, so a reused/invalid
-  MessageId was NOT the cause of this fault — the OOV-provisioning
-  theory above remains the leading explanation.
+- **RESOLVED (2026-08-06)**: **HMLR live account / OOV provisioning.**
+  New live credentials (`MWilson3245`, added to `.env` as
+  `HMLR_LIVE_USERNAME`/`HMLR_LIVE_PASSWORD`) were tested directly
+  against the production Business Gateway (`businessgateway.landregistry.gov.uk`)
+  using the existing `secrets/hmlr/live/*` cert bundle via
+  `src/scripts/test-hmlr-ov.ts`. Got back a clean, well-formed SOAP
+  response (`TypeCode 20`, `bg.properties.nopropertyfound` — the
+  expected outcome for the script's default fake test subject, Jon
+  Tankerman, against a real title register), **not** the previous
+  `System Error occurred` fault. mTLS + WS-Security auth + OOV
+  provisioning are all confirmed working end-to-end on this account.
+  **Confirmed with a real subject (2026-08-06)**: Maxine Wilson / 9
+  Woodfield Road, Coventry CV5 6AJ → `TypeCode 30`, `SINGLE_MATCH`,
+  surname+forename MATCH, title `WK146253`, joint freehold — a
+  genuine positive match, not just "auth doesn't error."
+  **Local `.env` is now wired live by default** (`HMLR_USERNAME` /
+  `HMLR_PASSWORD` / `HMLR_OV_ENDPOINT` / cert paths all point at
+  `secrets/hmlr/live/*` and the production endpoint; the old bgtest
+  stub config is preserved commented-out in `.env` for reverting to
+  local UI-only iteration). Verified by running `test-hmlr-ov.ts`
+  through its normal `--env-file=.env` path with zero manual
+  overrides — same real match came back.
+  **AWS production updated too (2026-08-06)**: `umu/prod/app` secret
+  in Secrets Manager already had the correct live cert (`HMLR_CERT_PEM_B64`
+  etc. — sha256-verified byte-identical to `secrets/hmlr/live/live.cert.pem`)
+  and the correct `HMLR_OV_ENDPOINT`, from the 2026-07-27 deploy — only
+  `HMLR_USERNAME`/`HMLR_PASSWORD` were stale (still `OpenProperty`).
+  Updated both to the working `MWilson3245` credentials and triggered
+  an App Runner redeployment (`start-deployment`); confirmed `RUNNING`
+  and `/health` returns 200 post-deploy. Not separately re-verified
+  with a live OOV call against the deployed container (would require
+  going through the real claim flow with a real account — didn't want
+  to create test data on production unprompted) — the credential/cert
+  values are confirmed correct, but do a real claim-flow smoke test
+  before relying on this for real users.
+  **Railway is NOT part of this** — it only ever hosted the Postgres
+  DB (now legacy/TestFlight-era, superseded by RDS for production),
+  never the app itself, so there's no HMLR env var to change there.
+  Important wrinkle found while checking this: **Railway's DB and
+  production RDS are two separate databases with independently
+  drifting data** — local dev's `.env` and the demo Vercel frontend
+  both point at Railway; AWS App Runner points at RDS via
+  `DB_HOST`/etc in `umu/prod/db-credentials`. The title-number cleanup
+  below was only run against Railway (what this repo's tooling can
+  reach directly) — **RDS has not been checked and may have the same
+  `DN506574`-style corruption independently**. RDS sits in a private
+  subnet with no direct route from here; checking/fixing it needs a
+  temporary bastion (see RUNBOOK.md "Migrating data from Railway →
+  RDS" for the pattern) — not done as part of this pass, flag before
+  assuming production data is clean.
+  Also: `Property.titleNumber` had a data-integrity bug found
+  alongside this — see the entry above and the git log around
+  2026-08-06 for the Railway-side cleanup (3 properties shared one
+  fake `DN506574` placeholder; nulled the 2 with no real data,
+  corrected 9 Woodfield Road to the confirmed `WK146253`).
+  <details><summary>Prior history (superseded)</summary>
+  mTLS cert + username (`OpenProperty`) were confirmed working against
+  the production Business Gateway, but the account wasn't fully
+  provisioned for the Online Owner Verification product (generic
+  `System Error occurred` fault after a successful login) — needed a
+  support ticket to HMLR to activate OOV, which is what the new
+  `MWilson3245` credentials above appear to reflect. **Ruled out
+  (2026-07-27)**: external review flagged that `test-hmlr-ov.ts` was
+  sending `eoov-fm-1` — a bgtest vendor-test-data scenario code, not a
+  real MessageId — on every request, including against the live
+  endpoint (fixed in `4627cd1`, now defaults to a fresh UUID per
+  HMLR's reliable-messaging spec). Retested live immediately with a
+  genuine unique UUID and got the byte-identical `System Error
+  occurred` fault at the time, so a reused/invalid MessageId was NOT
+  the cause of that fault.
+  </details>
 - **No CloudWatch alarms configured yet** — RUNBOOK has the
   `put-metric-alarm` command for a 5xx-rate alarm; not yet run.
 - **OS_API_KEY is on an exhausted OS Data Hub free-trial plan** —

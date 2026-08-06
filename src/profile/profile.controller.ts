@@ -82,6 +82,11 @@ export class ProfileController {
     return this.profileService.updateCompany(req.user.id, id, dto);
   }
 
+  @Post('company/:id/verify')
+  verifyCompany(@Req() req: any, @Param('id') id: string) {
+    return this.profileService.verifyCompany(req.user.id, id);
+  }
+
   @Delete('company/:id')
   deleteCompany(@Req() req: any, @Param('id') id: string) {
     return this.profileService.deleteCompany(req.user.id, id);

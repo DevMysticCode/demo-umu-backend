@@ -4,9 +4,10 @@ import { QuestionController } from './question.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '../passport/passport.module';
+import { RewardsModule } from '../rewards/rewards.module';
 
 @Module({
-  imports: [PrismaModule, JwtModule, PassportModule],
+  imports: [PrismaModule, JwtModule, PassportModule, RewardsModule],
   providers: [QuestionService],
   controllers: [QuestionController],
 })
