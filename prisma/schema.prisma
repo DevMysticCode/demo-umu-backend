@@ -37,6 +37,11 @@ model User {
   pushNotifications             Boolean                @default(true)
   emailNewsletter               Boolean                @default(true)
   smsNotifications              Boolean                @default(false)
+  // Denormalized running balance — always updated atomically alongside a
+  // PointsLedgerEntry write (increment/decrement, never read-then-write),
+  // so it can never drift from the ledger's own sum. See RewardsService.
+  rewardPointsBalance            Int                    @default(0)
+  pointsLedger                   PointsLedgerEntry[]
   passports                     Passport[]
   passportCollaborations        PassportCollaborator[]
   preference                    UserPreference?
@@ -149,6 +154,14 @@ model UserCompany {
   companyNumber String?
   director      String?
   createdAt     DateTime @default(now())
+  // Companies House live verification — checked automatically whenever
+  // companyNumber is set/changed. chStatus mirrors the CH API's own
+  // company_status value (e.g. "active", "dissolved", "liquidation") so we
+  // display it verbatim rather than reinterpreting it.
+  chStatus          String?
+  chCompanyName     String? // registered name per Companies House, for spotting mismatches
+  chVerifiedAt      DateTime?
+  chVerifyError     String? // e.g. "not found" — set when verification failed, cleared on success
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -559,6 +572,30 @@ model PassportActivity {
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([passportId, createdAt])
+}
+
+// Reward points ledger — mirrors PassportActivity's append-only shape but
+// per-USER (not per-passport, since points work across a person's whole
+// account and a future cross-passport Marketplace spend), plus a
+// balance-snapshot and a DB-level idempotency key PassportActivity doesn't
+// need. See RewardsService for the only code that should ever write here.
+model PointsLedgerEntry {
+  id                 String   @id @default(uuid())
+  userId             String
+  type               String // QUESTION_ANSWERED | REDEEMED | ADJUSTED
+  amount             Int // signed: positive = credit, negative = debit
+  balanceAfter       Int // snapshot of the running balance after this entry
+  description        String // human-readable, e.g. "Answered: 'What is your council tax band?'"
+  // Set only for QUESTION_ANSWERED — a real DB-level idempotency guard.
+  // Re-submitting the same answer can never insert a second award, even
+  // under a race/double-click. Postgres allows multiple NULLs under a
+  // unique constraint, so REDEEMED/ADJUSTED rows leave this null freely.
+  passportQuestionId String?  @unique
+  metadata           Json? // { passportId?, sectionKey?, questionTemplateId?, redemptionContext? }
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model QuestionTemplate {

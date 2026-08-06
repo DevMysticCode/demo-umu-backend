@@ -20,6 +20,7 @@ import { LearnModule } from './learn/learn.module';
 import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
+import { RewardsModule } from './rewards/rewards.module';
 import { KycModule } from './kyc/kyc.module';
 import { VerifierApiModule } from './verifier-api/verifier-api.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
@@ -85,6 +86,7 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     // Only available in non-production envs — see PROD_BUILD comment above.
     ...(PROD_BUILD ? [] : [MaintenanceModule]),
     BuyerProfileModule,
+    RewardsModule,
     KycModule,
     VerifierApiModule,
     MarketplaceModule,

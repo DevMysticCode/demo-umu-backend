@@ -115,9 +115,10 @@ export class ProfileService {
   // ─── Companies ────────────────────────────────────────────────────────────
 
   async createCompany(userId: string, dto: CreateCompanyDto) {
-    return this.prisma.userCompany.create({
+    const company = await this.prisma.userCompany.create({
       data: { ...dto, userId },
     });
+    return this.verifyCompanyWithCompaniesHouse(company.id);
   }
 
   async updateCompany(userId: string, companyId: string, dto: UpdateCompanyDto) {
@@ -125,10 +126,16 @@ export class ProfileService {
     if (!company) throw new NotFoundException('Company not found');
     if (company.userId !== userId) throw new ForbiddenException();
 
-    return this.prisma.userCompany.update({
+    const updated = await this.prisma.userCompany.update({
       where: { id: companyId },
       data: dto,
     });
+    // Only re-verify when the number actually changed — avoids hitting
+    // Companies House on every unrelated field edit (e.g. director name).
+    if (dto.companyNumber && dto.companyNumber !== company.companyNumber) {
+      return this.verifyCompanyWithCompaniesHouse(companyId);
+    }
+    return updated;
   }
 
   async deleteCompany(userId: string, companyId: string) {
@@ -138,6 +145,75 @@ export class ProfileService {
 
     await this.prisma.userCompany.delete({ where: { id: companyId } });
     return { message: 'Company deleted' };
+  }
+
+  // Re-check a company's live status against Companies House. Callable
+  // directly (POST /profile/company/:id/verify) or triggered internally
+  // whenever the company number is set/changed.
+  async verifyCompany(userId: string, companyId: string) {
+    const company = await this.prisma.userCompany.findUnique({ where: { id: companyId } });
+    if (!company) throw new NotFoundException('Company not found');
+    if (company.userId !== userId) throw new ForbiddenException();
+    return this.verifyCompanyWithCompaniesHouse(companyId);
+  }
+
+  private async verifyCompanyWithCompaniesHouse(companyId: string) {
+    const company = await this.prisma.userCompany.findUnique({ where: { id: companyId } });
+    if (!company) throw new NotFoundException('Company not found');
+
+    const cleanNumber = (company.companyNumber || '').trim();
+    if (!cleanNumber) return company; // nothing to verify yet
+
+    const apiKey = process.env.COMPANIES_HOUSE_API_KEY;
+    if (!apiKey) {
+      // No key configured — leave the company record as-is rather than
+      // silently marking it unverifiable. See DEPLOYMENT.md "known gaps".
+      return company;
+    }
+
+    try {
+      const res = await fetch(
+        `https://api.company-information.service.gov.uk/company/${encodeURIComponent(cleanNumber)}`,
+        {
+          headers: { Authorization: `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}` },
+          signal: AbortSignal.timeout(8000),
+        },
+      );
+
+      if (res.status === 404) {
+        return this.prisma.userCompany.update({
+          where: { id: companyId },
+          data: {
+            chStatus: null,
+            chCompanyName: null,
+            chVerifiedAt: new Date(),
+            chVerifyError: 'No company found with this number at Companies House',
+          },
+        });
+      }
+      if (!res.ok) {
+        return this.prisma.userCompany.update({
+          where: { id: companyId },
+          data: { chVerifiedAt: new Date(), chVerifyError: `Companies House lookup failed (${res.status})` },
+        });
+      }
+
+      const data = await res.json();
+      return this.prisma.userCompany.update({
+        where: { id: companyId },
+        data: {
+          chStatus: data.company_status ?? null,
+          chCompanyName: data.company_name ?? null,
+          chVerifiedAt: new Date(),
+          chVerifyError: null,
+        },
+      });
+    } catch (e: any) {
+      return this.prisma.userCompany.update({
+        where: { id: companyId },
+        data: { chVerifiedAt: new Date(), chVerifyError: `Companies House lookup error: ${String(e?.message ?? e).slice(0, 200)}` },
+      }).catch(() => company);
+    }
   }
 
   // ─── Solicitors ───────────────────────────────────────────────────────────
