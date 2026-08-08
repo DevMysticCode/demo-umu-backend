@@ -200,18 +200,6 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.rewardCatalogueItem;
   }
 
-  get workType() {
-    return this.prisma.workType;
-  }
-
-  get propertyWork() {
-    return this.prisma.propertyWork;
-  }
-
-  get valuationSnapshot() {
-    return this.prisma.valuationSnapshot;
-  }
-
   get pricePaidTransaction() {
     return this.prisma.pricePaidTransaction;
   }
