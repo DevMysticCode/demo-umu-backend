@@ -25,4 +25,19 @@ export class RewardsController {
       cursor,
     });
   }
+
+  // GET /rewards/stamps — this user's earned Passport Stamps.
+  @Get('stamps')
+  async getStamps(@Request() req: any) {
+    return this.rewardsService.getStamps(req.user.id);
+  }
+
+  // GET /rewards/catalogue — display-only reward tiles. Nothing here is
+  // redeemable yet; the frontend derives "N rewards ready" / "points to
+  // next reward" from this list against the balance it already fetches
+  // separately, rather than duplicating that logic server-side.
+  @Get('catalogue')
+  async getCatalogue() {
+    return this.rewardsService.getCatalogue();
+  }
 }

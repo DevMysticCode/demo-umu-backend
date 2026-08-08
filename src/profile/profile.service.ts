@@ -8,6 +8,7 @@ import {
   deleteStoredFile,
   isS3Mode,
 } from '../common/storage';
+import { computePassportCompletion } from '../common/passport-completion';
 import {
   UpdateProfileDto,
   CreateAddressDto,
@@ -304,21 +305,12 @@ export class ProfileService {
     }
 
     return passports.map((p) => {
-      // Completion % — a task counts as complete when every one of its
-      // questions has an answer. Matches the same rule the property
-      // page uses via passportProgress so both surfaces read the
-      // same number.
-      let totalTasks = 0;
-      let doneTasks = 0;
-      for (const s of p.sections) {
-        for (const t of s.tasks) {
-          if (t.passportQuestions.length === 0) continue;
-          totalTasks += 1;
-          if (t.passportQuestions.every((q) => q.answer)) doneTasks += 1;
-        }
-      }
-      const completionPercentage =
-        totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+      // Completion % — shared with PropertyService.buildPassportProgress()
+      // via computePassportCompletion() so both surfaces read the same
+      // number off the same rule (see src/common/passport-completion.ts).
+      const { completionPct: completionPercentage } = computePassportCompletion(
+        p.sections,
+      );
 
       // Prefer a saved HomeScore, else fall back to the property's
       // stored epcScore (same precedence PropertyService.searchProperties

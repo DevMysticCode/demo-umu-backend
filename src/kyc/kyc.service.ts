@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardsService } from '../rewards/rewards.service';
 import * as crypto from 'crypto';
 
 const PERSONA_API_URL = 'https://api.withpersona.com/api/v1';
@@ -13,7 +14,10 @@ const PERSONA_API_URL = 'https://api.withpersona.com/api/v1';
 export class KycService {
   private readonly logger = new Logger(KycService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private rewards: RewardsService,
+  ) {}
 
   private get apiKey(): string {
     const k = process.env.PERSONA_API_KEY;
@@ -312,6 +316,20 @@ export class KycService {
       data.kycCompletedAt = new Date();
     }
     await this.prisma.user.update({ where: { id: userId }, data });
+
+    // Rewards: fire on every transition into 'approved', not just the
+    // first — award()'s own (userId, actionKey, subjectId) uniqueness is
+    // what actually prevents double-crediting on repeat webhook deliveries
+    // or re-polls of an already-approved user, so no "was it already
+    // approved" check is needed here. Never allowed to block/break KYC
+    // persistence — same fire-and-forget pattern QuestionService uses.
+    if (status === 'approved') {
+      this.rewards
+        .award(userId, 'KYC_COMPLETED_OWNER', userId)
+        .catch((err) =>
+          this.logger.error(`[Rewards] KYC_COMPLETED_OWNER award failed: ${err?.message}`),
+        );
+    }
   }
 
   /**

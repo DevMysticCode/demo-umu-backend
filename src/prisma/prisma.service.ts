@@ -184,6 +184,34 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.pointsLedgerEntry;
   }
 
+  get rewardAction() {
+    return this.prisma.rewardAction;
+  }
+
+  get stampDefinition() {
+    return this.prisma.stampDefinition;
+  }
+
+  get userStamp() {
+    return this.prisma.userStamp;
+  }
+
+  get rewardCatalogueItem() {
+    return this.prisma.rewardCatalogueItem;
+  }
+
+  get workType() {
+    return this.prisma.workType;
+  }
+
+  get propertyWork() {
+    return this.prisma.propertyWork;
+  }
+
+  get valuationSnapshot() {
+    return this.prisma.valuationSnapshot;
+  }
+
   get pricePaidTransaction() {
     return this.prisma.pricePaidTransaction;
   }

@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { computePassportCompletion } from '../common/passport-completion';
+import { RewardsService } from '../rewards/rewards.service';
 import { PassportService } from '../passport/passport.service';
 import { LandRegistryService } from '../land-registry/land-registry.service';
 import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
@@ -79,6 +81,24 @@ function bandToScore(band?: string | null): number | null {
     case 'F': return 21;
     case 'G': return 1;
     default:  return null;
+  }
+}
+
+/**
+ * The certificate-detail endpoint rates each component (walls, roof,
+ * windows, ...) on a 1–5 numeric scale rather than the old API's
+ * "Good"/"Average"/"Poor" text. 0 means "not applicable" (e.g. a flat
+ * whose roof is another dwelling above it) — mapped to null so it renders
+ * as N/A rather than a fabricated "Very Poor".
+ */
+function numericEffToText(n: number | null | undefined): string | null {
+  switch (n) {
+    case 5: return 'Very Good';
+    case 4: return 'Good';
+    case 3: return 'Average';
+    case 2: return 'Poor';
+    case 1: return 'Very Poor';
+    default: return null;
   }
 }
 
@@ -1413,6 +1433,7 @@ export class PropertyService {
     private prisma: PrismaService,
     private passportService: PassportService,
     private landRegistry: LandRegistryService,
+    private rewards: RewardsService,
   ) {}
 
   // In-memory enrichment cache. The /enrichment endpoint aggregates ~10 live
@@ -2212,6 +2233,22 @@ export class PropertyService {
 
     // Ensure we have all EPC fields (even if null) and always generate titleNumber
     if (epcData) {
+      // The /search response epcData was built from doesn't carry the V2
+      // insulation/heating/lighting breakdown fields (see
+      // fetchEpcCertificateDetail's doc comment) — merge them in from the
+      // single-certificate endpoint before building updateData below, so
+      // every existing `if (!property.xEnergyEff && epcData.xEnergyEff)`
+      // check further down just works. Non-fatal: the property still gets
+      // its basic EPC fields even if this call fails.
+      if ((epcData as any).lmkKey) {
+        try {
+          const detail = await this.fetchEpcCertificateDetail((epcData as any).lmkKey);
+          if (detail) Object.assign(epcData, detail);
+        } catch {
+          /* non-fatal — basic EPC fields already resolved above */
+        }
+      }
+
       const updateData: any = {};
 
       // Only update fields that are missing in the property
@@ -2543,6 +2580,27 @@ export class PropertyService {
       if (fresh.lightingCostPotential != null) updateData.lightingCostPotential = fresh.lightingCostPotential;
       if (fresh.co2Emissions != null) updateData.co2Emissions = fresh.co2Emissions;
       if (fresh.co2EmissionsPotential != null) updateData.co2EmissionsPotential = fresh.co2EmissionsPotential;
+    }
+
+    // Top up the V2 breakdown fields (walls/roof/windows/heating/hot
+    // water/lighting) from the single-certificate endpoint whenever we
+    // have a key — same as the normal enrichment flow, but here it isn't
+    // gated on `fresh` since `lmkKey` can come from the persisted value
+    // alone (see rule 1 above). Only fills fields the property doesn't
+    // already have, matching the pattern above.
+    if (lmkKey) {
+      try {
+        const detail = await this.fetchEpcCertificateDetail(lmkKey);
+        if (detail) {
+          for (const [key, value] of Object.entries(detail)) {
+            if (value != null && (property as any)[key] == null) {
+              updateData[key] = value;
+            }
+          }
+        }
+      } catch {
+        /* non-fatal — basic EPC fields already resolved above */
+      }
     }
 
     // Always pull recommendations if we have a key — this is the bit the
@@ -4300,6 +4358,69 @@ export class PropertyService {
   }
 
   /**
+   * The new gov.uk EPC API's /search endpoint only returns 12 summary
+   * fields (address, band, UPRN, registration date, ...) — none of the V2
+   * insulation/heating/lighting breakdown fields the "Full HomeScore
+   * breakdown" panel needs, which is why every property showed N/A there.
+   * Those DO exist, but only on the single-certificate detail endpoint,
+   * under a different shape: `{ walls: [{ description, energy_efficiency_
+   * rating }], roofs: [...], floors: [...], windows: {...}, lighting: {...},
+   * hot_water: {...}, main_heating: [...], main_heating_controls: [...] }`
+   * with a 1–5 numeric rating (0 = not applicable, e.g. a flat with no
+   * roof exposure) instead of the old "Good"/"Average"/"Poor" text.
+   * Verified against the live API (2026-08-08) before writing this — see
+   * numericEffToText() for the 1–5 → text mapping.
+   */
+  private async fetchEpcCertificateDetail(
+    certificateNumber: string,
+  ): Promise<Partial<EpcCert> | null> {
+    if (!certificateNumber) return null;
+    try {
+      const url = `${EPC_API_BASE}/api/certificate?certificate_number=${encodeURIComponent(certificateNumber)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: epcAuthHeader(), Accept: 'application/json' },
+      });
+      if (!res.ok) return null;
+      const ct = res.headers.get('content-type') ?? '';
+      if (!ct.includes('json')) return null;
+      const body = await res.json();
+      const d = body?.data;
+      if (!d) return null;
+
+      const wall = Array.isArray(d.walls) ? d.walls[0] : d.walls;
+      const roof = Array.isArray(d.roofs) ? d.roofs[0] : d.roofs;
+      const floor = Array.isArray(d.floors) ? d.floors[0] : d.floors;
+      const mainHeat = Array.isArray(d.main_heating) ? d.main_heating[0] : d.main_heating;
+      const mainHeatControl = Array.isArray(d.main_heating_controls)
+        ? d.main_heating_controls[0]
+        : d.main_heating_controls;
+
+      return {
+        wallsEnergyEff: numericEffToText(wall?.energy_efficiency_rating),
+        wallsDescription: wall?.description ?? null,
+        roofEnergyEff: numericEffToText(roof?.energy_efficiency_rating),
+        roofDescription: roof?.description ?? null,
+        floorEnergyEff: numericEffToText(floor?.energy_efficiency_rating),
+        floorDescription: floor?.description ?? null,
+        windowsEnergyEff: numericEffToText(d.windows?.energy_efficiency_rating),
+        windowsDescription: d.windows?.description ?? null,
+        multiGlazeProportion: d.multiple_glazed_percentage ?? null,
+        mainheatEnergyEff: numericEffToText(mainHeat?.energy_efficiency_rating),
+        mainheatDescription: mainHeat?.description ?? null,
+        mainheatcEnergyEff: numericEffToText(mainHeatControl?.energy_efficiency_rating),
+        mainheatcontDescription: mainHeatControl?.description ?? null,
+        hotWaterEnergyEff: numericEffToText(d.hot_water?.energy_efficiency_rating),
+        hotwaterDescription: d.hot_water?.description ?? null,
+        secondheatDescription: d.secondary_heating?.description ?? null,
+        lightingEnergyEff: numericEffToText(d.lighting?.energy_efficiency_rating),
+        lowEnergyLighting: d.low_energy_fixed_lighting_outlets_percentage ?? null,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Pull the EPC Register's improvement recommendations for a single
    * certificate (identified by its LMK key). Each row is reshaped into our
    * canonical shape used by the simulator's improvement cards. Returns an
@@ -5234,55 +5355,9 @@ export class PropertyService {
         },
         orderBy: { order: 'asc' },
       });
-      if (sections.length === 0) {
-        return {
-          completedSections: 0,
-          totalSections: 0,
-          completedTasks: 0,
-          totalTasks: 0,
-          completionPct: 0,
-          sections: [],
-        };
-      }
-      let totalTasks = 0;
-      let completedTasks = 0;
-      const sectionRows = sections.map((s) => {
-        const sTotal = s.tasks.length;
-        let sDone = 0;
-        for (const t of s.tasks) {
-          // A task is "complete" when every question on it has an answer.
-          if (
-            t.passportQuestions.length > 0 &&
-            t.passportQuestions.every((q) => q.answer)
-          ) {
-            sDone += 1;
-          }
-        }
-        totalTasks += sTotal;
-        completedTasks += sDone;
-        return {
-          key: s.key,
-          title: s.title,
-          status: s.status,
-          completedTasks: sDone,
-          totalTasks: sTotal,
-        };
-      });
-      const completedSections = sectionRows.filter(
-        (s) => s.totalTasks > 0 && s.completedTasks === s.totalTasks,
-      ).length;
-      const completionPct =
-        totalTasks > 0
-          ? Math.round((completedTasks / totalTasks) * 100)
-          : 0;
-      return {
-        completedSections,
-        totalSections: sections.length,
-        completedTasks,
-        totalTasks,
-        completionPct,
-        sections: sectionRows,
-      };
+      // Shared with ProfileService.getUserPassports() via
+      // computePassportCompletion() — see src/common/passport-completion.ts.
+      return computePassportCompletion(sections);
     } catch {
       return null;
     }
@@ -5378,6 +5453,7 @@ export class PropertyService {
         verifiedAt: new Date(),
       },
     });
+    this.awardOwnershipVerified(propertyId, userId);
 
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
@@ -5385,6 +5461,23 @@ export class PropertyService {
     if (!property) throw new Error('Property not found');
 
     return { ok: true };
+  }
+
+  // "Claim a property + verify ownership" — 750 pts per the client's Major
+  // Actions Points Framework. subjectId = propertyId, so this correctly
+  // fires once per property (not once ever per user) — a landlord with ten
+  // properties gets this moment ten times, matching the requirements doc's
+  // multi-property model. Covers both Homeowner/Seller and Landlord claims
+  // (see seed-reward-actions.ts comment on OWNERSHIP_VERIFIED) — the
+  // passport's real type isn't known yet at this point, so journeyType is
+  // left at the action's OWNER default rather than guessed here. Never
+  // allowed to block/break the verification flow itself.
+  private awardOwnershipVerified(propertyId: string, userId: string) {
+    this.rewards
+      .award(userId, 'OWNERSHIP_VERIFIED', propertyId, { propertyId })
+      .catch((err) =>
+        console.error(`[Rewards] OWNERSHIP_VERIFIED award failed: ${err?.message}`),
+      );
   }
 
   /**
@@ -5478,6 +5571,7 @@ export class PropertyService {
           landRegistryCheckedAt: new Date(),
         },
       });
+      this.awardOwnershipVerified(propertyId, userId);
       return {
         status: 'VERIFIED' as const,
         typeCode: 30,
@@ -5579,6 +5673,9 @@ export class PropertyService {
         landRegistryCheckedAt: new Date(),
       },
     });
+    if (status === 'VERIFIED') {
+      this.awardOwnershipVerified(propertyId, userId);
+    }
 
     // Promote the HMLR-returned title number to Property.titleNumber so
     // every downstream surface (claim, buyer view, TA6 form, costs page)
@@ -6781,6 +6878,18 @@ export class PropertyService {
       avgEpcScore,
       neighbours: buildNeighbourList(),
     };
+  }
+
+  // Site-wide count for the HomeScore landing page's "N HomeScores run in
+  // the last hour" social-proof pill. Every property/HomeScore view logs a
+  // PropertySearchLog row (see logPropertySearch below), so this is a real
+  // count, not a decorative placeholder.
+  async getLastHourSearchActivity() {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const count = await this.prisma.propertySearchLog.count({
+      where: { createdAt: { gte: oneHourAgo } },
+    });
+    return { count };
   }
 
   async getPropertySearchStats(propertyId: string) {

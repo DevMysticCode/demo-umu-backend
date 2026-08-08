@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { RewardsService } from '../rewards/rewards.service';
 import { captureException } from '../common/sentry';
 import {
   RequestOtpDto,
@@ -28,12 +29,32 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private rewards: RewardsService,
   ) {
     this.resend = new Resend(process.env.RESEND_API_KEY ?? '');
   }
 
   private generateOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  // "Create UMU account" — 250 pts per the client's Major Actions Points
+  // Framework, seeded with verificationRequired: true (points are meant to
+  // sit PENDING until email/mobile is verified). Both of this service's
+  // "a brand new account just became verified" moments — OTP verification
+  // and the legacy direct-register path — already only call this once the
+  // account IS verified, so award() would write PENDING and nothing would
+  // ever confirm it; immediately confirming afterwards is what actually
+  // realises the "pending until verified" intent for these two flows.
+  // subjectId = userId, so this can only ever fire once per account.
+  // Never allowed to block signup.
+  private grantAccountCreatedPoints(userId: string) {
+    this.rewards
+      .award(userId, 'ACCOUNT_CREATED', userId)
+      .then(() => this.rewards.confirmAward(userId, 'ACCOUNT_CREATED', userId))
+      .catch((err) =>
+        console.error(`[Rewards] ACCOUNT_CREATED award failed: ${err?.message}`),
+      );
   }
 
   private readonly FROM =
@@ -148,6 +169,7 @@ export class AuthService {
         isVerified: true,
       },
     });
+    this.grantAccountCreatedPoints(user.id);
 
     // Delete used OTP
     await this.prisma.otpCode.delete({
@@ -229,6 +251,7 @@ export class AuthService {
           isVerified: true,
         },
       });
+      this.grantAccountCreatedPoints(user.id);
     }
 
     if (!user) {

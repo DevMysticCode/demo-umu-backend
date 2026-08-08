@@ -13,18 +13,31 @@ import { BadRequestException } from '@nestjs/common';
 import { RewardsService } from './rewards.service';
 
 function makeService() {
-  const txUser = { update: jest.fn() };
-  const txLedger = { create: jest.fn() };
-  const tx = { user: txUser, pointsLedgerEntry: txLedger };
+  const txUser = {
+    update: jest.fn(),
+    findUniqueOrThrow: jest.fn(),
+  };
+  const txLedger = { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() };
+  const txStampDef = { findUnique: jest.fn() };
+  const txUserStamp = { findFirst: jest.fn(), create: jest.fn() };
+  const txRewardAction = { findUnique: jest.fn() };
+  const tx = {
+    user: txUser,
+    pointsLedgerEntry: txLedger,
+    stampDefinition: txStampDef,
+    userStamp: txUserStamp,
+    rewardAction: txRewardAction,
+  };
 
   const prismaStub: any = {
     user: { findUnique: jest.fn() },
     pointsLedgerEntry: { findMany: jest.fn() },
+    rewardAction: { findUnique: jest.fn() },
     $transaction: jest.fn((cb: any) => cb(tx)),
   };
 
   const service = new RewardsService(prismaStub);
-  return { service, prismaStub, txUser, txLedger };
+  return { service, prismaStub, txUser, txLedger, txStampDef, txUserStamp, txRewardAction };
 }
 
 describe('RewardsService.awardForQuestion', () => {
@@ -141,5 +154,139 @@ describe('RewardsService.redeemPoints', () => {
 
     await expect(service.redeemPoints('u1', 0, 'Nothing')).rejects.toThrow(BadRequestException);
     expect(prismaStub.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('RewardsService.award', () => {
+  test('CONFIRMED action: increments balance, writes ledger row, mints its stamp', async () => {
+    const { service, prismaStub, txUser, txLedger, txStampDef, txUserStamp } = makeService();
+    prismaStub.rewardAction.findUnique.mockResolvedValue({
+      actionKey: 'OWNERSHIP_VERIFIED',
+      journeyType: 'OWNER',
+      label: 'Claim a property + verify ownership',
+      points: 750,
+      stampKey: 'FIRST_PROPERTY_PASSPORT',
+      firstTimeOnly: true,
+      verificationRequired: false,
+      active: true,
+    });
+    txUser.update.mockResolvedValue({ id: 'u1', rewardPointsBalance: 750 });
+    txLedger.create.mockResolvedValue({ id: 'entry1', amount: 750, balanceAfter: 750, status: 'CONFIRMED' });
+    txStampDef.findUnique.mockResolvedValue({ id: 'stamp1', key: 'FIRST_PROPERTY_PASSPORT', active: true });
+    txUserStamp.findFirst.mockResolvedValue(null);
+
+    const result = await service.award('u1', 'OWNERSHIP_VERIFIED', 'prop1', { propertyId: 'prop1' });
+
+    expect(txUser.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { rewardPointsBalance: { increment: 750 } },
+    });
+    expect(txLedger.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'u1',
+        actionKey: 'OWNERSHIP_VERIFIED',
+        subjectId: 'prop1',
+        amount: 750,
+        status: 'CONFIRMED',
+        propertyId: 'prop1',
+      }),
+    });
+    expect(txUserStamp.create).toHaveBeenCalledWith({
+      data: { userId: 'u1', stampDefinitionId: 'stamp1', passportId: undefined, propertyId: 'prop1' },
+    });
+    expect(result).toEqual(expect.objectContaining({ id: 'entry1' }));
+  });
+
+  test('a repeat award for the same (userId, actionKey, subjectId) is a safe no-op', async () => {
+    const { service, prismaStub, txUser, txLedger } = makeService();
+    prismaStub.rewardAction.findUnique.mockResolvedValue({
+      actionKey: 'OWNERSHIP_VERIFIED',
+      journeyType: 'OWNER',
+      points: 750,
+      stampKey: null,
+      verificationRequired: false,
+      active: true,
+    });
+    txUser.update.mockResolvedValue({ id: 'u1', rewardPointsBalance: 750 });
+    const uniqueViolation: any = new Error('Unique constraint failed');
+    uniqueViolation.code = 'P2002';
+    txLedger.create.mockRejectedValue(uniqueViolation);
+
+    const result = await service.award('u1', 'OWNERSHIP_VERIFIED', 'prop1');
+
+    expect(result).toBeNull();
+  });
+
+  test('unknown or inactive action returns null without opening a transaction', async () => {
+    const { service, prismaStub } = makeService();
+    prismaStub.rewardAction.findUnique.mockResolvedValue(null);
+
+    const result = await service.award('u1', 'NOT_A_REAL_ACTION', 'x');
+
+    expect(result).toBeNull();
+    expect(prismaStub.$transaction).not.toHaveBeenCalled();
+  });
+
+  test('verificationRequired action is written PENDING and does NOT touch the balance yet', async () => {
+    const { service, prismaStub, txUser, txLedger } = makeService();
+    prismaStub.rewardAction.findUnique.mockResolvedValue({
+      actionKey: 'ACCOUNT_CREATED',
+      journeyType: 'GLOBAL',
+      points: 250,
+      stampKey: null,
+      verificationRequired: true,
+      active: true,
+    });
+    txUser.findUniqueOrThrow.mockResolvedValue({ rewardPointsBalance: 0 });
+    txLedger.create.mockResolvedValue({ id: 'entry2', amount: 250, balanceAfter: 0, status: 'PENDING' });
+
+    const result = await service.award('u1', 'ACCOUNT_CREATED', 'u1');
+
+    expect(txUser.update).not.toHaveBeenCalled();
+    expect(txLedger.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ status: 'PENDING', amount: 250, balanceAfter: 0 }),
+    });
+    expect(result).toEqual(expect.objectContaining({ id: 'entry2' }));
+  });
+});
+
+describe('RewardsService.confirmAward', () => {
+  test('flips a PENDING entry to CONFIRMED and applies the deferred balance increment', async () => {
+    const { service, prismaStub, txUser, txLedger, txRewardAction } = makeService();
+    txLedger.findUnique.mockResolvedValue({
+      id: 'entry2',
+      userId: 'u1',
+      actionKey: 'ACCOUNT_CREATED',
+      subjectId: 'u1',
+      amount: 250,
+      status: 'PENDING',
+      passportId: null,
+      propertyId: null,
+    });
+    txUser.update.mockResolvedValue({ id: 'u1', rewardPointsBalance: 250 });
+    txLedger.update.mockResolvedValue({ id: 'entry2', status: 'CONFIRMED', balanceAfter: 250 });
+    txRewardAction.findUnique.mockResolvedValue({ actionKey: 'ACCOUNT_CREATED', stampKey: null });
+
+    const result = await service.confirmAward('u1', 'ACCOUNT_CREATED', 'u1');
+
+    expect(txUser.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { rewardPointsBalance: { increment: 250 } },
+    });
+    expect(txLedger.update).toHaveBeenCalledWith({
+      where: { id: 'entry2' },
+      data: { status: 'CONFIRMED', balanceAfter: 250 },
+    });
+    expect(result).toEqual(expect.objectContaining({ status: 'CONFIRMED' }));
+  });
+
+  test('a missing or already-CONFIRMED entry is a safe no-op', async () => {
+    const { service, txLedger, txUser } = makeService();
+    txLedger.findUnique.mockResolvedValue(null);
+
+    const result = await service.confirmAward('u1', 'ACCOUNT_CREATED', 'u1');
+
+    expect(result).toBeNull();
+    expect(txUser.update).not.toHaveBeenCalled();
   });
 });

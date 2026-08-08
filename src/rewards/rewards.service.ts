@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, JourneyType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Tx = Prisma.TransactionClient;
@@ -13,9 +13,143 @@ export interface AwardMetadata {
   [key: string]: unknown;
 }
 
+export interface AwardOptions {
+  // Overrides RewardAction's default journeyType — needed for actions like
+  // OWNERSHIP_VERIFIED that are shared across journeys (see seed script
+  // comment); the caller knows the real journey (e.g. passport.type) at
+  // award time even though the config row doesn't.
+  journeyType?: JourneyType;
+  passportId?: string;
+  propertyId?: string;
+  description?: string;
+  metadata?: AwardMetadata;
+}
+
 @Injectable()
 export class RewardsService {
   constructor(private prisma: PrismaService) {}
+
+  // Generic, config-driven award path — every new hook (KYC, ownership
+  // verified, passport complete, ...) should call this rather than writing
+  // its own ledger/balance logic. Looks up points/stamp/verification rules
+  // from RewardAction by actionKey so they stay editable without a code
+  // change. Idempotent per (userId, actionKey, subjectId) via a DB-level
+  // unique constraint — safe under races/retries/duplicate webhook
+  // deliveries, same guarantee awardForQuestion already relied on.
+  //
+  // subjectId scopes "first time" — pass the id of whatever this action is
+  // about (a propertyId for OWNERSHIP_VERIFIED, a passportId for
+  // CORE_PASSPORT_COMPLETE, the userId itself for a pure account-level
+  // action like ACCOUNT_CREATED) so the same milestone can recur across
+  // different properties/passports for the same user where that's the
+  // intended behaviour (e.g. a landlord claiming multiple properties).
+  async award(userId: string, actionKey: string, subjectId: string, opts: AwardOptions = {}) {
+    const action = await this.prisma.rewardAction.findUnique({ where: { actionKey } });
+    if (!action || !action.active || !action.points || action.points <= 0) return null;
+
+    const status = action.verificationRequired ? 'PENDING' : 'CONFIRMED';
+    const journeyType = opts.journeyType ?? action.journeyType;
+
+    try {
+      const entry = await this.prisma.$transaction(async (tx: Tx) => {
+        let balanceAfter: number;
+        if (status === 'CONFIRMED') {
+          const updatedUser = await tx.user.update({
+            where: { id: userId },
+            data: { rewardPointsBalance: { increment: action.points } },
+          });
+          balanceAfter = updatedUser.rewardPointsBalance;
+        } else {
+          // Reserves the idempotency slot without touching the visible
+          // balance yet — see confirmAward().
+          const user = await tx.user.findUniqueOrThrow({
+            where: { id: userId },
+            select: { rewardPointsBalance: true },
+          });
+          balanceAfter = user.rewardPointsBalance;
+        }
+
+        const created = await tx.pointsLedgerEntry.create({
+          data: {
+            userId,
+            type: actionKey,
+            actionKey,
+            subjectId,
+            amount: action.points,
+            balanceAfter,
+            description: opts.description ?? action.label,
+            journeyType,
+            passportId: opts.passportId,
+            propertyId: opts.propertyId,
+            status: status as any,
+            metadata: opts.metadata as any,
+          },
+        });
+
+        if (action.stampKey && status === 'CONFIRMED') {
+          await this.mintStamp(tx, userId, action.stampKey, opts.passportId, opts.propertyId);
+        }
+
+        return created;
+      });
+      return entry;
+    } catch (e: any) {
+      if (e?.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) return null; // already awarded — no-op
+      throw e;
+    }
+  }
+
+  // Flips a PENDING award to CONFIRMED and applies the balance increment
+  // that was deferred at award time. Used for actions seeded with
+  // verificationRequired: true (currently only ACCOUNT_CREATED — pending
+  // until email/mobile is verified).
+  async confirmAward(userId: string, actionKey: string, subjectId: string) {
+    return this.prisma.$transaction(async (tx: Tx) => {
+      const entry = await tx.pointsLedgerEntry.findUnique({
+        where: { userId_actionKey_subjectId: { userId, actionKey, subjectId } },
+      });
+      if (!entry || entry.status !== 'PENDING') return null;
+
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: { rewardPointsBalance: { increment: entry.amount } },
+      });
+      const confirmed = await tx.pointsLedgerEntry.update({
+        where: { id: entry.id },
+        data: { status: 'CONFIRMED', balanceAfter: updatedUser.rewardPointsBalance },
+      });
+
+      const action = await tx.rewardAction.findUnique({ where: { actionKey } });
+      if (action?.stampKey) {
+        await this.mintStamp(tx, userId, action.stampKey, entry.passportId ?? undefined, entry.propertyId ?? undefined);
+      }
+
+      return confirmed;
+    });
+  }
+
+  private async mintStamp(
+    tx: Tx,
+    userId: string,
+    stampKey: string,
+    passportId?: string,
+    propertyId?: string,
+  ) {
+    const stampDef = await tx.stampDefinition.findUnique({ where: { key: stampKey } });
+    if (!stampDef || !stampDef.active) return;
+    // findFirst + create rather than upsert against the composite unique:
+    // passportId is nullable, and Postgres unique indexes treat every NULL
+    // as distinct, so an upsert keyed on a null passportId can't reliably
+    // find its own prior row. This is the same trade-off documented on
+    // UserStamp's @@unique.
+    const existing = await tx.userStamp.findFirst({
+      where: { userId, stampDefinitionId: stampDef.id, passportId: passportId ?? null },
+    });
+    if (existing) return;
+    await tx.userStamp.create({
+      data: { userId, stampDefinitionId: stampDef.id, passportId, propertyId },
+    });
+  }
 
   // Awards points for a question the first time it's ever completed.
   // Idempotent two ways: the caller should only invoke this when the
@@ -97,6 +231,21 @@ export class RewardsService {
       select: { rewardPointsBalance: true },
     });
     return { balance: user?.rewardPointsBalance ?? 0 };
+  }
+
+  async getStamps(userId: string) {
+    return this.prisma.userStamp.findMany({
+      where: { userId },
+      include: { stampDefinition: true },
+      orderBy: { awardedAt: 'desc' },
+    });
+  }
+
+  async getCatalogue() {
+    return this.prisma.rewardCatalogueItem.findMany({
+      where: { active: true },
+      orderBy: { sortOrder: 'asc' },
+    });
   }
 
   async getHistory(userId: string, opts: { limit?: number; cursor?: string } = {}) {
