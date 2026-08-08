@@ -6,12 +6,14 @@
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportService } from '../passport/passport.service';
+import { RewardsService } from '../rewards/rewards.service';
 
 @Injectable()
 export class TaskService {
   constructor(
     private prisma: PrismaService,
     private passportService: PassportService,
+    private rewards: RewardsService,
   ) {}
 
   async getTaskQuestions(taskId: string, userId: string) {
@@ -227,6 +229,27 @@ export class TaskService {
           data: { status: 'ACTIVE' },
         });
         nextSectionId = nextSection.id;
+      } else {
+        // No next section left to activate — check whether every section
+        // on this passport is now COMPLETED (re-query rather than assume
+        // order-based "last section" means "all done", since sections can
+        // in principle be skipped/reordered). "Complete core Property
+        // Passport" — 1000 pts per the client's Major Actions Points
+        // Framework. subjectId = passportId, so this can only ever fire
+        // once per passport. Never allowed to block task completion.
+        const allSections = await this.prisma.passportSection.findMany({
+          where: { passportId: currentSection.passportId },
+          select: { status: true },
+        });
+        if (allSections.length > 0 && allSections.every((s) => s.status === 'COMPLETED')) {
+          this.rewards
+            .award(userId, 'CORE_PASSPORT_COMPLETE', currentSection.passportId, {
+              passportId: currentSection.passportId,
+            })
+            .catch((err) =>
+              console.error(`[Rewards] CORE_PASSPORT_COMPLETE award failed: ${err?.message}`),
+            );
+        }
       }
     }
 

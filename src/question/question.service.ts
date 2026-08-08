@@ -102,11 +102,18 @@ export class QuestionService {
     let pointsAwarded = 0;
     if (!wasAlreadyCompleted) {
       try {
+        // MULTIPART questions are seeded with an intentionally blank
+        // QuestionTemplate.title (their label is built from `parts` on the
+        // frontend instead) — ~60% of templates are this type. Falling
+        // back to the task's title keeps the ledger description readable
+        // instead of rendering as `Answered: ""`.
+        const questionLabel =
+          question.questionTemplate.title?.trim() || question.passportSectionTask.title;
         const awarded = await this.rewardsService.awardForQuestion(
           userId,
           questionId,
           question.questionTemplate.points,
-          `Answered: "${question.questionTemplate.title}"`,
+          `Answered: "${questionLabel}"`,
           {
             passportId: question.passportSectionTask.passportSection.passportId,
             sectionKey: question.passportSectionTask.passportSection.key,

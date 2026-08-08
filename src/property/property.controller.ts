@@ -156,6 +156,13 @@ export class PropertyController {
     return this.propertyService.getSavedProperties(req.user.id);
   }
 
+  // Real "N HomeScores run in the last hour" counter for the HomeScore
+  // landing page's social-proof pill — no auth required, site-wide count.
+  @Get('activity/last-hour')
+  async getLastHourActivity() {
+    return this.propertyService.getLastHourSearchActivity();
+  }
+
   // Feed endpoint — fires from the explore page mount alongside every
   // other cold read. Not sensible to throttle: JWT already gates it
   // per-user, and the fan-out inside getForYou can trigger 5+ upstream

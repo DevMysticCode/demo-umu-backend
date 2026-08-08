@@ -49,7 +49,11 @@ function makeService() {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
     verify: jest.fn(),
   };
-  return { svc: new AuthService(prismaStub, jwtStub), prismaStub, jwtStub };
+  const rewardsStub: any = {
+    award: jest.fn().mockResolvedValue(null),
+    confirmAward: jest.fn().mockResolvedValue(null),
+  };
+  return { svc: new AuthService(prismaStub, jwtStub, rewardsStub), prismaStub, jwtStub, rewardsStub };
 }
 
 beforeAll(() => {

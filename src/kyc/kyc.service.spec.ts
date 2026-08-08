@@ -28,7 +28,8 @@ function makeService() {
       update: jest.fn(),
     },
   };
-  return { svc: new KycService(prismaStub), prismaStub };
+  const rewardsStub: any = { award: jest.fn().mockResolvedValue(null) };
+  return { svc: new KycService(prismaStub, rewardsStub), prismaStub, rewardsStub };
 }
 
 beforeAll(() => {

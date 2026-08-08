@@ -42,6 +42,7 @@ model User {
   // so it can never drift from the ledger's own sum. See RewardsService.
   rewardPointsBalance            Int                    @default(0)
   pointsLedger                   PointsLedgerEntry[]
+  stamps                        UserStamp[]
   passports                     Passport[]
   passportCollaborations        PassportCollaborator[]
   preference                    UserPreference?
@@ -582,7 +583,7 @@ model PassportActivity {
 model PointsLedgerEntry {
   id                 String   @id @default(uuid())
   userId             String
-  type               String // QUESTION_ANSWERED | REDEEMED | ADJUSTED
+  type               String // QUESTION_ANSWERED | REDEEMED | ADJUSTED | <RewardAction.actionKey>
   amount             Int // signed: positive = credit, negative = debit
   balanceAfter       Int // snapshot of the running balance after this entry
   description        String // human-readable, e.g. "Answered: 'What is your council tax band?'"
@@ -591,11 +592,113 @@ model PointsLedgerEntry {
   // under a race/double-click. Postgres allows multiple NULLs under a
   // unique constraint, so REDEEMED/ADJUSTED rows leave this null freely.
   passportQuestionId String?  @unique
-  metadata           Json? // { passportId?, sectionKey?, questionTemplateId?, redemptionContext? }
+  // General-purpose idempotency guard for every non-question award (see
+  // RewardsService.award()). subjectId is whatever the action is scoped to
+  // (a passportId, propertyId, userId-again for a pure account-level action,
+  // etc) — the pair must be unique so the same milestone can never fire
+  // twice for the same user, even if the triggering code runs more than
+  // once (webhook retries, duplicate requests).
+  actionKey          String? // RewardAction.actionKey this entry was awarded under, null for legacy/manual rows
+  subjectId          String? // id of whatever actionKey is scoped to; see RewardAction.firstTimeOnly
+  // Loose (non-FK) linkage for reporting/filtering only — deliberately NOT
+  // a relation. A hard FK here would force a delete-behaviour decision
+  // (cascade would silently erase point history when a passport/property
+  // is removed; restrict would block admin deletes) and points are the
+  // user's own currency, not owned by the passport/property they were
+  // earned on.
+  journeyType        JourneyType?
+  passportId         String?
+  propertyId         String?
+  // Almost every award is immediate/CONFIRMED. PENDING exists for the one
+  // case the requirements doc calls out explicitly: account-creation
+  // points that shouldn't count until the email/mobile is verified. A
+  // pending entry still reserves passportQuestionId/actionKey+subjectId
+  // idempotency but is excluded from rewardPointsBalance until confirmed.
+  status             LedgerEntryStatus @default(CONFIRMED)
+  metadata           Json? // { sectionKey?, questionTemplateId?, redemptionContext?, ... }
   createdAt          DateTime @default(now())
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, actionKey, subjectId])
   @@index([userId, createdAt])
+  @@index([passportId])
+  @@index([propertyId])
+}
+
+enum LedgerEntryStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum JourneyType {
+  OWNER
+  BUYER
+  TENANT
+  LANDLORD
+  GLOBAL
+}
+
+// Config/rules table — "what CAN earn points". Seeded centrally (see
+// src/scripts/seed-reward-actions.ts) and editable without an app release;
+// RewardsService.award() looks a row up by actionKey at award time rather
+// than having point values hard-coded per call site.
+model RewardAction {
+  id                   String       @id @default(uuid())
+  actionKey            String       @unique // e.g. "OWNERSHIP_VERIFIED", "BUYER_PASSPORT_READY"
+  journeyType          JourneyType
+  label                String // human-readable name, for admin/reporting only
+  points               Int
+  stampKey             String? // StampDefinition.key to mint alongside this award, if any
+  firstTimeOnly        Boolean      @default(true)
+  verificationRequired Boolean      @default(false) // awarded PENDING, confirmed by a separate step
+  active               Boolean      @default(true)
+  description          String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+// Collectible milestone — deliberately separate from points/currency.
+// Config row (definition) + UserStamp (an actual earned instance) below.
+model StampDefinition {
+  id          String      @id @default(uuid())
+  key         String      @unique // e.g. "IDENTITY_VERIFIED", "PASSPORT_COMPLETE"
+  journeyType JourneyType
+  title       String
+  description String?
+  iconAsset   String? // path under /op-icons, matches the frontend's existing icon-reuse convention
+  tier        Int?        @default(1) // for future rarity/visual ordering only
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  userStamps  UserStamp[]
+}
+
+model UserStamp {
+  id                String          @id @default(uuid())
+  userId            String
+  stampDefinitionId String
+  passportId        String? // which Passport this stamp was earned on, if scoped
+  propertyId        String?
+  awardedAt         DateTime        @default(now())
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stampDefinition   StampDefinition @relation(fields: [stampDefinitionId], references: [id])
+
+  @@unique([userId, stampDefinitionId, passportId])
+  @@index([userId])
+}
+
+// Display-only reward catalogue for the Rewards page ("Rewards waiting for
+// you" / "More rewards to unlock"). No redemption backend yet — every item
+// is shown but non-actionable regardless of the viewer's balance.
+model RewardCatalogueItem {
+  id             String   @id @default(uuid())
+  partner        String // e.g. "AnyVan", "Todd & Co Solicitors"
+  title          String // e.g. "20% off removals"
+  description    String?
+  pointsRequired Int
+  iconAsset      String?
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
 }
 
 model QuestionTemplate {
@@ -736,6 +839,12 @@ enum PassportStatus {
 enum PassportType {
   SELLER
   LANDLORD
+  // Not yet wired to a real creation flow — added so the rewards engine's
+  // RewardAction rows for the Buyer/Tenant journeys (see
+  // seed-reward-actions.ts) have a valid PassportType to target once those
+  // journeys exist. No code creates these yet.
+  BUYER
+  TENANT
 }
 
 enum SectionVisibility {
