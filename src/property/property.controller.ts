@@ -225,6 +225,39 @@ export class PropertyController {
     return this.propertyService.toggleSave(req.user.id, id);
   }
 
+  // "Watch this property" — per-property notification-preference toggles
+  // (components/property/WatchPropertyDrawer.vue). Body keys match the
+  // drawer's toggle keys 1:1: claimed/progress/published/comparables/
+  // homescore.
+  @Post(':id/watch')
+  @UseGuards(JwtAuthGuard)
+  async upsertPropertyWatch(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body()
+    body: {
+      claimed?: boolean;
+      progress?: boolean;
+      published?: boolean;
+      comparables?: boolean;
+      homescore?: boolean;
+    },
+  ) {
+    return this.propertyService.upsertPropertyWatch(req.user.id, id, body);
+  }
+
+  @Get(':id/watch')
+  @UseGuards(JwtAuthGuard)
+  async getPropertyWatch(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getPropertyWatch(req.user.id, id);
+  }
+
+  @Delete(':id/watch')
+  @UseGuards(JwtAuthGuard)
+  async deletePropertyWatch(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.deletePropertyWatch(req.user.id, id);
+  }
+
   @Get(':id/sold-history')
   async getSoldHistory(@Param('id') id: string) {
     return this.propertyService.getLiveSoldHistory(id);

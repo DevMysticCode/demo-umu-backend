@@ -56,6 +56,7 @@ model User {
   userDocuments                 UserDocument[]
   wishlistedProperties          UserWishlist[]
   savedProperties               UserSavedProperty[]
+  propertyWatches               PropertyWatch[]
   reminders                     UserReminder[]
   videoProgress                 VideoProgress[]
   buyerNotes                    BuyerNote[]
@@ -314,6 +315,7 @@ model Property {
   ownershipVerifications OwnershipVerification[]
   wishlistedBy           UserWishlist[]
   savedBy                UserSavedProperty[]
+  watchedBy              PropertyWatch[]
   searchLogs             PropertySearchLog[]
   captureEvents          CaptureEvent[]
   llcSearch              LlcSearch?
@@ -788,6 +790,32 @@ model UserSavedProperty {
   @@index([userId])
 }
 
+// Per-property notification preferences for the "Watch this property" drawer
+// (components/property/WatchPropertyDrawer.vue). Field names match the
+// drawer's toggle keys 1:1 (claimed/progress/published/comparables/
+// homescore) so no key-mapping layer is needed between frontend and API.
+// Separate from UserWishlist/UserSavedProperty — those are simple boolean
+// "did I save this" markers; this is the actual notification-preference
+// row consulted (once the emission side is built — see PropertyWatch
+// controller doc comment) before firing any of the 5 event types.
+model PropertyWatch {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  claimed     Boolean  @default(true)
+  progress    Boolean  @default(true)
+  published   Boolean  @default(true)
+  comparables Boolean  @default(false)
+  homescore   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([propertyId])
+}
+
 model UserReminder {
   id        String   @id @default(uuid())
   userId    String
@@ -1016,10 +1044,12 @@ model BuyerProfile {
   user                   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Public reference — short, URL-safe code shown on shared profile (e.g. "K3M9X2").
   publicRef              String?             @unique
-  // Tier — BASIC (free) / VERIFIED (£29) / PREMIUM (£79).
-  tier                   String              @default("BASIC")
-  tierPaidAt             DateTime?
-  tierPaymentId          String? // Stripe PaymentIntent id (£ paid for Verified/Premium)
+  // Tier — no free tier: "Identity Verified" (£19.99) is the only
+  // purchasable tier, via VERIFIED. "UNVERIFIED" is the pre-payment default,
+  // not a selectable tier — see ALLOWED_TIERS in buyer-profile.service.ts.
+  tier                    String              @default("UNVERIFIED")
+  tierPaidAt              DateTime?
+  tierPaymentId           String? // Stripe PaymentIntent id (£19.99 paid for Verified)
   // Step 1: ID
   idDocumentType         String? // "passport" | "drivingLicence" | "nationalId"
   idDocumentUrl          String?

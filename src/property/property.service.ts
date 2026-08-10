@@ -5829,6 +5829,47 @@ export class PropertyService {
     return { wishlisted: !!wishlist, saved: !!saved };
   }
 
+  // ── Property Watch (per-property notification preferences) ─────────────────
+  // Backs components/property/WatchPropertyDrawer.vue's 5 toggles. Field
+  // names match the drawer's toggle keys 1:1 — no mapping layer needed.
+  // NOTE: this only stores the preference. Nothing fires notifications for
+  // any of the 5 event types yet (owner claim / progress / published /
+  // comparable sale / HomeScore change) — that emission logic is separate,
+  // unbuilt follow-up work.
+
+  async upsertPropertyWatch(
+    userId: string,
+    propertyId: string,
+    prefs: {
+      claimed?: boolean;
+      progress?: boolean;
+      published?: boolean;
+      comparables?: boolean;
+      homescore?: boolean;
+    },
+  ) {
+    return this.prisma.propertyWatch.upsert({
+      where: { userId_propertyId: { userId, propertyId } },
+      update: prefs,
+      create: { userId, propertyId, ...prefs },
+    });
+  }
+
+  async getPropertyWatch(userId: string, propertyId: string) {
+    return this.prisma.propertyWatch.findUnique({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+  }
+
+  async deletePropertyWatch(userId: string, propertyId: string) {
+    const existing = await this.prisma.propertyWatch.findUnique({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+    if (!existing) return { watching: false };
+    await this.prisma.propertyWatch.delete({ where: { id: existing.id } });
+    return { watching: false };
+  }
+
   /**
    * HomeScore V2 Neighbourhood: queries EPC API for postcode, returns
    * median & std-dev of cost_per_sqm for matching property type + age band.
@@ -6723,6 +6764,7 @@ export class PropertyService {
         id: true,
         postcode: true,
         epcRating: true,
+        epcScore: true,
         heatingCostCurrent: true,
         hotWaterCostCurrent: true,
         lightingCostCurrent: true,
@@ -6769,6 +6811,7 @@ export class PropertyService {
           { heatingCostCurrent: { not: null } },
           { hotWaterCostCurrent: { not: null } },
           { lightingCostCurrent: { not: null } },
+          { epcScore: { not: null } },
         ],
       },
       select: {
@@ -6840,9 +6883,31 @@ export class PropertyService {
     };
 
     if (ranked.length < 3) {
+      // Real running-cost figures ("heating/hot-water/lighting-cost-current")
+      // are no longer returned by the gov.uk EPC /search endpoint (see the
+      // doc comment on fetchEpcCertificateDetail), so cost-based ranking is
+      // almost never populated. Fall back to ranking by EPC score instead
+      // (0-100, higher = more efficient = cheaper to run) — still real
+      // data, just not in £. bestCost/averageCost/yourCost stay null since
+      // those genuinely aren't known; only rank/total get filled in.
+      const scoreRanked = neighbours
+        .map((n) => ({
+          id: n.id as string,
+          epcScore: Number((n as any).epcScore ?? 0),
+        }))
+        .filter((r) => r.epcScore > 0)
+        .sort((a, b) => b.epcScore - a.epcScore); // descending = most efficient first
+
+      let scoreRank: number | null = null;
+      const selfScore = Number((self as any).epcScore ?? 0);
+      if (scoreRanked.length >= 3 && selfScore > 0) {
+        const idx = scoreRanked.findIndex((r) => r.id === self.id);
+        scoreRank = idx >= 0 ? idx + 1 : null;
+      }
+
       return {
-        rank: null,
-        total: ranked.length,
+        rank: scoreRank,
+        total: scoreRank !== null ? scoreRanked.length : ranked.length,
         bestCost: null,
         averageCost: null,
         yourCost: yourCost > 0 ? Math.round(yourCost) : null,
