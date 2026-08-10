@@ -48,14 +48,15 @@ export class CreateShareDto {
   @IsOptional() @IsInt() @Min(1) expiresInDays?: number; // agent-configurable
 }
 
-// Tier price book (GBP pence). Basic free (Persona identity only),
-// Verified £19.99 (identity + funds + AML) — collapsed from the previous
-// 3-tier Basic/Verified-£29/Premium-£79 book to match the single £19.99
+// Tier price book (GBP pence). No free tier — "Identity Verified" (identity
+// + funds + AML) is the only purchasable tier, £19.99, matching the single
 // KYC price point used app-wide (see PaymentService's owner-claim pricing).
+// "UNVERIFIED" is the pre-payment default on BuyerProfile.tier; it's not in
+// this allow-list so it can never be set directly, only defaulted by Prisma.
 export const TIER_PRICES_GBP_PENCE: Record<string, number> = {
   VERIFIED: 1999,
 };
-const ALLOWED_TIERS = new Set(['BASIC', 'VERIFIED']);
+const ALLOWED_TIERS = new Set(['VERIFIED']);
 
 // Strength score breakdown — single source of truth, used on every upsert.
 // Mirrors the prototype's 5-section weighting plus credentials.
@@ -299,12 +300,12 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
 
     const missing: string[] = [];
     if (!existing.idDocumentType) missing.push('ID document');
-    // Funds capture only required for Verified / Premium tiers — Basic just
-    // proves identity + chain so we don't block publish on missing budget.
-    const requiresFunds =
-      (existing as any).tier && (existing as any).tier !== 'BASIC';
-    if (requiresFunds && !existing.fundsType) missing.push('Proof of funds type');
-    if (requiresFunds && !existing.fundsAmount) missing.push('Maximum budget');
+    // Funds capture is one of the 4 core Buyer Passport steps (Identity,
+    // Buying position, Finance, Chain position) — required for every buyer
+    // regardless of tier, not just Verified/Premium. Tier is a separate,
+    // optional paid credential on top, not a gate on this core step.
+    if (!existing.fundsType) missing.push('Proof of funds type');
+    if (!existing.fundsAmount) missing.push('Maximum budget');
     if (!existing.chainPosition) missing.push('Chain position');
     if (missing.length > 0) {
       throw new BadRequestException(
