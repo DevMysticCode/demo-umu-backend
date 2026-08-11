@@ -2592,9 +2592,24 @@ export class PropertyService {
       try {
         const detail = await this.fetchEpcCertificateDetail(lmkKey);
         if (detail) {
-          for (const [key, value] of Object.entries(detail)) {
-            if (value != null && (property as any)[key] == null) {
-              updateData[key] = value;
+          for (const [key, rawValue] of Object.entries(detail)) {
+            if (rawValue == null) continue;
+            // EpcCert's `potentialScore` field doesn't share a name with
+            // the Property column (`epcScorePotential`) — writing it
+            // through unchanged silently fails Prisma's schema validation
+            // (caught below, logged, but the whole update is then
+            // dropped). Every other EpcCert key here already matches its
+            // Property column 1:1.
+            const column = key === 'potentialScore' ? 'epcScorePotential' : key;
+            // epcScore/epcScorePotential: always overwrite with the real
+            // figure from this endpoint, even if a value is already
+            // persisted — that existing value is very likely the old
+            // bandToScore() approximation (band's lower bound) from
+            // before this endpoint's real score was wired in, not a
+            // deliberately-set value worth protecting.
+            const isScoreField = column === 'epcScore' || column === 'epcScorePotential';
+            if (isScoreField || (property as any)[column] == null) {
+              updateData[column] = rawValue;
             }
           }
         }
@@ -4396,6 +4411,19 @@ export class PropertyService {
         : d.main_heating_controls;
 
       return {
+        // Real numeric SAP score — was previously approximated via
+        // bandToScore() (the band's lower bound, e.g. every band-C
+        // property showed 69) because the /search endpoint only exposes
+        // the band letter. This single-certificate endpoint has the real
+        // figure (energy_rating_current) all along; only include the key
+        // when a real value exists so Object.assign doesn't clobber the
+        // bandToScore fallback with undefined on a partial response.
+        ...(d.energy_rating_current != null
+          ? { epcScore: d.energy_rating_current }
+          : {}),
+        ...(d.energy_rating_potential != null
+          ? { potentialScore: d.energy_rating_potential }
+          : {}),
         wallsEnergyEff: numericEffToText(wall?.energy_efficiency_rating),
         wallsDescription: wall?.description ?? null,
         roofEnergyEff: numericEffToText(roof?.energy_efficiency_rating),
