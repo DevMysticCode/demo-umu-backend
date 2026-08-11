@@ -2594,13 +2594,17 @@ export class PropertyService {
         if (detail) {
           for (const [key, rawValue] of Object.entries(detail)) {
             if (rawValue == null) continue;
-            // EpcCert's `potentialScore` field doesn't share a name with
-            // the Property column (`epcScorePotential`) — writing it
-            // through unchanged silently fails Prisma's schema validation
-            // (caught below, logged, but the whole update is then
-            // dropped). Every other EpcCert key here already matches its
-            // Property column 1:1.
-            const column = key === 'potentialScore' ? 'epcScorePotential' : key;
+            // EpcCert's `potentialScore`/`potentialRating` fields don't
+            // share a name with their Property columns (`epcScorePotential`/
+            // `epcRatingPotential`) — writing either through unchanged
+            // silently fails Prisma's schema validation (caught below,
+            // logged, but the whole update is then dropped). Every other
+            // EpcCert key here already matches its Property column 1:1.
+            const FIELD_RENAMES: Record<string, string> = {
+              potentialScore: 'epcScorePotential',
+              potentialRating: 'epcRatingPotential',
+            };
+            const column = FIELD_RENAMES[key] ?? key;
             // epcScore/epcScorePotential: always overwrite with the real
             // figure from this endpoint, even if a value is already
             // persisted — that existing value is very likely the old
@@ -4424,14 +4428,51 @@ export class PropertyService {
         ...(d.energy_rating_potential != null
           ? { potentialScore: d.energy_rating_potential }
           : {}),
+        ...(d.potential_energy_efficiency_band
+          ? { potentialRating: d.potential_energy_efficiency_band }
+          : {}),
+        // Running costs and CO2 — the /search endpoint never had these
+        // (same reason as the score), and this endpoint wasn't extracting
+        // them either, so every property showed £0/blank running costs
+        // and no CO2 figure regardless of what the real certificate said.
+        ...(d.heating_cost_current?.value != null
+          ? { heatingCostCurrent: d.heating_cost_current.value }
+          : {}),
+        ...(d.hot_water_cost_current?.value != null
+          ? { hotWaterCostCurrent: d.hot_water_cost_current.value }
+          : {}),
+        ...(d.lighting_cost_current?.value != null
+          ? { lightingCostCurrent: d.lighting_cost_current.value }
+          : {}),
+        ...(d.heating_cost_potential?.value != null
+          ? { heatingCostPotential: d.heating_cost_potential.value }
+          : {}),
+        ...(d.hot_water_cost_potential?.value != null
+          ? { hotWaterCostPotential: d.hot_water_cost_potential.value }
+          : {}),
+        ...(d.lighting_cost_potential?.value != null
+          ? { lightingCostPotential: d.lighting_cost_potential.value }
+          : {}),
+        ...(d.co2_emissions_current != null
+          ? { co2Emissions: d.co2_emissions_current }
+          : {}),
+        ...(d.co2_emissions_potential != null
+          ? { co2EmissionsPotential: d.co2_emissions_potential }
+          : {}),
+        ...(d.total_floor_area != null
+          ? { floorAreaSqm: d.total_floor_area }
+          : {}),
         wallsEnergyEff: numericEffToText(wall?.energy_efficiency_rating),
         wallsDescription: wall?.description ?? null,
         roofEnergyEff: numericEffToText(roof?.energy_efficiency_rating),
         roofDescription: roof?.description ?? null,
         floorEnergyEff: numericEffToText(floor?.energy_efficiency_rating),
         floorDescription: floor?.description ?? null,
-        windowsEnergyEff: numericEffToText(d.windows?.energy_efficiency_rating),
-        windowsDescription: d.windows?.description ?? null,
+        // NB: the API's field is `window` (singular) — reading `d.windows`
+        // (plural) here always silently returned undefined, so every
+        // property's window row showed blank regardless of its real rating.
+        windowsEnergyEff: numericEffToText(d.window?.energy_efficiency_rating),
+        windowsDescription: d.window?.description ?? null,
         multiGlazeProportion: d.multiple_glazed_percentage ?? null,
         mainheatEnergyEff: numericEffToText(mainHeat?.energy_efficiency_rating),
         mainheatDescription: mainHeat?.description ?? null,
