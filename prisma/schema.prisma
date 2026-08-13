@@ -41,6 +41,13 @@ model User {
   // PointsLedgerEntry write (increment/decrement, never read-then-write),
   // so it can never drift from the ledger's own sum. See RewardsService.
   rewardPointsBalance            Int                    @default(0)
+  // Daily-activity streak — advanced by RewardsService.recordDailyActivity()
+  // whenever the user answers a question (see QuestionService.answerQuestion).
+  // lastActiveDate is truncated to UTC midnight so "same day" / "consecutive
+  // day" comparisons are pure date math, no timezone drift.
+  currentStreak                  Int                    @default(0)
+  longestStreak                  Int                    @default(0)
+  lastActiveDate                 DateTime?
   pointsLedger                   PointsLedgerEntry[]
   stamps                        UserStamp[]
   passports                     Passport[]
@@ -666,7 +673,12 @@ model StampDefinition {
   key         String      @unique // e.g. "IDENTITY_VERIFIED", "PASSPORT_COMPLETE"
   journeyType JourneyType
   title       String
-  description String?
+  // Achievement-celebration copy (PassportAchievement component) — kept
+  // here rather than hardcoded per-achievement on the frontend so new
+  // stamps can ship without a client release.
+  subtitle       String? // one-line "You've confirmed who you are." style hook
+  description    String? // body paragraph
+  checklistItems Json? // string[] — "✓ Identity check complete" style lines
   iconAsset   String? // path under /op-icons, matches the frontend's existing icon-reuse convention
   tier        Int?        @default(1) // for future rarity/visual ordering only
   active      Boolean     @default(true)
@@ -681,6 +693,15 @@ model UserStamp {
   passportId        String? // which Passport this stamp was earned on, if scoped
   propertyId        String?
   awardedAt         DateTime        @default(now())
+  // Denormalized snapshot of RewardAction.points at mint time, so the
+  // PassportAchievement celebration payload needs zero extra joins.
+  pointsAwarded     Int?
+  // Null = not yet shown to the user via the PassportAchievement
+  // celebration. Set once acknowledged (POST /rewards/stamps/:id/celebrate).
+  // The award flow that mints this row is always fire-and-forget from an
+  // HTTP response's perspective, so the frontend discovers new stamps by
+  // polling this field rather than via an inline API response.
+  celebratedAt      DateTime?
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   stampDefinition   StampDefinition @relation(fields: [stampDefinitionId], references: [id])
 

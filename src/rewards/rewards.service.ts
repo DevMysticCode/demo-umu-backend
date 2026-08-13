@@ -1,6 +1,18 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Prisma, JourneyType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { getLevelProgress } from './levels';
+
+const STREAK_MILESTONES = [
+  { days: 3, actionKey: 'STREAK_3_DAY' },
+  { days: 7, actionKey: 'STREAK_7_DAY' },
+  { days: 14, actionKey: 'STREAK_14_DAY' },
+  { days: 30, actionKey: 'STREAK_30_DAY' },
+] as const;
+
+function utcMidnight(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
 
 type Tx = Prisma.TransactionClient;
 
@@ -87,7 +99,7 @@ export class RewardsService {
         });
 
         if (action.stampKey && status === 'CONFIRMED') {
-          await this.mintStamp(tx, userId, action.stampKey, opts.passportId, opts.propertyId);
+          await this.mintStamp(tx, userId, action.stampKey, action.points, opts.passportId, opts.propertyId);
         }
 
         return created;
@@ -121,7 +133,7 @@ export class RewardsService {
 
       const action = await tx.rewardAction.findUnique({ where: { actionKey } });
       if (action?.stampKey) {
-        await this.mintStamp(tx, userId, action.stampKey, entry.passportId ?? undefined, entry.propertyId ?? undefined);
+        await this.mintStamp(tx, userId, action.stampKey, action.points, entry.passportId ?? undefined, entry.propertyId ?? undefined);
       }
 
       return confirmed;
@@ -132,6 +144,7 @@ export class RewardsService {
     tx: Tx,
     userId: string,
     stampKey: string,
+    points: number,
     passportId?: string,
     propertyId?: string,
   ) {
@@ -147,7 +160,16 @@ export class RewardsService {
     });
     if (existing) return;
     await tx.userStamp.create({
-      data: { userId, stampDefinitionId: stampDef.id, passportId, propertyId },
+      data: {
+        userId,
+        stampDefinitionId: stampDef.id,
+        passportId,
+        propertyId,
+        // Snapshot at mint time so the PassportAchievement celebration
+        // payload (GET /rewards/stamps/uncelebrated) needs no extra join
+        // back to PointsLedgerEntry to know how many points to display.
+        pointsAwarded: points,
+      },
     });
   }
 
@@ -233,11 +255,99 @@ export class RewardsService {
     return { balance: user?.rewardPointsBalance ?? 0 };
   }
 
+  // Combined balance + level + streak, for the section-screen summary
+  // card. Kept separate from getBalance() (used in several other places
+  // expecting just `{ balance }`) rather than widening that response.
+  async getProgress(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { rewardPointsBalance: true, currentStreak: true, longestStreak: true },
+    });
+    const balance = user?.rewardPointsBalance ?? 0;
+    return {
+      balance,
+      level: getLevelProgress(balance),
+      streak: {
+        current: user?.currentStreak ?? 0,
+        longest: user?.longestStreak ?? 0,
+      },
+    };
+  }
+
+  // Advances the daily-activity streak — call on any real question
+  // interaction (see QuestionService.answerQuestion). Idempotent per UTC
+  // calendar day: a second call the same day is a no-op. Never throws —
+  // callers fire this without letting it affect the response they're
+  // already sending back.
+  async recordDailyActivity(userId: string) {
+    const today = utcMidnight(new Date());
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { lastActiveDate: true, currentStreak: true, longestStreak: true },
+    });
+    if (!user) return;
+
+    const last = user.lastActiveDate ? utcMidnight(user.lastActiveDate) : null;
+    if (last && last.getTime() === today.getTime()) return; // already counted today
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const isConsecutive = !!last && today.getTime() - last.getTime() === oneDayMs;
+    const newStreak = isConsecutive ? user.currentStreak + 1 : 1;
+    const newLongest = Math.max(user.longestStreak, newStreak);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { currentStreak: newStreak, longestStreak: newLongest, lastActiveDate: today },
+    });
+
+    // One-time bonus per distinct streak run reaching a milestone length —
+    // subjectId is the date the milestone was hit, so a later streak that
+    // breaks and rebuilds back up to (say) 3 days can earn it again.
+    const hit = STREAK_MILESTONES.find((m) => m.days === newStreak);
+    if (hit) {
+      const subjectId = today.toISOString().slice(0, 10);
+      await this.award(userId, hit.actionKey, subjectId).catch(() => {});
+    }
+  }
+
   async getStamps(userId: string) {
     return this.prisma.userStamp.findMany({
       where: { userId },
       include: { stampDefinition: true },
       orderBy: { awardedAt: 'desc' },
+    });
+  }
+
+  // Stamps minted but not yet shown via the PassportAchievement celebration.
+  // Every award() call site is fire-and-forget from its HTTP response's
+  // perspective (see award()'s callers), so the frontend can't learn about
+  // a new stamp from a response body — it has to ask. Ascending order so
+  // if several queued up (offline, background KYC approval, ...), the
+  // oldest achievement celebrates first.
+  async getUncelebratedStamps(userId: string) {
+    return this.prisma.userStamp.findMany({
+      where: { userId, celebratedAt: null },
+      include: { stampDefinition: true },
+      orderBy: { awardedAt: 'asc' },
+    });
+  }
+
+  // Idempotent ack — scoped by userId (ownership) and celebratedAt: null
+  // (a second call for the same stamp is a no-op, not an error).
+  async markStampCelebrated(userId: string, userStampId: string) {
+    const result = await this.prisma.userStamp.updateMany({
+      where: { id: userStampId, userId, celebratedAt: null },
+      data: { celebratedAt: new Date() },
+    });
+    return { acknowledged: result.count > 0 };
+  }
+
+  // Full active stamp set (earned + locked), for the Passport Stamps
+  // collection view — diffed against getStamps() client-side.
+  async getStampsCatalogue() {
+    return this.prisma.stampDefinition.findMany({
+      where: { active: true },
+      orderBy: { tier: 'asc' },
     });
   }
 

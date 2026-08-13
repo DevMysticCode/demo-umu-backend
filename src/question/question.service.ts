@@ -95,6 +95,12 @@ export class QuestionService {
       data: { status: "COMPLETED" },
     });
 
+    // Counts today toward the daily-activity streak regardless of whether
+    // this question was already answered before — any real interaction on
+    // the passport should keep a streak alive, not just first-time
+    // completions. Fire-and-forget: never let this affect the save.
+    this.rewardsService.recordDailyActivity(userId).catch(() => {});
+
     // Award points the first time this question is ever completed. Never
     // let a rewards hiccup fail the answer save — the DB unique constraint
     // on passportQuestionId is the real idempotency guarantee regardless
