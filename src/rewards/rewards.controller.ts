@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { RewardsService } from './rewards.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
@@ -11,6 +11,13 @@ export class RewardsController {
   @Get('balance')
   async getBalance(@Request() req: any) {
     return this.rewardsService.getBalance(req.user.id);
+  }
+
+  // GET /rewards/progress — balance + level + streak, for the
+  // section-screen summary card.
+  @Get('progress')
+  async getProgress(@Request() req: any) {
+    return this.rewardsService.getProgress(req.user.id);
   }
 
   // GET /rewards/history?limit=20&cursor=<entryId>
@@ -26,10 +33,27 @@ export class RewardsController {
     });
   }
 
+  @Get('stamps/uncelebrated')
+  async getUncelebratedStamps(@Request() req: any) {
+    return this.rewardsService.getUncelebratedStamps(req.user.id);
+  }
+
+  @Get('stamps/catalogue')
+  async getStampsCatalogue() {
+    return this.rewardsService.getStampsCatalogue();
+  }
+
   // GET /rewards/stamps — this user's earned Passport Stamps.
   @Get('stamps')
   async getStamps(@Request() req: any) {
     return this.rewardsService.getStamps(req.user.id);
+  }
+
+  // POST /rewards/stamps/:id/celebrate — ack a PassportAchievement
+  // celebration so it never replays. Idempotent.
+  @Post('stamps/:id/celebrate')
+  async celebrateStamp(@Request() req: any, @Param('id') id: string) {
+    return this.rewardsService.markStampCelebrated(req.user.id, id);
   }
 
   // GET /rewards/catalogue — display-only reward tiles. Nothing here is

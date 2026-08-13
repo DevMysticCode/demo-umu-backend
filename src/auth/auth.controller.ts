@@ -12,10 +12,13 @@ import {
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
 
-// Credential-sensitive endpoints use the `auth` bucket (5 req/min/IP).
-// Defined as a constant so we can keep the rules visible at the top
-// of the file instead of repeating the literal on every handler.
-const AUTH_THROTTLE = { auth: { limit: 5, ttl: 60_000 } };
+// Credential-sensitive endpoints override the global 'default' bucket's
+// limit down to 5 req/min/IP, scoped to just these routes (there's no
+// separate 'auth' bucket registered in app.module.ts — see the note
+// there for why a second globally-registered bucket doesn't stay scoped).
+// Defined as a constant so we can keep the rule visible at the top of
+// the file instead of repeating the literal on every handler.
+const AUTH_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
 
 @Controller('auth')
 export class AuthController {

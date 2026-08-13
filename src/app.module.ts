@@ -63,10 +63,19 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
         ttl: 60_000,
         limit: process.env.NODE_ENV === 'production' ? 300 : 10_000,
       },
-      // Tight bucket for credential-sensitive endpoints. Brute force
-      // an OTP at 5/min and it'll take a year to cover a 6-digit space.
-      // Kept tight even in dev to catch validator regressions early.
-      { name: 'auth',    ttl: 60_000, limit: 5  },
+      // NOTE: credential-sensitive endpoints (OTP/login/register) do NOT
+      // get a second globally-registered named bucket here — every named
+      // throttler registered in this array applies to EVERY route by
+      // default (nestjs-throttler v6 semantics: a route must opt OUT via
+      // @SkipThrottle({name: true}) per bucket name, and bare
+      // @SkipThrottle() only opts out of 'default'). A previously-added
+      // 'auth' bucket here was silently rate-limiting the entire API to
+      // 5 req/min/IP — /tasks/:id/questions, /property/search, etc. —
+      // even though those routes had @SkipThrottle() (which only skips
+      // 'default'). Fixed by having AuthController's @Throttle(...)
+      // override the *existing* 'default' bucket's limit down to 5 for
+      // just those routes, instead of introducing a second global bucket.
+      // See AUTH_THROTTLE in auth.controller.ts.
     ]),
     PrismaModule,
     AuthModule,

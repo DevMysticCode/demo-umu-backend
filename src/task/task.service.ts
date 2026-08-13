@@ -213,6 +213,18 @@ export class TaskService {
         icon: '📎',
         metadata: { sectionKey: currentSection.key },
       });
+      // Section-completion bonus, on top of whatever per-question points
+      // were already earned along the way. subjectId = sectionId, so this
+      // can only ever fire once per section. Never allowed to block task
+      // completion — same fire-and-forget pattern as CORE_PASSPORT_COMPLETE
+      // below.
+      this.rewards
+        .award(userId, 'SECTION_COMPLETE_BONUS', sectionId, {
+          passportId: currentSection.passportId,
+        })
+        .catch((err) =>
+          console.error(`[Rewards] SECTION_COMPLETE_BONUS award failed: ${err?.message}`),
+        );
       const nextSection = await this.prisma.passportSection.findFirst({
         where: {
           passportId: currentSection.passportId,

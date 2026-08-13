@@ -34,14 +34,77 @@ const prisma = new PrismaClient();
 
 // ── Stamp definitions ────────────────────────────────────────────
 // Deliberately rarer than RewardAction rows — only major-milestone
-// actions mint one (see stampKey below). No icon/UI wired yet.
+// actions mint one (see stampKey below).
+//
+// subtitle/description/checklistItems are the PassportAchievement
+// celebration's right-hand-page copy (see components/rewards/
+// PassportAchievement.vue on the frontend) — kept here, not hardcoded
+// per-achievement in the client, so new stamps can ship without a
+// frontend release. checklistItems deliberately does NOT include a
+// "Verified on <date>" line — the component always appends that itself
+// from the award's completedAt, per achievement, so it isn't baked into
+// seed data.
 const STAMPS = [
-  { key: 'IDENTITY_VERIFIED', journeyType: 'GLOBAL', title: 'Identity Verified', description: 'You completed identity verification (KYC).', tier: 1 },
-  { key: 'FIRST_PROPERTY_PASSPORT', journeyType: 'OWNER', title: 'First Property Passport', description: 'You claimed your first property and verified ownership.', tier: 1 },
-  { key: 'PASSPORT_COMPLETE', journeyType: 'OWNER', title: 'Passport Complete', description: 'You completed every section of your Property Passport.', tier: 2 },
-  { key: 'MOVE_READY', journeyType: 'OWNER', title: 'Move Ready', description: 'Your property became sale/move ready.', tier: 3 },
-  { key: 'BUYER_READY', journeyType: 'BUYER', title: 'Buyer Ready', description: 'Your Buyer Passport reached fully-ready status.', tier: 2 },
-  { key: 'TENANT_READY', journeyType: 'TENANT', title: 'Tenant Ready', description: 'Your Tenant Passport reached ready status.', tier: 2 },
+  {
+    key: 'IDENTITY_VERIFIED',
+    journeyType: 'GLOBAL',
+    title: 'Identity Verified',
+    subtitle: "You've confirmed who you are.",
+    description: 'Your identity has been securely verified, helping make your Property Passport trusted and ready for the next step.',
+    checklistItems: ['Identity check complete'],
+    iconAsset: '/op-icons/verify-identity/idCardChecked.png',
+    tier: 1,
+  },
+  {
+    key: 'FIRST_PROPERTY_PASSPORT',
+    journeyType: 'OWNER',
+    title: 'Property Claimed',
+    subtitle: 'Your property is officially claimed.',
+    description: "You've claimed this property and verified your ownership, unlocking your Property Passport.",
+    checklistItems: ['Property claimed', 'Ownership verified'],
+    iconAsset: '/op-icons/watchThisProperty/ownerClaim.png',
+    tier: 1,
+  },
+  {
+    key: 'PASSPORT_COMPLETE',
+    journeyType: 'OWNER',
+    title: 'Passport Complete',
+    subtitle: 'Every section is filled in.',
+    description: "You've completed every section of your Property Passport, giving buyers and agents the full picture.",
+    checklistItems: ['All sections complete'],
+    iconAsset: '/op-icons/watchThisProperty/passportPublished.png',
+    tier: 2,
+  },
+  {
+    key: 'MOVE_READY',
+    journeyType: 'OWNER',
+    title: 'Move Ready',
+    subtitle: 'Your home is ready to move.',
+    description: 'Your property has reached sale/move-ready status — the strongest signal you can give buyers.',
+    checklistItems: ['Move-ready status reached'],
+    iconAsset: '/op-icons/homescore/targetPathway.png',
+    tier: 3,
+  },
+  {
+    key: 'BUYER_READY',
+    journeyType: 'BUYER',
+    title: 'Buyer Ready',
+    subtitle: "You're a fully verified buyer.",
+    description: 'Your Buyer Passport has reached fully-ready status, helping sellers take your offer seriously.',
+    checklistItems: ['Buyer Passport complete'],
+    iconAsset: '/op-icons/investment/handshake.png',
+    tier: 2,
+  },
+  {
+    key: 'TENANT_READY',
+    journeyType: 'TENANT',
+    title: 'Tenant Ready',
+    subtitle: "You're ready to rent.",
+    description: 'Your Tenant Passport has reached ready status, helping landlords trust your application.',
+    checklistItems: ['Tenant Passport complete'],
+    iconAsset: '/op-icons/investment/house.png',
+    tier: 2,
+  },
 ] as const;
 
 // ── Reward actions — "what CAN earn points" ─────────────────────
@@ -209,6 +272,60 @@ const ACTIONS = [
     description: 'Major completion milestone. NOT YET WIRED.',
     active: false,
   },
+  {
+    actionKey: 'SECTION_COMPLETE_BONUS',
+    journeyType: 'GLOBAL',
+    label: 'Finish a passport section',
+    points: 30,
+    stampKey: null,
+    firstTimeOnly: true, // per-section (subjectId = passportSectionId)
+    verificationRequired: false,
+    description: 'Bonus on top of per-question points when every task in a section is completed.',
+  },
+  // Streak milestones — repeatable across distinct streak runs, since
+  // subjectId is the UTC date the milestone was hit (not a fixed value),
+  // so a streak that breaks and rebuilds can earn the same milestone
+  // again. See RewardsService.recordDailyActivity().
+  {
+    actionKey: 'STREAK_3_DAY',
+    journeyType: 'GLOBAL',
+    label: '3-day activity streak',
+    points: 10,
+    stampKey: null,
+    firstTimeOnly: false,
+    verificationRequired: false,
+    description: 'Answered at least one question on 3 consecutive days.',
+  },
+  {
+    actionKey: 'STREAK_7_DAY',
+    journeyType: 'GLOBAL',
+    label: '7-day activity streak',
+    points: 25,
+    stampKey: null,
+    firstTimeOnly: false,
+    verificationRequired: false,
+    description: 'Answered at least one question on 7 consecutive days.',
+  },
+  {
+    actionKey: 'STREAK_14_DAY',
+    journeyType: 'GLOBAL',
+    label: '14-day activity streak',
+    points: 50,
+    stampKey: null,
+    firstTimeOnly: false,
+    verificationRequired: false,
+    description: 'Answered at least one question on 14 consecutive days.',
+  },
+  {
+    actionKey: 'STREAK_30_DAY',
+    journeyType: 'GLOBAL',
+    label: '30-day activity streak',
+    points: 100,
+    stampKey: null,
+    firstTimeOnly: false,
+    verificationRequired: false,
+    description: 'Answered at least one question on 30 consecutive days.',
+  },
 ] as const;
 
 // ── Reward catalogue — display-only, nothing redeemable yet ─────
@@ -248,21 +365,19 @@ const CATALOGUE = [
 async function main() {
   console.log('Seeding stamp definitions...');
   for (const s of STAMPS) {
+    const shared = {
+      journeyType: s.journeyType as any,
+      title: s.title,
+      subtitle: s.subtitle,
+      description: s.description,
+      checklistItems: s.checklistItems as any,
+      iconAsset: s.iconAsset,
+      tier: s.tier,
+    };
     await prisma.stampDefinition.upsert({
       where: { key: s.key },
-      update: {
-        journeyType: s.journeyType as any,
-        title: s.title,
-        description: s.description,
-        tier: s.tier,
-      },
-      create: {
-        key: s.key,
-        journeyType: s.journeyType as any,
-        title: s.title,
-        description: s.description,
-        tier: s.tier,
-      },
+      update: shared,
+      create: { key: s.key, ...shared },
     });
   }
   console.log(`  ${STAMPS.length} stamp definitions upserted.`);
