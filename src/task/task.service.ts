@@ -7,6 +7,8 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportService } from '../passport/passport.service';
 import { RewardsService } from '../rewards/rewards.service';
+import { sectionBonusActionKey } from '../rewards/section-bonuses';
+import { StampEvaluatorService } from '../rewards/stamp-evaluator';
 
 @Injectable()
 export class TaskService {
@@ -14,6 +16,7 @@ export class TaskService {
     private prisma: PrismaService,
     private passportService: PassportService,
     private rewards: RewardsService,
+    private stampEvaluator: StampEvaluatorService,
   ) {}
 
   async getTaskQuestions(taskId: string, userId: string) {
@@ -183,6 +186,14 @@ export class TaskService {
       data: { status: 'COMPLETED' },
     });
 
+    // UMU Stamp Reward System V1 — re-checks every stamp this task's
+    // completion could have just satisfied (this task alone, or as the
+    // last piece of a multi-task/cross-section group). Fire-and-forget:
+    // never allowed to block task completion.
+    this.stampEvaluator
+      .evaluatePassport(passportId, userId)
+      .catch((err) => console.error(`[StampEvaluator] failed: ${err?.message}`));
+
     const sectionId = task.passportSection.id;
 
     const tasksInSection = await this.prisma.passportSectionTask.findMany({
@@ -196,71 +207,105 @@ export class TaskService {
 
     let sectionCompleted = false;
     let nextSectionId: string | undefined;
+    let awardedBonusPoints = 0;
+    let balanceAfterBonus: number | undefined;
 
     if (allTasksCompleted) {
-      await this.prisma.passportSection.update({
-        where: { id: sectionId },
-        data: { status: 'COMPLETED' },
-      });
       sectionCompleted = true;
-
       const currentSection = task.passportSection;
-      // Record an immutable activity-ledger entry — surfaces on the Timeline tab.
-      await this.passportService.logActivity(currentSection.passportId, {
-        type: 'SECTION_COMPLETED',
-        title: `${currentSection.title} completed & verified`,
-        actor: 'You',
-        icon: '📎',
-        metadata: { sectionKey: currentSection.key },
-      });
-      // Section-completion bonus, on top of whatever per-question points
-      // were already earned along the way. subjectId = sectionId, so this
-      // can only ever fire once per section. Never allowed to block task
-      // completion — same fire-and-forget pattern as CORE_PASSPORT_COMPLETE
-      // below.
-      this.rewards
-        .award(userId, 'SECTION_COMPLETE_BONUS', sectionId, {
-          passportId: currentSection.passportId,
-        })
-        .catch((err) =>
-          console.error(`[Rewards] SECTION_COMPLETE_BONUS award failed: ${err?.message}`),
-        );
-      const nextSection = await this.prisma.passportSection.findFirst({
-        where: {
-          passportId: currentSection.passportId,
-          order: {
-            gt: currentSection.order,
-          },
-        },
-        orderBy: { order: 'asc' },
-      });
+      const actionKey = sectionBonusActionKey(currentSection.key);
 
-      if (nextSection) {
-        await this.prisma.passportSection.update({
-          where: { id: nextSection.id },
-          data: { status: 'ACTIVE' },
+      // Guards against re-running the one-time completion side effects
+      // (activity log, bonus award, next-section unlock) on every
+      // subsequent completeTask call for this section — e.g. re-toggling
+      // an already-answered NOTE question re-triggers this endpoint, and
+      // without this check it would log a duplicate Timeline entry and
+      // attempt to re-award the bonus (harmlessly blocked by the ledger's
+      // idempotency guard, but reporting a false "0 pts" bonus back to a
+      // celebration screen that's already been shown once).
+      if (currentSection.status === 'COMPLETED') {
+        const existingEntry = await this.prisma.pointsLedgerEntry.findUnique({
+          where: { userId_actionKey_subjectId: { userId, actionKey, subjectId: sectionId } },
         });
-        nextSectionId = nextSection.id;
+        if (existingEntry) {
+          awardedBonusPoints = existingEntry.amount;
+          balanceAfterBonus = existingEntry.balanceAfter;
+        }
+        const nextSection = await this.prisma.passportSection.findFirst({
+          where: { passportId: currentSection.passportId, order: { gt: currentSection.order } },
+          orderBy: { order: 'asc' },
+        });
+        if (nextSection) nextSectionId = nextSection.id;
       } else {
-        // No next section left to activate — check whether every section
-        // on this passport is now COMPLETED (re-query rather than assume
-        // order-based "last section" means "all done", since sections can
-        // in principle be skipped/reordered). "Complete core Property
-        // Passport" — 1000 pts per the client's Major Actions Points
-        // Framework. subjectId = passportId, so this can only ever fire
-        // once per passport. Never allowed to block task completion.
-        const allSections = await this.prisma.passportSection.findMany({
-          where: { passportId: currentSection.passportId },
-          select: { status: true },
+        await this.prisma.passportSection.update({
+          where: { id: sectionId },
+          data: { status: 'COMPLETED' },
         });
-        if (allSections.length > 0 && allSections.every((s) => s.status === 'COMPLETED')) {
-          this.rewards
-            .award(userId, 'CORE_PASSPORT_COMPLETE', currentSection.passportId, {
-              passportId: currentSection.passportId,
-            })
-            .catch((err) =>
-              console.error(`[Rewards] CORE_PASSPORT_COMPLETE award failed: ${err?.message}`),
-            );
+
+        // Record an immutable activity-ledger entry — surfaces on the Timeline tab.
+        await this.passportService.logActivity(currentSection.passportId, {
+          type: 'SECTION_COMPLETED',
+          title: `${currentSection.title} completed & verified`,
+          actor: 'You',
+          icon: '📎',
+          metadata: { sectionKey: currentSection.key },
+        });
+        // Section-completion bonus, on top of whatever per-question points
+        // were already earned along the way. Amount varies by section (see
+        // section-bonuses.ts) — subjectId = sectionId, so this can only
+        // ever fire once per section. Awaited (unlike CORE_PASSPORT_COMPLETE
+        // below) because the section-complete celebration screen needs the
+        // exact bonus amount + resulting balance to show "425 -> 455 pts" —
+        // still wrapped in try/catch so a rewards hiccup never fails task
+        // completion itself.
+        try {
+          const awarded = await this.rewards.award(userId, actionKey, sectionId, {
+            passportId: currentSection.passportId,
+          });
+          if (awarded) {
+            awardedBonusPoints = awarded.amount;
+            balanceAfterBonus = awarded.balanceAfter;
+          }
+        } catch (err: any) {
+          console.error(`[Rewards] ${actionKey} award failed: ${err?.message}`);
+        }
+        const nextSection = await this.prisma.passportSection.findFirst({
+          where: {
+            passportId: currentSection.passportId,
+            order: {
+              gt: currentSection.order,
+            },
+          },
+          orderBy: { order: 'asc' },
+        });
+
+        if (nextSection) {
+          await this.prisma.passportSection.update({
+            where: { id: nextSection.id },
+            data: { status: 'ACTIVE' },
+          });
+          nextSectionId = nextSection.id;
+        } else {
+          // No next section left to activate — check whether every section
+          // on this passport is now COMPLETED (re-query rather than assume
+          // order-based "last section" means "all done", since sections can
+          // in principle be skipped/reordered). "Complete core Property
+          // Passport" — 1000 pts per the client's Major Actions Points
+          // Framework. subjectId = passportId, so this can only ever fire
+          // once per passport. Never allowed to block task completion.
+          const allSections = await this.prisma.passportSection.findMany({
+            where: { passportId: currentSection.passportId },
+            select: { status: true },
+          });
+          if (allSections.length > 0 && allSections.every((s) => s.status === 'COMPLETED')) {
+            this.rewards
+              .award(userId, 'CORE_PASSPORT_COMPLETE', currentSection.passportId, {
+                passportId: currentSection.passportId,
+              })
+              .catch((err) =>
+                console.error(`[Rewards] CORE_PASSPORT_COMPLETE award failed: ${err?.message}`),
+              );
+          }
         }
       }
     }
@@ -269,6 +314,8 @@ export class TaskService {
       success: true,
       sectionCompleted,
       nextSectionId,
+      sectionBonusPoints: awardedBonusPoints,
+      balanceAfterBonus,
     };
   }
 }

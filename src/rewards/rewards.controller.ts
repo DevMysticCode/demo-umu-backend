@@ -38,9 +38,11 @@ export class RewardsController {
     return this.rewardsService.getUncelebratedStamps(req.user.id);
   }
 
+  // GET /rewards/stamps/catalogue?passportId=... — passportId is optional
+  // but needed for per-property applicability (see getStampsCatalogue).
   @Get('stamps/catalogue')
-  async getStampsCatalogue() {
-    return this.rewardsService.getStampsCatalogue();
+  async getStampsCatalogue(@Query('passportId') passportId?: string) {
+    return this.rewardsService.getStampsCatalogue(passportId);
   }
 
   // GET /rewards/stamps — this user's earned Passport Stamps.

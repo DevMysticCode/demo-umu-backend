@@ -12763,6 +12763,21 @@ const QUESTION_TEMPLATES: QSeed[] = [
     points: 75,
     order: 1,
   },
+  // UMU Stamp Reward System V1 — the actual title-register/plan upload
+  // this section is meant to cover (the question above is an unrelated
+  // planning-notices stub carried over by an earlier copy/paste — left in
+  // place rather than removed, since existing passports may already have
+  // answered it).
+  {
+    sectionKey: 'titleDeedsAndPlan',
+    taskKey: 'title_deeds_review',
+    title: 'Please upload the Title Register and Title Plan.',
+    description: 'Retrieved from HM Land Registry or supplied directly.',
+    type: 'UPLOAD',
+    helpText: 'The official Title Register and Title Plan for this property, from HM Land Registry.',
+    points: 75,
+    order: 2,
+  },
 
   // ────────────────────────────────────────────
   // SEARCHES
@@ -12779,6 +12794,60 @@ const QUESTION_TEMPLATES: QSeed[] = [
       { label: 'Yes', value: 'yes' },
       { label: 'No', value: 'no' },
     ],
+    points: 75,
+    order: 1,
+  },
+  // UMU Stamp Reward System V1 — searches stay individual (each is its
+  // own stamp per the client spec), manual-upload for V1 rather than a
+  // live search-ordering integration: the user orders the search
+  // themselves and uploads the result here.
+  {
+    sectionKey: 'searches',
+    taskKey: 'local_authority_search',
+    title: 'Please upload your Local Authority Search.',
+    description: 'A LLC1/CON29 or equivalent Local Authority Search result.',
+    type: 'UPLOAD',
+    helpText: 'Order this from your local council (or a search provider) and upload the result once received.',
+    points: 75,
+    order: 1,
+  },
+  {
+    sectionKey: 'searches',
+    taskKey: 'drainage_water_search',
+    title: 'Please upload your Drainage & Water Search.',
+    description: 'Confirms how the property connects to public sewers and water supply.',
+    type: 'UPLOAD',
+    helpText: 'Order this from your water authority (or a search provider) and upload the result once received.',
+    points: 75,
+    order: 1,
+  },
+  {
+    sectionKey: 'searches',
+    taskKey: 'environmental_search',
+    title: 'Please upload your Environmental Search.',
+    description: 'Covers contaminated land, flood risk and other environmental factors.',
+    type: 'UPLOAD',
+    helpText: 'Order this from an environmental search provider and upload the result once received.',
+    points: 75,
+    order: 1,
+  },
+  {
+    sectionKey: 'searches',
+    taskKey: 'flood_search',
+    title: 'Please upload your Flood Search.',
+    description: 'A dedicated flood-risk search for the property.',
+    type: 'UPLOAD',
+    helpText: 'Order this from a search provider and upload the result once received.',
+    points: 75,
+    order: 1,
+  },
+  {
+    sectionKey: 'searches',
+    taskKey: 'mining_risk_search',
+    title: 'Please upload your Mining / Local Risk Search.',
+    description: 'Relevant where the property sits in a coalfield or other mining-affected area.',
+    type: 'UPLOAD',
+    helpText: 'Only relevant if the property is in a known mining or local-risk area — order from the Coal Authority or a search provider and upload the result once received.',
     points: 75,
     order: 1,
   },
