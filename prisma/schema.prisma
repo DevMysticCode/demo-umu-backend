@@ -681,9 +681,19 @@ model StampDefinition {
   checklistItems Json? // string[] — "✓ Identity check complete" style lines
   iconAsset   String? // path under /op-icons, matches the frontend's existing icon-reuse convention
   tier        Int?        @default(1) // for future rarity/visual ordering only
+  // UMU Stamp Reward System V1 grouping — CORE | TA6 | TA10 | SEARCHES |
+  // LEASEHOLD, matches the client spec's own section headings. Null for
+  // the earlier (pre-V1) stamps (Passport Complete, Move Ready, Buyer/
+  // Tenant Ready) that sit outside this spec as their own tier.
+  category    String?
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
   userStamps  UserStamp[]
+}
+
+enum StampVerificationStatus {
+  EARNED
+  VERIFIED
 }
 
 model UserStamp {
@@ -702,6 +712,18 @@ model UserStamp {
   // HTTP response's perspective, so the frontend discovers new stamps by
   // polling this field rather than via an inline API response.
   celebratedAt      DateTime?
+  // UMU Stamp Reward System V1 — every stamp is minted straight into
+  // EARNED (no verification workflow exists yet); VERIFIED is a real
+  // state the schema supports for when one gets built, not something
+  // anything transitions into today.
+  verificationStatus StampVerificationStatus @default(EARNED)
+  // What actually satisfied this stamp — e.g. "TASK:services:electricity"
+  // or "GROUP:leasehold:documents:order=1" — see stamp-catalogue.ts. Kept
+  // for audit/debugging since a stamp's trigger can span several tasks.
+  triggerEvent      String?
+  // QuestionAnswer ids that supplied the evidence for this stamp, so the
+  // stamp can link back to what was actually uploaded.
+  supportingDocumentIds Json? // string[]
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   stampDefinition   StampDefinition @relation(fields: [stampDefinitionId], references: [id])
 

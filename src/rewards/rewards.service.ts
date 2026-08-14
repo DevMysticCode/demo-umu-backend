@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { Prisma, JourneyType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLevelProgress } from './levels';
+import { STAMP_CATALOGUE } from './stamp-catalogue';
 
 const STREAK_MILESTONES = [
   { days: 3, actionKey: 'STREAK_3_DAY' },
@@ -35,6 +36,11 @@ export interface AwardOptions {
   propertyId?: string;
   description?: string;
   metadata?: AwardMetadata;
+  // UMU Stamp Reward System V1 (stamp-evaluator.ts) — what satisfied the
+  // stamp and which QuestionAnswer ids supplied the evidence, if this
+  // award mints one. Ignored when the action has no stampKey.
+  stampTriggerEvent?: string;
+  stampSupportingDocumentIds?: string[];
 }
 
 @Injectable()
@@ -99,7 +105,16 @@ export class RewardsService {
         });
 
         if (action.stampKey && status === 'CONFIRMED') {
-          await this.mintStamp(tx, userId, action.stampKey, action.points, opts.passportId, opts.propertyId);
+          await this.mintStamp(
+            tx,
+            userId,
+            action.stampKey,
+            action.points,
+            opts.passportId,
+            opts.propertyId,
+            opts.stampTriggerEvent,
+            opts.stampSupportingDocumentIds,
+          );
         }
 
         return created;
@@ -147,6 +162,8 @@ export class RewardsService {
     points: number,
     passportId?: string,
     propertyId?: string,
+    triggerEvent?: string,
+    supportingDocumentIds?: string[],
   ) {
     const stampDef = await tx.stampDefinition.findUnique({ where: { key: stampKey } });
     if (!stampDef || !stampDef.active) return;
@@ -169,6 +186,8 @@ export class RewardsService {
         // payload (GET /rewards/stamps/uncelebrated) needs no extra join
         // back to PointsLedgerEntry to know how many points to display.
         pointsAwarded: points,
+        triggerEvent,
+        supportingDocumentIds: supportingDocumentIds as any,
       },
     });
   }
@@ -343,12 +362,33 @@ export class RewardsService {
   }
 
   // Full active stamp set (earned + locked), for the Passport Stamps
-  // collection view — diffed against getStamps() client-side.
-  async getStampsCatalogue() {
-    return this.prisma.stampDefinition.findMany({
+  // collection view — diffed against getStamps() client-side. When
+  // passportId is given, each stamp is annotated with `applicable` so the
+  // UI can hide ones that don't apply to this property (the client spec's
+  // "never show a stamp that doesn't apply" rule) — V1 only has one real
+  // applicability signal (does this passport have a leasehold section),
+  // see the comment on `requiresLeasehold` in stamp-catalogue.ts for why
+  // the other conditional stamps aren't gated yet.
+  async getStampsCatalogue(passportId?: string) {
+    const stamps = await this.prisma.stampDefinition.findMany({
       where: { active: true },
       orderBy: { tier: 'asc' },
     });
+
+    if (!passportId) return stamps.map((s) => ({ ...s, applicable: true }));
+
+    const leaseholdSection = await this.prisma.passportSection.findFirst({
+      where: { passportId, key: 'leasehold' },
+      select: { id: true },
+    });
+    const leaseholdGatedKeys = new Set(
+      STAMP_CATALOGUE.filter((s) => s.requiresLeasehold).map((s) => s.key),
+    );
+
+    return stamps.map((s) => ({
+      ...s,
+      applicable: leaseholdGatedKeys.has(s.key) ? !!leaseholdSection : true,
+    }));
   }
 
   async getCatalogue() {

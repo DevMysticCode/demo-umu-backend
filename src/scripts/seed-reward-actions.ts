@@ -15,6 +15,8 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { SECTION_BONUS_POINTS, sectionBonusActionKey } from '../rewards/section-bonuses';
+import { STAMP_CATALOGUE, stampActionKey } from '../rewards/stamp-catalogue';
 
 const path = require('path');
 const fs = require('fs');
@@ -56,10 +58,14 @@ const STAMPS = [
     tier: 1,
   },
   {
+    // Key unchanged from its original "Property Claimed" naming to avoid
+    // churn on already-earned rows — retitled to match UMU Stamp Reward
+    // System V1 stamp (2) "Ownership Verified", same underlying trigger
+    // (OWNERSHIP_VERIFIED action, below).
     key: 'FIRST_PROPERTY_PASSPORT',
     journeyType: 'OWNER',
-    title: 'Property Claimed',
-    subtitle: 'Your property is officially claimed.',
+    title: 'Ownership Verified',
+    subtitle: 'Your ownership of this property is verified.',
     description: "You've claimed this property and verified your ownership, unlocking your Property Passport.",
     checklistItems: ['Property claimed', 'Ownership verified'],
     iconAsset: '/op-icons/watchThisProperty/ownerClaim.png',
@@ -107,6 +113,24 @@ const STAMPS = [
   },
 ] as const;
 
+// UMU Stamp Reward System V1 — one StampDefinition per STAMP_CATALOGUE
+// entry (src/rewards/stamp-catalogue.ts is the single source of truth for
+// title/subtitle/description/category; RewardAction rows generated from
+// the same list further below). No iconAsset yet for any of these —
+// StampFrame.vue's generic fallback badge covers them until real art
+// exists, same pattern used for the original 6 stamps' initial rollout.
+const STAMP_V1_ENTRIES = STAMP_CATALOGUE.map((s) => ({
+  key: s.key,
+  journeyType: 'OWNER' as const,
+  title: s.title,
+  subtitle: s.subtitle,
+  description: s.description,
+  checklistItems: null as string[] | null,
+  iconAsset: null as string | null,
+  tier: 1,
+  category: s.category,
+}));
+
 // ── Reward actions — "what CAN earn points" ─────────────────────
 // Note on "Landlord claims Property Passport + ownership verified" (750,
 // per the client's table): this is the SAME underlying event as
@@ -142,7 +166,7 @@ const ACTIONS = [
     actionKey: 'OWNERSHIP_VERIFIED',
     journeyType: 'OWNER',
     label: 'Claim a property + verify ownership',
-    points: 750,
+    points: 500, // UMU Stamp Reward System V1 — flat 500 per stamp
     stampKey: 'FIRST_PROPERTY_PASSPORT',
     firstTimeOnly: true, // per-property (subjectId = propertyId), not per-user-ever
     verificationRequired: false,
@@ -272,16 +296,10 @@ const ACTIONS = [
     description: 'Major completion milestone. NOT YET WIRED.',
     active: false,
   },
-  {
-    actionKey: 'SECTION_COMPLETE_BONUS',
-    journeyType: 'GLOBAL',
-    label: 'Finish a passport section',
-    points: 30,
-    stampKey: null,
-    firstTimeOnly: true, // per-section (subjectId = passportSectionId)
-    verificationRequired: false,
-    description: 'Bonus on top of per-question points when every task in a section is completed.',
-  },
+  // Section-completion bonus is NOT a single flat action — see
+  // SECTION_BONUS_ACTIONS below (generated from section-bonuses.ts,
+  // one action per passport section key, points varying by the
+  // section's conveyancing significance).
   // Streak milestones — repeatable across distinct streak runs, since
   // subjectId is the UTC date the milestone was hit (not a fixed value),
   // so a streak that breaks and rebuilds can earn the same milestone
@@ -328,6 +346,35 @@ const ACTIONS = [
   },
 ] as const;
 
+// One action per passport section — see section-bonuses.ts for the actual
+// point values and the rationale behind each one.
+const SECTION_BONUS_ACTIONS = Object.entries(SECTION_BONUS_POINTS).map(([sectionKey, points]) => ({
+  actionKey: sectionBonusActionKey(sectionKey),
+  journeyType: 'GLOBAL' as const,
+  label: `Finish the ${sectionKey} section`,
+  points,
+  stampKey: null,
+  firstTimeOnly: true, // per-section (subjectId = passportSectionId)
+  verificationRequired: false,
+  description: `Bonus on top of per-question points when every task in the ${sectionKey} section is completed.`,
+}));
+
+// UMU Stamp Reward System V1 — one action per catalogue stamp, flat 500
+// points each per the client spec ("Each completed stamp = 500 points"),
+// each minting its matching StampDefinition (STAMP_V1_ENTRIES above).
+// subjectId = passportId when awarded (see StampEvaluatorService), so a
+// user earns each of these once per property/passport, not once ever.
+const STAMP_V1_ACTIONS = STAMP_CATALOGUE.map((s) => ({
+  actionKey: stampActionKey(s.key),
+  journeyType: 'OWNER' as const,
+  label: `Stamp: ${s.title}`,
+  points: 500,
+  stampKey: s.key,
+  firstTimeOnly: true, // per-passport (subjectId = passportId)
+  verificationRequired: false,
+  description: s.description,
+}));
+
 // ── Reward catalogue — display-only, nothing redeemable yet ─────
 // The two "already unlocked-looking" example partners from the client
 // mockup, plus its two explicit "Unlock at N points" locked examples.
@@ -364,7 +411,8 @@ const CATALOGUE = [
 
 async function main() {
   console.log('Seeding stamp definitions...');
-  for (const s of STAMPS) {
+  const allStamps = [...STAMPS, ...STAMP_V1_ENTRIES];
+  for (const s of allStamps) {
     const shared = {
       journeyType: s.journeyType as any,
       title: s.title,
@@ -373,6 +421,7 @@ async function main() {
       checklistItems: s.checklistItems as any,
       iconAsset: s.iconAsset,
       tier: s.tier,
+      category: (s as any).category ?? null,
     };
     await prisma.stampDefinition.upsert({
       where: { key: s.key },
@@ -380,10 +429,11 @@ async function main() {
       create: { key: s.key, ...shared },
     });
   }
-  console.log(`  ${STAMPS.length} stamp definitions upserted.`);
+  console.log(`  ${allStamps.length} stamp definitions upserted.`);
 
   console.log('Seeding reward actions...');
-  for (const a of ACTIONS) {
+  const allActions = [...ACTIONS, ...SECTION_BONUS_ACTIONS, ...STAMP_V1_ACTIONS];
+  for (const a of allActions) {
     const { actionKey, ...rest } = a;
     await prisma.rewardAction.upsert({
       where: { actionKey },
@@ -391,7 +441,7 @@ async function main() {
       create: { actionKey, ...rest, journeyType: rest.journeyType as any, active: (rest as any).active ?? true },
     });
   }
-  console.log(`  ${ACTIONS.length} reward actions upserted.`);
+  console.log(`  ${allActions.length} reward actions upserted.`);
 
   console.log('Seeding reward catalogue...');
   for (const c of CATALOGUE) {
