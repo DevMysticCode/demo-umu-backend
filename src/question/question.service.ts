@@ -191,4 +191,37 @@ export class QuestionService {
 
     return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
   }
+
+  // For a file uploaded as ONE PART of a MULTIPART question — e.g. the
+  // "photos" part of services/electricity, which sits alongside a
+  // separate property_rewired yes/no part in the SAME PassportQuestion.
+  // uploadQuestionFile() above upserts the whole QuestionAnswer row
+  // (wiping every other part's answer already in answerJson) and force-
+  // completes the question — correct for a real standalone upload
+  // question, destructive here. This only verifies access, stores the
+  // file, and returns its URL; the caller merges that URL into the
+  // part's own answer and saves the WHOLE multipart answer normally
+  // (MultipartQuestion.vue's updatePartAnswer -> the regular save flow).
+  async uploadPartFile(questionId: string, userId: string, file: any) {
+    if (!file) throw new BadRequestException('No file provided');
+
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: questionId },
+      include: {
+        passportSectionTask: {
+          include: { passportSection: { include: { passport: { select: { ownerId: true } } } } },
+        },
+      },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+
+    const passportId = question.passportSectionTask.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
+    if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
+
+    const relative = publicUrlFor('passport-docs', storedFilename(file));
+    const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
+
+    return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
+  }
 }
