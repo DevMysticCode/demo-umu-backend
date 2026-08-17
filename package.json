@@ -25,6 +25,7 @@
     "seed:reward-actions": "ts-node -r tsconfig-paths/register src/scripts/seed-reward-actions.ts",
     "reset:passport": "ts-node -r tsconfig-paths/register src/scripts/reset-passport.ts",
     "add:stamp-v1-questions": "ts-node -r tsconfig-paths/register src/scripts/add-stamp-v1-question-templates.ts",
+    "backfill:stamp-celebrated-at": "ts-node -r tsconfig-paths/register src/scripts/backfill-stamp-celebrated-at.ts",
     "script:null-fake-title-numbers": "ts-node -r tsconfig-paths/register src/scripts/null-synthesised-title-numbers.ts",
     "backfill:valuations": "ts-node -r tsconfig-paths/register src/scripts/backfill-property-valuations.ts",
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",

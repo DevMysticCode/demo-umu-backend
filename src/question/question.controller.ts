@@ -62,4 +62,33 @@ export class QuestionController {
     const userId = req.user.id;
     return this.questionService.uploadQuestionFile(questionId, userId, file);
   }
+
+  // See QuestionService.uploadPartFile — for a file that belongs to one
+  // part of a MULTIPART question, not a whole question's answer.
+  @Post(':questionId/upload-part')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads', 'passport-docs');
+          if (!existsSync(uploadPath)) mkdirSync(uploadPath, { recursive: true });
+          cb(null, uploadPath);
+        },
+        filename: (_req, file, cb) => {
+          const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+          cb(null, `${unique}${extname(file.originalname)}`);
+        },
+      }),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  async uploadPartFile(
+    @Param('questionId') questionId: string,
+    @UploadedFile() file: any,
+    @Request() req: any,
+  ) {
+    const userId = req.user.id;
+    return this.questionService.uploadPartFile(questionId, userId, file);
+  }
 }

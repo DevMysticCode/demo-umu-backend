@@ -24,17 +24,18 @@
 //   where a definitive "No" answer is itself a complete, meaningful
 //   result (Building Safety).
 //
-// - `requiresLeasehold: true` is the only applicability gate implemented
-//   in V1 — it's the one condition with a fully reliable existing signal
-//   (the leasehold PassportSection is only ever seeded for leasehold
-//   properties — see PassportService.seedPassportContent). Solar,
-//   private drainage, window-replacement and mining-risk are each
-//   genuinely conditional per the client spec too, but reliably detecting
-//   "the user answered no shared property doesn't have this" needs the
-//   exact seeded option values confirmed with the client/QA first, so
-//   for V1 those four stay universally visible (Available to everyone)
-//   rather than risk hiding a stamp for someone it actually applies to.
-//   They still only ever mint when real matching evidence exists.
+// - Applicability gates: `requiresLeasehold` (the leasehold PassportSection
+//   is only ever seeded for leasehold properties) and `notApplicableIf`
+//   (a passport answer directly says "this doesn't apply") — both checked
+//   in RewardsService.getStampsCatalogue(). Solar and Private Drainage
+//   have a reliable existing yes/no signal, so they're gated. Window
+//   Compliance and Mining Risk Search do NOT have one yet (Window
+//   Compliance reuses a general warranty question — see below — and
+//   there's no mining-risk-area signal anywhere in the data model), so
+//   those two stay universally visible (Available to everyone) rather
+//   than risk hiding a stamp for someone it actually applies to. All four
+//   still only ever MINT when real matching evidence exists, regardless
+//   of the applicable flag — this only affects catalogue display.
 //
 // - Window Compliance (5) reuses the existing guaranteesAndWarranties /
 //   window_roof_light_door task (window/roof-light/door guarantees)
@@ -57,6 +58,19 @@ export interface StampRequirement {
   order?: number;
 }
 
+// A stamp is NOT applicable when every gate here matches the passport's
+// current answer for that (sectionKey, taskKey, order) question — e.g.
+// "not applicable if solar_panels' answer is 'no'". Multiple gates are
+// AND'd together (all must match) so a two-question condition like
+// "fully on mains drainage" (both foul AND surface water = yes) can be
+// expressed without a bespoke check per stamp.
+export interface NotApplicableGate {
+  sectionKey: string;
+  taskKey: string;
+  order: number;
+  valuesIn: string[];
+}
+
 export interface StampCatalogueEntry {
   key: string;
   title: string;
@@ -66,6 +80,15 @@ export interface StampCatalogueEntry {
   requirements: StampRequirement[];
   requireUpload: boolean;
   requiresLeasehold?: boolean;
+  /**
+   * Additional conditional-visibility gate beyond requiresLeasehold, per
+   * the client spec's UX Rule ("a property without solar panels should
+   * not show Solar Documentation", etc). Only wired up where a reliable
+   * existing answer signal exists — see stamp-catalogue.ts's own comment
+   * above for the two (Window Compliance, Mining Risk) that don't have one
+   * yet and stay universally visible.
+   */
+  notApplicableIf?: NotApplicableGate[];
 }
 
 export const STAMP_CATALOGUE: StampCatalogueEntry[] = [
@@ -156,6 +179,11 @@ export const STAMP_CATALOGUE: StampCatalogueEntry[] = [
       { sectionKey: 'alterationsAndPlanning', taskKey: 'solar_panel_roof_lease' },
     ],
     requireUpload: true,
+    // "Have solar panels been installed?" (order 1) has a plain 'no' option
+    // — a reliable existing signal for "this property has no solar panels".
+    notApplicableIf: [
+      { sectionKey: 'alterationsAndPlanning', taskKey: 'solar_panels', order: 1, valuesIn: ['no'] },
+    ],
   },
   {
     key: 'PRIVATE_DRAINAGE_COMPLETE',
@@ -165,6 +193,13 @@ export const STAMP_CATALOGUE: StampCatalogueEntry[] = [
     category: 'TA6',
     requirements: [{ sectionKey: 'services', taskKey: 'drainage_and_sewerage' }],
     requireUpload: false,
+    // "Is the property connected to mains: foul water drainage?" (order 1)
+    // and "...surface water drainage?" (order 2) are both plain yes/no —
+    // fully on mains for both means private drainage doesn't apply here.
+    notApplicableIf: [
+      { sectionKey: 'services', taskKey: 'drainage_and_sewerage', order: 1, valuesIn: ['yes'] },
+      { sectionKey: 'services', taskKey: 'drainage_and_sewerage', order: 2, valuesIn: ['yes'] },
+    ],
   },
   {
     key: 'BOUNDARIES_RIGHTS_COMPLETE',

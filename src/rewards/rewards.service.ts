@@ -188,6 +188,13 @@ export class RewardsService {
         pointsAwarded: points,
         triggerEvent,
         supportingDocumentIds: supportingDocumentIds as any,
+        // No manual review workflow exists yet — a user's own uploaded
+        // documents/answers are treated as legitimate as soon as they
+        // satisfy a stamp's requirements, so every stamp mints straight
+        // to VERIFIED rather than sitting in EARNED indefinitely. Revisit
+        // once a real verification workflow exists (see StampDefinition
+        // schema comment).
+        verificationStatus: 'VERIFIED',
       },
     });
   }
@@ -385,10 +392,53 @@ export class RewardsService {
       STAMP_CATALOGUE.filter((s) => s.requiresLeasehold).map((s) => s.key),
     );
 
-    return stamps.map((s) => ({
-      ...s,
-      applicable: leaseholdGatedKeys.has(s.key) ? !!leaseholdSection : true,
-    }));
+    // notApplicableIf gates (Solar, Private Drainage) — one batched query
+    // for every (sectionKey, taskKey, order) any catalogue entry gates on,
+    // rather than one query per stamp.
+    const gatedEntries = STAMP_CATALOGUE.filter((s) => s.notApplicableIf?.length);
+    const gateSectionKeys = [
+      ...new Set(gatedEntries.flatMap((s) => s.notApplicableIf!.map((g) => g.sectionKey))),
+    ];
+    const answerLookup = new Map<string, string | null>();
+    if (gateSectionKeys.length) {
+      const rows = await this.prisma.passportQuestion.findMany({
+        where: {
+          passportSectionTask: {
+            passportSection: { passportId, key: { in: gateSectionKeys } },
+          },
+        },
+        select: {
+          questionTemplate: { select: { sectionKey: true, taskKey: true, order: true } },
+          answer: { select: { answerText: true } },
+        },
+      });
+      for (const row of rows) {
+        const key = `${row.questionTemplate.sectionKey}::${row.questionTemplate.taskKey}::${row.questionTemplate.order}`;
+        answerLookup.set(key, row.answer?.answerText ?? null);
+      }
+    }
+
+    function isGatedNotApplicable(entry: (typeof STAMP_CATALOGUE)[number]): boolean {
+      const gates = entry.notApplicableIf;
+      if (!gates?.length) return false;
+      return gates.every((g) => {
+        const value = answerLookup.get(`${g.sectionKey}::${g.taskKey}::${g.order}`);
+        return value != null && g.valuesIn.includes(value);
+      });
+    }
+
+    const gatedByKey = new Map(gatedEntries.map((s) => [s.key, s]));
+
+    return stamps.map((s) => {
+      if (leaseholdGatedKeys.has(s.key) && !leaseholdSection) {
+        return { ...s, applicable: false };
+      }
+      const gatedEntry = gatedByKey.get(s.key);
+      if (gatedEntry && isGatedNotApplicable(gatedEntry)) {
+        return { ...s, applicable: false };
+      }
+      return { ...s, applicable: true };
+    });
   }
 
   async getCatalogue() {
