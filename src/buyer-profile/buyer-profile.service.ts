@@ -18,6 +18,7 @@ import { Resend } from 'resend';
 import OpenAI from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { publicUrlFor, storedFilename } from '../common/storage';
+import { isKycVerified } from '../common/kyc';
 
 // All fields decorated so that the global ValidationPipe (whitelist: true)
 // keeps them in the request body instead of stripping them.
@@ -119,7 +120,19 @@ export class BuyerProfileService {
   }
 
   async getMine(userId: string) {
-    return this.prisma.buyerProfile.findUnique({ where: { userId } });
+    const profile = await this.prisma.buyerProfile.findUnique({
+      where: { userId },
+    });
+    if (!profile) return profile;
+    // idVerified on this row is never written anywhere (a Phase-2 Persona
+    // hook that was never wired up) — always false in practice. The real
+    // signal is User.kycStatus, so override with that instead of trusting
+    // the dead column.
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { kycStatus: true },
+    });
+    return { ...profile, idVerified: isKycVerified(user) };
   }
 
   /**

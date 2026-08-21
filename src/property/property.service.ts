@@ -1993,6 +1993,44 @@ export class PropertyService {
       take: 300,
     });
 
+    // Postcode-district (outcode) matches take priority when the query
+    // looks like a postcode fragment — Rightmove-style: show the
+    // matching district codes themselves ("CV5", "CV11", ...), not the
+    // area they're grouped under. Only reached for queries whose prefix
+    // actually matches a real outcode in the cache, so a place-name
+    // query like "Coventry" naturally falls through to the area-name
+    // grouping below untouched.
+    const qUpper = q.toUpperCase().replace(/\s+/g, '');
+    const outcodeSeen = new Set<string>();
+    const outcodeItems: {
+      label: string;
+      city: string | null;
+      county: string | null;
+      postcode: string | null;
+    }[] = [];
+    for (const r of rows) {
+      const outcode = (r.postcode ?? '').trim().split(' ')[0]?.toUpperCase();
+      if (!outcode || !outcode.startsWith(qUpper)) continue;
+      if (outcodeSeen.has(outcode)) continue;
+      outcodeSeen.add(outcode);
+      outcodeItems.push({ label: outcode, city: null, county: null, postcode: outcode });
+      if (outcodeItems.length >= limit) break;
+    }
+    if (outcodeItems.length) {
+      // A bare area code (e.g. "CV", no digits yet) gets its own
+      // "whole area" entry above the specific districts, same as
+      // Rightmove's "CV (Postcode Area)" row.
+      if (/^[A-Za-z]{1,2}$/.test(q)) {
+        outcodeItems.unshift({
+          label: `${qUpper} (Postcode Area)`,
+          city: null,
+          county: null,
+          postcode: qUpper,
+        });
+      }
+      return { items: outcodeItems.slice(0, limit) };
+    }
+
     const seen = new Map<
       string,
       { label: string; city: string | null; county: string | null; postcode: string | null }
@@ -6082,7 +6120,33 @@ export class PropertyService {
       include: { property: true },
       orderBy: { createdAt: 'desc' },
     });
-    return items.map((item) => ({ ...item.property, savedAt: item.createdAt }));
+
+    // Same HomeScore precedence as searchProperties()'s dropdown rows —
+    // the saving user's own score first, else the most-recently-updated
+    // score anyone else produced, else the property's EPC score.
+    const ids = items.map((item) => item.propertyId);
+    const scoreRows = ids.length
+      ? await this.prisma.homeScoreResult.findMany({
+          where: { propertyId: { in: ids } },
+          select: { propertyId: true, userId: true, total: true, updatedAt: true },
+        })
+      : [];
+    const homeScoreByProperty = new Map<string, number>();
+    for (const propertyId of ids) {
+      const forProp = scoreRows.filter((r) => r.propertyId === propertyId);
+      if (!forProp.length) continue;
+      const ownScore = forProp.find((r) => r.userId === userId);
+      const chosen =
+        ownScore ??
+        [...forProp].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+      homeScoreByProperty.set(propertyId, chosen.total);
+    }
+
+    return items.map((item) => ({
+      ...item.property,
+      savedAt: item.createdAt,
+      homeScore: homeScoreByProperty.get(item.propertyId) ?? item.property.epcScore ?? null,
+    }));
   }
 
   async getPropertyActions(userId: string, propertyId: string) {
