@@ -5,7 +5,7 @@ import { RewardsService } from '../rewards/rewards.service';
 import { PassportService } from '../passport/passport.service';
 import { LandRegistryService } from '../land-registry/land-registry.service';
 import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
-import { Property } from '@prisma/client';
+import { Property, Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { buildStreetViewUrl, resolveStreetViewUrl } from './street-view';
 
@@ -1425,6 +1425,23 @@ function estimateCouncilTaxAmount(
   return Math.round((bandD * ratio) / 9 / 10) * 10; // round to nearest £10
 }
 
+// Real server-side filters for /property/search's Rightmove-style results
+// list (radius/type/bedrooms/EPC/price/passport-status). Unlike
+// `applyPropertyFilters` (kept for `getForYou`'s small unpaginated pool),
+// these become an actual Prisma WHERE clause so `total` reflects the true
+// filtered dataset size across pages, not just whatever page happened to
+// be fetched first.
+export interface PropertySearchFilterInput {
+  propertyTypes?: string[];
+  minBedrooms?: number;
+  maxBedrooms?: number;
+  minEpc?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  // 'unclaimed' | 'in_progress' | 'claimed'
+  passportStatus?: string[];
+}
+
 // ── Service ──────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -1450,24 +1467,127 @@ export class PropertyService {
   private overpassDownUntil = 0;
   private static readonly OVERPASS_COOLDOWN_MS = 5 * 60 * 1000; // 5 min
 
-  // Property type / bedrooms / EPC / HomeScore / passport-only filters.
-  // The Explore filter sheet has always sent these as query params, but
-  // neither `searchProperties` nor `getForYou` ever read them — every
-  // filter besides distance was a silent no-op. `searchProperties`'s
-  // multi-source fetch/cache/dedup logic is intricate enough that
-  // threading filters into every branch's DB query is riskier than it's
-  // worth right now, so this filters the already-assembled result set
-  // instead. Good enough to make the sheet actually work; a true
-  // server-side WHERE clause would be needed to filter beyond whatever
-  // page/pool was already fetched.
+  private buildPropertyFilterWhere(
+    filters?: PropertySearchFilterInput,
+  ): Prisma.PropertyWhereInput | null {
+    if (!filters) return null;
+    const EPC_RANK: Record<string, number> = {
+      A: 7, B: 6, C: 5, D: 4, E: 3, F: 2, G: 1,
+    };
+    const and: Prisma.PropertyWhereInput[] = [];
+
+    if (filters.propertyTypes?.length) {
+      // Mirrors applyPropertyFilters' fuzzy substring match as closely as
+      // Prisma allows — `contains` covers "want ⊂ stored" (e.g. "flat" ⊂
+      // "Flat"), the rarer reverse case isn't expressible as a WHERE and
+      // is dropped as an accepted precision loss.
+      and.push({
+        OR: filters.propertyTypes.map((want) => ({
+          propertyType: { contains: want, mode: 'insensitive' as const },
+        })),
+      });
+    }
+    if (filters.minBedrooms != null) {
+      and.push({ bedrooms: { gte: filters.minBedrooms } });
+    }
+    if (filters.maxBedrooms != null) {
+      and.push({ bedrooms: { lte: filters.maxBedrooms } });
+    }
+    if (filters.minEpc) {
+      const want = EPC_RANK[filters.minEpc.toUpperCase()] ?? 0;
+      const allowed = Object.entries(EPC_RANK)
+        .filter(([, rank]) => rank >= want)
+        .map(([grade]) => grade);
+      and.push({ epcRating: { in: allowed } });
+    }
+    if (filters.minPrice != null) {
+      and.push({ estimatedPrice: { gte: filters.minPrice } });
+    }
+    if (filters.maxPrice != null) {
+      and.push({ estimatedPrice: { lte: filters.maxPrice } });
+    }
+    if (filters.passportStatus?.length) {
+      const statusOr: Prisma.PropertyWhereInput[] = [];
+      for (const s of filters.passportStatus) {
+        if (s === 'unclaimed') {
+          statusOr.push({ passports: { none: { type: 'SELLER' } } });
+        } else if (s === 'claimed') {
+          statusOr.push({
+            passports: { some: { type: 'SELLER', status: 'PUBLISHED' } },
+          });
+        } else if (s === 'in_progress') {
+          statusOr.push({
+            passports: {
+              some: {
+                type: 'SELLER',
+                status: {
+                  in: ['PENDING_PAYMENT', 'IN_PROGRESS', 'COMPLETED'],
+                },
+              },
+            },
+          });
+        }
+      }
+      if (statusOr.length) and.push({ OR: statusOr });
+    }
+
+    return and.length ? { AND: and } : null;
+  }
+
+  // Shared "pick the passport to represent this property row" reduction —
+  // previously duplicated between searchProperties() and
+  // searchWithinRadius(), which is how the latter ended up destructuring
+  // the wrong (singular) key and always reporting hasPassport: false.
+  private derivePassportFields(passports: any[] | null | undefined): {
+    hasPassport: boolean;
+    passportPublished: boolean;
+    passportCompletion: number | null;
+  } {
+    const list = passports ?? [];
+    const passport =
+      list.find((x) => x?.status === 'PUBLISHED') ?? list[0] ?? null;
+    const isPublished = passport?.status === 'PUBLISHED';
+    let passportCompletion: number | null = null;
+    if (passport && isPublished) {
+      const allTasks = passport.sections.flatMap((s: any) => s.tasks);
+      const doneTasks = allTasks.filter((t: any) => {
+        const total = t.passportQuestions.length;
+        const answered = t.passportQuestions.filter(
+          (q: any) => q.answer !== null,
+        ).length;
+        return total > 0 && answered === total;
+      }).length;
+      passportCompletion =
+        allTasks.length > 0
+          ? Math.round((doneTasks / allTasks.length) * 100)
+          : 0;
+    }
+    return {
+      hasPassport: !!passport,
+      passportPublished: isPublished,
+      passportCompletion,
+    };
+  }
+
+  // Property type / bedrooms / EPC / HomeScore / price / passport filters —
+  // used by getForYou's small unpaginated pool, where filtering an
+  // already-fetched in-memory set is fine (it isn't paginated, so there's
+  // no "total across pages" to get wrong). Covers the same fields as
+  // buildPropertyFilterWhere (minus radius, which searchProperties already
+  // handles) so For You can use the same filters modal as Explore search.
   applyPropertyFilters(
     items: any[],
     filters: {
       propertyTypes?: string[];
       minBedrooms?: number;
+      maxBedrooms?: number;
       minEpc?: string;
       minHomeScore?: number;
+      minPrice?: number;
+      maxPrice?: number;
       passportOnly?: boolean;
+      // 'unclaimed' | 'in_progress' | 'claimed'
+      passportStatus?: string[];
     },
   ): any[] {
     const EPC_RANK: Record<string, number> = {
@@ -1484,6 +1604,9 @@ export class PropertyService {
       if (filters.minBedrooms != null && (p.bedrooms ?? 0) < filters.minBedrooms) {
         return false;
       }
+      if (filters.maxBedrooms != null && (p.bedrooms ?? Infinity) > filters.maxBedrooms) {
+        return false;
+      }
       if (filters.minEpc) {
         const want = EPC_RANK[filters.minEpc.toUpperCase()] ?? 0;
         const have = EPC_RANK[String(p.epcRating ?? '').toUpperCase()] ?? 0;
@@ -1493,7 +1616,21 @@ export class PropertyService {
         const hs = p.homeScore ?? p.epcScore ?? null;
         if (hs == null || hs < filters.minHomeScore) return false;
       }
+      if (filters.minPrice != null && (p.estimatedPrice ?? -Infinity) < filters.minPrice) {
+        return false;
+      }
+      if (filters.maxPrice != null && (p.estimatedPrice ?? Infinity) > filters.maxPrice) {
+        return false;
+      }
       if (filters.passportOnly && !p.hasPassport) return false;
+      if (filters.passportStatus?.length) {
+        const status = p.hasPassport
+          ? p.passportPublished
+            ? 'claimed'
+            : 'in_progress'
+          : 'unclaimed';
+        if (!filters.passportStatus.includes(status)) return false;
+      }
       return true;
     });
   }
@@ -1503,6 +1640,7 @@ export class PropertyService {
     offset = 0,
     limit = 10,
     radiusMiles?: number,
+    filters?: PropertySearchFilterInput,
   ): Promise<{ items: Property[]; total: number }> {
     const q = query.trim();
 
@@ -1512,13 +1650,14 @@ export class PropertyService {
       if (centre) {
         // Ensure DB has something for the postcode by priming it via the
         // normal search path (populates real data from OS Places / EPC).
-        // Fire-and-wait first page only.
+        // Fire-and-wait first page only. No filters here — this call's
+        // result is discarded, its only job is to populate the cache.
         try {
           await this.searchProperties(q, 0, limit);
         } catch {
           /* non-critical */
         }
-        return this.searchWithinRadius(centre, radiusMiles, offset, limit);
+        return this.searchWithinRadius(centre, radiusMiles, offset, limit, filters);
       }
       // Could not resolve centre → fall back to text search below
     }
@@ -1615,7 +1754,11 @@ export class PropertyService {
     }
 
     // Re-count after the optional top-up so the response total reflects the
-    // post-merge cache size.
+    // post-merge cache size. Deliberately UNFILTERED — this decides which
+    // branch to take below (cache-hit vs fresh-fetch), and "cache has rows
+    // but none match the active filter" must stay on the cache-hit branch
+    // (→ a legitimate empty filtered result), not fall through to
+    // re-fetching from OS/EPC as if nothing were cached at all.
     const effectiveTotal = await this.prisma.property.count({
       where: realDataCacheWhere,
     });
@@ -1636,8 +1779,12 @@ export class PropertyService {
       // broader queries we keep DB pagination (the upstream APIs already
       // pre-filter, so the visible result set stays small).
       const isPostcodeQuery = looksLikeUkPostcode(q);
+      const filterWhere = this.buildPropertyFilterWhere(filters);
+      const queryWhere = filterWhere
+        ? { AND: [realDataCacheWhere, filterWhere] }
+        : realDataCacheWhere;
       const rows = await this.prisma.property.findMany({
-        where: realDataCacheWhere,
+        where: queryWhere,
         // Order by addressLine1 ASC so the lexical fetch is deterministic;
         // the JS natural-sort below promotes "9 Woodfield Rd" above "10".
         orderBy: { addressLine1: 'asc' },
@@ -1688,25 +1835,8 @@ export class PropertyService {
         // Pick a PUBLISHED passport when one exists, even if an older
         // in-progress duplicate sits alongside it. Keeps search badges
         // consistent with the detail page (which uses the same rule).
-        const list = (passports as any[]) ?? [];
-        const passport =
-          list.find((x) => x?.status === 'PUBLISHED') ?? list[0] ?? null;
-        const isPublished = passport?.status === 'PUBLISHED';
-        let passportCompletion: number | null = null;
-        if (passport && isPublished) {
-          const allTasks = passport.sections.flatMap((s: any) => s.tasks);
-          const doneTasks = allTasks.filter((t: any) => {
-            const total = t.passportQuestions.length;
-            const answered = t.passportQuestions.filter(
-              (q: any) => q.answer !== null,
-            ).length;
-            return total > 0 && answered === total;
-          }).length;
-          passportCompletion =
-            allTasks.length > 0
-              ? Math.round((doneTasks / allTasks.length) * 100)
-              : 0;
-        }
+        const { hasPassport, passportPublished, passportCompletion } =
+          this.derivePassportFields(passports as any[]);
         const savedHs = scoreByProp.get(p.id);
         const homeScore = savedHs ?? p.epcScore ?? null;
         return {
@@ -1718,8 +1848,8 @@ export class PropertyService {
           // Override the stored imageUrl with a live-built one so a key
           // rotation heals every cached row without any DB mutation.
           imageUrl: resolveStreetViewUrl(p),
-          hasPassport: !!passport,
-          passportPublished: isPublished,
+          hasPassport,
+          passportPublished,
           passportCompletion,
           homeScore,
         };
@@ -1755,9 +1885,17 @@ export class PropertyService {
       const windowed = isPostcodeQuery
         ? sorted.slice(offset, offset + limit)
         : sorted;
-      // effectiveTotal came from the pre-dedupe row count; use the
-      // deduped length so the frontend paginates against reality.
-      return { items: windowed, total: isPostcodeQuery ? sorted.length : effectiveTotal };
+      // Postcode queries: sorted.length IS the true filtered total (we
+      // fetched every matching row). Non-postcode queries only fetched one
+      // page (skip/take above), so when a filter is active effectiveTotal
+      // (unfiltered) is wrong — get the real filtered count instead. This
+      // is the actual fix for pagination "total" being honest across pages.
+      const total = isPostcodeQuery
+        ? sorted.length
+        : filterWhere
+          ? await this.prisma.property.count({ where: queryWhere })
+          : effectiveTotal;
+      return { items: windowed, total };
     }
 
     // 2. No real data cached — try OS Places API first.
@@ -1789,18 +1927,28 @@ export class PropertyService {
           epcTotal > 0 ? this.fetchFromEpc(q, 0, epcTotal) : Promise.resolve(),
           this.fetchAllFromOsPlacesForPostcode(q),
         ]);
-        return this.searchProperties(q, offset, limit);
+        return this.searchProperties(q, offset, limit, undefined, filters);
       } catch {
         /* fall through to existing per-batch behaviour */
       }
     }
 
     const osResult = await this.fetchFromOsPlaces(q, offset, limit);
-    if (osResult.total > 0) return osResult;
+    if (osResult.total > 0) {
+      // Both fetchers upsert as a side effect — when filters are active,
+      // recurse into the now-populated cache path instead of returning
+      // this raw upstream page directly, so the WHERE clause + honest
+      // `total` above actually apply to a query's very first hit too.
+      if (filters) return this.searchProperties(q, offset, limit, undefined, filters);
+      return osResult;
+    }
 
     // 3. OS returned nothing — call EPC API (also upserts results into DB)
     const epcResult = await this.fetchFromEpc(q, offset, limit);
-    if (epcResult.total > 0) return epcResult;
+    if (epcResult.total > 0) {
+      if (filters) return this.searchProperties(q, offset, limit, undefined, filters);
+      return epcResult;
+    }
 
     // No real data and no synthetic fallback — honest empty result.
     // Mock-property generation used to live here, but it persisted fake
@@ -1809,6 +1957,57 @@ export class PropertyService {
     // to surface "no results" so the user knows the gov register has
     // nothing for this postcode (or is currently unavailable).
     return { items: [], total: 0 };
+  }
+
+  // Rightmove-style location typeahead: distinct AREAS (city + county),
+  // not individual property addresses — the dropdown is "where do you
+  // want to search", not a preview of results. We don't have a proper UK
+  // gazetteer, so this groups whatever's already cached from OS Places/EPC
+  // ingestion (same source searchProperties uses) rather than hitting a
+  // new upstream. Coarser than Rightmove's real place-name data (our
+  // "city" is typically postal-town level, not sub-locality), but it's
+  // real UK geography, not property listings, and needs no new API/cost.
+  async searchAreas(
+    query: string,
+    limit = 8,
+  ): Promise<{
+    items: { label: string; city: string | null; county: string | null; postcode: string | null }[];
+  }> {
+    const q = query.trim();
+    if (q.length < 2) return { items: [] };
+
+    const rows = await this.prisma.property.findMany({
+      where: {
+        OR: [
+          { city: { contains: q, mode: 'insensitive' } },
+          { county: { contains: q, mode: 'insensitive' } },
+          { postcode: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: { city: true, county: true, postcode: true },
+      orderBy: { city: 'asc' },
+      // Over-fetch and dedupe in JS — Prisma's `distinct` combined with an
+      // orderBy on a different field set is finicky, and this table is
+      // small enough per-query that a plain findMany + dedupe is simpler
+      // and just as fast.
+      take: 300,
+    });
+
+    const seen = new Map<
+      string,
+      { label: string; city: string | null; county: string | null; postcode: string | null }
+    >();
+    for (const r of rows) {
+      if (!r.city && !r.county) continue;
+      const key = `${(r.city ?? '').toLowerCase()}|${(r.county ?? '').toLowerCase()}`;
+      if (seen.has(key)) continue;
+      const label = r.city && r.county ? `${r.city}, ${r.county}` : r.city || r.county || '';
+      if (!label) continue;
+      const outcode = (r.postcode ?? '').trim().split(' ')[0] || null;
+      seen.set(key, { label, city: r.city, county: r.county, postcode: outcode });
+      if (seen.size >= limit) break;
+    }
+    return { items: Array.from(seen.values()) };
   }
 
   /**
@@ -6253,9 +6452,13 @@ export class PropertyService {
     filters?: {
       propertyTypes?: string[];
       minBedrooms?: number;
+      maxBedrooms?: number;
       minEpc?: string;
       minHomeScore?: number;
+      minPrice?: number;
+      maxPrice?: number;
       passportOnly?: boolean;
+      passportStatus?: string[];
     },
   ): Promise<{ items: any[]; total: number; needsPostcode?: boolean }> {
     const [user, preference] = await Promise.all([
@@ -6402,11 +6605,13 @@ export class PropertyService {
     radiusMiles: number,
     offset: number,
     limit: number,
+    filters?: PropertySearchFilterInput,
   ): Promise<{ items: Property[]; total: number }> {
     // Convert radius to deg (approximation): 1° lat ≈ 69 mi
     const latDelta = radiusMiles / 69;
     const lonDelta = radiusMiles / (69 * Math.cos((centre.lat * Math.PI) / 180));
 
+    const filterWhere = this.buildPropertyFilterWhere(filters);
     const where = {
       AND: [
         {
@@ -6422,6 +6627,7 @@ export class PropertyService {
             lte: centre.lon + lonDelta,
           },
         },
+        ...(filterWhere ? [filterWhere] : []),
       ],
     };
 
@@ -6431,6 +6637,10 @@ export class PropertyService {
       include: {
         passports: {
           where: { type: 'SELLER' },
+          // Newest first, matches searchProperties() — see
+          // derivePassportFields for why order doesn't actually change
+          // which passport is picked, kept for consistency.
+          orderBy: { createdAt: 'desc' },
           select: {
             id: true,
             status: true,
@@ -6472,23 +6682,14 @@ export class PropertyService {
     const page = withinRadius.slice(offset, offset + limit);
 
     const items = page.map(({ p, d }) => {
-      const { passport, ...rest } = p as any;
-      const isPublished = passport?.status === 'PUBLISHED';
-      let passportCompletion: number | null = null;
-      if (passport && isPublished) {
-        const allTasks = passport.sections.flatMap((s: any) => s.tasks);
-        const doneTasks = allTasks.filter((t: any) => {
-          const totalQ = t.passportQuestions.length;
-          const answered = t.passportQuestions.filter(
-            (q: any) => q.answer !== null,
-          ).length;
-          return totalQ > 0 && answered === totalQ;
-        }).length;
-        passportCompletion =
-          allTasks.length > 0
-            ? Math.round((doneTasks / allTasks.length) * 100)
-            : 0;
-      }
+      // Bug fix: this used to destructure `passport` (singular) from a
+      // query that only ever `include`s `passports` (plural), so it was
+      // always undefined — hasPassport/passportPublished were always
+      // false for every radius search. Now shares the same derivation
+      // searchProperties() uses.
+      const { passports, ...rest } = p as any;
+      const { hasPassport, passportPublished, passportCompletion } =
+        this.derivePassportFields(passports);
       return {
         ...rest,
         addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
@@ -6497,8 +6698,8 @@ export class PropertyService {
           : rest.addressLine2,
         city: rest.city ? titleCase(rest.city) : rest.city,
         county: rest.county ? titleCase(rest.county) : rest.county,
-        hasPassport: !!passport,
-        passportPublished: isPublished,
+        hasPassport,
+        passportPublished,
         passportCompletion,
         distanceMiles: +d.toFixed(2),
       };
