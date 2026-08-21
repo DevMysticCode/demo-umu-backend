@@ -268,7 +268,14 @@ export class ProfileService {
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      // Most-recently-acted-on passport first, so index 0 is the one the
+      // seller's dashboard summary card should show. lastVisitedAt is the
+      // same field the resume flow already uses to track activity;
+      // passports nobody has resumed yet fall back to creation order.
+      orderBy: [
+        { lastVisitedAt: { sort: 'desc', nulls: 'last' } },
+        { createdAt: 'desc' },
+      ],
     });
 
     // Best-available HomeScore per property — owner's own score first,
@@ -328,15 +335,21 @@ export class ProfileService {
 
       return {
         id: p.id,
+        propertyId: p.propertyId,
         addressLine1: p.addressLine1,
         postcode: p.postcode,
         address: p.property
           ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
           : p.addressLine1,
+        type: p.type,
         // Score gauge on the explore summary card. Null when there's
         // no saved HomeScore AND no EPC score on file — the gauge
         // then renders a dash.
         homeScore: savedScore ?? fallbackEpc,
+        // "Potential" HomeScore doesn't exist as its own concept yet —
+        // reuses the EPC certificate's post-improvement score, same
+        // precedent as the homeScore fallback above.
+        homeScorePotential: p.property?.epcScorePotential ?? null,
         // Progress on filling out the passport itself. Separate metric
         // from HomeScore; drives the "Complete X%" line below the
         // gauge.
