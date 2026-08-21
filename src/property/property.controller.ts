@@ -18,7 +18,10 @@ import { diskStorage } from 'multer';
 import { join, extname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { SkipThrottle } from '@nestjs/throttler';
-import { PropertyService } from './property.service';
+import {
+  PropertyService,
+  PropertySearchFilterInput,
+} from './property.service';
 import { RunningCostsService } from './running-costs.service';
 import { BillParserService } from './bill-parser.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -44,9 +47,17 @@ export class PropertyController {
     @Query('radius') radius?: string,
     @Query('propertyType') propertyType?: string,
     @Query('minBedrooms') minBedrooms?: string,
+    @Query('maxBedrooms') maxBedrooms?: string,
     @Query('minEpc') minEpc?: string,
     @Query('minHomeScore') minHomeScore?: string,
     @Query('passportOnly') passportOnly?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    // Comma-list of 'unclaimed' | 'in_progress' | 'claimed' — the new
+    // Explore results-list filter. Server-side WHERE clause (see
+    // PropertyService.buildPropertyFilterWhere), unlike the legacy
+    // `passportOnly` boolean below.
+    @Query('passportStatus') passportStatus?: string,
   ) {
     if (!query || query.trim().length < 2) {
       return { items: [], total: 0 };
@@ -59,30 +70,78 @@ export class PropertyController {
     const r = radius ? parseFloat(radius) : undefined;
     const radiusMiles =
       r && !isNaN(r) && r > 0 && r <= 25 ? r : undefined;
+
+    // New Rightmove-style filters (property type / bedrooms / EPC / price /
+    // passport status) — a real server-side WHERE clause (see
+    // PropertyService.buildPropertyFilterWhere), so `total` below reflects
+    // the true filtered dataset size across pages, not just one page's pool.
+    let minPriceNum = minPrice ? parseFloat(minPrice) : undefined;
+    let maxPriceNum = maxPrice ? parseFloat(maxPrice) : undefined;
+    if (minPriceNum != null && (isNaN(minPriceNum) || minPriceNum < 0)) {
+      minPriceNum = undefined;
+    }
+    if (maxPriceNum != null && (isNaN(maxPriceNum) || maxPriceNum < 0)) {
+      maxPriceNum = undefined;
+    }
+    if (minPriceNum != null && maxPriceNum != null && minPriceNum > maxPriceNum) {
+      [minPriceNum, maxPriceNum] = [maxPriceNum, minPriceNum];
+    }
+    const filters: PropertySearchFilterInput | undefined =
+      propertyType ||
+      minBedrooms ||
+      maxBedrooms ||
+      minEpc ||
+      minPriceNum != null ||
+      maxPriceNum != null ||
+      passportStatus
+        ? {
+            propertyTypes: propertyType
+              ? propertyType.split(',').filter((v) => v && v !== 'any')
+              : undefined,
+            minBedrooms: minBedrooms ? parseInt(minBedrooms, 10) : undefined,
+            maxBedrooms: maxBedrooms ? parseInt(maxBedrooms, 10) : undefined,
+            minEpc: minEpc || undefined,
+            minPrice: minPriceNum,
+            maxPrice: maxPriceNum,
+            passportStatus: passportStatus
+              ? passportStatus.split(',').filter(Boolean)
+              : undefined,
+          }
+        : undefined;
+
     const result = await this.propertyService.searchProperties(
       query.trim(),
       off,
       lim,
       radiusMiles,
+      filters,
     );
 
-    // Explore's filter sheet (property type / bedrooms / EPC / HomeScore /
-    // passport-only) — filters whatever this call already fetched. Not a
-    // true server-side WHERE clause (see applyPropertyFilters comment), so
-    // it only sees the current page's pool, not the full match count.
-    if (!propertyType && !minBedrooms && !minEpc && !minHomeScore && !passportOnly) {
+    // Legacy `passportOnly`/`minHomeScore` — kept working exactly as
+    // before (post-fetch, current-page-only) for callers that still send
+    // them (e.g. the non-lightweight SearchFilterBar sheet used by
+    // Discover). Not combined with the new WHERE-clause filters above;
+    // callers should use `passportStatus` instead of `passportOnly` going
+    // forward.
+    if (!minHomeScore && !passportOnly) {
       return result;
     }
     const filtered = this.propertyService.applyPropertyFilters(result.items, {
-      propertyTypes: propertyType
-        ? propertyType.split(',').filter((v) => v && v !== 'any')
-        : undefined,
-      minBedrooms: minBedrooms ? parseInt(minBedrooms, 10) : undefined,
-      minEpc: minEpc || undefined,
       minHomeScore: minHomeScore ? parseInt(minHomeScore, 10) : undefined,
       passportOnly: passportOnly === '1' || passportOnly === 'true',
     });
     return { items: filtered, total: filtered.length };
+  }
+
+  // Rightmove-style location typeahead — distinct areas (city + county),
+  // not individual properties. Used by Explore's lightweight search
+  // dropdown; see PropertyService.searchAreas for the grouping logic.
+  @SkipThrottle()
+  @Get('search-areas')
+  async searchAreas(@Query('q') query: string, @Query('limit') limit?: string) {
+    if (!query || query.trim().length < 2) return { items: [] };
+    const lim = Math.min(parseInt(limit ?? '8') || 8, 15);
+    return this.propertyService.searchAreas(query.trim(), lim);
   }
 
   @Get(':id/passport-status')
@@ -175,12 +234,24 @@ export class PropertyController {
     @Request() req: any,
     @Query('propertyType') propertyType?: string,
     @Query('minBedrooms') minBedrooms?: string,
+    @Query('maxBedrooms') maxBedrooms?: string,
     @Query('minEpc') minEpc?: string,
     @Query('minHomeScore') minHomeScore?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
     @Query('passportOnly') passportOnly?: string,
+    @Query('passportStatus') passportStatus?: string,
   ) {
     const hasFilters =
-      !!propertyType || !!minBedrooms || !!minEpc || !!minHomeScore || !!passportOnly;
+      !!propertyType ||
+      !!minBedrooms ||
+      !!maxBedrooms ||
+      !!minEpc ||
+      !!minHomeScore ||
+      !!minPrice ||
+      !!maxPrice ||
+      !!passportOnly ||
+      !!passportStatus;
     return this.propertyService.getForYou(
       req.user.id,
       hasFilters
@@ -189,9 +260,15 @@ export class PropertyController {
               ? propertyType.split(',').filter((v) => v && v !== 'any')
               : undefined,
             minBedrooms: minBedrooms ? parseInt(minBedrooms, 10) : undefined,
+            maxBedrooms: maxBedrooms ? parseInt(maxBedrooms, 10) : undefined,
             minEpc: minEpc || undefined,
             minHomeScore: minHomeScore ? parseInt(minHomeScore, 10) : undefined,
+            minPrice: minPrice ? parseFloat(minPrice) : undefined,
+            maxPrice: maxPrice ? parseFloat(maxPrice) : undefined,
             passportOnly: passportOnly === '1' || passportOnly === 'true',
+            passportStatus: passportStatus
+              ? passportStatus.split(',').filter(Boolean)
+              : undefined,
           }
         : undefined,
     );
