@@ -318,33 +318,18 @@ export class PassportService {
 
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
 
-    // KYC gate. Claiming a property creates a verified-owner relationship
-    // with a real address — we need to know the claimant is who they
-    // say they are before HMLR ownership verification, TA6 generation,
-    // and buyer-side trust signals downstream. Returning an existing
-    // owned passport (above) skips this — that user already cleared it.
-    assertKycVerified(user);
-
     // Property claims (propertyId set, not a landlord→seller convert) cost
     // us real money — Persona KYC and/or HM Land Registry Online Ownership
-    // Verification — so they're paid. HMLR must have already come back
-    // VERIFIED (the frontend's /claim/[id] flow runs it via
-    // /property/:id/land-registry-check before ever calling this) —
-    // enforced server-side too so a client can't skip straight here.
-    // The passport is created now in PENDING_PAYMENT so its id can be
-    // stamped into the PaymentIntent (PassportPayment.passportId is a
-    // required FK), but sections aren't seeded until activatePassport()
-    // confirms the charge succeeded — see that method below.
+    // Verification — so they're paid. Payment now happens BEFORE either of
+    // those runs (the user pays for the verification service up front,
+    // rather than us incurring the KYC/HMLR cost and then finding out they
+    // won't pay), so neither is required yet here. The passport is created
+    // now in PENDING_PAYMENT so its id can be stamped into the
+    // PaymentIntent (PassportPayment.passportId is a required FK); KYC and
+    // HM Land Registry verification are both enforced instead at
+    // activatePassport() below, right before sections are seeded — a paid
+    // claim just sits in PENDING_PAYMENT until the user completes both.
     if (propertyId && !opts.convertedFromId) {
-      const ov = await this.prisma.ownershipVerification.findUnique({
-        where: { propertyId_userId: { propertyId, userId } },
-      });
-      if (!ov || ov.status !== 'VERIFIED') {
-        throw new BadRequestException(
-          'Ownership has not been verified against HM Land Registry yet.',
-        );
-      }
-
       const passport = await this.prisma.passport.create({
         data: {
           addressLine1,
@@ -357,18 +342,15 @@ export class PassportService {
         },
       });
 
-      // Link back so the OV row (and any future audit query) can find the
-      // passport this claim attempt produced.
-      await this.prisma.ownershipVerification.update({
-        where: { id: ov.id },
-        data: { passportId: passport.id },
-      });
-
       return { passportId: passport.id, status: passport.status };
     }
 
     // No propertyId (manual passport) or a landlord→seller convert: no
-    // HMLR/fresh-KYC cost is incurred, stays free and instant as before.
+    // HMLR/fresh-KYC cost is incurred, stays free and instant as before —
+    // still requires KYC to already be verified, since there's no later
+    // activation step in this path to defer the check to.
+    assertKycVerified(user);
+
     const passport = await this.prisma.passport.create({
       data: {
         addressLine1,
@@ -415,8 +397,35 @@ export class PassportService {
       );
     }
 
+    // KYC + HM Land Registry ownership checks were deferred from
+    // createPassport() to here — payment now happens first, so these are
+    // the gates that actually decide whether the paid claim gets to
+    // activate. A user who's paid but hasn't finished KYC/HMLR yet just
+    // gets sent back to finish those; the paid PENDING_PAYMENT passport
+    // waits for them (no re-charge on retry).
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    assertKycVerified(user);
+
     let propertyTenure: string | null = null;
     if (passport.propertyId) {
+      const ov = await this.prisma.ownershipVerification.findUnique({
+        where: {
+          propertyId_userId: { propertyId: passport.propertyId, userId },
+        },
+      });
+      if (!ov || ov.status !== 'VERIFIED') {
+        throw new BadRequestException(
+          'Ownership has not been verified against HM Land Registry yet.',
+        );
+      }
+      if (!ov.passportId) {
+        await this.prisma.ownershipVerification.update({
+          where: { id: ov.id },
+          data: { passportId: passport.id },
+        });
+      }
+
       const prop = await this.prisma.property.findUnique({
         where: { id: passport.propertyId },
         select: { tenure: true },
