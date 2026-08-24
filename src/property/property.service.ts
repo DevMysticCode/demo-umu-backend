@@ -2009,11 +2009,26 @@ export class PropertyService {
       postcode: string | null;
     }[] = [];
     for (const r of rows) {
-      const outcode = (r.postcode ?? '').trim().split(' ')[0]?.toUpperCase();
-      if (!outcode || !outcode.startsWith(qUpper)) continue;
-      if (outcodeSeen.has(outcode)) continue;
-      outcodeSeen.add(outcode);
-      outcodeItems.push({ label: outcode, city: null, county: null, postcode: outcode });
+      const rawPostcode = (r.postcode ?? '').trim().toUpperCase();
+      const outcode = rawPostcode.split(' ')[0];
+      if (!outcode) continue;
+      if (outcode.startsWith(qUpper)) {
+        // Query is an outcode-level prefix ("CV", "CV5") — suggest the
+        // district itself.
+        if (outcodeSeen.has(outcode)) continue;
+        outcodeSeen.add(outcode);
+        outcodeItems.push({ label: outcode, city: null, county: null, postcode: outcode });
+      } else if (qUpper.length > outcode.length && rawPostcode.replace(/\s+/g, '').startsWith(qUpper)) {
+        // Query is more specific than the outcode ("CV5 6AJ", "CV56") —
+        // the outcode alone no longer matches (it's a strict prefix of
+        // the query, not the other way round), so suggest the full
+        // postcode instead of silently falling through to area names.
+        if (outcodeSeen.has(rawPostcode)) continue;
+        outcodeSeen.add(rawPostcode);
+        outcodeItems.push({ label: rawPostcode, city: null, county: null, postcode: rawPostcode });
+      } else {
+        continue;
+      }
       if (outcodeItems.length >= limit) break;
     }
     if (outcodeItems.length) {
