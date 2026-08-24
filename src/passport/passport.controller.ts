@@ -79,9 +79,11 @@ export class PassportController {
   }
 
   // Property owner-claims come back from createPassport in PENDING_PAYMENT
-  // status (KYC/HMLR cost real money — see PaymentService pricing). Call
-  // this after POST /payment/create-claim-intent's Stripe charge succeeds
-  // to seed the passport's sections and activate it.
+  // status (KYC/HMLR cost real money — see PaymentService pricing).
+  // Payment happens first (right after createPassport), then KYC and HM
+  // Land Registry verification; this is the last call in that chain and
+  // requires all three — Stripe charge succeeded, KYC approved, and HMLR
+  // ownership VERIFIED — before it seeds the passport's sections.
   @Post(':id/activate')
   @UseGuards(JwtAuthGuard)
   async activatePassport(@Param('id') id: string, @Request() req: any) {
