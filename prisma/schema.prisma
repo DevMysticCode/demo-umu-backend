@@ -424,7 +424,12 @@ model Passport {
   postcode          String
   ownerId           String
   propertyId        String?
-  type              PassportType             @default(SELLER)
+  // Nullable: a property claim now takes payment before the owner picks
+  // seller/landlord (see PassportService.createPassport/setPassportType),
+  // so a PENDING_PAYMENT row can exist for a while with no type chosen yet.
+  // Manual passports and landlord→seller converts still set this at
+  // creation, same as before. Never null once status leaves PENDING_PAYMENT.
+  type              PassportType?
   // True when the property is a House in Multiple Occupation (landlord only).
   // Drives whether PAT-testing and HMO-licence sections are seeded.
   isHmo             Boolean                  @default(false)

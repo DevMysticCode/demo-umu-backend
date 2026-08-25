@@ -68,7 +68,12 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
     const userId = req.user.id;
-    const type = dto.type === 'landlord' ? 'LANDLORD' : 'SELLER';
+    // Manual passports / landlord→seller converts send a real type and get
+    // it applied immediately. Property claims (dto.propertyId set) don't
+    // send one anymore — createPassport() ignores it for that path and the
+    // frontend calls set-type below once HMLR verifies ownership.
+    const type =
+      dto.type === 'landlord' ? 'LANDLORD' : dto.type === 'seller' ? 'SELLER' : undefined;
     return this.passportService.createPassport(
       userId,
       dto.addressLine1,
@@ -79,11 +84,24 @@ export class PassportController {
   }
 
   // Property owner-claims come back from createPassport in PENDING_PAYMENT
-  // status (KYC/HMLR cost real money — see PaymentService pricing).
-  // Payment happens first (right after createPassport), then KYC and HM
-  // Land Registry verification; this is the last call in that chain and
-  // requires all three — Stripe charge succeeded, KYC approved, and HMLR
-  // ownership VERIFIED — before it seeds the passport's sections.
+  // status with no type yet (KYC/HMLR cost real money — see PaymentService
+  // pricing). Payment happens first (right after createPassport), then KYC
+  // and HM Land Registry verification, then this sets the seller/landlord
+  // choice once ownership is confirmed — call it right before :id/activate.
+  @Post(':id/set-type')
+  @UseGuards(JwtAuthGuard)
+  async setPassportType(
+    @Param('id') id: string,
+    @Body() dto: { type: 'seller' | 'landlord'; isHmo?: boolean },
+    @Request() req: any,
+  ) {
+    const type = dto.type === 'landlord' ? 'LANDLORD' : 'SELLER';
+    return this.passportService.setPassportType(id, req.user.id, type, !!dto.isHmo);
+  }
+
+  // Last call in the chain — requires all of: Stripe charge succeeded, KYC
+  // approved, HMLR ownership VERIFIED, and a type already set via
+  // :id/set-type — before it seeds the passport's sections.
   @Post(':id/activate')
   @UseGuards(JwtAuthGuard)
   async activatePassport(@Param('id') id: string, @Request() req: any) {

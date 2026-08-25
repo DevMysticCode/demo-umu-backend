@@ -275,9 +275,6 @@ export class PassportService {
     propertyId?: string,
     opts: { type?: 'SELLER' | 'LANDLORD'; isHmo?: boolean; convertedFromId?: string } = {},
   ): Promise<{ passportId: string; status: string }> {
-    const passportType = opts.type ?? 'SELLER';
-    const isHmo = !!opts.isHmo;
-
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User does not exist: ' + userId);
 
@@ -287,6 +284,54 @@ export class PassportService {
         'A phone number is required on your profile before claiming a property passport. Please add your phone number in Profile → Personal Information.',
       );
     }
+
+    // Property claims (propertyId set, not a landlord→seller convert) cost
+    // us real money — Persona KYC and/or HM Land Registry Online Ownership
+    // Verification — so they're paid. Payment happens BEFORE either of
+    // those runs (the user pays for the verification service up front,
+    // rather than us incurring the KYC/HMLR cost and then finding out they
+    // won't pay), which in turn means the seller/landlord choice can't be
+    // known yet either — the frontend now asks for it only once HM Land
+    // Registry has actually verified ownership, via setPassportType()
+    // below, right before activatePassport() seeds the passport's
+    // sections. This row is created now in PENDING_PAYMENT with no type so
+    // its id can be stamped into the PaymentIntent (PassportPayment.
+    // passportId is a required FK) — KYC, HMLR, and the type choice are
+    // all enforced later instead.
+    if (propertyId && !opts.convertedFromId) {
+      // Reuse an existing untyped pending claim for this (owner, property)
+      // instead of creating a duplicate paid record — covers a refreshed
+      // or re-entered attempt before payment (or before a type was ever
+      // chosen) landing here again.
+      const existingPending = await this.prisma.passport.findFirst({
+        where: { propertyId, ownerId: userId, type: null, status: 'PENDING_PAYMENT' },
+      });
+      if (existingPending) {
+        return { passportId: existingPending.id, status: existingPending.status };
+      }
+
+      const passport = await this.prisma.passport.create({
+        data: {
+          addressLine1,
+          postcode,
+          ownerId: userId,
+          propertyId,
+          status: 'PENDING_PAYMENT',
+        },
+      });
+
+      return { passportId: passport.id, status: passport.status };
+    }
+
+    // No propertyId (manual passport) or a landlord→seller convert: no
+    // HMLR/fresh-KYC cost is incurred, stays free and instant as before —
+    // still requires KYC to already be verified, since there's no later
+    // activation step in this path to defer the check to, and the type IS
+    // known upfront for these paths.
+    assertKycVerified(user);
+
+    const passportType = opts.type ?? 'SELLER';
+    const isHmo = !!opts.isHmo;
 
     // Manual claim: at most one passport per (owner, property, type). Convert
     // flow bypasses this naturally — its target type is SELLER and the source
@@ -318,39 +363,6 @@ export class PassportService {
 
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
 
-    // Property claims (propertyId set, not a landlord→seller convert) cost
-    // us real money — Persona KYC and/or HM Land Registry Online Ownership
-    // Verification — so they're paid. Payment now happens BEFORE either of
-    // those runs (the user pays for the verification service up front,
-    // rather than us incurring the KYC/HMLR cost and then finding out they
-    // won't pay), so neither is required yet here. The passport is created
-    // now in PENDING_PAYMENT so its id can be stamped into the
-    // PaymentIntent (PassportPayment.passportId is a required FK); KYC and
-    // HM Land Registry verification are both enforced instead at
-    // activatePassport() below, right before sections are seeded — a paid
-    // claim just sits in PENDING_PAYMENT until the user completes both.
-    if (propertyId && !opts.convertedFromId) {
-      const passport = await this.prisma.passport.create({
-        data: {
-          addressLine1,
-          postcode,
-          ownerId: userId,
-          type: passportType as any,
-          isHmo,
-          propertyId,
-          status: 'PENDING_PAYMENT',
-        },
-      });
-
-      return { passportId: passport.id, status: passport.status };
-    }
-
-    // No propertyId (manual passport) or a landlord→seller convert: no
-    // HMLR/fresh-KYC cost is incurred, stays free and instant as before —
-    // still requires KYC to already be verified, since there's no later
-    // activation step in this path to defer the check to.
-    assertKycVerified(user);
-
     const passport = await this.prisma.passport.create({
       data: {
         addressLine1,
@@ -368,6 +380,59 @@ export class PassportService {
       passportId: passport.id,
       status: passport.status,
     };
+  }
+
+  /**
+   * Set the seller/landlord type (and HMO flag) on a PENDING_PAYMENT
+   * property claim — called once HM Land Registry has verified ownership,
+   * right before activatePassport(). Property claims no longer choose a
+   * type at creation time (see createPassport() above), since payment now
+   * happens before KYC/HMLR and the type genuinely isn't known that early.
+   */
+  async setPassportType(
+    passportId: string,
+    userId: string,
+    type: 'SELLER' | 'LANDLORD',
+    isHmo: boolean,
+  ): Promise<{ passportId: string; status: string }> {
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this passport claim');
+    }
+    if (passport.status !== 'PENDING_PAYMENT') {
+      // Already typed and activated (or a retried call) — nothing to do.
+      return { passportId: passport.id, status: passport.status };
+    }
+    if (!passport.propertyId) {
+      throw new BadRequestException('This passport has no associated property');
+    }
+
+    // Same dedupe the old upfront check used to do at createPassport() time
+    // — moved here since type isn't known until now. If the claimant
+    // already owns an active passport of this exact type on this property,
+    // there's no need for a second one; hand back the existing one instead
+    // (the newly-paid PENDING_PAYMENT row is left as-is — already charged,
+    // not auto-refunded, same "no re-charge on retry, no auto-refund on a
+    // dead-end" policy as everywhere else in this flow).
+    const existingSameType = await this.prisma.passport.findFirst({
+      where: { propertyId: passport.propertyId, type, id: { not: passport.id } },
+    });
+    if (existingSameType) {
+      if (existingSameType.ownerId === userId) {
+        return { passportId: existingSameType.id, status: existingSameType.status };
+      }
+      throw new ForbiddenException(
+        'This property already has a passport of this type owned by another user',
+      );
+    }
+
+    await this.prisma.passport.update({
+      where: { id: passport.id },
+      data: { type, isHmo },
+    });
+
+    return { passportId: passport.id, status: passport.status };
   }
 
   /**
@@ -433,6 +498,17 @@ export class PassportService {
       propertyTenure = prop?.tenure ?? null;
     }
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
+
+    // Property claims don't get a type at creation anymore (see
+    // createPassport()) — the frontend calls setPassportType() once HMLR
+    // verifies, before this. Manual/convert passports always have one from
+    // creation, so this only ever fires for a property claim activated out
+    // of order (shouldn't happen via the normal flow).
+    if (!passport.type) {
+      throw new BadRequestException(
+        'Passport type has not been chosen yet — call POST /passport/:id/set-type first.',
+      );
+    }
 
     await this.seedPassportContent(passport.id, passport.type, passport.isHmo, isLeasehold);
     await this.prisma.passport.update({
