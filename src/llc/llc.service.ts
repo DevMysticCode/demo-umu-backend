@@ -170,11 +170,17 @@ export class LlcService {
   private mapErrorCode(code: string): string {
     // E435 = "Search location covers an area for which we do not
     // currently hold information" — the council hasn't migrated.
-    // E425 = "More than one possible geometry found" — HMLR's parcel
-    // data is ambiguous. UPRN-based search can't recover; a manual
-    // gov.uk lookup is the escape hatch.
+    // Confirmed against the live API (October 2025 docs agree).
+    //
+    // "More than one possible geometry found" — HMLR's parcel data is
+    // ambiguous, UPRN-based search can't recover, a manual gov.uk lookup
+    // is the escape hatch. The docs call this E425, but live testing
+    // against several address-search requests consistently returned
+    // E422 for this exact message instead — docs appear stale on the
+    // code (message text matched verbatim). Checking both in case E425
+    // is real for some other path (e.g. UPRN) that wasn't exercised.
     if (code === 'E435') return 'NOT_MIGRATED';
-    if (code === 'E425') return 'MULTI_GEOMETRY';
+    if (code === 'E422' || code === 'E425') return 'MULTI_GEOMETRY';
     return 'ERROR';
   }
 
