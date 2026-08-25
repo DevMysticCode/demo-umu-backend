@@ -771,6 +771,10 @@ model QuestionTemplate {
   parts               Json?
   fields              Json?
   autoSaveOn          Json?
+  // Publish-readiness classification, one entry per answerable slot (one
+  // per parts[] entry for MULTIPART, or a single order:1 entry otherwise).
+  // See src/common/passport-readiness.ts for the shape and how it's read.
+  readiness           Json?
   repeatable          Boolean?
   buttonText          String?
   scaleType           String?
@@ -1053,6 +1057,66 @@ model HomeScoreResult {
   @@index([propertyId])
   @@index([userId])
   @@index([publishedAt])
+}
+
+model WorkType {
+  code        String  @id
+  label       String
+  category    String
+  tier        Int
+  upliftLow   Float?
+  upliftHigh  Float?
+  isMinor     Boolean @default(false)
+  epcAssessed Boolean @default(false)
+  docRequired String?
+  warningText String?
+  isCommon    Boolean @default(false)
+  sortOrder   Int     @default(0)
+  active      Boolean @default(true)
+
+  works PropertyWork[]
+}
+
+model PropertyWork {
+  id                String    @id @default(uuid())
+  propertyId        String
+  userId            String
+  workTypeCode      String
+  verificationState String    @default("self")
+  evidenceUrl       String?
+  installDate       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  workType WorkType @relation(fields: [workTypeCode], references: [code])
+
+  @@unique([propertyId, userId, workTypeCode])
+}
+
+model ValuationSnapshot {
+  id            String   @id @default(uuid())
+  propertyId    String
+  userId        String
+  baseline      Float
+  estimateLow   Float
+  estimateHigh  Float
+  estimatePoint Float
+  provedCount   Int
+  scoringCount  Int
+  derisked      Int
+  recorded      Int
+  flagged       Int
+  epcSuppressed Boolean  @default(false)
+  contributions Json
+  engineVersion String
+  inputsHash    String
+  isHomeowner   Boolean?
+  isLandlord    Boolean?
+  purpose       String?
+  foundNextHome String?
+  createdAt     DateTime @default(now())
+
+  @@unique([propertyId, userId])
 }
 
 model SharedPassportLink {

@@ -17,6 +17,11 @@ import {
   QuestionTemplate,
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
+import {
+  computePassportReadiness,
+  PassportReadinessResult,
+  SystemCheckInput,
+} from '../common/passport-readiness';
 import OpenAI from 'openai';
 import { Resend } from 'resend';
 
@@ -206,7 +211,7 @@ export class PassportService {
                   },
                 },
                 questionTemplate: {
-                  select: { points: true },
+                  select: { points: true, readiness: true },
                 },
               },
             },
@@ -261,6 +266,20 @@ export class PassportService {
           earnedPoints: task.passportQuestions
             .filter((q) => q.answer !== null)
             .reduce((sum, q) => sum + (q.questionTemplate?.points ?? 0), 0),
+          // True when this task holds at least one question that hard-
+          // blocks publication (QuestionTemplate.readiness has a 'yes'
+          // entry) — lets the task list badge "required to publish" so
+          // sellers don't lose it among everything else. Deliberately a
+          // static flag (not re-checking conditional-trigger state here)
+          // — good enough for a list-level badge; the authoritative,
+          // currently-applicable list is GET /passport/:id/readiness.
+          hasPublishRequired: task.passportQuestions.some((q) => {
+            const readiness = q.questionTemplate?.readiness;
+            return (
+              Array.isArray(readiness) &&
+              readiness.some((r: any) => r?.blocksPublication === 'yes')
+            );
+          }),
         })),
       };
     });
@@ -1507,6 +1526,126 @@ export class PassportService {
     };
   }
 
+  async getReadiness(
+    passportId: string,
+    userId: string,
+  ): Promise<PassportReadinessResult> {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+    return this.computeReadiness(passportId);
+  }
+
+  /**
+   * Publish-readiness for a SELLER passport — separate from
+   * computePassportCompletion()'s flat task-count ratio. Walks every
+   * question's QuestionTemplate.readiness (populated by
+   * src/scripts/import-passport-readiness.ts from the client's classified
+   * spreadsheet) plus two system-fact checks sourced from data we already
+   * hold rather than asked as seller questions. LANDLORD passports (and any
+   * SELLER section not yet classified) simply have no `readiness` data on
+   * their templates, so computePassportReadiness finds zero blockers and
+   * canPublish comes back true — the gate only bites where classification
+   * data actually exists.
+   */
+  private async computeReadiness(
+    passportId: string,
+  ): Promise<PassportReadinessResult> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { propertyId: true },
+    });
+
+    const sections = await this.prisma.passportSection.findMany({
+      where: { passportId },
+      select: {
+        id: true,
+        key: true,
+        title: true,
+        tasks: {
+          select: {
+            id: true,
+            key: true,
+            title: true,
+            passportQuestions: {
+              select: {
+                id: true,
+                answer: {
+                  select: { answerJson: true, answerText: true, fileUrl: true },
+                },
+                questionTemplate: {
+                  select: { type: true, title: true, parts: true, readiness: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const readinessSections = sections.map((s) => ({
+      id: s.id,
+      key: s.key,
+      title: s.title,
+      tasks: s.tasks.map((t) => ({
+        id: t.id,
+        key: t.key,
+        title: t.title,
+        questions: t.passportQuestions.map((q) => ({
+          id: q.id,
+          answer: q.answer,
+          questionTemplate: q.questionTemplate as any,
+        })),
+      })),
+    }));
+
+    let property: { titleNumber: string | null; epcRating: string | null } | null =
+      null;
+    if (passport?.propertyId) {
+      property = await this.prisma.property.findUnique({
+        where: { id: passport.propertyId },
+        select: { titleNumber: true, epcRating: true },
+      });
+    }
+
+    // EPC fallback: if we don't already hold a structured EPC rating,
+    // accept the seller's own EPC upload (environmental / energy_efficiency
+    // task) as evidence instead — never block on a data gap that isn't the
+    // seller's fault.
+    let epcSatisfied = !!property?.epcRating;
+    if (!epcSatisfied) {
+      epcSatisfied =
+        readinessSections
+          .find((s) => s.key === 'environmental')
+          ?.tasks.find((t) => t.key === 'energy_efficiency')
+          ?.questions.some(
+            (q) => q.answer?.fileUrl || q.answer?.answerJson,
+          ) ?? false;
+    }
+
+    const systemChecks: SystemCheckInput[] = [
+      {
+        key: 'titleNumber',
+        label: 'Title number verified with HM Land Registry',
+        satisfied: !!property?.titleNumber,
+        // Informational only — many genuinely-owned properties are not yet
+        // registered with HM Land Registry (first registration only
+        // becomes compulsory on a subsequent sale), so this must not trap
+        // a legitimate seller from publishing.
+        blocksPublication: false,
+      },
+      {
+        key: 'epcRating',
+        label: 'EPC rating on file',
+        satisfied: epcSatisfied,
+        blocksPublication: true,
+      },
+    ];
+
+    return computePassportReadiness(readinessSections as any, systemChecks);
+  }
+
   async publishPassport(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
@@ -1514,6 +1653,15 @@ export class PassportService {
     if (!passport) throw new ForbiddenException('Passport not found');
     if (passport.ownerId !== userId)
       throw new ForbiddenException('Only the owner can publish this passport');
+
+    const readiness = await this.computeReadiness(passportId);
+    if (!readiness.canPublish) {
+      throw new ForbiddenException({
+        message:
+          'This passport is not ready to publish yet — some required disclosures are still missing.',
+        readiness,
+      });
+    }
 
     const updated = await this.prisma.passport.update({
       where: { id: passportId },

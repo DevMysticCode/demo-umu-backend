@@ -227,6 +227,12 @@ export class PassportController {
     return this.passportService.getBuyerView(passportId, req.user.id);
   }
 
+  @Get(':id/readiness')
+  @UseGuards(JwtAuthGuard)
+  async getReadiness(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getReadiness(passportId, req.user.id);
+  }
+
   @Put(':id/publish')
   @UseGuards(JwtAuthGuard)
   async publishPassport(@Param('id') passportId: string, @Request() req: any) {
