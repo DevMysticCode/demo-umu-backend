@@ -2969,6 +2969,33 @@ export class PropertyService {
       sellerPassports.find((p) => p.status === 'PUBLISHED') ??
       sellerPassports[0] ??
       null;
+    // Street-level claim count ("1 of 8 homes on Oakleigh Avenue claimed")
+    // and watcher count for the property page's claim-prompt card. Scoped
+    // to the postcode outcode (not exact postcode — a street commonly spans
+    // more than one) so "Oakleigh Avenue" doesn't accidentally match a
+    // same-named street in a different town. "Claimed" here means any
+    // Passport row at all, seller or landlord — distinct from the
+    // SELLER-only hasPassport badge above, since a landlord claiming their
+    // own home is still genuinely "claimed" for this street-activity stat.
+    const outcode = (rest.postcode || '').split(' ')[0].trim();
+    const streetName = this.extractStreetName(rest.addressLine1);
+    const [streetProperties, watcherCount] = await Promise.all([
+      outcode && streetName !== 'your street'
+        ? this.prisma.property.findMany({
+            where: {
+              postcode: { startsWith: outcode },
+              addressLine1: { contains: streetName, mode: 'insensitive' },
+            },
+            select: { passports: { select: { id: true }, take: 1 } },
+          })
+        : Promise.resolve([]),
+      this.prisma.propertyWatch.count({ where: { propertyId: id } }),
+    ]);
+    const streetTotalCount = streetProperties.length;
+    const streetClaimedCount = streetProperties.filter(
+      (p) => (p as any).passports?.length > 0,
+    ).length;
+
     const normalised = {
       ...rest,
       addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
@@ -2979,6 +3006,10 @@ export class PropertyService {
       hasPassport: !!sellerPassport,
       passportPublished: sellerPassport?.status === 'PUBLISHED',
       passportId: sellerPassport?.id ?? null,
+      streetName,
+      streetTotalCount,
+      streetClaimedCount,
+      watcherCount,
     };
 
     // Enrich with EPC data if fields are missing (non-blocking, always returns a property)
