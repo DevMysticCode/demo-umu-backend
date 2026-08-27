@@ -5705,13 +5705,27 @@ export class PropertyService {
     // Real-time progress summary — public-safe (counts + section keys only,
     // no question/answer content). Drives the property page's "Passport
     // being built" card so buyers see actual completion, not a proxy.
-    const progress = await this.buildPassportProgress(passport.id);
+    const [progress, publishedActivity] = await Promise.all([
+      this.buildPassportProgress(passport.id),
+      // Passport has no dedicated publishedAt column — the PUBLISHED
+      // timeline entry (written when publishPassport() runs) is the real
+      // source of truth for when that happened. Most-recent one in case
+      // it was ever unpublished + republished.
+      isPublished
+        ? this.prisma.passportActivity.findFirst({
+            where: { passportId: passport.id, type: 'PUBLISHED' },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+          })
+        : Promise.resolve(null),
+    ]);
 
     return {
       hasPassport: true,
       passportId: passport.id,
       passportStatus: passport.status,
       isPublished,
+      publishedAt: publishedActivity?.createdAt ?? null,
       isOwner,
       isCollaborator,
       isBuyer,
