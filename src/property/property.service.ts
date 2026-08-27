@@ -2636,7 +2636,13 @@ export class PropertyService {
             data: updateData,
           });
           console.log(`[Enrich] Successfully updated property ${property.id}`);
-          return updated;
+          // Prisma's update() result only carries real Property columns — it
+          // silently drops synthetic overlay fields the caller merged onto
+          // `property` before enrichment (hasPassport, passportId,
+          // streetName, streetTotalCount, streetClaimedCount, watcherCount).
+          // Spread `property` first so those survive, then `updated` so the
+          // freshly-written DB columns still win over their stale values.
+          return { ...property, ...updated };
         } catch (error) {
           // If DB update fails, still return enriched object in memory
           console.error(
@@ -2672,7 +2678,10 @@ export class PropertyService {
             console.log(
               `[Enrich] Recovered ${recs.length} recommendations from LMK`,
             );
-            property = updated;
+            // Same synthetic-field-loss risk as the update() above — merge
+            // rather than replace so streetTotalCount/watcherCount/etc.
+            // survive into the final `return property` below.
+            property = { ...property, ...updated };
           } catch (err) {
             console.error(`[Enrich] Failed to persist recovered recs:`, err);
             (property as any).epcRecommendations = recs;
