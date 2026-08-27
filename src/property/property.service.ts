@@ -2988,18 +2988,34 @@ export class PropertyService {
     // own home is still genuinely "claimed" for this street-activity stat.
     const outcode = (rest.postcode || '').split(' ')[0].trim();
     const streetName = this.extractStreetName(rest.addressLine1);
-    const [streetProperties, watcherCount] = await Promise.all([
-      outcode && streetName !== 'your street'
-        ? this.prisma.property.findMany({
-            where: {
-              postcode: { startsWith: outcode },
-              addressLine1: { contains: streetName, mode: 'insensitive' },
-            },
-            select: { passports: { select: { id: true }, take: 1 } },
-          })
-        : Promise.resolve([]),
-      this.prisma.propertyWatch.count({ where: { propertyId: id } }),
-    ]);
+    const [streetProperties, watcherCount, anyVerifiedClaim, guestProgress] =
+      await Promise.all([
+        outcode && streetName !== 'your street'
+          ? this.prisma.property.findMany({
+              where: {
+                postcode: { startsWith: outcode },
+                addressLine1: { contains: streetName, mode: 'insensitive' },
+              },
+              select: { passports: { select: { id: true }, take: 1 } },
+            })
+          : Promise.resolve([]),
+        this.prisma.propertyWatch.count({ where: { propertyId: id } }),
+        // Only needed when there's no seller passport to prove the claim
+        // via — see the isClaimed comment below.
+        sellerPassport
+          ? Promise.resolve(null)
+          : this.prisma.ownershipVerification.findFirst({
+              where: { propertyId: id, status: 'VERIFIED' },
+              select: { id: true },
+            }),
+        // Real progress for the guest-facing floating claim card — same
+        // data getPassportStatus() computes for logged-in viewers, needed
+        // here too since that endpoint requires a JWT and guests browsing
+        // the property page don't have one.
+        sellerPassport && sellerPassport.status !== 'PUBLISHED'
+          ? this.buildPassportProgress(sellerPassport.id)
+          : Promise.resolve(null),
+      ]);
     const streetTotalCount = streetProperties.length;
     const streetClaimedCount = streetProperties.filter(
       (p) => (p as any).passports?.length > 0,
@@ -3015,6 +3031,14 @@ export class PropertyService {
       hasPassport: !!sellerPassport,
       passportPublished: sellerPassport?.status === 'PUBLISHED',
       passportId: sellerPassport?.id ?? null,
+      // Distinguishes a genuinely unclaimed property ("be the first on
+      // this street") from one that's been claimed but has no seller
+      // passport yet ("no public Passport available") — a seller passport
+      // can only exist after a verified ownership claim, so its presence
+      // alone is proof; otherwise fall back to checking for a VERIFIED
+      // OwnershipVerification directly.
+      isClaimed: !!sellerPassport || !!anyVerifiedClaim,
+      passportProgress: guestProgress,
       streetName,
       streetTotalCount,
       streetClaimedCount,
@@ -5643,9 +5667,23 @@ export class PropertyService {
       ((property as any).passports as any[])?.find((p) => p.type === 'SELLER') ?? null;
 
     if (!sellerPassport) {
-      const verification = await this.prisma.ownershipVerification.findUnique({
-        where: { propertyId_userId: { propertyId, userId } },
-      });
+      // `verification` (below) is scoped to THIS viewer's own attempt, so
+      // it's null for anyone except the person who actually ran the
+      // claim flow — no good for "has this property been claimed by
+      // ANYONE" which the property page needs regardless of who's
+      // looking. `anyVerifiedClaim` answers that property-wide question
+      // so the page can tell a genuinely unclaimed property ("be the
+      // first on this street") apart from one that's been claimed but
+      // has no seller passport yet ("no public Passport available").
+      const [verification, anyVerifiedClaim] = await Promise.all([
+        this.prisma.ownershipVerification.findUnique({
+          where: { propertyId_userId: { propertyId, userId } },
+        }),
+        this.prisma.ownershipVerification.findFirst({
+          where: { propertyId, status: 'VERIFIED' },
+          select: { id: true },
+        }),
+      ]);
       return {
         hasPassport: false,
         passportId: null,
@@ -5653,6 +5691,7 @@ export class PropertyService {
         isCollaborator: false,
         isBuyer: false,
         verificationStatus: verification?.status ?? null,
+        isClaimed: !!anyVerifiedClaim,
       };
     }
 
@@ -5679,6 +5718,10 @@ export class PropertyService {
       // Owner/collaborator can always access; buyers and public only if published
       canAccess: isOwner || isCollaborator || isBuyer || isPublished,
       verificationStatus: null,
+      // A seller passport can only exist after a verified ownership claim
+      // (KYC + HMLR), so its existence alone confirms the property is
+      // claimed — no extra query needed here, unlike the branch above.
+      isClaimed: true,
       passportProgress: progress,
     };
   }
