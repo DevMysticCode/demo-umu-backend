@@ -215,6 +215,22 @@ export class PropertyController {
     return this.propertyService.getSavedProperties(req.user.id);
   }
 
+  // "Recently viewed" strip — every property opened, not just saved ones.
+  @Get('recently-viewed')
+  @UseGuards(JwtAuthGuard)
+  async getRecentlyViewed(@Request() req: any) {
+    return this.propertyService.getRecentlyViewed(req.user.id);
+  }
+
+  // Fired from the property page's own mount — cheap upsert, not worth
+  // throttling alongside the heavier enrichment endpoints.
+  @SkipThrottle()
+  @Post(':id/record-view')
+  @UseGuards(JwtAuthGuard)
+  async recordView(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.recordRecentlyViewed(req.user.id, id);
+  }
+
   // Real "N HomeScores run in the last hour" counter for the HomeScore
   // landing page's social-proof pill — no auth required, site-wide count.
   @Get('activity/last-hour')

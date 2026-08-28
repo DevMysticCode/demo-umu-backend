@@ -63,6 +63,7 @@ model User {
   userDocuments                 UserDocument[]
   wishlistedProperties          UserWishlist[]
   savedProperties               UserSavedProperty[]
+  recentlyViewedProperties      RecentlyViewedProperty[]
   propertyWatches               PropertyWatch[]
   reminders                     UserReminder[]
   videoProgress                 VideoProgress[]
@@ -322,6 +323,7 @@ model Property {
   ownershipVerifications OwnershipVerification[]
   wishlistedBy           UserWishlist[]
   savedBy                UserSavedProperty[]
+  recentlyViewedBy       RecentlyViewedProperty[]
   watchedBy              PropertyWatch[]
   searchLogs             PropertySearchLog[]
   captureEvents          CaptureEvent[]
@@ -840,6 +842,23 @@ model UserSavedProperty {
 
   @@unique([userId, propertyId])
   @@index([userId])
+}
+
+// "Recently viewed" strip on the dashboard — every property a user has
+// opened, not just ones they've explicitly saved/watched (that's
+// UserSavedProperty, above). One row per (user, property); viewedAt is
+// bumped in place on repeat views rather than inserting duplicates, so
+// the row's position always reflects the most recent visit.
+model RecentlyViewedProperty {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  viewedAt   DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, viewedAt])
 }
 
 // Per-property notification preferences for the "Watch this property" drawer
