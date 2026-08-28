@@ -6261,6 +6261,36 @@ export class PropertyService {
     }));
   }
 
+  // Upsert-and-bump: a repeat view moves the row to the front rather than
+  // inserting a duplicate, so "recently viewed" always reflects the most
+  // recent visit per property, not every visit. Fire-and-forget from the
+  // frontend's property page mount — never blocks page render.
+  async recordRecentlyViewed(userId: string, propertyId: string) {
+    await this.prisma.recentlyViewedProperty.upsert({
+      where: { userId_propertyId: { userId, propertyId } },
+      create: { userId, propertyId },
+      update: { viewedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
+  // Last few properties a user opened — including ones never saved/
+  // watched, unlike getSavedProperties above. Capped to 6 for the
+  // dashboard's horizontal strip; the table itself isn't pruned here
+  // (kept simple — a user's full view history is a small row count).
+  async getRecentlyViewed(userId: string, limit = 6) {
+    const items = await this.prisma.recentlyViewedProperty.findMany({
+      where: { userId },
+      include: { property: true },
+      orderBy: { viewedAt: 'desc' },
+      take: limit,
+    });
+    return items.map((item) => ({
+      ...item.property,
+      viewedAt: item.viewedAt,
+    }));
+  }
+
   async getPropertyActions(userId: string, propertyId: string) {
     const [wishlist, saved] = await Promise.all([
       this.prisma.userWishlist.findUnique({

@@ -160,6 +160,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.userSavedProperty;
   }
 
+  get recentlyViewedProperty() {
+    return this.prisma.recentlyViewedProperty;
+  }
+
   get propertyWatch() {
     return this.prisma.propertyWatch;
   }
@@ -202,6 +206,18 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get rewardCatalogueItem() {
     return this.prisma.rewardCatalogueItem;
+  }
+
+  get workType() {
+    return this.prisma.workType;
+  }
+
+  get propertyWork() {
+    return this.prisma.propertyWork;
+  }
+
+  get valuationSnapshot() {
+    return this.prisma.valuationSnapshot;
   }
 
   get pricePaidTransaction() {
