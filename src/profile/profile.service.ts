@@ -354,6 +354,11 @@ export class ProfileService {
         // from HomeScore; drives the "Complete X%" line below the
         // gauge.
         completionPercentage,
+        // Real timestamps (not a fabricated deadline — there isn't one)
+        // for the dashboard's "Started/last touched N days ago" staleness
+        // nudge on the Next For You card.
+        createdAt: p.createdAt,
+        lastVisitedAt: p.lastVisitedAt,
       };
     });
   }
