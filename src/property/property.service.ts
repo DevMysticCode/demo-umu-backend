@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { computePassportCompletion } from '../common/passport-completion';
+import { loadAndComputePassportReadiness } from '../common/passport-readiness';
 import { RewardsService } from '../rewards/rewards.service';
 import { PassportService } from '../passport/passport.service';
 import { LandRegistryService } from '../land-registry/land-registry.service';
@@ -5710,7 +5711,7 @@ export class PropertyService {
     // Real-time progress summary — public-safe (counts + section keys only,
     // no question/answer content). Drives the property page's "Passport
     // being built" card so buyers see actual completion, not a proxy.
-    const [progress, publishedActivity] = await Promise.all([
+    const [progress, publishedActivity, milestonePct] = await Promise.all([
       this.buildPassportProgress(passport.id),
       // Passport has no dedicated publishedAt column — the PUBLISHED
       // timeline entry (written when publishPassport() runs) is the real
@@ -5722,6 +5723,21 @@ export class PropertyService {
             orderBy: { createdAt: 'desc' },
             select: { createdAt: true },
           })
+        : Promise.resolve(null),
+      // Only computed once published — this is what tells the public
+      // "Claimed · Partially Public" (milestonePct < 100) from
+      // "Claimed · Public" (milestonePct === 100). Deliberately the SAME
+      // readiness system that gates publishPassport() itself (see
+      // src/common/passport-readiness.ts), not the flat task-count
+      // completionPct above — that's the metric the readiness system was
+      // built to replace precisely because it's easy to game (e.g. Fixtures
+      // & Fittings' 316 rows outweighing genuinely important disclosures).
+      // Only milestonePct is returned here, never missingBlockers/checklist
+      // — those stay owner/collaborator-gated via GET /passport/:id/readiness.
+      isPublished
+        ? loadAndComputePassportReadiness(this.prisma, passport.id).then(
+            (r) => r.milestonePct,
+          )
         : Promise.resolve(null),
     ]);
 
@@ -5742,6 +5758,7 @@ export class PropertyService {
       // claimed — no extra query needed here, unlike the branch above.
       isClaimed: true,
       passportProgress: progress,
+      milestonePct,
     };
   }
 

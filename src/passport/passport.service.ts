@@ -18,9 +18,8 @@ import {
 } from '@prisma/client';
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
 import {
-  computePassportReadiness,
+  loadAndComputePassportReadiness,
   PassportReadinessResult,
-  SystemCheckInput,
 } from '../common/passport-readiness';
 import OpenAI from 'openai';
 import { Resend } from 'resend';
@@ -1552,98 +1551,7 @@ export class PassportService {
   private async computeReadiness(
     passportId: string,
   ): Promise<PassportReadinessResult> {
-    const passport = await this.prisma.passport.findUnique({
-      where: { id: passportId },
-      select: { propertyId: true },
-    });
-
-    const sections = await this.prisma.passportSection.findMany({
-      where: { passportId },
-      select: {
-        id: true,
-        key: true,
-        title: true,
-        tasks: {
-          select: {
-            id: true,
-            key: true,
-            title: true,
-            passportQuestions: {
-              select: {
-                id: true,
-                answer: {
-                  select: { answerJson: true, answerText: true, fileUrl: true },
-                },
-                questionTemplate: {
-                  select: { type: true, title: true, parts: true, readiness: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const readinessSections = sections.map((s) => ({
-      id: s.id,
-      key: s.key,
-      title: s.title,
-      tasks: s.tasks.map((t) => ({
-        id: t.id,
-        key: t.key,
-        title: t.title,
-        questions: t.passportQuestions.map((q) => ({
-          id: q.id,
-          answer: q.answer,
-          questionTemplate: q.questionTemplate as any,
-        })),
-      })),
-    }));
-
-    let property: { titleNumber: string | null; epcRating: string | null } | null =
-      null;
-    if (passport?.propertyId) {
-      property = await this.prisma.property.findUnique({
-        where: { id: passport.propertyId },
-        select: { titleNumber: true, epcRating: true },
-      });
-    }
-
-    // EPC fallback: if we don't already hold a structured EPC rating,
-    // accept the seller's own EPC upload (environmental / energy_efficiency
-    // task) as evidence instead — never block on a data gap that isn't the
-    // seller's fault.
-    let epcSatisfied = !!property?.epcRating;
-    if (!epcSatisfied) {
-      epcSatisfied =
-        readinessSections
-          .find((s) => s.key === 'environmental')
-          ?.tasks.find((t) => t.key === 'energy_efficiency')
-          ?.questions.some(
-            (q) => q.answer?.fileUrl || q.answer?.answerJson,
-          ) ?? false;
-    }
-
-    const systemChecks: SystemCheckInput[] = [
-      {
-        key: 'titleNumber',
-        label: 'Title number verified with HM Land Registry',
-        satisfied: !!property?.titleNumber,
-        // Informational only — many genuinely-owned properties are not yet
-        // registered with HM Land Registry (first registration only
-        // becomes compulsory on a subsequent sale), so this must not trap
-        // a legitimate seller from publishing.
-        blocksPublication: false,
-      },
-      {
-        key: 'epcRating',
-        label: 'EPC rating on file',
-        satisfied: epcSatisfied,
-        blocksPublication: true,
-      },
-    ];
-
-    return computePassportReadiness(readinessSections as any, systemChecks);
+    return loadAndComputePassportReadiness(this.prisma, passportId);
   }
 
   async publishPassport(passportId: string, userId: string) {

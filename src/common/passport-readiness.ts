@@ -134,6 +134,115 @@ function isSlotAnswered(
   return isAnswerPresent(value);
 }
 
+// Loads a passport's sections/answers/property fields and runs
+// computePassportReadiness() below — the exact query PassportService's own
+// (private) computeReadiness() runs, extracted here so PropertyService can
+// call the same logic for the public "Claimed · Partially Public / Public"
+// split (see getPassportStatus()) without a cross-module dependency on
+// PassportService. Takes `prisma` as a param rather than being a class
+// method so either service can call it with its own injected PrismaService.
+export async function loadAndComputePassportReadiness(
+  prisma: {
+    passport: { findUnique: (args: any) => Promise<any> };
+    passportSection: { findMany: (args: any) => Promise<any> };
+    property: { findUnique: (args: any) => Promise<any> };
+  },
+  passportId: string,
+): Promise<PassportReadinessResult> {
+  const passport = await prisma.passport.findUnique({
+    where: { id: passportId },
+    select: { propertyId: true },
+  });
+
+  const sections = await prisma.passportSection.findMany({
+    where: { passportId },
+    select: {
+      id: true,
+      key: true,
+      title: true,
+      tasks: {
+        select: {
+          id: true,
+          key: true,
+          title: true,
+          passportQuestions: {
+            select: {
+              id: true,
+              answer: {
+                select: { answerJson: true, answerText: true, fileUrl: true },
+              },
+              questionTemplate: {
+                select: { type: true, title: true, parts: true, readiness: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const readinessSections: ReadinessSectionInput[] = sections.map((s: any) => ({
+    id: s.id,
+    key: s.key,
+    title: s.title,
+    tasks: s.tasks.map((t: any) => ({
+      id: t.id,
+      key: t.key,
+      title: t.title,
+      questions: t.passportQuestions.map((q: any) => ({
+        id: q.id,
+        answer: q.answer,
+        questionTemplate: q.questionTemplate as any,
+      })),
+    })),
+  }));
+
+  let property: { titleNumber: string | null; epcRating: string | null } | null =
+    null;
+  if (passport?.propertyId) {
+    property = await prisma.property.findUnique({
+      where: { id: passport.propertyId },
+      select: { titleNumber: true, epcRating: true },
+    });
+  }
+
+  // EPC fallback: if we don't already hold a structured EPC rating, accept
+  // the seller's own EPC upload (environmental / energy_efficiency task) as
+  // evidence instead — never block on a data gap that isn't the seller's
+  // fault.
+  let epcSatisfied = !!property?.epcRating;
+  if (!epcSatisfied) {
+    epcSatisfied =
+      readinessSections
+        .find((s) => s.key === 'environmental')
+        ?.tasks.find((t) => t.key === 'energy_efficiency')
+        ?.questions.some(
+          (q) => q.answer?.fileUrl || q.answer?.answerJson,
+        ) ?? false;
+  }
+
+  const systemChecks: SystemCheckInput[] = [
+    {
+      key: 'titleNumber',
+      label: 'Title number verified with HM Land Registry',
+      satisfied: !!property?.titleNumber,
+      // Informational only — many genuinely-owned properties are not yet
+      // registered with HM Land Registry (first registration only becomes
+      // compulsory on a subsequent sale), so this must not trap a
+      // legitimate seller from publishing.
+      blocksPublication: false,
+    },
+    {
+      key: 'epcRating',
+      label: 'EPC rating on file',
+      satisfied: epcSatisfied,
+      blocksPublication: true,
+    },
+  ];
+
+  return computePassportReadiness(readinessSections, systemChecks);
+}
+
 export function computePassportReadiness(
   sections: ReadinessSectionInput[],
   systemChecks: SystemCheckInput[],
