@@ -36,6 +36,15 @@ export class UpdateProfileDto {
 
   @IsOptional()
   smsNotifications?: boolean;
+
+  // Single-postcode "home base" used by getForYou() to source For You
+  // matches — distinct from UserAddress (multiple labelled addresses,
+  // never read by that endpoint). No dedicated editor existed for this
+  // field anywhere in the app before the For You empty-state's "Set
+  // postcode" button; that button now writes here via PATCH /profile/me.
+  @IsOptional()
+  @IsString()
+  postcode?: string;
 }
 
 // NOTE: every field below MUST carry a validator decorator. The
