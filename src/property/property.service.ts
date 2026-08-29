@@ -1548,7 +1548,12 @@ export class PropertyService {
       list.find((x) => x?.status === 'PUBLISHED') ?? list[0] ?? null;
     const isPublished = passport?.status === 'PUBLISHED';
     let passportCompletion: number | null = null;
-    if (passport && isPublished) {
+    // Computed for ANY existing passport, not just published ones — search
+    // list cards need this to tell "claimed, <60% done" (no public passport
+    // yet) apart from "claimed, >=60% done" (in progress, matching the
+    // threshold PassportClaimBox/property/[id].vue already use), which a
+    // null-unless-published completion couldn't distinguish.
+    if (passport) {
       const allTasks = passport.sections.flatMap((s: any) => s.tasks);
       const doneTasks = allTasks.filter((t: any) => {
         const total = t.passportQuestions.length;
