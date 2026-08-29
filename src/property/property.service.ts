@@ -1837,29 +1837,43 @@ export class PropertyService {
         if (existing == null) scoreByProp.set(s.propertyId, s.total);
       }
 
-      const items = rows.map(({ passports, ...p }) => {
-        // Pick a PUBLISHED passport when one exists, even if an older
-        // in-progress duplicate sits alongside it. Keeps search badges
-        // consistent with the detail page (which uses the same rule).
-        const { hasPassport, passportPublished, passportCompletion } =
-          this.derivePassportFields(passports as any[]);
-        const savedHs = scoreByProp.get(p.id);
-        const homeScore = savedHs ?? p.epcScore ?? null;
-        return {
-          ...p,
-          addressLine1: titleCase(p.addressLine1) || p.addressLine1,
-          addressLine2: p.addressLine2 ? titleCase(p.addressLine2) : p.addressLine2,
-          city: p.city ? titleCase(p.city) : p.city,
-          county: p.county ? titleCase(p.county) : p.county,
-          // Override the stored imageUrl with a live-built one so a key
-          // rotation heals every cached row without any DB mutation.
-          imageUrl: resolveStreetViewUrl(p),
-          hasPassport,
-          passportPublished,
-          passportCompletion,
-          homeScore,
-        };
-      });
+      const items = await Promise.all(
+        rows.map(async ({ passports, ...p }) => {
+          // Pick a PUBLISHED passport when one exists, even if an older
+          // in-progress duplicate sits alongside it. Keeps search badges
+          // consistent with the detail page (which uses the same rule).
+          const { hasPassport, passportPublished, passportCompletion } =
+            this.derivePassportFields(passports as any[]);
+          const savedHs = scoreByProp.get(p.id);
+          const homeScore = savedHs ?? p.epcScore ?? null;
+          // Only computed for published passports — this is what lets the
+          // list badge distinguish Partially Public (milestonePct < 100)
+          // from Public (=== 100), same real readiness system that gates
+          // publishPassport() itself (see getPassportStatus() for the
+          // single-property version of this same rule).
+          const publishedPassport = passportPublished
+            ? (passports as any[]).find((x) => x?.status === 'PUBLISHED')
+            : null;
+          const milestonePct = publishedPassport
+            ? (await loadAndComputePassportReadiness(this.prisma, publishedPassport.id)).milestonePct
+            : null;
+          return {
+            ...p,
+            addressLine1: titleCase(p.addressLine1) || p.addressLine1,
+            addressLine2: p.addressLine2 ? titleCase(p.addressLine2) : p.addressLine2,
+            city: p.city ? titleCase(p.city) : p.city,
+            county: p.county ? titleCase(p.county) : p.county,
+            // Override the stored imageUrl with a live-built one so a key
+            // rotation heals every cached row without any DB mutation.
+            imageUrl: resolveStreetViewUrl(p),
+            hasPassport,
+            passportPublished,
+            passportCompletion,
+            milestonePct,
+            homeScore,
+          };
+        }),
+      );
       // Dedupe by (postcode, addressLine1) — both EPC and OS write to the
       // Property table with distinct UDPRN prefixes, so the same house
       // ends up as two rows when we query both upstreams for a postcode.
@@ -6909,29 +6923,40 @@ export class PropertyService {
     const total = withinRadius.length;
     const page = withinRadius.slice(offset, offset + limit);
 
-    const items = page.map(({ p, d }) => {
-      // Bug fix: this used to destructure `passport` (singular) from a
-      // query that only ever `include`s `passports` (plural), so it was
-      // always undefined — hasPassport/passportPublished were always
-      // false for every radius search. Now shares the same derivation
-      // searchProperties() uses.
-      const { passports, ...rest } = p as any;
-      const { hasPassport, passportPublished, passportCompletion } =
-        this.derivePassportFields(passports);
-      return {
-        ...rest,
-        addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
-        addressLine2: rest.addressLine2
-          ? titleCase(rest.addressLine2)
-          : rest.addressLine2,
-        city: rest.city ? titleCase(rest.city) : rest.city,
-        county: rest.county ? titleCase(rest.county) : rest.county,
-        hasPassport,
-        passportPublished,
-        passportCompletion,
-        distanceMiles: +d.toFixed(2),
-      };
-    });
+    const items = await Promise.all(
+      page.map(async ({ p, d }) => {
+        // Bug fix: this used to destructure `passport` (singular) from a
+        // query that only ever `include`s `passports` (plural), so it was
+        // always undefined — hasPassport/passportPublished were always
+        // false for every radius search. Now shares the same derivation
+        // searchProperties() uses.
+        const { passports, ...rest } = p as any;
+        const { hasPassport, passportPublished, passportCompletion } =
+          this.derivePassportFields(passports);
+        // Same rule as searchProperties() — see its comment for why this
+        // is the real readiness system, not the flat completionPct above.
+        const publishedPassport = passportPublished
+          ? (passports as any[])?.find((x) => x?.status === 'PUBLISHED')
+          : null;
+        const milestonePct = publishedPassport
+          ? (await loadAndComputePassportReadiness(this.prisma, publishedPassport.id)).milestonePct
+          : null;
+        return {
+          ...rest,
+          addressLine1: titleCase(rest.addressLine1) || rest.addressLine1,
+          addressLine2: rest.addressLine2
+            ? titleCase(rest.addressLine2)
+            : rest.addressLine2,
+          city: rest.city ? titleCase(rest.city) : rest.city,
+          county: rest.county ? titleCase(rest.county) : rest.county,
+          hasPassport,
+          passportPublished,
+          passportCompletion,
+          milestonePct,
+          distanceMiles: +d.toFixed(2),
+        };
+      }),
+    );
 
     return { items, total };
   }
