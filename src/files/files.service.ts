@@ -25,6 +25,7 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 
 const SIG_TTL_SECONDS_DEFAULT = 60 * 60; // 1 hour
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 @Injectable()
 export class FilesService {
@@ -108,8 +109,14 @@ export class FilesService {
 
   /**
    * Check the DB for a record proving this user owns `path`. The path
-   * we receive is the relative form (e.g. `documents/abc.pdf`); rows
-   * store the leading-slashed form (`/uploads/documents/abc.pdf`).
+   * we receive is the relative form (e.g. `documents/abc.pdf`), but the
+   * stored fileUrl can be either the bare leading-slashed form
+   * (`/uploads/documents/abc.pdf`, S3 mode) or that same path prefixed
+   * with BASE_URL (disk mode — see question.service.ts's
+   * uploadQuestionFile). Match either, or this silently always misses in
+   * disk-mode dev — which is exactly what was happening: every signed
+   * URL for a QuestionAnswer file 403'd because this only ever checked
+   * the bare form.
    *
    * Looks at the two surfaces that currently produce signed URLs:
    *   - UserDocument — the explicit /documents upload
@@ -120,10 +127,11 @@ export class FilesService {
    * KYC, marketplace evidence) so they get the same check for free.
    */
   private async userOwnsFilePath(userId: string, path: string): Promise<boolean> {
-    const fileUrl = `/uploads/${path.replace(/^\/+/, '')}`;
+    const bareUrl = `/uploads/${path.replace(/^\/+/, '')}`;
+    const candidates = [bareUrl, `${BASE_URL}${bareUrl}`];
 
     const asDocument = await this.prisma.userDocument.findFirst({
-      where: { userId, fileUrl },
+      where: { userId, fileUrl: { in: candidates } },
       select: { id: true },
     });
     if (asDocument) return true;
@@ -134,7 +142,7 @@ export class FilesService {
     // passport OR has been added as a collaborator on it.
     const asAnswer = await this.prisma.questionAnswer.findFirst({
       where: {
-        fileUrl,
+        fileUrl: { in: candidates },
         passportQuestion: {
           passportSectionTask: {
             passportSection: {

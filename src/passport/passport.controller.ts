@@ -136,7 +136,7 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
-    const passport = await this.passportService.getPassport(passportId);
+    const passport = await this.passportService.getPassport(passportId, userId);
 
     if (!passport) {
       throw new ForbiddenException('Passport not found');

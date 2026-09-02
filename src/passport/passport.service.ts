@@ -9,6 +9,8 @@ import { PaymentService } from '../payment/payment.service';
 import { PushService } from '../push/push.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { FilesService } from '../files/files.service';
+import { PUBLIC_BUCKETS } from '../common/storage';
 import { assertKycVerified } from '../common/kyc';
 import {
   Passport,
@@ -23,6 +25,8 @@ import {
 } from '../common/passport-readiness';
 import OpenAI from 'openai';
 import { Resend } from 'resend';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 interface GroupedQuestion {
   sectionKey: string;
@@ -43,6 +47,7 @@ export class PassportService {
     private push: PushService,
     private conversations: ConversationsService,
     private notifications: NotificationsService,
+    private files: FilesService,
   ) {
     this.groq = new OpenAI({
       apiKey: process.env.GROQ_API_KEY,
@@ -157,7 +162,7 @@ export class PassportService {
     }
   }
 
-  async getPassport(passportId: string) {
+  async getPassport(passportId: string, viewerUserId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
       include: {
@@ -186,7 +191,59 @@ export class PassportService {
       },
     });
 
+    if (passport) this.resolveAnswerFileUrls(passport, viewerUserId);
+
     return passport;
+  }
+
+  // Question-answer file fields (fileUrl, and answerJson.fileUrl/url for
+  // MULTIPART parts) are stored as an /uploads/<bucket>/<file> path — bare
+  // in S3 mode, but prefixed with BASE_URL in disk mode (see
+  // question.service.ts's uploadQuestionFile: `isS3Mode ? relative :
+  // BASE_URL+relative`), so both forms have to be recognised here. For a
+  // PUBLIC bucket that's directly fetchable — main.ts statically mounts
+  // those. But passport-docs (where every certificate/document upload
+  // lands — see QuestionController's multer config) is NOT public, by
+  // design: it holds user PII. An unsigned path to it 404s, which is
+  // exactly the "can't view certificate" bug reported on the Landlord
+  // Passport — every uploaded document was affected, not just the ones
+  // tested.
+  //
+  // Fixed the same way documents.service.ts already does for the separate
+  // `documents/` bucket: swap the raw path for a freshly-signed
+  // /files/... URL (FilesService), scoped to whoever is viewing right
+  // now — not the original uploader, so a collaborator or the owner
+  // viewing later both get a URL valid for them. Mutates in place; this
+  // runs once per request on an already-fetched tree, so no extra query.
+  private resolveAnswerFileUrls(passport: any, viewerUserId: string) {
+    const resolve = (url: string | null | undefined): string | null | undefined => {
+      if (!url) return url;
+      const uploadsPath = url.startsWith('/uploads/')
+        ? url
+        : url.startsWith(`${BASE_URL}/uploads/`)
+          ? url.slice(BASE_URL.length)
+          : null;
+      if (!uploadsPath) return url; // already a full non-uploads URL (e.g. S3 public host) — leave as-is
+      const bucket = uploadsPath.match(/^\/uploads\/([^/]+)\//)?.[1];
+      if (!bucket || PUBLIC_BUCKETS.has(bucket)) return url;
+      const relPath = uploadsPath.replace(/^\/uploads\//, '');
+      return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
+    };
+
+    for (const section of passport.sections ?? []) {
+      for (const task of section.tasks ?? []) {
+        for (const q of task.passportQuestions ?? []) {
+          const answer = q.answer;
+          if (!answer) continue;
+          if (answer.fileUrl) answer.fileUrl = resolve(answer.fileUrl);
+          const aj = answer.answerJson;
+          if (aj && typeof aj === 'object') {
+            if (aj.fileUrl) aj.fileUrl = resolve(aj.fileUrl);
+            if (aj.url) aj.url = resolve(aj.url);
+          }
+        }
+      }
+    }
   }
 
   async getPassportSections(passportId: string, userId: string) {

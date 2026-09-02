@@ -28,6 +28,7 @@
     "backfill:stamp-celebrated-at": "ts-node -r tsconfig-paths/register src/scripts/backfill-stamp-celebrated-at.ts",
     "script:null-fake-title-numbers": "ts-node -r tsconfig-paths/register src/scripts/null-synthesised-title-numbers.ts",
     "update:title-deeds-questions": "ts-node -r tsconfig-paths/register src/scripts/update-title-deeds-questions.ts",
+    "update:landlord-legal-copy": "ts-node -r tsconfig-paths/register src/scripts/update-landlord-legal-copy.ts",
     "import:passport-readiness": "ts-node -r tsconfig-paths/register src/scripts/import-passport-readiness.ts",
     "backfill:valuations": "ts-node -r tsconfig-paths/register src/scripts/backfill-property-valuations.ts",
     "hmlr:test": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/test-hmlr-ov.ts",
