@@ -229,10 +229,10 @@ const SECTION_TEMPLATES = [
   {
     type: 'LANDLORD',
     key: 'landlord_ast',
-    title: 'Tenancy Agreement (AST)',
-    subtitle: 'The signed assured shorthold tenancy',
+    title: 'Tenancy Agreement',
+    subtitle: 'The signed tenancy agreement',
     description:
-      'The signed AST setting out the tenant, term, rent and deposit.',
+      "The signed tenancy agreement setting out the tenant, term, rent and deposit. Fixed-term ASTs were replaced by assured periodic tenancies under the Renters' Rights Act 2025 — Section 21 can no longer be used.",
     icon: 'occupiers',
     order: 7,
   },
@@ -259,10 +259,10 @@ const SECTION_TEMPLATES = [
   {
     type: 'LANDLORD',
     key: 'landlord_how_to_rent',
-    title: 'How to Rent Guide',
-    subtitle: 'Latest gov.uk version served to tenant',
+    title: "Renters' Rights Act Information Sheet",
+    subtitle: 'Replaced the How to Rent guide (1 May 2026)',
     description:
-      'Failure to serve the latest version blocks Section 21. Updated regularly — check gov.uk before each new tenancy.',
+      "The How to Rent guide was withdrawn under the Renters' Rights Act 2025. Serve the official GOV.UK Renters' Rights Act Information Sheet 2026 — a link on its own isn't valid, it must be a printed copy or a PDF attached to an email/text. Fines reach £7,000 for non-compliance.",
     icon: 'noticesAndProposals',
     order: 10,
   },
@@ -12860,10 +12860,10 @@ const QUESTION_TEMPLATES: QSeed[] = [
     ['landlord_alarms',         'alarms_check',          'Smoke & CO test record (PDF or photo)',          'Test record signed at the start of the tenancy.'],
     ['landlord_legionella',     'legionella_upload',     'Legionella risk assessment (PDF)',               'Most recent assessment.'],
     ['landlord_insurance',      'insurance_upload',      'Landlord insurance schedule (PDF)',              'Schedule of cover from your insurer.'],
-    ['landlord_ast',            'ast_upload',            'Signed AST (PDF)',                               'The signed assured shorthold tenancy agreement.'],
+    ['landlord_ast',            'ast_upload',            'Signed tenancy agreement (PDF)',                 "The signed tenancy agreement (assured periodic tenancy since the Renters' Rights Act 2025)."],
     ['landlord_deposit',        'deposit_upload',        'Deposit-protection certificate (PDF)',           'DPS / mydeposits / TDS certificate.'],
     ['landlord_right_to_rent',  'rtr_upload',            'Right-to-Rent check evidence (PDF or photo)',    "Tenant ID + your check record."],
-    ['landlord_how_to_rent',    'how_to_rent_upload',    'How-to-Rent guide served (PDF)',                 'The version you sent to the tenant — keep proof of service.'],
+    ['landlord_how_to_rent',    'how_to_rent_upload',    "Renters' Rights Act Information Sheet served (PDF)", 'The signed/served copy given to the tenant — keep proof of service.'],
     ['landlord_inventory',      'inventory_upload',      'Move-in inventory & schedule of condition (PDF)','Baseline document for end-of-tenancy comparisons.'],
     ['landlord_pat_testing',    'pat_upload',            'PAT testing report (PDF)',                       'Portable appliance test report (HMOs).'],
   ] as const).flatMap(([sectionKey, taskKey, title, description]) => [
