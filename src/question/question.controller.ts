@@ -1,6 +1,8 @@
 import {
   Controller,
+  Get,
   Post,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -14,6 +16,7 @@ import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { QuestionService } from './question.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { createUploadStorage } from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -90,5 +93,35 @@ export class QuestionController {
   ) {
     const userId = req.user.id;
     return this.questionService.uploadPartFile(questionId, userId, file);
+  }
+
+  // Multi-copy certificate retention (client feedback items 1a/3) — see
+  // QuestionService.listQuestionCopies. Kept separate from
+  // :questionId/upload (the single-slot answer flow every other section
+  // still uses) rather than changing that endpoint's behaviour.
+  @Get(':questionId/copies')
+  @UseGuards(JwtAuthGuard)
+  async listCopies(@Param('questionId') questionId: string, @Request() req: any) {
+    return this.questionService.listQuestionCopies(questionId, req.user.id);
+  }
+
+  @Post(':questionId/copies')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20 })),
+  )
+  async uploadCopy(
+    @Param('questionId') questionId: string,
+    @UploadedFile() file: any,
+    @Body('name') name: string,
+    @Request() req: any,
+  ) {
+    return this.questionService.uploadQuestionCopy(questionId, req.user.id, file, name);
+  }
+
+  @Delete('copies/:docId')
+  @UseGuards(JwtAuthGuard)
+  async deleteCopy(@Param('docId') docId: string, @Request() req: any) {
+    return this.questionService.deleteQuestionCopy(req.user.id, docId);
   }
 }

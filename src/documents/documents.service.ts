@@ -183,6 +183,26 @@ export class DocumentsService {
     };
   }
 
+  // Scoped list for a single tag — used by the Landlord Passport's
+  // multi-copy certificate retention (client feedback items 1a/3): each
+  // question gets its own `landlord-cert:<questionId>` tag rather than
+  // being mixed into the general /documents vault list. Prisma's `has`
+  // on a Json array column does a straight equality match per element,
+  // which is exactly right here (an exact tag, not a substring search).
+  async getDocumentsByTag(userId: string, tag: string) {
+    const docs = await this.prisma.userDocument.findMany({
+      where: { userId, tags: { array_contains: [tag] } as any },
+      orderBy: { createdAt: 'desc' },
+    });
+    return docs.map((doc) => ({
+      id: doc.id,
+      name: doc.name,
+      fileUrl: this.resolveUrl(doc.fileUrl, userId),
+      size: formatSize(doc.fileSize ?? null),
+      uploadedAt: formatDate(doc.createdAt),
+    }));
+  }
+
   async uploadDocument(
     userId: string,
     file: any,
