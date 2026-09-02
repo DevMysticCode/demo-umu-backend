@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
   UseInterceptors,
@@ -101,8 +102,12 @@ export class QuestionController {
   // still uses) rather than changing that endpoint's behaviour.
   @Get(':questionId/copies')
   @UseGuards(JwtAuthGuard)
-  async listCopies(@Param('questionId') questionId: string, @Request() req: any) {
-    return this.questionService.listQuestionCopies(questionId, req.user.id);
+  async listCopies(
+    @Param('questionId') questionId: string,
+    @Query('kind') kind: string,
+    @Request() req: any,
+  ) {
+    return this.questionService.listQuestionCopies(questionId, req.user.id, kind);
   }
 
   @Post(':questionId/copies')
@@ -114,9 +119,10 @@ export class QuestionController {
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
     @Body('name') name: string,
+    @Body('kind') kind: string,
     @Request() req: any,
   ) {
-    return this.questionService.uploadQuestionCopy(questionId, req.user.id, file, name);
+    return this.questionService.uploadQuestionCopy(questionId, req.user.id, file, name, kind);
   }
 
   @Delete('copies/:docId')
