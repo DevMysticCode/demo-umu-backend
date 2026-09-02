@@ -169,6 +169,13 @@ export class PassportService {
         // Sibling passports created via convert-to-seller — used by the
         // landlord view to surface a "Selling passport linked" CTA.
         convertedTo: { select: { id: true, type: true } },
+        // EPC auto-pull (client feedback item #3) — the Landlord
+        // Passport's EPC card reads the property's own already-enriched
+        // EPC data (same pipeline used property-wide) instead of asking
+        // for a manual re-upload of a certificate we already have.
+        property: {
+          select: { epcRating: true, epcScore: true, lodgementDate: true, epcLmkKey: true },
+        },
         sections: {
           orderBy: { order: 'asc' },
           include: {
