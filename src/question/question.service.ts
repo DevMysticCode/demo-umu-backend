@@ -22,8 +22,15 @@ export class QuestionService {
     private documentsService: DocumentsService,
   ) {}
 
-  private copyTag(questionId: string): string {
-    return `landlord-cert:${questionId}`;
+  // `kind` lets one question host more than one independently-tracked
+  // document list — Deposit Protection needs this: the protection
+  // certificate and the served prescribed-information copy are legally
+  // distinct documents (client feedback item #7), but both live under the
+  // same deposit_upload question. Defaults to the plain form so existing
+  // Gas Safety/EPC/EICR/Insurance tags (landlord-cert:<questionId>, no
+  // kind) keep matching unchanged.
+  private copyTag(questionId: string, kind?: string): string {
+    return kind ? `landlord-cert:${kind}:${questionId}` : `landlord-cert:${questionId}`;
   }
 
   private async assertQuestionAccess(questionId: string, userId: string) {
@@ -45,18 +52,18 @@ export class QuestionService {
   // the general /documents vault) rather than the single QuestionAnswer
   // .fileUrl slot every other UPLOAD question still uses, tagged per
   // question so it stays scoped to just this section's list.
-  async listQuestionCopies(questionId: string, userId: string) {
+  async listQuestionCopies(questionId: string, userId: string, kind?: string) {
     await this.assertQuestionAccess(questionId, userId);
-    return this.documentsService.getDocumentsByTag(userId, this.copyTag(questionId));
+    return this.documentsService.getDocumentsByTag(userId, this.copyTag(questionId, kind));
   }
 
-  async uploadQuestionCopy(questionId: string, userId: string, file: any, name?: string) {
+  async uploadQuestionCopy(questionId: string, userId: string, file: any, name?: string, kind?: string) {
     const question = await this.assertQuestionAccess(questionId, userId);
     const doc = await this.documentsService.uploadDocument(
       userId,
       file,
       name || '',
-      [this.copyTag(questionId)],
+      [this.copyTag(questionId, kind)],
     );
     // Multi-copy uploads never touch QuestionAnswer (they live on
     // UserDocument instead — see listQuestionCopies), so without this the
@@ -83,7 +90,11 @@ export class QuestionService {
       select: { tags: true },
     });
     const tag = (doc?.tags as string[] | null)?.find((t) => t.startsWith('landlord-cert:'));
-    const questionId = tag?.slice('landlord-cert:'.length);
+    // Tag shape is either landlord-cert:<questionId> or, for a
+    // multi-kind question (Deposit Protection's cert vs served-PI),
+    // landlord-cert:<kind>:<questionId> — the id is always the LAST
+    // segment either way.
+    const questionId = tag?.split(':').pop();
 
     const result = await this.documentsService.deleteDocument(userId, docId);
 
