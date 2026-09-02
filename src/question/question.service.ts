@@ -51,12 +51,60 @@ export class QuestionService {
   }
 
   async uploadQuestionCopy(questionId: string, userId: string, file: any, name?: string) {
-    await this.assertQuestionAccess(questionId, userId);
-    return this.documentsService.uploadDocument(userId, file, name || '', [this.copyTag(questionId)]);
+    const question = await this.assertQuestionAccess(questionId, userId);
+    const doc = await this.documentsService.uploadDocument(
+      userId,
+      file,
+      name || '',
+      [this.copyTag(questionId)],
+    );
+    // Multi-copy uploads never touch QuestionAnswer (they live on
+    // UserDocument instead — see listQuestionCopies), so without this the
+    // question stays PENDING forever even with real certificates on file:
+    // section-completion, the passport progress %, and the compliance
+    // card's status pill all read PassportQuestion.status, not the copies
+    // list. Mark it COMPLETED the same way answerQuestion() does on the
+    // first successful copy.
+    if (question.status !== 'COMPLETED') {
+      await this.prisma.passportQuestion.update({
+        where: { id: questionId },
+        data: { status: 'COMPLETED' },
+      });
+    }
+    return doc;
   }
 
   async deleteQuestionCopy(userId: string, docId: string) {
-    return this.documentsService.deleteDocument(userId, docId);
+    // Read the tag before deleting so we know which question to re-check
+    // afterwards — removing a landlord's only certificate shouldn't leave
+    // the section showing complete with nothing on file.
+    const doc = await this.prisma.userDocument.findUnique({
+      where: { id: docId },
+      select: { tags: true },
+    });
+    const tag = (doc?.tags as string[] | null)?.find((t) => t.startsWith('landlord-cert:'));
+    const questionId = tag?.slice('landlord-cert:'.length);
+
+    const result = await this.documentsService.deleteDocument(userId, docId);
+
+    if (questionId) {
+      const [remaining, question] = await Promise.all([
+        this.documentsService.getDocumentsByTag(userId, tag!),
+        this.prisma.passportQuestion.findUnique({
+          where: { id: questionId },
+          include: { answer: true },
+        }),
+      ]);
+      const hasLegacyFile = !!question?.answer?.fileUrl;
+      if (remaining.length === 0 && !hasLegacyFile && question?.status === 'COMPLETED') {
+        await this.prisma.passportQuestion.update({
+          where: { id: questionId },
+          data: { status: 'PENDING' },
+        });
+      }
+    }
+
+    return result;
   }
 
   async answerQuestion(
