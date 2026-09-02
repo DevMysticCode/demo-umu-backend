@@ -396,13 +396,24 @@ ${PROPERTY_KNOWLEDGE}`;
       let completion;
       try {
         completion = await this.openai.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          // llama-3.3-70b-versatile was retired from Groq's catalog (confirmed
+          // via GET /openai/v1/models against this key — every llama-3.x chat
+          // model is gone, replaced by openai/gpt-oss-*). gpt-oss-120b is the
+          // closest replacement: Groq's own docs recommend it for agentic
+          // tool-calling, which this endpoint relies on.
+          // It's a reasoning model: it burns tokens on a separate `reasoning`
+          // field before writing `content`/tool calls, so max_tokens needs
+          // headroom for both or the response cuts off (finish_reason
+          // "length") with nothing usable — confirmed live against this key.
+          // reasoning_effort 'low' keeps that overhead down.
+          model: 'openai/gpt-oss-120b',
           messages,
           tools: TOOLS,
           tool_choice: 'auto',
-          max_tokens: 500,
+          max_tokens: 800,
           temperature: 0.6,
-        });
+          reasoning_effort: 'low',
+        } as any);
       } catch (err: any) {
         const status = err?.status ?? err?.response?.status;
         const detail =

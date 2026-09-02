@@ -2158,11 +2158,19 @@ Focus on: what is good news, what needs attention, and any questions the buyer s
 Be factual, helpful, and concise. Do not repeat the questions verbatim.`;
 
     const completion = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      // llama-3.3-70b-versatile was retired from Groq's catalog — see the
+      // matching note in chat.service.ts. gpt-oss-120b replaces it here too.
+      // It's a reasoning model: it burns tokens on a separate `reasoning`
+      // field before writing `content`, so max_tokens has to cover both or
+      // the response gets cut off (finish_reason "length") with empty
+      // content — confirmed live. reasoning_effort 'low' keeps that
+      // overhead small for a task this short.
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
+      max_tokens: 500,
       temperature: 0.4,
-    });
+      reasoning_effort: 'low',
+    } as any);
 
     return { summary: completion.choices[0]?.message?.content ?? 'Unable to generate summary.' };
   }

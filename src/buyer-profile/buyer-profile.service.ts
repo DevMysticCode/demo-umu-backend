@@ -244,11 +244,19 @@ Known profile signals: ${signals.join('; ') || 'none yet'}.
 ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${draft}` : 'Draft a short intro for a UK home buyer to share with a seller.'}`;
 
     const completion = await this.groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      // llama-3.3-70b-versatile was retired from Groq's catalog — see the
+      // matching note in chat.service.ts. gpt-oss-120b replaces it here too.
+      // It's a reasoning model: it burns tokens on a separate `reasoning`
+      // field before writing `content`, so max_tokens has to cover both or
+      // the response gets cut off (finish_reason "length") with empty
+      // content — confirmed live. reasoning_effort 'low' keeps that
+      // overhead small for a task this short.
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 220,
+      max_tokens: 400,
       temperature: 0.6,
-    });
+      reasoning_effort: 'low',
+    } as any);
     const text = completion.choices[0]?.message?.content?.trim();
     if (!text) throw new BadRequestException('AI did not return a draft — try again.');
     return { text };
