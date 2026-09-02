@@ -15,5 +15,10 @@ import { FilesModule } from '../files/files.module';
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService],
+  // Reused by QuestionModule for the Landlord Passport's multi-copy
+  // certificate retention (client feedback items 1a/3) — the same
+  // upload/delete/signed-URL machinery, just tagged and filtered by
+  // question id instead of shown in the general /documents vault.
+  exports: [DocumentsService],
 })
 export class DocumentsModule {}

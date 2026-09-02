@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
 import { RewardsService } from '../rewards/rewards.service';
+import { DocumentsService } from '../documents/documents.service';
 import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
 
 @Injectable()
@@ -18,7 +19,45 @@ export class QuestionService {
     private prisma: PrismaService,
     private passportService: PassportService,
     private rewardsService: RewardsService,
+    private documentsService: DocumentsService,
   ) {}
+
+  private copyTag(questionId: string): string {
+    return `landlord-cert:${questionId}`;
+  }
+
+  private async assertQuestionAccess(questionId: string, userId: string) {
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: questionId },
+      include: { passportSectionTask: { include: { passportSection: true } } },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+    const passportId = question.passportSectionTask.passportSection.passportId;
+    const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
+    if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
+    return question;
+  }
+
+  // Multi-copy certificate retention (client feedback items 1a/3) — a
+  // landlord uploading a renewed Gas Safety cert or EPC shouldn't lose
+  // the previous copy, which they may still need for compliance history.
+  // Reuses UserDocument (the same model/storage/signed-URL machinery as
+  // the general /documents vault) rather than the single QuestionAnswer
+  // .fileUrl slot every other UPLOAD question still uses, tagged per
+  // question so it stays scoped to just this section's list.
+  async listQuestionCopies(questionId: string, userId: string) {
+    await this.assertQuestionAccess(questionId, userId);
+    return this.documentsService.getDocumentsByTag(userId, this.copyTag(questionId));
+  }
+
+  async uploadQuestionCopy(questionId: string, userId: string, file: any, name?: string) {
+    await this.assertQuestionAccess(questionId, userId);
+    return this.documentsService.uploadDocument(userId, file, name || '', [this.copyTag(questionId)]);
+  }
+
+  async deleteQuestionCopy(userId: string, docId: string) {
+    return this.documentsService.deleteDocument(userId, docId);
+  }
 
   async answerQuestion(
     questionId: string,
