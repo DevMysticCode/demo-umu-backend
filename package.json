@@ -29,6 +29,7 @@
     "script:null-fake-title-numbers": "ts-node -r tsconfig-paths/register src/scripts/null-synthesised-title-numbers.ts",
     "update:title-deeds-questions": "ts-node -r tsconfig-paths/register src/scripts/update-title-deeds-questions.ts",
     "update:landlord-legal-copy": "ts-node -r tsconfig-paths/register src/scripts/update-landlord-legal-copy.ts",
+    "add:deposit-protection-fields": "ts-node -r tsconfig-paths/register src/scripts/add-deposit-protection-fields.ts",
     "remove:how-to-rent-subtitle": "ts-node -r tsconfig-paths/register src/scripts/remove-how-to-rent-subtitle.ts",
     "import:passport-readiness": "ts-node -r tsconfig-paths/register src/scripts/import-passport-readiness.ts",
     "backfill:valuations": "ts-node -r tsconfig-paths/register src/scripts/backfill-property-valuations.ts",
