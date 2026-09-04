@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Query,
+  Ip,
   UseGuards,
   Request,
   UseInterceptors,
@@ -129,5 +130,28 @@ export class QuestionController {
   @UseGuards(JwtAuthGuard)
   async deleteCopy(@Param('docId') docId: string, @Request() req: any) {
     return this.questionService.deleteQuestionCopy(req.user.id, docId);
+  }
+
+  // Tenancy Agreement e-signature — the landlord (authed) generates a
+  // magic link; the tenant (no account) opens tenancy-sign/:token and
+  // tenancy-sign POST to review + sign, no JWT guard on either.
+  @Post(':questionId/tenancy-sign-link')
+  @UseGuards(JwtAuthGuard)
+  async createTenancySignLink(@Param('questionId') questionId: string, @Request() req: any) {
+    return this.questionService.createTenancySignLink(questionId, req.user.id);
+  }
+
+  @Get('tenancy-sign/:token')
+  async getTenancySignData(@Param('token') token: string) {
+    return this.questionService.getTenancySignData(token);
+  }
+
+  @Post('tenancy-sign/:token')
+  async submitTenantSignature(
+    @Param('token') token: string,
+    @Body() dto: { signerName: string; signatureDataUrl: string },
+    @Ip() ip: string,
+  ) {
+    return this.questionService.submitTenantSignature(token, dto, ip);
   }
 }

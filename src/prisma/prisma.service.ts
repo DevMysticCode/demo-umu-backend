@@ -228,6 +228,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.sharedPassportLink;
   }
 
+  get tenancySignLink() {
+    return this.prisma.tenancySignLink;
+  }
+
   get buyerNote() {
     return this.prisma.buyerNote;
   }
