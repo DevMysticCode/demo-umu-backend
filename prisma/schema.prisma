@@ -805,6 +805,7 @@ model PassportQuestion {
   passportSectionTask   PassportSectionTask @relation(fields: [passportSectionTaskId], references: [id], onDelete: Cascade)
   questionTemplate      QuestionTemplate    @relation(fields: [questionTemplateId], references: [id])
   answer                QuestionAnswer?
+  tenancySignLinks      TenancySignLink[]
 
   @@index([passportSectionTaskId])
   @@index([questionTemplateId])
@@ -1136,6 +1137,27 @@ model ValuationSnapshot {
   createdAt     DateTime @default(now())
 
   @@unique([propertyId, userId])
+}
+
+// A landlord-generated magic link a tenant (no umovingu account) opens
+// to review and e-sign a Tenancy Agreement — client feedback: the
+// prototype's "Send to tenant to e-sign" step, held back earlier this
+// session pending a decision on scope, now approved (magic link, drawn
+// signature). Deliberately a separate model from SharedPassportLink:
+// this one is write-capable (the tenant submits a signature through
+// it) and long-lived (signing can take days), not a short read-only
+// document-viewing link.
+model TenancySignLink {
+  id                 String           @id @default(uuid())
+  passportQuestionId String
+  token              String           @unique
+  expiresAt          DateTime
+  usedAt             DateTime?
+  createdAt          DateTime         @default(now())
+  passportQuestion   PassportQuestion @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([passportQuestionId])
 }
 
 model SharedPassportLink {

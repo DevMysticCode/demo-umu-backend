@@ -4,6 +4,7 @@
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
@@ -321,5 +322,102 @@ export class QuestionService {
     const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
 
     return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
+  }
+
+  // ── Tenancy Agreement e-signature (client feedback: "Send to tenant
+  // to e-sign", held earlier this session pending scope, now approved —
+  // magic link, drawn signature). The tenant has no umovingu account, so
+  // access is by long-lived signed token (TenancySignLink) rather than
+  // JWT — same reasoning as SharedPassportLink, but write-capable and
+  // longer-lived (signing can take days, not a 3-hour viewing window).
+  // Signature images are stored as data: URLs directly in the answer's
+  // JSON blob rather than going through the file-upload pipeline — the
+  // tenant is unauthenticated, so the ownership/signed-URL machinery
+  // every other upload uses doesn't apply, and a signature PNG is small
+  // enough that a Postgres text column is the simpler, safer choice.
+  private frontendBaseUrl(): string {
+    return (
+      process.env.FRONTEND_URL ??
+      (process.env.NODE_ENV === 'production'
+        ? 'https://demo-umu-frontend.vercel.app'
+        : 'http://localhost:3000')
+    );
+  }
+
+  async createTenancySignLink(questionId: string, userId: string) {
+    await this.assertQuestionAccess(questionId, userId);
+    const token = randomBytes(24).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days — signing can take a while
+    const link = await this.prisma.tenancySignLink.create({
+      data: { passportQuestionId: questionId, token, expiresAt },
+    });
+    return { token: link.token, url: `${this.frontendBaseUrl()}/sign/tenancy/${link.token}` };
+  }
+
+  async getTenancySignData(token: string) {
+    const link = await this.prisma.tenancySignLink.findUnique({ where: { token } });
+    if (!link) throw new NotFoundException('This signing link is invalid.');
+    if (link.expiresAt < new Date()) throw new ForbiddenException('This signing link has expired.');
+
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: link.passportQuestionId },
+      include: {
+        answer: true,
+        passportSectionTask: {
+          include: { passportSection: { include: { passport: true } } },
+        },
+      },
+    });
+    if (!question) throw new NotFoundException('Document not found.');
+
+    const record = (question.answer?.answerJson as any) ?? {};
+    return {
+      docText: record.docText ?? [],
+      tenantName: record.tenantName ?? '',
+      propertyAddress: question.passportSectionTask.passportSection.passport.addressLine1 ?? '',
+      landlordSigned: !!record.audit?.landlord,
+      tenantSigned: !!record.audit?.tenant,
+    };
+  }
+
+  async submitTenantSignature(
+    token: string,
+    dto: { signerName: string; signatureDataUrl: string },
+    ip?: string,
+  ) {
+    const link = await this.prisma.tenancySignLink.findUnique({ where: { token } });
+    if (!link) throw new NotFoundException('This signing link is invalid.');
+    if (link.expiresAt < new Date()) throw new ForbiddenException('This signing link has expired.');
+    if (link.usedAt) throw new ForbiddenException('This document has already been signed.');
+    if (!dto.signerName?.trim() || !dto.signatureDataUrl) {
+      throw new BadRequestException('A name and signature are required.');
+    }
+    if (!dto.signatureDataUrl.startsWith('data:image/')) {
+      throw new BadRequestException('Invalid signature image.');
+    }
+
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: link.passportQuestionId },
+      include: { answer: true },
+    });
+    if (!question) throw new NotFoundException('Document not found.');
+
+    const record = (question.answer?.answerJson as any) ?? {};
+    record.audit = record.audit ?? {};
+    record.audit.tenant = {
+      name: dto.signerName.trim(),
+      signatureDataUrl: dto.signatureDataUrl,
+      signedAt: new Date().toISOString(),
+      ip: ip ?? null,
+    };
+
+    await this.prisma.questionAnswer.upsert({
+      where: { passportQuestionId: link.passportQuestionId },
+      update: { answerJson: record },
+      create: { passportQuestionId: link.passportQuestionId, answerJson: record },
+    });
+    await this.prisma.tenancySignLink.update({ where: { token }, data: { usedAt: new Date() } });
+
+    return { success: true };
   }
 }
