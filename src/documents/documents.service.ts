@@ -13,6 +13,7 @@ import {
   storedFilename,
   deleteStoredFile,
   isS3Mode,
+  uploadsPathFrom,
 } from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
@@ -23,9 +24,10 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 const PRIVATE_BUCKETS = new Set(['documents']);
 
 function bucketOf(fileUrl: string | null | undefined): string | null {
-  if (!fileUrl) return null;
+  const uploadsPath = uploadsPathFrom(fileUrl);
+  if (!uploadsPath) return null;
   // Path shape: /uploads/<bucket>/<filename>
-  const match = fileUrl.match(/^\/uploads\/([^/]+)\//);
+  const match = uploadsPath.match(/^\/uploads\/([^/]+)\//);
   return match ? match[1] : null;
 }
 
@@ -69,15 +71,20 @@ export class DocumentsService {
    */
   private resolveUrl(fileUrl: string | null | undefined, viewerUserId: string): string {
     if (!fileUrl) return '';
-    if (!fileUrl.startsWith('/uploads/')) return fileUrl;
+    // Bare /uploads/... or absolute-with-any-host (including a stale
+    // BASE_URL baked in at upload time, e.g. a dev localhost URL that
+    // shipped to production before BASE_URL was set correctly there —
+    // see uploadsPathFrom's own comment).
+    const uploadsPath = uploadsPathFrom(fileUrl);
+    if (!uploadsPath) return fileUrl; // already a full non-uploads URL — leave as-is
 
     const bucket = bucketOf(fileUrl);
     if (bucket && PRIVATE_BUCKETS.has(bucket)) {
       // strip the /uploads/ prefix — /files/<bucket>/<filename>
-      const relPath = fileUrl.replace(/^\/uploads\//, '');
+      const relPath = uploadsPath.replace(/^\/uploads\//, '');
       return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
     }
-    return `${BASE_URL}${fileUrl}`;
+    return `${BASE_URL}${uploadsPath}`;
   }
 
   async getDocuments(userId: string) {
