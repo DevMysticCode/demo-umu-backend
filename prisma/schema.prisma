@@ -1147,10 +1147,16 @@ model ValuationSnapshot {
 // this one is write-capable (the tenant submits a signature through
 // it) and long-lived (signing can take days), not a short read-only
 // document-viewing link.
+// `kind` distinguishes what's being signed ("tenancy" | "inventory") so
+// one model/link mechanism covers both e-sign flows (client feedback:
+// extend the Tenancy Agreement e-sign pattern to Inventory's move-in
+// sign-off too) - the link/expiry/one-time-use machinery is identical,
+// only the document summary shown to the signer differs.
 model TenancySignLink {
   id                 String           @id @default(uuid())
   passportQuestionId String
   token              String           @unique
+  kind               String           @default("tenancy")
   expiresAt          DateTime
   usedAt             DateTime?
   createdAt          DateTime         @default(now())
