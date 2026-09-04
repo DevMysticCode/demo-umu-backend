@@ -10,7 +10,7 @@ import { PushService } from '../push/push.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FilesService } from '../files/files.service';
-import { PUBLIC_BUCKETS } from '../common/storage';
+import { PUBLIC_BUCKETS, uploadsPathFrom } from '../common/storage';
 import { assertKycVerified } from '../common/kyc';
 import {
   Passport,
@@ -225,11 +225,10 @@ export class PassportService {
   private resolveAnswerFileUrls(passport: any, viewerUserId: string) {
     const resolve = (url: string | null | undefined): string | null | undefined => {
       if (!url) return url;
-      const uploadsPath = url.startsWith('/uploads/')
-        ? url
-        : url.startsWith(`${BASE_URL}/uploads/`)
-          ? url.slice(BASE_URL.length)
-          : null;
+      // Matches bare /uploads/... or absolute-with-any-host — see
+      // uploadsPathFrom's own comment for why this can't be a strict
+      // startsWith(current BASE_URL) check.
+      const uploadsPath = uploadsPathFrom(url);
       if (!uploadsPath) return url; // already a full non-uploads URL (e.g. S3 public host) — leave as-is
       const bucket = uploadsPath.match(/^\/uploads\/([^/]+)\//)?.[1];
       if (!bucket || PUBLIC_BUCKETS.has(bucket)) return url;

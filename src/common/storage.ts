@@ -187,6 +187,29 @@ export function s3KeyFromRelativeUrl(relativeUrl: string): string | null {
 }
 
 /**
+ * Extract the `/uploads/<bucket>/<file>` relative path from a stored
+ * fileUrl, whatever form it's actually in: bare relative, or absolute
+ * with ANY host — not just this process's current BASE_URL.
+ *
+ * Disk-mode uploads bake the BASE_URL env var in at upload time
+ * (question.service.ts's uploadQuestionFile). If that var was ever
+ * wrong (e.g. left at the http://localhost:3002 dev default, or the
+ * env only got corrected later), the stored value permanently carries
+ * the wrong host. A strict `startsWith(currentBaseUrl)` check then
+ * never recognises those rows again once BASE_URL is fixed — this is
+ * exactly the "View certificate" bug reported live: GSR/EICR/EPC
+ * links pointing at localhost:3002 in production. Matching by suffix
+ * instead of a fixed prefix fixes both existing stale rows and any
+ * future host change, with no data migration needed.
+ */
+export function uploadsPathFrom(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith('/uploads/')) return url;
+  const m = url.match(/^https?:\/\/[^/]+(\/uploads\/.+)$/);
+  return m ? m[1] : null;
+}
+
+/**
  * Stream a private file out of S3. Returns the body stream + content
  * type. Caller is responsible for piping into `res`.
  */

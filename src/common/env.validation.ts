@@ -74,6 +74,25 @@ const checks: EnvCheck[] = [
     description: 'Comma-separated CORS allow-list (no trailing slash)',
     prodOnly: true,
   },
+  // Missing/wrong in production silently ships broken file links —
+  // it gets baked into every disk-mode upload's fileUrl at upload
+  // time (question.service.ts), with no validation catching it
+  // before then. Confirmed live: GSR/EICR/EPC "View" all 404'd
+  // because this defaulted to the http://localhost:3002 dev fallback
+  // in production. uploadsPathFrom (common/storage.ts) makes already-
+  // stored bad rows recoverable without a migration, but this check
+  // stops it happening again going forward.
+  {
+    name: 'BASE_URL',
+    description: 'Public base URL of this API (e.g. https://api.umovingu.com) — never localhost in production',
+    prodOnly: true,
+    shape: (v) =>
+      /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(v)
+        ? 'must not point at localhost in production'
+        : v.startsWith('http://') || v.startsWith('https://')
+          ? null
+          : 'must start with http:// or https://',
+  },
 ];
 
 export function validateEnv(env: NodeJS.ProcessEnv): void {

@@ -25,7 +25,6 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 
 const SIG_TTL_SECONDS_DEFAULT = 60 * 60; // 1 hour
-const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 @Injectable()
 export class FilesService {
@@ -128,10 +127,17 @@ export class FilesService {
    */
   private async userOwnsFilePath(userId: string, path: string): Promise<boolean> {
     const bareUrl = `/uploads/${path.replace(/^\/+/, '')}`;
-    const candidates = [bareUrl, `${BASE_URL}${bareUrl}`];
-
+    // Match by suffix, not a fixed list of [bare, current-BASE_URL]
+    // candidates — a row stored with a stale BASE_URL (e.g. a
+    // dev-time localhost URL that shipped before BASE_URL was set
+    // correctly in production) never matched either candidate once
+    // BASE_URL was fixed, permanently 403ing that file. Filenames are
+    // random+timestamped, so a suffix match is exactly as specific as
+    // an exact match — only the host prefix is being relaxed. See
+    // uploadsPathFrom in common/storage.ts for the read-side version
+    // of this same fix.
     const asDocument = await this.prisma.userDocument.findFirst({
-      where: { userId, fileUrl: { in: candidates } },
+      where: { userId, fileUrl: { endsWith: bareUrl } },
       select: { id: true },
     });
     if (asDocument) return true;
@@ -142,7 +148,7 @@ export class FilesService {
     // passport OR has been added as a collaborator on it.
     const asAnswer = await this.prisma.questionAnswer.findFirst({
       where: {
-        fileUrl: { in: candidates },
+        fileUrl: { endsWith: bareUrl },
         passportQuestion: {
           passportSectionTask: {
             passportSection: {
