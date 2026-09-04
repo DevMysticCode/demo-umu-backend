@@ -132,13 +132,19 @@ export class QuestionController {
     return this.questionService.deleteQuestionCopy(req.user.id, docId);
   }
 
-  // Tenancy Agreement e-signature — the landlord (authed) generates a
-  // magic link; the tenant (no account) opens tenancy-sign/:token and
-  // tenancy-sign POST to review + sign, no JWT guard on either.
+  // E-signature (Tenancy Agreement + Inventory) — the landlord (authed)
+  // generates a magic link; the tenant (no account) opens
+  // tenancy-sign/:token / inventory-sign/:token to review + sign, no
+  // JWT guard on either. One shared link mechanism (kind distinguishes
+  // which document is being signed), see question.service.ts.
   @Post(':questionId/tenancy-sign-link')
   @UseGuards(JwtAuthGuard)
-  async createTenancySignLink(@Param('questionId') questionId: string, @Request() req: any) {
-    return this.questionService.createTenancySignLink(questionId, req.user.id);
+  async createTenancySignLink(
+    @Param('questionId') questionId: string,
+    @Body('kind') kind: 'tenancy' | 'inventory',
+    @Request() req: any,
+  ) {
+    return this.questionService.createTenancySignLink(questionId, req.user.id, kind || 'tenancy');
   }
 
   @Get('tenancy-sign/:token')

@@ -344,14 +344,14 @@ export class QuestionService {
     );
   }
 
-  async createTenancySignLink(questionId: string, userId: string) {
+  async createTenancySignLink(questionId: string, userId: string, kind: 'tenancy' | 'inventory' = 'tenancy') {
     await this.assertQuestionAccess(questionId, userId);
     const token = randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days — signing can take a while
     const link = await this.prisma.tenancySignLink.create({
-      data: { passportQuestionId: questionId, token, expiresAt },
+      data: { passportQuestionId: questionId, token, kind, expiresAt },
     });
-    return { token: link.token, url: `${this.frontendBaseUrl()}/sign/tenancy/${link.token}` };
+    return { token: link.token, url: `${this.frontendBaseUrl()}/sign/${kind}/${link.token}` };
   }
 
   async getTenancySignData(token: string) {
@@ -371,12 +371,37 @@ export class QuestionService {
     if (!question) throw new NotFoundException('Document not found.');
 
     const record = (question.answer?.answerJson as any) ?? {};
+    const propertyAddress = question.passportSectionTask.passportSection.passport.addressLine1 ?? '';
+    const landlordSigned = !!record.audit?.landlord;
+    const tenantSigned = !!record.audit?.tenant;
+
+    if (link.kind === 'inventory') {
+      // Inventory has no assembled document text (Tenancy Agreement's
+      // docText) — summarise the room-by-room record instead, matching
+      // what the landlord already sees on the review screen.
+      return {
+        kind: 'inventory',
+        tenantName: record.tenantName ?? '',
+        propertyAddress,
+        inventoryType: record.type ?? 'checkin',
+        furnishing: record.furnishing ?? '',
+        completedAt: record.completedAt ?? '',
+        rooms: (record.rooms ?? []).map((r: any) => ({
+          name: r.name,
+          items: (r.items ?? []).map((i: any) => ({ name: i.name, condition: i.condition, cleanliness: i.cleanliness, note: i.note })),
+        })),
+        landlordSigned,
+        tenantSigned,
+      };
+    }
+
     return {
+      kind: 'tenancy',
       docText: record.docText ?? [],
       tenantName: record.tenantName ?? '',
-      propertyAddress: question.passportSectionTask.passportSection.passport.addressLine1 ?? '',
-      landlordSigned: !!record.audit?.landlord,
-      tenantSigned: !!record.audit?.tenant,
+      propertyAddress,
+      landlordSigned,
+      tenantSigned,
     };
   }
 
