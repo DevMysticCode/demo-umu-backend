@@ -125,7 +125,7 @@ export class LlcService {
         ? 'OK_WITH_CHARGES' : 'OK_EMPTY';
       const ms = Date.now() - started;
       this.logger.log(
-        `[llc] ${status} for ${property.id} — ${rawCharges.length} direct + ${rawBoundary.length} boundary (${ms}ms)`,
+        `[llc] ${status} for ${property.id} - ${rawCharges.length} direct + ${rawBoundary.length} boundary (${ms}ms)`,
       );
       return this.upsert(existingSearchId, property.id, {
         status,
@@ -146,7 +146,7 @@ export class LlcService {
     if (res.status === 400 && json && typeof json.error_code === 'string') {
       const status = this.mapErrorCode(json.error_code);
       this.logger.warn(
-        `[llc] ${status} for ${property.id} — ${json.error_code}: ${json.error_message ?? ''}`,
+        `[llc] ${status} for ${property.id} - ${json.error_code}: ${json.error_message ?? ''}`,
       );
       return this.upsert(existingSearchId, property.id, {
         status,

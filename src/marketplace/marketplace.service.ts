@@ -83,7 +83,7 @@ export interface MarketplaceContractDto {
     title: string;
     locationLabel: string;
     categoryLabel: string;
-    startedAt: string;        // ISO date — payment.heldAt or createdAt
+    startedAt: string;        // ISO date - payment.heldAt or createdAt
     status: string;
   };
   payment: {
@@ -280,7 +280,7 @@ export class MarketplaceService {
     if (!payment) {
       // No payment yet → contract doesn't exist. The customer should
       // still be on the offers/authorize flow.
-      throw new BadRequestException('This job has no contract yet — authorise an offer first');
+      throw new BadRequestException('This job has no contract yet - authorise an offer first');
     }
     if (payment.customerId !== viewerUserId && payment.supplierId !== viewerUserId) {
       throw new ForbiddenException('You are not a party to this contract');

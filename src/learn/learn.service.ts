@@ -95,14 +95,14 @@ export class LearnService implements OnModuleInit {
       if (transient && attempt < 3) {
         const delayMs = 500 * Math.pow(2, attempt);
         this.logger.warn(
-          `seedVideos failed (${code}) — retry ${attempt + 1}/3 in ${delayMs}ms`,
+          `seedVideos failed (${code}) - retry ${attempt + 1}/3 in ${delayMs}ms`,
         );
         await new Promise((r) => setTimeout(r, delayMs));
         return this.seedVideosSafe(attempt + 1);
       }
       this.logger.error(
         `seedVideos failed permanently (${code ?? err?.message}). ` +
-          `Skipping seed — will retry on next boot.`,
+          `Skipping seed - will retry on next boot.`,
       );
     }
   }

@@ -92,7 +92,7 @@ export class PaymentController {
     // main.ts boots Nest with `rawBody: true` so the raw bytes are
     // available here without disabling the JSON body parser globally.
     if (!req.rawBody) {
-      throw new BadRequestException('Raw body unavailable — check main.ts setup');
+      throw new BadRequestException('Raw body unavailable - check main.ts setup');
     }
     return this.paymentService.handleWebhook(req.rawBody, signature);
   }

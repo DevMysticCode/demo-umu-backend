@@ -38,7 +38,7 @@ const SECTION_KEY = 'landlord_how_to_rent';
 async function main() {
   const st = await prisma.sectionTemplate.findUnique({ where: { key: SECTION_KEY } });
   if (!st) {
-    console.warn(`  SKIPPED SectionTemplate — not found: ${SECTION_KEY}`);
+    console.warn(`  SKIPPED SectionTemplate - not found: ${SECTION_KEY}`);
   } else {
     await prisma.sectionTemplate.update({
       where: { key: SECTION_KEY },

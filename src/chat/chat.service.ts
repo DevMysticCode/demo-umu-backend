@@ -18,28 +18,28 @@ const PROPERTY_KNOWLEDGE = `
 ## UK HOME MOVING PROCESS
 
 ### The 7 stages
-1. Prepare to sell — get EPC, property passport, documents ready BEFORE listing
-2. Instruct agent — choose agent, agree fee, sign contract
-3. List & market — photos, portal listing, viewings
-4. Offers & negotiation — accept offer, instruct solicitor, memorandum of sale issued
-5. Conveyancing — searches, mortgage survey, enquiries, draft contracts (typically 8–16 weeks)
-6. Exchange of contracts — legally binding, completion date set, 10% deposit paid
-7. Completion — remaining funds transfer, keys released, you move
+1. Prepare to sell - get EPC, property passport, documents ready BEFORE listing
+2. Instruct agent - choose agent, agree fee, sign contract
+3. List & market - photos, portal listing, viewings
+4. Offers & negotiation - accept offer, instruct solicitor, memorandum of sale issued
+5. Conveyancing - searches, mortgage survey, enquiries, draft contracts (typically 8–16 weeks)
+6. Exchange of contracts - legally binding, completion date set, 10% deposit paid
+7. Completion - remaining funds transfer, keys released, you move
 
 ### Why sales fall through (top reasons)
 - Missing or incomplete documents discovered late (EPC, planning permissions, warranties)
 - Gazumping or buyer pulling out due to delays
 - Mortgage valuation lower than offer (down-valuation)
 - Survey reveals serious defect (subsidence, damp, roof issues)
-- Broken chain — someone else in the chain pulls out
+- Broken chain - someone else in the chain pulls out
 - Boundary disputes or title issues
 - Leasehold complications (short lease <80 years, high service charge, missing freeholder consent)
-- Slow conveyancing — solicitor delays, slow local authority searches
-- Financial issues — buyer loses job or fails stress test
+- Slow conveyancing - solicitor delays, slow local authority searches
+- Financial issues - buyer loses job or fails stress test
 
 ### Key documents sellers need BEFORE listing
-- EPC (Energy Performance Certificate) — legally required, valid 10 years
-- Title register and title plan (from Land Registry — £3 each online)
+- EPC (Energy Performance Certificate) - legally required, valid 10 years
+- Title register and title plan (from Land Registry - £3 each online)
 - Property Information Form (TA6)
 - Fittings and Contents Form (TA10)
 - Leasehold Information Form (TA7, if leasehold)
@@ -62,20 +62,20 @@ Conveyancing is the legal process of transferring property ownership. After an o
 - Both buyer and seller instruct solicitors (different firms)
 - Seller's solicitor sends draft contract and property info
 - Buyer's solicitor raises enquiries, orders searches
-- Searches include: local authority, water, drainage, environmental — typically 2–6 weeks
+- Searches include: local authority, water, drainage, environmental - typically 2–6 weeks
 - Once satisfied, solicitors agree a completion date and exchange contracts
-- Exchange is legally binding — neither party can pull out without penalty
+- Exchange is legally binding - neither party can pull out without penalty
 - Completion usually happens 1–4 weeks after exchange
 
 ### Common terms explained
-- Memorandum of sale: written record from the agent confirming the agreed sale price, buyer, and seller details — not legally binding
+- Memorandum of sale: written record from the agent confirming the agreed sale price, buyer, and seller details - not legally binding
 - Exchange of contracts: the moment the sale becomes legally binding
 - Completion: the day money transfers and keys are handed over
-- Gazumping: seller accepts a higher offer from someone else after agreeing a sale — legal in England and Wales
-- Gazundering: buyer reduces their offer just before exchange — also legal
+- Gazumping: seller accepts a higher offer from someone else after agreeing a sale - legal in England and Wales
+- Gazundering: buyer reduces their offer just before exchange - also legal
 - Chain: linked sequence of property transactions dependent on each other
 - Freehold: you own the property and the land outright
-- Leasehold: you own the property but not the land — you pay ground rent and service charge to a freeholder
+- Leasehold: you own the property but not the land - you pay ground rent and service charge to a freeholder
 - Stamp Duty Land Tax (SDLT): tax paid by buyers. 0% up to £250,000 for most buyers; first-time buyers get relief up to £425,000
 - Help to Buy: government scheme to help first-time buyers (closed to new applicants 2023)
 - Shared ownership: buy a share of a property and pay rent on the rest
@@ -91,12 +91,12 @@ A property is ready to sell when:
 - Property Passport started or complete
 - Boiler serviced recently
 
-### Leasehold — key things to know
-- Leases under 80 years are hard to mortgage — buyers often can't get a mortgage
+### Leasehold - key things to know
+- Leases under 80 years are hard to mortgage - buyers often can't get a mortgage
 - Lease extension costs: roughly 1% of property value if over 80 years; much more below 80 years
 - You can extend a lease after owning for 2 years
-- Service charge disputes are common — always check accounts history
-- Ground rent — since 2022, new leases cannot have escalating ground rent (must be peppercorn)
+- Service charge disputes are common - always check accounts history
+- Ground rent - since 2022, new leases cannot have escalating ground rent (must be peppercorn)
 
 ### Energy efficiency / EPC
 - Ratings: A (most efficient) to G (least efficient)
@@ -106,7 +106,7 @@ A property is ready to sell when:
 - EPC assessors typically charge £60–£120
 
 ### About UMovingU / Open Property
-UMovingU (Umovingu) is a property platform built on the belief that the home-moving process is broken because information is gathered too late. The platform helps sellers prepare a Property Passport before listing — collecting all documents, certificates, and property history in advance so that sales complete faster with fewer fall-throughs.
+UMovingU (Umovingu) is a property platform built on the belief that the home-moving process is broken because information is gathered too late. The platform helps sellers prepare a Property Passport before listing - collecting all documents, certificates, and property history in advance so that sales complete faster with fewer fall-throughs.
 `;
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
@@ -147,7 +147,7 @@ export class ChatService {
 
   constructor(private prisma: PrismaService) {
     if (!process.env.GROQ_API_KEY) {
-      this.logger.warn('GROQ_API_KEY is not set — /chat will fail with 503 until configured.');
+      this.logger.warn('GROQ_API_KEY is not set - /chat will fail with 503 until configured.');
     }
     this.openai = new OpenAI({
       apiKey: process.env.GROQ_API_KEY ?? 'missing',
@@ -278,7 +278,7 @@ export class ChatService {
     }
 
     if (passportCount === 0) return 'thinking about selling / preparing to sell (no passport yet)';
-    if (passportCompletion !== null && passportCompletion < 30) return 'early stages — passport just started';
+    if (passportCompletion !== null && passportCompletion < 30) return 'early stages - passport just started';
     if (passportCompletion !== null && passportCompletion < 80) return 'building property passport (preparation stage)';
     if (passportCompletion !== null && passportCompletion >= 80) return 'nearly ready to list (passport nearly complete)';
 
@@ -366,17 +366,17 @@ export class ChatService {
     const systemPrompt = `You are MoveCompanion, a trusted property guide from UMovingU / Open Property. You help UK homeowners and buyers navigate the home-moving process.
 
 Your personality:
-- Calm, warm, and reassuring — like a knowledgeable friend who has seen it all before
-- Plain English only — no legal jargon without an immediate explanation
+- Calm, warm, and reassuring - like a knowledgeable friend who has seen it all before
+- Plain English only - no legal jargon without an immediate explanation
 - Concise: 3–5 sentences unless the user asks for detail
 - Always end with a practical next step or question when it helps
-- Never give legal or financial advice — for those, recommend a solicitor or financial adviser
+- Never give legal or financial advice - for those, recommend a solicitor or financial adviser
 - If you don't know something, say so and guide them to the right place
 
 User context (live data):
 ${contextLines.join('\n')}
 
-You have tools available to look up live data about this user's property passport, missing documents, and HomeScore. Use them when the user asks about their specific situation — don't guess or make up completion stats.
+You have tools available to look up live data about this user's property passport, missing documents, and HomeScore. Use them when the user asks about their specific situation - don't guess or make up completion stats.
 
 UK property knowledge base:
 ${PROPERTY_KNOWLEDGE}`;

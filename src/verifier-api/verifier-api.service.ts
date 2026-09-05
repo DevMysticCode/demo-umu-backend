@@ -117,7 +117,7 @@ export class VerifierApiService {
       org,
       client: { clientId, clientSecret: secret },
       message:
-        'Store the clientSecret now — it cannot be retrieved later. Use it as the Authorization Bearer for /api/v1/access-requests.',
+        'Store the clientSecret now - it cannot be retrieved later. Use it as the Authorization Bearer for /api/v1/access-requests.',
     };
   }
 
@@ -178,7 +178,7 @@ export class VerifierApiService {
     }
     if (!buyerUserId) {
       throw new NotFoundException(
-        'Buyer not found — provide buyerRef or buyerEmail of an existing UMU buyer',
+        'Buyer not found - provide buyerRef or buyerEmail of an existing UMU buyer',
       );
     }
 
@@ -274,7 +274,7 @@ export class VerifierApiService {
     }
     if (r.status !== 'PENDING') {
       throw new BadRequestException(
-        `Cannot approve — request is ${r.status.toLowerCase()}`,
+        `Cannot approve - request is ${r.status.toLowerCase()}`,
       );
     }
     if (r.expiresAt.getTime() < Date.now()) {
@@ -335,7 +335,7 @@ export class VerifierApiService {
     }
     if (r.status !== 'PENDING') {
       throw new BadRequestException(
-        `Cannot decline — request is ${r.status.toLowerCase()}`,
+        `Cannot decline - request is ${r.status.toLowerCase()}`,
       );
     }
     const updated = await this.prisma.accessRequest.update({

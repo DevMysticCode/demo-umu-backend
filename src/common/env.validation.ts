@@ -84,7 +84,7 @@ const checks: EnvCheck[] = [
   // stops it happening again going forward.
   {
     name: 'BASE_URL',
-    description: 'Public base URL of this API (e.g. https://api.umovingu.com) — never localhost in production',
+    description: 'Public base URL of this API (e.g. https://api.umovingu.com) - never localhost in production',
     prodOnly: true,
     shape: (v) =>
       /^https?:\/\/(localhost|127\.0\.0\.1)/i.test(v)
@@ -118,7 +118,7 @@ export function validateEnv(env: NodeJS.ProcessEnv): void {
     // logging a secret if someone pastes the boot output into Slack.
     // eslint-disable-next-line no-console
     console.error(
-      `\n[env] Boot aborted — ${errors.length} environment issue(s):\n${errors.join('\n')}\n`,
+      `\n[env] Boot aborted - ${errors.length} environment issue(s):\n${errors.join('\n')}\n`,
     );
     process.exit(1);
   }

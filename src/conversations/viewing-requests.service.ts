@@ -161,7 +161,7 @@ export class ViewingRequestsService {
     }
     if (viewing.status !== 'pending' && viewing.status !== 'rescheduled') {
       throw new BadRequestException(
-        `Cannot respond — request is already ${viewing.status}.`,
+        `Cannot respond - request is already ${viewing.status}.`,
       );
     }
 
@@ -246,7 +246,7 @@ export class ViewingRequestsService {
       email:
         input.action === 'accept'
           ? {
-              subject: `Viewing confirmed — ${viewing.property.addressLine1}`,
+              subject: `Viewing confirmed - ${viewing.property.addressLine1}`,
               html: `<p>${buyerName} accepted your viewing invite for <strong>${
                 viewing.property.addressLine1
               }</strong>.</p><p>Chosen time: <strong>${formatSlot(input.chosenSlot!)}</strong>.</p>`,

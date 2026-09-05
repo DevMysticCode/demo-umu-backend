@@ -82,7 +82,7 @@ export class PaymentService {
     });
     if (existingSuccess) {
       throw new ConflictException(
-        'A successful payment already exists — call /passport/:id/buyer-unlock to grant access',
+        'A successful payment already exists - call /passport/:id/buyer-unlock to grant access',
       );
     }
 
@@ -126,7 +126,7 @@ export class PaymentService {
     const intent = await this.stripe.paymentIntents.create({
       amount: PASSPORT_UNLOCK_AMOUNT_PENCE,
       currency: 'gbp',
-      description: 'Property Passport unlock — UMovingU',
+      description: 'Property Passport unlock - UMovingU',
       automatic_payment_methods: { enabled: true },
       metadata: {
         umuType: 'passport_unlock',
@@ -178,7 +178,7 @@ export class PaymentService {
     }
     if (passport.status !== 'PENDING_PAYMENT') {
       throw new ConflictException(
-        'This passport is not awaiting payment — it may already be active.',
+        'This passport is not awaiting payment - it may already be active.',
       );
     }
 
@@ -202,7 +202,7 @@ export class PaymentService {
     });
     if (existingSuccess) {
       throw new ConflictException(
-        'A successful payment already exists — call /passport/:id/activate to finish claiming',
+        'A successful payment already exists - call /passport/:id/activate to finish claiming',
       );
     }
 
@@ -246,8 +246,8 @@ export class PaymentService {
       currency: 'gbp',
       description:
         amount === OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE
-          ? 'Property ownership verification (HM Land Registry) — UMovingU'
-          : 'Property ownership verification (identity + HM Land Registry) — UMovingU',
+          ? 'Property ownership verification (HM Land Registry) - UMovingU'
+          : 'Property ownership verification (identity + HM Land Registry) - UMovingU',
       automatic_payment_methods: { enabled: true },
       metadata: {
         umuType: 'owner_claim',

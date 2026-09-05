@@ -114,7 +114,7 @@ export class KycService {
       if (err instanceof BadRequestException) throw err;
       this.logger.error(`Persona network error: ${err.message}`);
       throw new BadRequestException(
-        'Could not start identity verification — please try again.',
+        'Could not start identity verification - please try again.',
       );
     }
 

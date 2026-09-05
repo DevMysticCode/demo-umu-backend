@@ -229,7 +229,7 @@ export class PassportService {
       // uploadsPathFrom's own comment for why this can't be a strict
       // startsWith(current BASE_URL) check.
       const uploadsPath = uploadsPathFrom(url);
-      if (!uploadsPath) return url; // already a full non-uploads URL (e.g. S3 public host) — leave as-is
+      if (!uploadsPath) return url; // already a full non-uploads URL (e.g. S3 public host) - leave as-is
       const bucket = uploadsPath.match(/^\/uploads\/([^/]+)\//)?.[1];
       if (!bucket || PUBLIC_BUCKETS.has(bucket)) return url;
       const relPath = uploadsPath.replace(/^\/uploads\//, '');
@@ -539,7 +539,7 @@ export class PassportService {
     const paid = await this.payments.hasSuccessfulPayment(userId, passportId);
     if (!paid) {
       throw new ForbiddenException(
-        'Payment required — call POST /payment/create-claim-intent first and complete the Stripe charge.',
+        'Payment required - call POST /payment/create-claim-intent first and complete the Stripe charge.',
       );
     }
 
@@ -587,7 +587,7 @@ export class PassportService {
     // of order (shouldn't happen via the normal flow).
     if (!passport.type) {
       throw new BadRequestException(
-        'Passport type has not been chosen yet — call POST /passport/:id/set-type first.',
+        'Passport type has not been chosen yet - call POST /passport/:id/set-type first.',
       );
     }
 
@@ -1384,7 +1384,7 @@ export class PassportService {
       // request can't be served until you pay". Nest maps the message
       // string into the body so the frontend can render a useful copy.
       throw new ForbiddenException(
-        'Payment required — call POST /payment/create-intent first and complete the Stripe charge.',
+        'Payment required - call POST /payment/create-intent first and complete the Stripe charge.',
       );
     }
 
@@ -1629,7 +1629,7 @@ export class PassportService {
     if (!readiness.canPublish) {
       throw new ForbiddenException({
         message:
-          'This passport is not ready to publish yet — some required disclosures are still missing.',
+          'This passport is not ready to publish yet - some required disclosures are still missing.',
         readiness,
       });
     }
@@ -1641,7 +1641,7 @@ export class PassportService {
     });
     await this.logActivity(passportId, {
       type: 'PUBLISHED',
-      title: 'Passport published — live to buyers',
+      title: 'Passport published - live to buyers',
       actor: 'You',
       icon: '🚀',
     });
@@ -1665,7 +1665,7 @@ export class PassportService {
     });
     await this.logActivity(passportId, {
       type: 'UNPUBLISHED',
-      title: 'Passport unpublished — back to private',
+      title: 'Passport unpublished - back to private',
       actor: 'You',
       icon: '🔒',
     });
@@ -1842,8 +1842,8 @@ export class PassportService {
       type: visibility === 'PRIVATE' ? 'SECTION_PRIVATE' : 'SECTION_PUBLIC',
       title:
         visibility === 'PRIVATE'
-          ? `${updated.title} set to Private — kept out of the published Passport`
-          : `${updated.title} set to Public — will publish with the Passport`,
+          ? `${updated.title} set to Private - kept out of the published Passport`
+          : `${updated.title} set to Public - will publish with the Passport`,
       actor: 'You',
       icon: visibility === 'PRIVATE' ? '🔒' : '🌐',
       metadata: { sectionKey: updated.key },

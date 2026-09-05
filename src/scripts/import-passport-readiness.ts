@@ -197,7 +197,7 @@ async function main() {
     const [sectionTitle, taskTitle] = groupKey.split('|||');
 
     if (HAND_CLASSIFIED_SECTIONS.has(sectionTitle)) {
-      console.log(`Skipping "${sectionTitle}" / "${taskTitle}" — hand-classified separately (stale Excel rows).`);
+      console.log(`Skipping "${sectionTitle}" / "${taskTitle}" - hand-classified separately (stale Excel rows).`);
       continue;
     }
 
@@ -222,7 +222,7 @@ async function main() {
     );
     if (matchingTaskKeys.length !== 1) {
       needsReview.push(
-        `Section "${sectionTitle}" task "${taskTitle}": found ${matchingTaskKeys.length} matching DB taskKey(s) (expected 1) — ${JSON.stringify(matchingTaskKeys)}`,
+        `Section "${sectionTitle}" task "${taskTitle}": found ${matchingTaskKeys.length} matching DB taskKey(s) (expected 1) - ${JSON.stringify(matchingTaskKeys)}`,
       );
       continue;
     }
@@ -243,7 +243,7 @@ async function main() {
 
     if (slots.length !== rows.length) {
       needsReview.push(
-        `Section "${sectionTitle}" task "${taskTitle}": ${rows.length} Excel row(s) vs ${slots.length} DB slot(s) — skipped, needs manual review`,
+        `Section "${sectionTitle}" task "${taskTitle}": ${rows.length} Excel row(s) vs ${slots.length} DB slot(s) - skipped, needs manual review`,
       );
       continue;
     }
@@ -326,11 +326,11 @@ async function main() {
       if (allSameClassification) {
         finalRows = rows;
         console.log(
-          `  [uniform fallback] "${sectionTitle}" / "${taskTitle}": titles couldn't be matched but all ${rows.length} row(s) share one classification (${first.milestone}/${first.blocker}) — applying by position.`,
+          `  [uniform fallback] "${sectionTitle}" / "${taskTitle}": titles couldn't be matched but all ${rows.length} row(s) share one classification (${first.milestone}/${first.blocker}) - applying by position.`,
         );
       } else {
         needsReview.push(
-          `Section "${sectionTitle}" task "${taskTitle}": titles could not be safely matched to DB slots (distinct titles that don't correspond 1:1, or a repeated title with different classifications across occurrences) — skipped, needs manual review`,
+          `Section "${sectionTitle}" task "${taskTitle}": titles could not be safely matched to DB slots (distinct titles that don't correspond 1:1, or a repeated title with different classifications across occurrences) - skipped, needs manual review`,
         );
         continue;
       }
@@ -352,7 +352,7 @@ async function main() {
   for (const t of titleDeedsTemplates) {
     const parts = Array.isArray(t.parts) ? (t.parts as any[]) : [];
     if (t.type !== 'MULTIPART' || parts.length === 0) {
-      needsReview.push(`titleDeedsAndPlan template ${t.id} is not MULTIPART as expected — skipped hand-classification`);
+      needsReview.push(`titleDeedsAndPlan template ${t.id} is not MULTIPART as expected - skipped hand-classification`);
       continue;
     }
     const entries: ReadinessEntry[] = parts.map((p) => ({

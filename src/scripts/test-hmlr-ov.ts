@@ -61,7 +61,7 @@ async function main() {
   // file header) — default is a fresh UUID every run. Only override with
   // HMLR_TEST_SCENARIO when you're deliberately pointed at bgtest.
   const scenario = process.env.HMLR_TEST_SCENARIO?.trim() || randomUUID()
-  console.log('MessageId:', scenario, '(set HMLR_TEST_SCENARIO to override — bgtest scenario codes ONLY, never against live)')
+  console.log('MessageId:', scenario, '(set HMLR_TEST_SCENARIO to override - bgtest scenario codes ONLY, never against live)')
   console.log('-----------------------------')
 
   // Subject defaults to HMLR's own vendor test person (Jon Tankerman / 24

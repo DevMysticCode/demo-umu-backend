@@ -353,7 +353,7 @@ export class AuthService {
       const result = await this.resend.emails.send({
         from: this.FROM,
         to: email,
-        subject: `Reset your password — code: ${otp}`,
+        subject: `Reset your password - code: ${otp}`,
         html: `
 <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
   <div style="text-align:center;margin-bottom:32px;">
@@ -445,7 +445,7 @@ export class AuthService {
     if (!user.password) {
       // Account was created via Google / Apple / OTP and has no password set.
       throw new BadRequestException(
-        'This account does not use a password — sign in with the social provider you originally used.',
+        'This account does not use a password - sign in with the social provider you originally used.',
       );
     }
 

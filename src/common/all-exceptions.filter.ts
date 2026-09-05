@@ -46,7 +46,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     //    everything else gets the generic 500 path below.
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       this.logger.warn(
-        `[Prisma ${exception.code}] ${req.method} ${req.url} — ${exception.message.split('\n')[0]}`,
+        `[Prisma ${exception.code}] ${req.method} ${req.url} - ${exception.message.split('\n')[0]}`,
       );
       switch (exception.code) {
         case 'P2002': // unique constraint
@@ -77,7 +77,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // 3) Everything else — opaque 500 to the client, full detail server-side.
     const err = exception as Error;
     this.logger.error(
-      `Unhandled ${err?.name ?? 'Error'} on ${req.method} ${req.url} — ${err?.message ?? exception}`,
+      `Unhandled ${err?.name ?? 'Error'} on ${req.method} ${req.url} - ${err?.message ?? exception}`,
       err?.stack,
     );
     // Forward to Sentry if SENTRY_DSN is configured (no-op otherwise).

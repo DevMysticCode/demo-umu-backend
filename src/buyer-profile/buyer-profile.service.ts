@@ -258,7 +258,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
       reasoning_effort: 'low',
     } as any);
     const text = completion.choices[0]?.message?.content?.trim();
-    if (!text) throw new BadRequestException('AI did not return a draft — try again.');
+    if (!text) throw new BadRequestException('AI did not return a draft - try again.');
     return { text };
   }
 
@@ -315,7 +315,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
     });
     if (!existing) {
       throw new NotFoundException(
-        'Buyer profile not found — start by building one first',
+        'Buyer profile not found - start by building one first',
       );
     }
 
@@ -403,7 +403,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
     }
     if (!this.stripe) {
       throw new BadRequestException(
-        'Stripe not configured — set STRIPE_SECRET_KEY',
+        'Stripe not configured - set STRIPE_SECRET_KEY',
       );
     }
     // Ensure profile row exists before charging.
@@ -610,7 +610,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
     const result = await this.resend.emails.send({
       from: this.EMAIL_FROM,
       to: recipientEmail,
-      subject: `Verified Buyer Profile shared with you — ${buyerName}`,
+      subject: `Verified Buyer Profile shared with you - ${buyerName}`,
       html,
     });
     if (result.error) {

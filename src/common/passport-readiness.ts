@@ -22,8 +22,8 @@ export interface ReadinessEntry {
 export interface ReadinessQuestionTemplateInput {
   type: string;
   title?: string | null;
-  parts: any; // Json — array of { order, partKey, conditionalOn?, showOnValues? }
-  readiness: any; // Json — ReadinessEntry[]
+  parts: any; // Json - array of { order, partKey, conditionalOn?, showOnValues? }
+  readiness: any; // Json - ReadinessEntry[]
 }
 
 export interface ReadinessQuestionInput {
@@ -33,14 +33,14 @@ export interface ReadinessQuestionInput {
 }
 
 export interface ReadinessTaskInput {
-  id: string; // PassportSectionTask.id — needed to deep-link straight to this task's question flow
+  id: string; // PassportSectionTask.id - needed to deep-link straight to this task's question flow
   key: string;
   title: string;
   questions: ReadinessQuestionInput[];
 }
 
 export interface ReadinessSectionInput {
-  id: string; // PassportSection.id — needed to deep-link (steps/:sectionId route)
+  id: string; // PassportSection.id - needed to deep-link (steps/:sectionId route)
   key: string;
   title: string;
   tasks: ReadinessTaskInput[];
@@ -80,7 +80,7 @@ export interface ChecklistItem {
 export interface PassportReadinessResult {
   canPublish: boolean;
   milestonePct: number; // highest tier (20/40/60/80/100) fully satisfied
-  readinessPct: number; // % of currently-applicable blockers (yes + triggered conditional + blocking system checks) satisfied — drives the UI progress bar
+  readinessPct: number; // % of currently-applicable blockers (yes + triggered conditional + blocking system checks) satisfied - drives the UI progress bar
   requiredTotal: number;
   requiredDone: number;
   missingBlockers: MissingBlocker[];

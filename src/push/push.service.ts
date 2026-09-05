@@ -44,7 +44,7 @@ export class PushService {
     this.sns = new SNSClient({ region: process.env.AWS_REGION ?? 'eu-west-2' });
     if (!this.apnsArn && !this.fcmArn) {
       this.logger.warn(
-        'No SNS platform ARNs configured — push notifications will no-op. ' +
+        'No SNS platform ARNs configured - push notifications will no-op. ' +
           'Set AWS_SNS_APNS_PLATFORM_ARN and/or AWS_SNS_FCM_PLATFORM_ARN.',
       );
     }
@@ -101,7 +101,7 @@ export class PushService {
         }
       } catch (err: any) {
         this.logger.warn(
-          `SNS CreatePlatformEndpoint failed (${err?.message ?? err}) — token stored, endpoint will be created on next send()`,
+          `SNS CreatePlatformEndpoint failed (${err?.message ?? err}) - token stored, endpoint will be created on next send()`,
         );
       }
     }

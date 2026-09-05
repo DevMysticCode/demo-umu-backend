@@ -57,7 +57,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('createPassportPaymentIntent — refusal paths', () => {
+describe('createPassportPaymentIntent - refusal paths', () => {
   it('throws NotFoundException when the passport does not exist', async () => {
     const { svc, prismaStub } = makeService();
     prismaStub.passport.findUnique.mockResolvedValue(null);
@@ -96,7 +96,7 @@ describe('createPassportPaymentIntent — refusal paths', () => {
   });
 });
 
-describe('createPassportPaymentIntent — happy + reuse paths', () => {
+describe('createPassportPaymentIntent - happy + reuse paths', () => {
   it('creates a Stripe intent + DB row when the user is fresh', async () => {
     const { svc, prismaStub } = makeService();
     prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });

@@ -48,7 +48,7 @@ export class CaptureService {
       select: { id: true, createdAt: true },
     });
     this.logger.log(
-      `[capture] ${input.type} from ${input.source} by ${userId ?? 'anonymous'} — ${row.id}`,
+      `[capture] ${input.type} from ${input.source} by ${userId ?? 'anonymous'} - ${row.id}`,
     );
     return row;
   }

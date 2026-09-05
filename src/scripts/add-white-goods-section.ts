@@ -68,8 +68,8 @@ async function main() {
         title: 'White Goods & Appliances',
         subtitle: 'Manuals, warranties & appliance cover',
         description:
-          'Keep everything for the white goods you provide — so the tenant can use them, and you’re covered if one fails.',
-        icon: 'landlord-insurance', // placeholder — see iconSlugForSection on the frontend; swap once a dedicated icon is generated
+          'Keep everything for the white goods you provide - so the tenant can use them, and you’re covered if one fails.',
+        icon: 'landlord-insurance', // placeholder - see iconSlugForSection on the frontend; swap once a dedicated icon is generated
         order: SECTION_ORDER,
       },
     });
@@ -86,7 +86,7 @@ async function main() {
     },
     {
       title: 'Expiry / next-renewal date',
-      description: 'Not used as an expiry here — holds the appliances list, tenant notes and cover details.',
+      description: 'Not used as an expiry here - holds the appliances list, tenant notes and cover details.',
       type: 'DATE',
       order: 2,
     },

@@ -121,7 +121,7 @@ export class RewardsService {
       });
       return entry;
     } catch (e: any) {
-      if (e?.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) return null; // already awarded — no-op
+      if (e?.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) return null; // already awarded - no-op
       throw e;
     }
   }
@@ -234,7 +234,7 @@ export class RewardsService {
         });
       });
     } catch (e: any) {
-      if (e?.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) return null; // already awarded — no-op
+      if (e?.code === PRISMA_UNIQUE_CONSTRAINT_ERROR) return null; // already awarded - no-op
       throw e;
     }
   }
