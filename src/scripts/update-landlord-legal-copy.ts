@@ -61,14 +61,14 @@ const SECTION_UPDATES: {
     title: "Renters' Rights Act Information Sheet",
     subtitle: 'Replaced the How to Rent guide (1 May 2026)',
     description:
-      "The How to Rent guide was withdrawn under the Renters' Rights Act 2025. Serve the official GOV.UK Renters' Rights Act Information Sheet 2026 — a link on its own isn't valid, it must be a printed copy or a PDF attached to an email/text. Fines reach £7,000 for non-compliance.",
+      "The How to Rent guide was withdrawn under the Renters' Rights Act 2025. Serve the official GOV.UK Renters' Rights Act Information Sheet 2026 - a link on its own isn't valid, it must be a printed copy or a PDF attached to an email/text. Fines reach £7,000 for non-compliance.",
   },
   {
     key: 'landlord_ast',
     title: 'Tenancy Agreement',
     subtitle: 'The signed tenancy agreement',
     description:
-      "The signed tenancy agreement setting out the tenant, term, rent and deposit. Fixed-term ASTs were replaced by assured periodic tenancies under the Renters' Rights Act 2025 — Section 21 can no longer be used.",
+      "The signed tenancy agreement setting out the tenant, term, rent and deposit. Fixed-term ASTs were replaced by assured periodic tenancies under the Renters' Rights Act 2025 - Section 21 can no longer be used.",
   },
 ];
 
@@ -82,7 +82,7 @@ const QUESTION_UPDATES: {
     sectionKey: 'landlord_how_to_rent',
     taskKey: 'how_to_rent_upload',
     title: "Renters' Rights Act Information Sheet served (PDF)",
-    description: 'The signed/served copy given to the tenant — keep proof of service.',
+    description: 'The signed/served copy given to the tenant - keep proof of service.',
   },
   {
     sectionKey: 'landlord_ast',
@@ -97,7 +97,7 @@ async function main() {
   for (const u of SECTION_UPDATES) {
     const st = await prisma.sectionTemplate.findUnique({ where: { key: u.key } });
     if (!st) {
-      console.warn(`  SKIPPED SectionTemplate — not found: ${u.key}`);
+      console.warn(`  SKIPPED SectionTemplate - not found: ${u.key}`);
     } else {
       await prisma.sectionTemplate.update({
         where: { key: u.key },

@@ -34,7 +34,7 @@ beforeAll(() => {
   process.env.JWT_SECRET = 'jwt-test-secret-at-least-sixteen-chars';
 });
 
-describe('createPassport — KYC gate', () => {
+describe('createPassport - KYC gate', () => {
   it('REJECTS a user with kycStatus pending (regression guard)', async () => {
     const { svc, prismaStub } = makeService({
       user: { id: 'user-1', phone: '07000000', kycStatus: 'pending' },

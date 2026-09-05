@@ -54,7 +54,7 @@ const DEMO_JOBS = [
     key: 'demo-bathroom',
     categorySlug: 'bathrooms',
     title: 'Replace bathroom tiles and refit shower',
-    description: 'Existing tiles need to be ripped out and replaced. Walk-in shower has a leaking tray that needs swapping out. All materials supplied by us — looking for labour-only.',
+    description: 'Existing tiles need to be ripped out and replaced. Walk-in shower has a leaking tray that needs swapping out. All materials supplied by us - looking for labour-only.',
     locationLabel: 'Bristol BS1',
     postcode: 'BS1',
     distanceMi: 1.2,
@@ -72,7 +72,7 @@ const DEMO_JOBS = [
   {
     key: 'demo-kitchen',
     categorySlug: 'kitchens',
-    title: 'Fit new kitchen — 14 units + worktop',
+    title: 'Fit new kitchen - 14 units + worktop',
     description: 'IKEA Metod kitchen, flat-packed and on-site. Existing kitchen ripped out. Looking for someone to do a clean fit including worktop, sink, and hob cut-outs.',
     locationLabel: 'Bristol BS6',
     postcode: 'BS6',
@@ -91,7 +91,7 @@ const DEMO_JOBS = [
   {
     key: 'demo-electrical',
     categorySlug: 'electrical',
-    title: 'EICR — 3-bed end-terrace',
+    title: 'EICR - 3-bed end-terrace',
     description: 'EICR certificate needed for landlord compliance. 2 consumer units, all sockets and lights accessible.',
     locationLabel: 'Coventry CV5',
     postcode: 'CV5',
@@ -110,7 +110,7 @@ const DEMO_JOBS = [
   {
     key: 'demo-garden',
     categorySlug: 'garden',
-    title: 'Garden makeover — 80m² turf + raised beds',
+    title: 'Garden makeover - 80m² turf + raised beds',
     description: 'Fresh turf across the back garden, two raised beds along the fence line, and 8m of new fencing on the side boundary. Supplier to supply all materials.',
     locationLabel: 'Bristol BS3',
     postcode: 'BS3',
@@ -149,7 +149,7 @@ const DEMO_JOBS = [
   {
     key: 'demo-plumbing',
     categorySlug: 'plumbing',
-    title: 'Replace combi boiler — Worcester 30CDi',
+    title: 'Replace combi boiler - Worcester 30CDi',
     description: 'Existing Worcester 30CDi is 12 years old and unreliable. Looking to fit a new combi in roughly the same position (utility cupboard, mains gas).',
     locationLabel: 'Coventry CV6',
     postcode: 'CV6',
@@ -208,7 +208,7 @@ async function main() {
   for (const spec of DEMO_JOBS) {
     const categoryId = categoryMap.get(spec.categorySlug);
     if (!categoryId) {
-      console.warn(`  ↳ skipping ${spec.title} — unknown category ${spec.categorySlug}`);
+      console.warn(`  ↳ skipping ${spec.title} - unknown category ${spec.categorySlug}`);
       continue;
     }
 
@@ -301,7 +301,7 @@ async function main() {
             {
               threadId: thread.id,
               senderId: supplierId,
-              body: 'Morning! I had a quick look at your job description — happy to start when works for you. Just to check — is access through the front door OK?',
+              body: 'Morning! I had a quick look at your job description - happy to start when works for you. Just to check - is access through the front door OK?',
               createdAt: hoursAgo(6),
               readAt: hoursAgo(5),
             },
@@ -315,7 +315,7 @@ async function main() {
             {
               threadId: thread.id,
               senderId: supplierId,
-              body: 'Yes — skip + tip charges are baked into the price. Anything you want to keep, let me know upfront.',
+              body: 'Yes - skip + tip charges are baked into the price. Anything you want to keep, let me know upfront.',
               createdAt: hoursAgo(2),
               readAt: null,
             },
@@ -393,7 +393,7 @@ async function main() {
     console.log(`  ✓ ${spec.title}`);
   }
 
-  console.log(`[seed-marketplace:demo] done — sign in as ${TARGET_EMAIL} to see the marketplace populated.`);
+  console.log(`[seed-marketplace:demo] done - sign in as ${TARGET_EMAIL} to see the marketplace populated.`);
 }
 
 main()

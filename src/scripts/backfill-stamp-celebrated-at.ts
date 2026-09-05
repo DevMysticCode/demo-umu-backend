@@ -40,7 +40,7 @@ async function main() {
   });
 
   if (!uncelebrated.length) {
-    console.log('No uncelebrated stamps found — nothing to backfill.');
+    console.log('No uncelebrated stamps found - nothing to backfill.');
     return;
   }
 

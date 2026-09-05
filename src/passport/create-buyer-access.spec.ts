@@ -44,7 +44,7 @@ beforeAll(() => {
   process.env.JWT_SECRET = 'jwt-test-secret-at-least-sixteen-chars';
 });
 
-describe('createBuyerAccess — paywall gate', () => {
+describe('createBuyerAccess - paywall gate', () => {
   it('throws NotFoundException when the passport does not exist', async () => {
     const { svc, prismaStub } = makeService();
     prismaStub.passport.findUnique.mockResolvedValue(null);
@@ -82,7 +82,7 @@ describe('createBuyerAccess — paywall gate', () => {
     expect(prismaStub.buyerPassportAccess.create).not.toHaveBeenCalled();
   });
 
-  it('REJECTS unpaid users with 403 — DF4 Finding #1 regression guard', async () => {
+  it('REJECTS unpaid users with 403 - DF4 Finding #1 regression guard', async () => {
     const { svc, prismaStub, paymentsStub } = makeService({ paid: false });
     prismaStub.passport.findUnique.mockResolvedValue({
       id: 'p1',
@@ -119,11 +119,11 @@ describe('createBuyerAccess — paywall gate', () => {
   });
 });
 
-describe('createBuyerAccess — KYC gate', () => {
+describe('createBuyerAccess - KYC gate', () => {
   // KYC must come BEFORE payment: we never take money from a user we
   // can't immediately unlock. Order matters; these guards lock it in.
 
-  it('REJECTS unverified user with 403 — regression guard for KYC bypass', async () => {
+  it('REJECTS unverified user with 403 - regression guard for KYC bypass', async () => {
     const { svc, prismaStub, paymentsStub } = makeService({
       kycApproved: false,
       paid: true, // even with payment present, KYC failure short-circuits

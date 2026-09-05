@@ -150,7 +150,7 @@ async function sleep(ms: number) {
 }
 
 async function main() {
-  console.log(`=== Property valuation backfill ${DRY_RUN ? '(DRY RUN — no writes)' : '(LIVE — will write)'} ===`);
+  console.log(`=== Property valuation backfill ${DRY_RUN ? '(DRY RUN - no writes)' : '(LIVE - will write)'} ===`);
 
   const properties = await prisma.property.findMany({
     select: { id: true, postcode: true, addressLine1: true, estimatedPrice: true },
@@ -209,9 +209,9 @@ async function main() {
 
   console.log('\n=== Done ===');
   console.log(`Checked:    ${checked}`);
-  console.log(`Updated:    ${updated}${DRY_RUN ? ' (would be — dry run)' : ''}`);
+  console.log(`Updated:    ${updated}${DRY_RUN ? ' (would be - dry run)' : ''}`);
   console.log(`Unchanged:  ${unchanged}`);
-  console.log(`No LR data: ${noLrData} (left on synthetic estimate — no sold prices for that postcode)`);
+  console.log(`No LR data: ${noLrData} (left on synthetic estimate - no sold prices for that postcode)`);
 }
 
 main()

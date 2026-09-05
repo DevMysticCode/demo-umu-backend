@@ -34,7 +34,7 @@ export class MarketplaceController {
     private messages: MarketplaceMessagesService,
     private escrow: EscrowService,
     private reviews: ReviewsService,
-    private jwtService: JwtService, // optional auth on job detail — see getJob()
+    private jwtService: JwtService, // optional auth on job detail - see getJob()
   ) {}
 
   // Decode the bearer token if present, but don't reject anonymous calls.
@@ -212,7 +212,7 @@ export class MarketplaceController {
     try {
       const thread = await this.messages.getOrCreateThread(req.user.id, payment.jobId, payment.supplierId);
       await this.messages.sendMessage(req.user.id, thread.id, {
-        body: `🛡 Funds authorised — £${(payment.amount / 100).toLocaleString('en-GB')} held in UProtect escrow until the job's verified complete.`,
+        body: `🛡 Funds authorised - £${(payment.amount / 100).toLocaleString('en-GB')} held in UProtect escrow until the job's verified complete.`,
       });
     } catch { /* ignore */ }
     return payment;
@@ -225,7 +225,7 @@ export class MarketplaceController {
     try {
       const thread = await this.messages.getOrCreateThread(req.user.id, payment.jobId, payment.supplierId);
       await this.messages.sendMessage(req.user.id, thread.id, {
-        body: `✅ Customer released the funds — £${(payment.amount / 100).toLocaleString('en-GB')} payable to you. Job marked complete.`,
+        body: `✅ Customer released the funds - £${(payment.amount / 100).toLocaleString('en-GB')} payable to you. Job marked complete.`,
       });
     } catch { /* ignore */ }
     return payment;

@@ -46,7 +46,7 @@ const SECTION_KEY = 'titleDeedsAndPlan';
 const NEW_SECTION_TITLE = 'Title Register and Plan';
 
 const NEW_SELLER_GUIDANCE =
-  "Provide buyer's conveyancer with a copy of the property's Official Copy of the Register (Title Register) and Title Plan, both available from HM Land Registry. If you were given any original deeds when you bought the property — from before it was registered with HM Land Registry — include those in the same upload as the Title Register; they don't need to be uploaded separately. If you don't have current copies to hand, you (or your solicitor) can order them from HM Land Registry.";
+  "Provide buyer's conveyancer with a copy of the property's Official Copy of the Register (Title Register) and Title Plan, both available from HM Land Registry. If you were given any original deeds when you bought the property - from before it was registered with HM Land Registry - include those in the same upload as the Title Register; they don't need to be uploaded separately. If you don't have current copies to hand, you (or your solicitor) can order them from HM Land Registry.";
 
 const TITLE_REGISTER_QUESTION = {
   id: '5a4060ad-8482-4936-9867-5d9cb105d3bf', // currently the "planning notices" RADIO
@@ -66,7 +66,7 @@ const TITLE_REGISTER_QUESTION = {
       ],
       partKey: 'has_title_register',
       helpText:
-        "This is HM Land Registry's current record of who owns the property and any registered charges or restrictions. If you also have any older deeds from before the property was registered with HM Land Registry, include those in this same upload — no need to upload them separately.",
+        "This is HM Land Registry's current record of who owns the property and any registered charges or restrictions. If you also have any older deeds from before the property was registered with HM Land Registry, include those in this same upload - no need to upload them separately.",
       description:
         "If yes, please upload it below. If no, you (or your solicitor) can order an Official Copy from HM Land Registry, then come back and upload it here.",
     },
@@ -105,7 +105,7 @@ const TITLE_PLAN_QUESTION = {
       ],
       partKey: 'has_title_plan',
       helpText:
-        "The official plan showing the property's registered boundaries, from HM Land Registry — a separate document from the Title Register, though usually ordered together.",
+        "The official plan showing the property's registered boundaries, from HM Land Registry - a separate document from the Title Register, though usually ordered together.",
       description:
         "If yes, please upload it below. If no, you (or your solicitor) can order a Title Plan from HM Land Registry, then come back and upload it here.",
     },
@@ -150,14 +150,14 @@ async function main() {
     const { id, ...data } = q;
     const existing = await prisma.questionTemplate.findUnique({ where: { id } });
     if (!existing) {
-      console.warn(`  SKIPPED — QuestionTemplate not found: ${id} (has the seed changed since this script was written?)`);
+      console.warn(`  SKIPPED - QuestionTemplate not found: ${id} (has the seed changed since this script was written?)`);
       continue;
     }
     await prisma.questionTemplate.update({ where: { id }, data: data as any });
     console.log(`  updated: ${id} -> "${q.parts[0].title}"`);
   }
 
-  console.log('\nDone. No backfill needed — task structure (title_deeds_review, order 1 & 2) is unchanged.');
+  console.log('\nDone. No backfill needed - task structure (title_deeds_review, order 1 & 2) is unchanged.');
 }
 
 main()

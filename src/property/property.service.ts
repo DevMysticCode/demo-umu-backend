@@ -1716,7 +1716,7 @@ export class PropertyService {
         // Log so throttle / auth failures are visible instead of
         // silently no-op'ing. Non-fatal: serve what we already have.
         console.warn(
-          `[search:epc-topup] ${q}: skipped — ${(err as Error)?.message ?? err}`,
+          `[search:epc-topup] ${q}: skipped - ${(err as Error)?.message ?? err}`,
         );
       }
       // Also top up from OS Places on the cache-hit path — otherwise
@@ -1754,7 +1754,7 @@ export class PropertyService {
         // Same rationale as the EPC block — log the throttle / auth /
         // network error but don't fail the whole search.
         console.warn(
-          `[search:os-topup] ${q}: skipped — ${(err as Error)?.message ?? err}`,
+          `[search:os-topup] ${q}: skipped - ${(err as Error)?.message ?? err}`,
         );
       }
     }
@@ -3225,7 +3225,7 @@ export class PropertyService {
     const age = cached ? Date.now() - cached.ts : Infinity;
 
     if (cached && age < PropertyService.ENRICHMENT_TTL_MS) {
-      return cached.data; // fresh enough — serve as-is
+      return cached.data; // fresh enough - serve as-is
     }
 
     if (cached) {
@@ -3804,14 +3804,14 @@ export class PropertyService {
             if (!r.ok) {
               const preview = (await r.text()).slice(0, 200);
               console.warn(
-                `[schools] OS Features API returned ${r.status} — check that 'OS Features API' + NGD access are enabled on the project owning OS_API_KEY. Body: ${preview}`,
+                `[schools] OS Features API returned ${r.status} - check that 'OS Features API' + NGD access are enabled on the project owning OS_API_KEY. Body: ${preview}`,
               );
               return { features: [] };
             }
             const ct = r.headers.get('content-type') ?? '';
             if (!ct.includes('json')) {
               console.warn(
-                `[schools] OS Features API returned non-JSON (content-type=${ct}) — likely an auth or endpoint redirect issue.`,
+                `[schools] OS Features API returned non-JSON (content-type=${ct}) - likely an auth or endpoint redirect issue.`,
               );
               return { features: [] };
             }
@@ -3942,7 +3942,7 @@ export class PropertyService {
         }
       }
       console.warn(
-        `[Overpass:${label}] all mirrors failed for ${lat},${lon} — ${failures.join('; ')}`,
+        `[Overpass:${label}] all mirrors failed for ${lat},${lon} - ${failures.join('; ')}`,
       );
       return { elements: [], ok: false };
     };
@@ -5513,7 +5513,7 @@ export class PropertyService {
     });
     if (!existing) {
       throw new NotFoundException(
-        'No HomeScore on file — run the quiz before publishing.',
+        'No HomeScore on file - run the quiz before publishing.',
       );
     }
     return this.prisma.homeScoreResult.update({
@@ -6582,9 +6582,9 @@ export class PropertyService {
     const userEmail = user?.email || body.userEmail;
 
     const interestLabels: Record<string, string> = {
-      dream: '🏡 Dream Home — This is exactly what they\'re looking for',
-      super: '🛋️ Super Keen — Very interested and ready to move quickly',
-      browsing: '🌳 Just Browsing — Interested but still exploring options',
+      dream: '🏡 Dream Home - This is exactly what they\'re looking for',
+      super: '🛋️ Super Keen - Very interested and ready to move quickly',
+      browsing: '🌳 Just Browsing - Interested but still exploring options',
     };
     const interestLabel = interestLabels[body.interestLevel] || body.interestLevel;
 

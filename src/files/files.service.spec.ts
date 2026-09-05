@@ -16,7 +16,7 @@ function makeSvc() {
   return { svc: new FilesService(prismaStub), prismaStub };
 }
 
-describe('FilesService — signing', () => {
+describe('FilesService - signing', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'sentinel-secret-at-least-sixteen-chars';
   });
@@ -36,7 +36,7 @@ describe('FilesService — signing', () => {
     expect(url).toMatch(/^\/files\/documents\/abc\.pdf\?/);
   });
 
-  it('the signature depends on (path, userId, exp) — changing any of them changes the sig', () => {
+  it('the signature depends on (path, userId, exp) - changing any of them changes the sig', () => {
     const { svc } = makeSvc();
     const a = new URLSearchParams(svc.buildSignedQuery('documents/abc.pdf', 'user-1')).get('sig');
     const b = new URLSearchParams(svc.buildSignedQuery('documents/abc.pdf', 'user-2')).get('sig');
@@ -46,7 +46,7 @@ describe('FilesService — signing', () => {
   });
 });
 
-describe('FilesService — verifyAndAuthorise', () => {
+describe('FilesService - verifyAndAuthorise', () => {
   beforeAll(() => {
     process.env.JWT_SECRET = 'sentinel-secret-at-least-sixteen-chars';
   });

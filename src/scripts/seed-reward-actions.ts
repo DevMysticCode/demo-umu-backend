@@ -86,7 +86,7 @@ const STAMPS = [
     journeyType: 'OWNER',
     title: 'Move Ready',
     subtitle: 'Your home is ready to move.',
-    description: 'Your property has reached sale/move-ready status — the strongest signal you can give buyers.',
+    description: 'Your property has reached sale/move-ready status - the strongest signal you can give buyers.',
     checklistItems: ['Move-ready status reached'],
     iconAsset: '/op-icons/homescore/targetPathway.png',
     tier: 3,
@@ -166,7 +166,7 @@ const ACTIONS = [
     actionKey: 'OWNERSHIP_VERIFIED',
     journeyType: 'OWNER',
     label: 'Claim a property + verify ownership',
-    points: 500, // UMU Stamp Reward System V1 — flat 500 per stamp
+    points: 500, // UMU Stamp Reward System V1 - flat 500 per stamp
     stampKey: 'FIRST_PROPERTY_PASSPORT',
     firstTimeOnly: true, // per-property (subjectId = propertyId), not per-user-ever
     verificationRequired: false,
@@ -194,7 +194,7 @@ const ACTIONS = [
     // sale-readiness signal today (it's currently only a frontend-derived
     // percentage). Seeded so the register is complete; RewardsService.award()
     // will not be called for this key until that signal exists server-side.
-    description: 'Exceptional milestone. NOT YET WIRED — no backend move-ready signal exists.',
+    description: 'Exceptional milestone. NOT YET WIRED - no backend move-ready signal exists.',
     active: false,
   },
   {
@@ -205,7 +205,7 @@ const ACTIONS = [
     stampKey: null,
     firstTimeOnly: true,
     verificationRequired: false,
-    description: 'Starts a meaningful buyer journey. NOT YET WIRED — Buyer Passport flow does not exist yet (PassportType.BUYER has no creation path).',
+    description: 'Starts a meaningful buyer journey. NOT YET WIRED - Buyer Passport flow does not exist yet (PassportType.BUYER has no creation path).',
     active: false,
   },
   {
@@ -216,7 +216,7 @@ const ACTIONS = [
     stampKey: 'IDENTITY_VERIFIED',
     firstTimeOnly: true, // per buyer passport (subjectId = buyerPassportId)
     verificationRequired: false,
-    description: 'Verified buyer identity. NOT YET WIRED — see BUYER_PASSPORT_CREATED.',
+    description: 'Verified buyer identity. NOT YET WIRED - see BUYER_PASSPORT_CREATED.',
     active: false,
   },
   {
@@ -260,7 +260,7 @@ const ACTIONS = [
     stampKey: null,
     firstTimeOnly: true,
     verificationRequired: false,
-    description: 'Starts tenant’s verified record. NOT YET WIRED — Tenant Passport flow does not exist yet.',
+    description: 'Starts tenant’s verified record. NOT YET WIRED - Tenant Passport flow does not exist yet.',
     active: false,
   },
   {

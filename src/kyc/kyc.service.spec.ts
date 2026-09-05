@@ -40,7 +40,7 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('KycService.handleWebhook — HMAC verification', () => {
+describe('KycService.handleWebhook - HMAC verification', () => {
   it('returns ok:false (does not throw) when PERSONA_WEBHOOK_SECRET is unset', async () => {
     delete process.env.PERSONA_WEBHOOK_SECRET;
     const { svc, prismaStub } = makeService();
@@ -126,7 +126,7 @@ describe('KycService.handleWebhook — HMAC verification', () => {
     );
   });
 
-  it('returns ok:true (logged + ignored) for an incomplete payload — no crash', async () => {
+  it('returns ok:true (logged + ignored) for an incomplete payload - no crash', async () => {
     const { svc, prismaStub } = makeService();
     const body = JSON.stringify({ data: { attributes: {} } }); // missing name + payload
     const ts = String(Math.floor(Date.now() / 1000));

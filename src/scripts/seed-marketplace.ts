@@ -51,7 +51,7 @@ const DEMO_JOBS = [
   {
     categorySlug: 'bathrooms',
     title: 'Full bathroom replumb & refit',
-    description: 'Complete replumb of family bathroom including new copper piping, bath, basin and toilet. Existing tiling is intact — needs careful removal and refit. Property is a 3-bed semi, second-floor bathroom, water mains accessible from airing cupboard. Looking for someone reliable to finish in one visit.',
+    description: 'Complete replumb of family bathroom including new copper piping, bath, basin and toilet. Existing tiling is intact - needs careful removal and refit. Property is a 3-bed semi, second-floor bathroom, water mains accessible from airing cupboard. Looking for someone reliable to finish in one visit.',
     locationLabel: 'Bristol BS1',
     postcode: 'BS1',
     distanceMi: 1.2,
@@ -201,7 +201,7 @@ async function main() {
 
   const existing = await prisma.marketplaceJob.count();
   if (existing > 0) {
-    console.log(`[seed-marketplace] ${existing} jobs already present — skipping demo job insert`);
+    console.log(`[seed-marketplace] ${existing} jobs already present - skipping demo job insert`);
     return;
   }
 
@@ -213,7 +213,7 @@ async function main() {
   for (const job of DEMO_JOBS) {
     const categoryId = slugToId.get(job.categorySlug);
     if (!categoryId) {
-      console.warn(`[seed-marketplace] skipping job "${job.title}" — unknown category ${job.categorySlug}`);
+      console.warn(`[seed-marketplace] skipping job "${job.title}" - unknown category ${job.categorySlug}`);
       continue;
     }
     const { categorySlug, ...rest } = job;

@@ -347,7 +347,7 @@ export class QuestionService {
   async createTenancySignLink(questionId: string, userId: string, kind: 'tenancy' | 'inventory' = 'tenancy') {
     await this.assertQuestionAccess(questionId, userId);
     const token = randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days — signing can take a while
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days - signing can take a while
     const link = await this.prisma.tenancySignLink.create({
       data: { passportQuestionId: questionId, token, kind, expiresAt },
     });

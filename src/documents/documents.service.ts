@@ -76,7 +76,7 @@ export class DocumentsService {
     // shipped to production before BASE_URL was set correctly there —
     // see uploadsPathFrom's own comment).
     const uploadsPath = uploadsPathFrom(fileUrl);
-    if (!uploadsPath) return fileUrl; // already a full non-uploads URL — leave as-is
+    if (!uploadsPath) return fileUrl; // already a full non-uploads URL - leave as-is
 
     const bucket = bucketOf(fileUrl);
     if (bucket && PRIVATE_BUCKETS.has(bucket)) {

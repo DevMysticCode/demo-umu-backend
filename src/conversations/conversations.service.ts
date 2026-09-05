@@ -23,7 +23,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 export type ConversationContext =
   | 'passport_match'      // owner ↔ matched buyer (contextId = passportId)
   | 'property_enquiry'    // buyer ↔ owner via property page (contextId = propertyId)
-  | 'marketplace_job';    // legacy — Ticket 6 will migrate marketplace threads here
+  | 'marketplace_job';    // legacy - Ticket 6 will migrate marketplace threads here
 
 export interface FindOrCreateInput {
   context: ConversationContext;

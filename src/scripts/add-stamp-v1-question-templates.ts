@@ -95,7 +95,7 @@ const NEW_TEMPLATES: NewTemplate[] = [
     taskKey: 'mining_risk_search',
     title: 'Please upload your Mining / Local Risk Search.',
     description: 'Relevant where the property sits in a coalfield or other mining-affected area.',
-    helpText: 'Only relevant if the property is in a known mining or local-risk area — order from the Coal Authority or a search provider and upload the result once received.',
+    helpText: 'Only relevant if the property is in a known mining or local-risk area - order from the Coal Authority or a search provider and upload the result once received.',
     points: 75,
     order: 1,
   },

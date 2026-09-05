@@ -63,43 +63,43 @@ const REFERENCE_PERSONALITY = {
 const scenarios: Scenario[] = [
   {
     id: 'eoov-fm-1',
-    description: 'Full match — TypeCode 30, SINGLE_MATCH, title DN506574',
+    description: 'Full match - TypeCode 30, SINGLE_MATCH, title DN506574',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-fm-1', reference: 'UMU-UAT-fm-1' },
     expected: { typeCode: 30, matchResult: 'SINGLE_MATCH', minMatches: 1 },
   },
   {
     id: 'eoov-snm-1',
-    description: 'Surname-only match — TypeCode 30 with surname MATCH only',
+    description: 'Surname-only match - TypeCode 30 with surname MATCH only',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-snm-1', reference: 'UMU-UAT-snm-1' },
     expected: { typeCode: 30, matchResult: 'SINGLE_MATCH', minMatches: 1 },
   },
   {
     id: 'eoov-nm-1',
-    description: 'No matches — TypeCode 30, NO_MATCHES',
+    description: 'No matches - TypeCode 30, NO_MATCHES',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-nm-1', reference: 'UMU-UAT-nm-1' },
     expected: { typeCode: 30, matchResult: 'NO_MATCHES' },
   },
   {
     id: 'eoov-mam-1',
-    description: 'Multiple address matches — TypeCode 30, MULTIPLE_MATCHES',
+    description: 'Multiple address matches - TypeCode 30, MULTIPLE_MATCHES',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-mam-1', reference: 'UMU-UAT-mam-1' },
     expected: { typeCode: 30, matchResult: 'MULTIPLE_MATCHES', minMatches: 2 },
   },
   {
     id: 'eoov-pi-1',
-    description: 'Postcode invalid — TypeCode 20 rejection',
+    description: 'Postcode invalid - TypeCode 20 rejection',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-pi-1', reference: 'UMU-UAT-pi-1' },
     expected: { typeCode: 20, hasRejectionCode: true },
   },
   {
     id: 'eoov-nam-1',
-    description: 'No address match — TypeCode 20 rejection',
+    description: 'No address match - TypeCode 20 rejection',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-nam-1', reference: 'UMU-UAT-nam-1' },
     expected: { typeCode: 20, hasRejectionCode: true },
   },
   {
     id: 'eoov-ooh-1',
-    description: 'Out of hours — TypeCode 20 rejection (with continueIfOutOfHours=false)',
+    description: 'Out of hours - TypeCode 20 rejection (with continueIfOutOfHours=false)',
     input: {
       ...REFERENCE_PERSONALITY,
       messageId: 'eoov-ooh-1',
@@ -110,7 +110,7 @@ const scenarios: Scenario[] = [
   },
   {
     id: 'eoov-ooh-2',
-    description: 'Out of hours queued — TypeCode 10 acknowledgement (continueIfOutOfHours=true)',
+    description: 'Out of hours queued - TypeCode 10 acknowledgement (continueIfOutOfHours=true)',
     input: { ...REFERENCE_PERSONALITY, messageId: 'eoov-ooh-2', reference: 'UMU-UAT-ooh-2' },
     expected: { typeCode: 10, hasAckExpectedDate: true },
   },

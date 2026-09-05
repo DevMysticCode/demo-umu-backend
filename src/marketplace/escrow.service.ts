@@ -232,7 +232,7 @@ export class EscrowService {
     // the photo array after the fact. Refuse cleanly.
     if (payment.status === 'released' || payment.status === 'refunded') {
       throw new BadRequestException(
-        `Payment is ${payment.status} — evidence is locked once funds settle`,
+        `Payment is ${payment.status} - evidence is locked once funds settle`,
       );
     }
 

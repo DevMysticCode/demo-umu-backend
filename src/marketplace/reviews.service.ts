@@ -38,10 +38,10 @@ export interface MarketplaceUserStats {
 }
 
 export interface MarketplaceEarnings {
-  totalEarned: number;       // pence — sum of `amount` on released payments
+  totalEarned: number;       // pence - sum of `amount` on released payments
   payoutCount: number;
   averagePayout: number;     // pence
-  pendingHeld: number;       // pence — payments currently held but not released yet (future earnings)
+  pendingHeld: number;       // pence - payments currently held but not released yet (future earnings)
   pendingCount: number;
 }
 
@@ -186,7 +186,7 @@ export class ReviewsService {
         reviewCount: 0,
         averageRating: null,
         jobsCompleted: completedBy.get(id) ?? 0,
-        jobsPosted: 0, // not needed for the offer card — leave 0
+        jobsPosted: 0, // not needed for the offer card - leave 0
       };
     }
     for (const row of reviewAgg) {
