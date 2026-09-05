@@ -344,6 +344,32 @@ export class QuestionService {
     );
   }
 
+  // Tenancy Agreement re-issues and Inventory check-outs now save
+  // `{ records: [...] }` and append rather than overwrite, so the
+  // sign-link flow (which used to read/write the answer's JSON directly
+  // as one flat record) needs to target the LAST record in that array.
+  // Falls back to treating the whole blob as one flat record for
+  // passports saved before this change.
+  private latestSignableRecord(answerJson: any): any {
+    const raw = answerJson ?? {};
+    if (Array.isArray(raw.records)) return raw.records[raw.records.length - 1] ?? {};
+    return raw;
+  }
+
+  private withUpdatedLatestRecord(answerJson: any, mutate: (record: any) => void): any {
+    const raw = answerJson ?? {};
+    if (Array.isArray(raw.records) && raw.records.length) {
+      const records = [...raw.records];
+      const last = { ...records[records.length - 1] };
+      mutate(last);
+      records[records.length - 1] = last;
+      return { ...raw, records };
+    }
+    const flat = { ...raw };
+    mutate(flat);
+    return flat;
+  }
+
   async createTenancySignLink(questionId: string, userId: string, kind: 'tenancy' | 'inventory' = 'tenancy') {
     await this.assertQuestionAccess(questionId, userId);
     const token = randomBytes(24).toString('hex');
@@ -370,7 +396,7 @@ export class QuestionService {
     });
     if (!question) throw new NotFoundException('Document not found.');
 
-    const record = (question.answer?.answerJson as any) ?? {};
+    const record = this.latestSignableRecord(question.answer?.answerJson);
     const propertyAddress = question.passportSectionTask.passportSection.passport.addressLine1 ?? '';
     const landlordSigned = !!record.audit?.landlord;
     const tenantSigned = !!record.audit?.tenant;
@@ -427,19 +453,20 @@ export class QuestionService {
     });
     if (!question) throw new NotFoundException('Document not found.');
 
-    const record = (question.answer?.answerJson as any) ?? {};
-    record.audit = record.audit ?? {};
-    record.audit.tenant = {
-      name: dto.signerName.trim(),
-      signatureDataUrl: dto.signatureDataUrl,
-      signedAt: new Date().toISOString(),
-      ip: ip ?? null,
-    };
+    const updatedJson = this.withUpdatedLatestRecord(question.answer?.answerJson, (record) => {
+      record.audit = record.audit ?? {};
+      record.audit.tenant = {
+        name: dto.signerName.trim(),
+        signatureDataUrl: dto.signatureDataUrl,
+        signedAt: new Date().toISOString(),
+        ip: ip ?? null,
+      };
+    });
 
     await this.prisma.questionAnswer.upsert({
       where: { passportQuestionId: link.passportQuestionId },
-      update: { answerJson: record },
-      create: { passportQuestionId: link.passportQuestionId, answerJson: record },
+      update: { answerJson: updatedJson },
+      create: { passportQuestionId: link.passportQuestionId, answerJson: updatedJson },
     });
     await this.prisma.tenancySignLink.update({ where: { token }, data: { usedAt: new Date() } });
 
