@@ -390,18 +390,47 @@ export class QuestionService {
       include: {
         answer: true,
         passportSectionTask: {
-          include: { passportSection: { include: { passport: true } } },
+          include: {
+            passportSection: {
+              include: {
+                passport: true,
+                tasks: {
+                  include: {
+                    passportQuestions: { include: { questionTemplate: true } },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });
     if (!question) throw new NotFoundException('Document not found.');
 
     const record = this.latestSignableRecord(question.answer?.answerJson);
-    const propertyAddress = question.passportSectionTask.passportSection.passport.addressLine1 ?? '';
+    const section = question.passportSectionTask.passportSection;
+    const propertyAddress = section.passport.addressLine1 ?? '';
     const landlordSigned = !!record.audit?.landlord;
     const tenantSigned = !!record.audit?.tenant;
 
     if (link.kind === 'inventory') {
+      // Evidence photos live on the sibling UPLOAD question in the same
+      // section (see MULTI_COPY_SECTIONS/drawerUploadQuestion on the
+      // frontend), tagged landlord-cert:<uploadQuestionId> — not on this
+      // DATE question itself. The tenant has no account/JWT to call the
+      // authed /questions/:id/copies route, so read the tag directly here
+      // using the passport owner's userId (the sign token already proves
+      // the sharing intent).
+      const uploadQuestion = (section.tasks ?? [])
+        .flatMap((t: any) => t.passportQuestions ?? [])
+        .find((q: any) => q.questionTemplate?.type === 'UPLOAD');
+      const photos = uploadQuestion
+        ? await this.documentsService.getDocumentsByTag(
+            section.passport.ownerId,
+            this.copyTag(uploadQuestion.id),
+          )
+        : [];
+
       // Inventory has no assembled document text (Tenancy Agreement's
       // docText) — summarise the room-by-room record instead, matching
       // what the landlord already sees on the review screen.
@@ -412,6 +441,7 @@ export class QuestionService {
         inventoryType: record.type ?? 'checkin',
         furnishing: record.furnishing ?? '',
         completedAt: record.completedAt ?? '',
+        photos: photos.map((p) => ({ name: p.name, fileUrl: p.fileUrl })),
         rooms: (record.rooms ?? []).map((r: any) => ({
           name: r.name,
           items: (r.items ?? []).map((i: any) => ({ name: i.name, condition: i.condition, cleanliness: i.cleanliness, note: i.note })),
