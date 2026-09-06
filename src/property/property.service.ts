@@ -6386,6 +6386,58 @@ export class PropertyService {
     return { watching: false };
   }
 
+  // Real "watch list" — every property with a PropertyWatch row for this
+  // user, regardless of Saved status (a watch is opted into via "Watch this
+  // property" / WatchPropertyDrawer, distinct from the plain Save heart).
+  // Same HomeScore precedence + shape as getSavedProperties() so both lists
+  // render through the same PropertyListItem-style card UI on the frontend.
+  async getWatchedProperties(userId: string) {
+    const rows = await this.prisma.propertyWatch.findMany({
+      where: { userId },
+      include: {
+        property: { include: { passports: { where: { type: 'SELLER' } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const ids = rows.map((r) => r.propertyId);
+    const scoreRows = ids.length
+      ? await this.prisma.homeScoreResult.findMany({
+          where: { propertyId: { in: ids } },
+          select: { propertyId: true, userId: true, total: true, updatedAt: true },
+        })
+      : [];
+    const homeScoreByProperty = new Map<string, number>();
+    for (const propertyId of ids) {
+      const forProp = scoreRows.filter((r) => r.propertyId === propertyId);
+      if (!forProp.length) continue;
+      const ownScore = forProp.find((r) => r.userId === userId);
+      const chosen =
+        ownScore ??
+        [...forProp].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
+      homeScoreByProperty.set(propertyId, chosen.total);
+    }
+
+    return rows.map((row) => {
+      const { passports, ...property } = row.property as any;
+      const published = (passports ?? []).some((p: any) => p.status === 'PUBLISHED');
+      return {
+        ...property,
+        watchedAt: row.createdAt,
+        watchPrefs: {
+          claimed: row.claimed,
+          progress: row.progress,
+          published: row.published,
+          comparables: row.comparables,
+          homescore: row.homescore,
+        },
+        hasPassport: (passports ?? []).length > 0,
+        passportPublished: published,
+        homeScore: homeScoreByProperty.get(row.propertyId) ?? property.epcScore ?? null,
+      };
+    });
+  }
+
   /**
    * HomeScore V2 Neighbourhood: queries EPC API for postcode, returns
    * median & std-dev of cost_per_sqm for matching property type + age band.

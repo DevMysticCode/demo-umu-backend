@@ -215,6 +215,15 @@ export class PropertyController {
     return this.propertyService.getSavedProperties(req.user.id);
   }
 
+  // Real watch list — every property the user has opted into notifications
+  // for via "Watch this property" (distinct from the plain Save heart).
+  // Backs pages/profile/watched-properties.vue.
+  @Get('watches')
+  @UseGuards(JwtAuthGuard)
+  async getWatches(@Request() req: any) {
+    return this.propertyService.getWatchedProperties(req.user.id);
+  }
+
   // "Recently viewed" strip — every property opened, not just saved ones.
   @Get('recently-viewed')
   @UseGuards(JwtAuthGuard)
