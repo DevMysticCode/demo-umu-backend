@@ -5577,7 +5577,13 @@ export class PropertyService {
   private extractStreetName(line: string | null | undefined): string {
     const v = (line || '').trim();
     if (!v) return 'your street';
-    const match = v.match(/^\d+\s*[a-zA-Z]?\s*[,.]?\s*(.+)$/);
+    // The optional flat-suffix letter (e.g. "25A Woodfield Road") must sit
+    // directly against the number, with no \s* in between - otherwise it
+    // greedily eats the first letter of the street name itself whenever
+    // the house number is followed by a plain space ("25 Woodfield Road"
+    // matched "25" + " " as \s* + "W" as the "suffix", returning "oodfield
+    // Road").
+    const match = v.match(/^\d+[a-zA-Z]?\s*[,.]?\s*(.+)$/);
     return match?.[1] || v;
   }
 
