@@ -1592,7 +1592,7 @@ export class PropertyService {
       minPrice?: number;
       maxPrice?: number;
       passportOnly?: boolean;
-      // 'unclaimed' | 'in_progress' | 'claimed'
+      // 'unclaimed' | 'private' | 'partiallyPublic' | 'public'
       passportStatus?: string[];
     },
   ): any[] {
@@ -1630,11 +1630,17 @@ export class PropertyService {
       }
       if (filters.passportOnly && !p.hasPassport) return false;
       if (filters.passportStatus?.length) {
-        const status = p.hasPassport
-          ? p.passportPublished
-            ? 'claimed'
-            : 'in_progress'
-          : 'unclaimed';
+        // Same 4-state vocab as passportStateOf() on the frontend
+        // (SearchFilterBar.vue) — was a stale 3-state
+        // unclaimed/in_progress/claimed model that couldn't tell a fully
+        // published passport apart from a partially-public one.
+        const status = !p.hasPassport
+          ? 'unclaimed'
+          : !p.passportPublished
+            ? 'private'
+            : (p.milestonePct ?? 0) >= 100
+              ? 'public'
+              : 'partiallyPublic';
         if (!filters.passportStatus.includes(status)) return false;
       }
       return true;
