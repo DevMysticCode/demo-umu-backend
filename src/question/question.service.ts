@@ -430,6 +430,23 @@ export class QuestionService {
             this.copyTag(uploadQuestion.id),
           )
         : [];
+      // Per-room photos (client feedback: a photo added while working
+      // through a room should show up wherever the record is reviewed,
+      // grouped under that room) — same room-<roomId> kind tag the
+      // landlord's room-capture screen uploads under.
+      const roomsRaw = record.rooms ?? [];
+      const roomPhotoEntries = uploadQuestion
+        ? await Promise.all(
+            roomsRaw.map(async (r: any) => {
+              const docs = await this.documentsService.getDocumentsByTag(
+                section.passport.ownerId,
+                this.copyTag(uploadQuestion.id, `room-${r.id}`),
+              );
+              return [r.id, docs.map((p) => ({ name: p.name, fileUrl: p.fileUrl }))] as const;
+            }),
+          )
+        : [];
+      const photosByRoom = Object.fromEntries(roomPhotoEntries);
 
       // Inventory has no assembled document text (Tenancy Agreement's
       // docText) — summarise the room-by-room record instead, matching
@@ -442,9 +459,10 @@ export class QuestionService {
         furnishing: record.furnishing ?? '',
         completedAt: record.completedAt ?? '',
         photos: photos.map((p) => ({ name: p.name, fileUrl: p.fileUrl })),
-        rooms: (record.rooms ?? []).map((r: any) => ({
+        rooms: roomsRaw.map((r: any) => ({
           name: r.name,
           items: (r.items ?? []).map((i: any) => ({ name: i.name, condition: i.condition, cleanliness: i.cleanliness, note: i.note })),
+          photos: photosByRoom[r.id] ?? [],
         })),
         landlordSigned,
         tenantSigned,
