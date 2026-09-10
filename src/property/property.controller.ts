@@ -593,4 +593,15 @@ export class PropertyController {
     if (!info) throw new NotFoundException('EPC certificate not available for this property');
     return { lmkKey: info.lmkKey };
   }
+
+  // Self-contained HTML of the official EPC certificate (fetched
+  // server-side from find-energy-certificate.service.gov.uk with its
+  // CSS + images inlined) so the app can turn it into a downloadable
+  // PDF without sending the user off-site.
+  @Get(':id/epc-certificate')
+  async epcCertificate(@Param('id') id: string) {
+    const result = await this.propertyService.getEpcCertificateHtml(id);
+    if (!result) throw new NotFoundException('EPC certificate not available for this property');
+    return result;
+  }
 }
