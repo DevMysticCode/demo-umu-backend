@@ -390,20 +390,17 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART',
     helpText: '',
+    // Single address part — it pre-fills from the property record and
+    // surfaces the known UPRN / title number. The old first part was a
+    // plain text box mislabelled "Please provide the address of the
+    // property" that just duplicated this one.
     parts: [
-      {
-        partKey: 'owner_names',
-        type: 'text',
-        title: 'Please provide the address of the property',
-        placeholder: 'Start typing...',
-        order: 1,
-      },
       {
         partKey: 'property_address',
         type: 'address',
-        title: '',
+        title: 'Please provide the address of the property',
         placeholder: '12 Example Road, AB1 2CD',
-        order: 2,
+        order: 1,
       },
     ],
     points: 100,
