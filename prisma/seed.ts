@@ -398,7 +398,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'property_address',
         type: 'address',
-        title: 'Please provide the address of the property',
+        title: 'Please confirm the address of the property',
         placeholder: '12 Example Road, AB1 2CD',
         order: 1,
       },
@@ -414,6 +414,11 @@ const QUESTION_TEMPLATES: QSeed[] = [
     description: '',
     type: 'MULTIPART',
     helpText: '',
+    // "Are you completing this form on behalf of the seller?" and the
+    // limited-company details only make sense when the person filling
+    // this in is NOT the owner - folded in here as conditional parts
+    // (conditionalOn / showOnValues) rather than a separate always-shown
+    // question.
     parts: [
       {
         partKey: 'full_names_of_sellers',
@@ -436,46 +441,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
         ],
         order: 2,
       },
-      // {
-      //   partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
-      //   type: 'radio',
-      //   title: 'Are completing this form on the behalf of the seller? ',
-      //   options: [
-      //     { label: 'Will / Grant of Probate', value: 'will_grant_of_probate' },
-      //     { label: 'Trustee', value: 'trustee' },
-      //     { label: 'Representative', value: 'representative' },
-      //     { label: 'Power of Attorney', value: 'power_of_attorney' },
-      //     { label: 'Limited Company ', value: 'limited_company' },
-      //   ],
-      //   order: 3,
-      // },
-      // {
-      //   partKey: 'company_details',
-      //   type: 'multifieldform',
-      //   title: '',
-      //   repeatable: false,
-      //   fields: [
-      //     {
-      //       key: 'filler_name',
-      //       label: 'N',
-      //       placeholder: 'Enter Name',
-      //     },
-      //   ],
-      //   order: 4,
-      // },
-    ],
-    points: 100,
-    order: 2,
-  },
-
-  {
-    sectionKey: 'ownershipProfile',
-    taskKey: 'name_of_sellers_and_address_of_the_property',
-    title: '',
-    description: '',
-    type: 'MULTIPART',
-    helpText: '',
-    parts: [
       {
         partKey: 'are_completing_this_form_on_the_behalf_of_the_seller',
         type: 'radio',
@@ -489,7 +454,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
           { label: 'Power of Attorney', value: 'power_of_attorney' },
           { label: 'Limited Company ', value: 'limited_company' },
         ],
-        order: 1,
+        conditionalOn: 'are_you_the_owner_of_the_property',
+        showOnValues: ['no'],
+        order: 3,
       },
       {
         partKey: 'company_details',
@@ -518,11 +485,13 @@ const QUESTION_TEMPLATES: QSeed[] = [
             placeholder: 'Country of incorporation',
           },
         ],
-        order: 2,
+        conditionalOn: 'are_completing_this_form_on_the_behalf_of_the_seller',
+        showOnValues: ['limited_company'],
+        order: 4,
       },
     ],
     points: 100,
-    order: 3,
+    order: 2,
   },
 
   {
