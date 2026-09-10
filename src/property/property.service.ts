@@ -7655,4 +7655,93 @@ export class PropertyService {
 
     return null;
   }
+
+  // Server-side fetch of the gov.uk EPC certificate print page, made
+  // fully self-contained (stylesheets + images inlined) so the frontend
+  // can render it straight into a downloadable PDF without redirecting
+  // the user out of the app. Client feedback: "View EPC certificate"
+  // should download in-app, not open find-energy-certificate.service.gov.uk
+  // in a new tab.
+  async getEpcCertificateHtml(
+    propertyId: string,
+  ): Promise<{ html: string; lmkKey: string } | null> {
+    const info = await this.getEpcDownloadInfo(propertyId);
+    if (!info) return null;
+
+    const BASE = 'https://find-energy-certificate.service.gov.uk';
+    const abs = (u: string) => {
+      if (!u) return u;
+      if (/^https?:\/\//i.test(u)) return u;
+      if (u.startsWith('//')) return 'https:' + u;
+      return BASE + (u.startsWith('/') ? u : '/' + u);
+    };
+
+    let html: string;
+    try {
+      const res = await fetch(`${info.certUrl}?print=true`, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (UMovingU EPC fetch)' },
+      });
+      if (!res.ok) return null;
+      html = await res.text();
+    } catch {
+      return null;
+    }
+
+    // Inline every <link rel="stylesheet"> so html2canvas (which can't
+    // read cross-origin stylesheet rules) still renders it styled.
+    const linkRe = /<link\b[^>]*rel=["']stylesheet["'][^>]*>/gi;
+    const linkTags = html.match(linkRe) ?? [];
+    for (const tag of linkTags) {
+      const href = /href=["']([^"']+)["']/i.exec(tag)?.[1];
+      if (!href) {
+        html = html.replace(tag, '');
+        continue;
+      }
+      try {
+        const cssRes = await fetch(abs(href));
+        const css = cssRes.ok ? await cssRes.text() : '';
+        const fixed = css.replace(
+          /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
+          (_m, q, u) =>
+            /^(data:|https?:)/i.test(u) ? `url(${q}${u}${q})` : `url(${q}${abs(u)}${q})`,
+        );
+        html = html.replace(tag, `<style>${fixed}</style>`);
+      } catch {
+        html = html.replace(tag, '');
+      }
+    }
+
+    // Inline <img src> assets (the energy-rating chart etc.) as data URIs.
+    const imgRe = /<img\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
+    const srcs = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = imgRe.exec(html))) {
+      if (!/^data:/i.test(m[1])) srcs.add(m[1]);
+    }
+    for (const src of srcs) {
+      try {
+        const r = await fetch(abs(src));
+        if (!r.ok) continue;
+        const ct = r.headers.get('content-type') || 'image/png';
+        const buf = Buffer.from(await r.arrayBuffer());
+        const dataUri = `data:${ct};base64,${buf.toString('base64')}`;
+        html = html.split(`src="${src}"`).join(`src="${dataUri}"`);
+        html = html.split(`src='${src}'`).join(`src='${dataUri}'`);
+      } catch {
+        /* leave the img as-is */
+      }
+    }
+
+    // Strip scripts and gov.uk page chrome that shouldn't be in a saved
+    // certificate (cookie banner, phase banner, skip link, back link,
+    // site header/footer).
+    html = html
+      .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+      .replace(/<a[^>]*class=["'][^"']*govuk-skip-link[^"']*["'][\s\S]*?<\/a>/gi, '')
+      .replace(/<a[^>]*class=["'][^"']*govuk-back-link[^"']*["'][\s\S]*?<\/a>/gi, '')
+      .replace(/<header\b[\s\S]*?<\/header>/gi, '')
+      .replace(/<footer\b[\s\S]*?<\/footer>/gi, '');
+
+    return { html, lmkKey: info.lmkKey };
+  }
 }
