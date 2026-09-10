@@ -163,6 +163,18 @@ export class PassportController {
     return this.passportService.getPassportSections(passportId, userId);
   }
 
+  // Address / UPRN / title number we already hold for this passport's
+  // property — used to pre-fill the "address of the property" question
+  // instead of asking the owner to re-type known facts.
+  @Get(':id/property-facts')
+  @UseGuards(JwtAuthGuard)
+  async getPassportPropertyFacts(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getPassportPropertyFacts(passportId, req.user.id);
+  }
+
   @Post(':id/collaborators')
   @UseGuards(JwtAuthGuard)
   async addCollaborator(
