@@ -252,6 +252,47 @@ export class PassportService {
     }
   }
 
+  // Facts we already hold about the passport's property — the address the
+  // passport was created for, plus whatever the enrichment pipeline (OS
+  // Places / EPC / HM Land Registry) has attached to the linked Property
+  // (UPRN, title number, type). Lets question screens pre-fill "what's the
+  // address / UPRN / title number" instead of asking the owner to re-type
+  // something we can look up. Falls back to the passport's own
+  // addressLine1/postcode columns when there's no linked Property yet.
+  async getPassportPropertyFacts(passportId: string, userId: string) {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: {
+        addressLine1: true,
+        postcode: true,
+        property: {
+          select: {
+            addressLine1: true,
+            city: true,
+            postcode: true,
+            uprn: true,
+            titleNumber: true,
+            propertyType: true,
+          },
+        },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const p = passport.property;
+    return {
+      addressLine1: p?.addressLine1 ?? passport.addressLine1 ?? null,
+      city: p?.city ?? null,
+      postcode: p?.postcode ?? passport.postcode ?? null,
+      uprn: p?.uprn ?? null,
+      titleNumber: p?.titleNumber ?? null,
+      propertyType: p?.propertyType ?? null,
+    };
+  }
+
   async getPassportSections(passportId: string, userId: string) {
     // Verify passport exists and user has access (owner or collaborator)
     const hasAccess = await this.checkUserAccess(passportId, userId);
