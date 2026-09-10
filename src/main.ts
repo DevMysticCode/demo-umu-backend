@@ -27,6 +27,15 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  // Raise the JSON/urlencoded body limit above express's 100kb default.
+  // Some legitimate payloads are large: a signed inventory answer carries
+  // the whole room-by-room record PLUS base64 signature-canvas PNGs for
+  // the landlord and tenant, which blew past 100kb and 500'd with
+  // PayloadTooLargeError on POST /questions/:id/answer. File uploads go
+  // through multer (its own limits), not these parsers.
+  app.useBodyParser('json', { limit: '15mb' });
+  app.useBodyParser('urlencoded', { limit: '15mb', extended: true });
+
   // helmet — security headers. crossOriginResourcePolicy is loosened
   // because the mobile webapp + Capacitor shells fetch /uploads/* from
   // a different origin; the default 'same-origin' would break image
