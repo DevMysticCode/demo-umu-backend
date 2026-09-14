@@ -921,6 +921,7 @@ export class PassportService {
         passport: {
           select: {
             id: true,
+            type: true,
             addressLine1: true,
             postcode: true,
             status: true,
@@ -945,6 +946,10 @@ export class PassportService {
     return rows.map((r) => ({
       id: r.id,
       passportId: r.passportId,
+      // Type of the passport that was actually purchased (SELLER/LANDLORD) -
+      // the frontend uses this to show the matching cover art instead of a
+      // generic "Buyer Passport" cover for every row.
+      type: r.passport?.type ?? null,
       propertyId: r.passport?.propertyId ?? null,
       addressLine1: r.passport?.addressLine1 ?? '',
       postcode: r.passport?.postcode ?? '',
