@@ -1653,6 +1653,18 @@ export class PropertyService {
     limit = 10,
     radiusMiles?: number,
     filters?: PropertySearchFilterInput,
+    // Internal recursion guard — NOT part of the public API (controller
+    // never passes this). The postcode-query branch below fetches fresh
+    // data from OS/EPC then recurses to re-read from the now-populated
+    // cache. If the upstream fetch fails to populate anything (quota
+    // exhausted, both APIs down, etc.), the recursive call used to see
+    // the exact same "empty cache, postcode query" state and re-enter
+    // the same fetch-then-recurse branch — forever. One real request
+    // produced 2,500+ OS Places calls this way before the bug was
+    // caught. This flag caps it at one retry: the second pass falls
+    // through to the plain single-call fallback further down instead
+    // of recursing again.
+    attemptedFreshFetch = false,
   ): Promise<{ items: Property[]; total: number }> {
     const q = query.trim();
 
@@ -1931,7 +1943,7 @@ export class PropertyService {
     //    lexical window the upstream returned, and the second batch
     //    (served from the now-populated cache) won't align with it.
     const isPostcodeQueryFresh = looksLikeUkPostcode(q);
-    if (isPostcodeQueryFresh) {
+    if (isPostcodeQueryFresh && !attemptedFreshFetch) {
       // For a postcode query we hit BOTH upstream sources so the
       // dropdown includes every deliverable address on the street.
       // OS Places has full UK residential coverage from Royal Mail
@@ -1953,7 +1965,7 @@ export class PropertyService {
           epcTotal > 0 ? this.fetchFromEpc(q, 0, epcTotal) : Promise.resolve(),
           this.fetchAllFromOsPlacesForPostcode(q),
         ]);
-        return this.searchProperties(q, offset, limit, undefined, filters);
+        return this.searchProperties(q, offset, limit, undefined, filters, true);
       } catch {
         /* fall through to existing per-batch behaviour */
       }
@@ -2131,7 +2143,10 @@ export class PropertyService {
         ? `https://api.os.uk/search/places/v1/postcode?postcode=${encodedQuery}&dataset=DPA&maxresults=${limit}&offset=${offset}&key=${key}`
         : `https://api.os.uk/search/places/v1/find?query=${encodedQuery}&dataset=DPA&maxresults=${limit}&offset=${offset}&key=${key}`;
 
-      const res = await fetch(url);
+      // Every other external call in this file has a timeout - this one
+      // didn't, so a slow/hanging OS response could block the whole
+      // request indefinitely instead of failing fast like everything else.
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) {
         // Preview the first slice of the body so throttle / auth
         // errors are diagnosable. OS Places returns JSON like
