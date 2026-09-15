@@ -374,17 +374,22 @@ export class ProfileService {
     const existing = await this.prisma.founderNumber.findUnique({
       where: { userId },
     });
-    if (existing) return existing;
+    // isNew tells the caller (the website) whether this is the very first
+    // time this user has ever asked for a number - that's the one moment
+    // it should fire the "here's your certificate" email, rather than
+    // re-sending it on every subsequent /certificate page view.
+    if (existing) return { ...existing, isNew: false };
 
     try {
-      return await this.prisma.founderNumber.create({ data: { userId } });
+      const created = await this.prisma.founderNumber.create({ data: { userId } });
+      return { ...created, isNew: true };
     } catch (err: any) {
       if (err?.code === 'P2002') {
         // Another concurrent request for the same user won the race.
         const record = await this.prisma.founderNumber.findUnique({
           where: { userId },
         });
-        if (record) return record;
+        if (record) return { ...record, isNew: false };
       }
       throw err;
     }
