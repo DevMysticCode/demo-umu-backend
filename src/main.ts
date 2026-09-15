@@ -82,6 +82,7 @@ async function bootstrap() {
   //   CORS_ORIGINS=https://app.umovingu.com,https://www.umovingu.com,capacitor://localhost
   const defaultOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:3002',
     'https://demo-umu-frontend.vercel.app',
     'capacitor://localhost', // iOS Capacitor webview
