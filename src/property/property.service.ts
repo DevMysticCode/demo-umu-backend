@@ -149,9 +149,15 @@ async function fetchEpcJson<T = { rows: EpcRow[]; total?: number }>(
   try {
     const auth = epcAuthHeader();
     if (!auth) return null;
+    // Same missing-timeout bug as fetchFromOsPlaces had - this call sits
+    // ahead of the OS Places branch in searchProperties (fetchEpcTotal is
+    // awaited before the Promise.allSettled that calls OS Places even
+    // starts), so a hanging EPC response blocks the whole request
+    // regardless of how fast OS Places itself fails.
     const res = await fetch(`${EPC_API_BASE}${path}`, {
       headers: { Authorization: auth as string, Accept: 'application/json' },
       redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const ct = res.headers.get('content-type') ?? '';
@@ -2308,6 +2314,7 @@ export class PropertyService {
       try {
         const pcRes = await fetch(
           `https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`,
+          { signal: AbortSignal.timeout(8000) },
         );
         if (pcRes.ok) {
           const pcData = await pcRes.json();
