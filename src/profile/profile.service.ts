@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
+import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   publicUrlFor,
@@ -361,6 +362,81 @@ export class ProfileService {
         lastVisitedAt: p.lastVisitedAt,
       };
     });
+  }
+
+  // Get-or-assign the caller's Founding Homeowner number. `number` is a
+  // DB-native serial (prisma/schema.prisma FounderNumber.number
+  // @default(autoincrement())), so this is safe under concurrent first
+  // requests for the same user without any app-level lock: the unique
+  // constraint on userId just makes the loser of a create-race re-read
+  // the winner's row instead of erroring out to the caller.
+  async getOrAssignFounderNumber(userId: string) {
+    const existing = await this.prisma.founderNumber.findUnique({
+      where: { userId },
+    });
+    if (existing) return existing;
+
+    try {
+      return await this.prisma.founderNumber.create({ data: { userId } });
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        // Another concurrent request for the same user won the race.
+        const record = await this.prisma.founderNumber.findUnique({
+          where: { userId },
+        });
+        if (record) return record;
+      }
+      throw err;
+    }
+  }
+
+  private readonly certificateResend = new Resend(process.env.RESEND_API_KEY);
+  private readonly certificateFrom =
+    process.env.RESEND_FROM ?? 'UMovingU <info@umovingu.io>';
+
+  // Emails the already-rendered certificate JPEG (base64, no data: URL
+  // prefix) to the user's own registered address. Rendering itself stays
+  // on the website (fonts + template artwork live there) - this only
+  // owns "look up the address, send it."
+  async emailFounderCertificate(userId: string, imageBase64: string) {
+    if (!imageBase64) {
+      throw new BadRequestException('imageBase64 is required');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true },
+    });
+    if (!user?.email) throw new NotFoundException('User not found');
+
+    const firstName = user.firstName?.trim() || 'there';
+    const result = await this.certificateResend.emails.send({
+      from: this.certificateFrom,
+      to: [user.email],
+      subject: 'Your Founding Homeowner certificate',
+      html: `
+        <p>Hi ${firstName},</p>
+        <p>Congratulations on claiming your property with UMovingU — you're
+        officially one of our first Founding Homeowners. Your certificate is
+        attached.</p>
+        <p>Thanks for being here early.<br/>The UMovingU team</p>
+      `,
+      attachments: [
+        {
+          filename: 'umovingu-founding-homeowner-certificate.jpg',
+          content: imageBase64,
+        },
+      ],
+    });
+    // Same rationale as auth.service.ts's OTP email: Resend's SDK returns
+    // { data, error } rather than throwing for API-level rejections, so
+    // this has to be checked explicitly or a rejected send looks
+    // identical to a successful one.
+    if (result.error) {
+      throw new BadRequestException(
+        `Could not send certificate email: ${result.error.message}`,
+      );
+    }
+    return { sent: true };
   }
 
   async searchUsers(query: string, currentUserId: string) {

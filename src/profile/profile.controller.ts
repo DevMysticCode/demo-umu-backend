@@ -116,6 +116,26 @@ export class ProfileController {
     return this.profileService.getUserPassports(req.user.id);
   }
 
+  // "Founding Homeowner" certificate — one per user, first 1M claimants.
+  // Get-or-assign so it's safe to call on every certificate page view;
+  // the DB-native serial (see prisma/schema.prisma FounderNumber.number)
+  // guarantees distinct numbers even if two requests race.
+  @Get('founder-number')
+  getFounderNumber(@Req() req: any) {
+    return this.profileService.getOrAssignFounderNumber(req.user.id);
+  }
+
+  // Emails the (already-rendered) certificate image to the user's own
+  // registered address. The website renders the JPEG client/server-side
+  // (fonts + template live there) and POSTs the bytes here rather than
+  // this backend re-implementing that rendering — this endpoint only
+  // owns "look up the address, send it via Resend."
+  @Post('founder-number/email')
+  @HttpCode(HttpStatus.OK)
+  emailFounderCertificate(@Req() req: any, @Body() body: { imageBase64?: string }) {
+    return this.profileService.emailFounderCertificate(req.user.id, body?.imageBase64 ?? '');
+  }
+
   @Get('users/search')
   searchUsers(@Req() req: any, @Query('q') q: string) {
     return this.profileService.searchUsers(q, req.user.id);

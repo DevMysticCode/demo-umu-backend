@@ -331,6 +331,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.pushToken;
   }
 
+  get founderNumber() {
+    return this.prisma.founderNumber;
+  }
+
   get captureEvent() {
     return this.prisma.captureEvent;
   }
