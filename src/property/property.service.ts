@@ -2355,32 +2355,18 @@ export class PropertyService {
         const estimatedPrice =
           Math.round((floorM2 * pricePerSqm) / 1000) * 1000;
 
-        // Fetch recommendations for THIS cert up-front using its real
-        // lmk-key. This locks the property to the correct certificate
-        // from the moment of insert, so subsequent enrichment never
-        // overrides it with a wrong-cert match.
-        //
-        // The opendatacommunities recs API is being retired and 404s on
-        // many certs now, so fall back to scraping the consumer site
-        // when the API returns nothing — same data, different source.
-        let recs: any[] = [];
-        if (cert.lmkKey) {
-          try {
-            recs = await this.fetchEpcRecommendations(cert.lmkKey);
-          } catch {
-            /* leave empty — fallback below */
-          }
-        }
-        if (recs.length === 0 && mapped.postcode && mapped.addressLine1) {
-          try {
-            recs = await this.scrapeRecommendationsFromGovSite(
-              mapped.postcode,
-              mapped.addressLine1,
-            );
-          } catch {
-            /* leave empty — recovery path will retry on next load */
-          }
-        }
+        // Recommendations are NOT fetched here. This loop runs on the
+        // search path (bulk-inserting every new property matched by a
+        // postcode search) — synchronously pulling recs per row (2 HTTP
+        // calls each, plus a scrape fallback) against a rate-limited
+        // external API turned a single search into a 30-60s+ hang once
+        // more than a couple of properties needed inserting (HTTP 429
+        // storms). Recs are only ever rendered on a single property's own
+        // detail page, so they're fetched lazily there instead — see
+        // enrichPropertyWithEpc(), called from getPropertyById() — using
+        // the epcLmkKey persisted below. cert.lmkKey is still captured up
+        // front so that on-demand fetch locks to the correct certificate.
+        const recs: any[] = [];
 
         const fullEpcFields = {
           epcRating: cert.epcRating,
