@@ -343,6 +343,7 @@ export class ProfileService {
           ? [p.property.addressLine1, p.property.addressLine2, p.property.city].filter(Boolean).join(', ')
           : p.addressLine1,
         type: p.type,
+        status: p.status,
         // Score gauge on the explore summary card. Null when there's
         // no saved HomeScore AND no EPC score on file — the gauge
         // then renders a dash.
