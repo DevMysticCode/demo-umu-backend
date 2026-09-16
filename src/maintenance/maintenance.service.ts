@@ -28,6 +28,31 @@ export class MaintenanceService {
     return { deleted: result.count };
   }
 
+  // Deletes accounts by email — everything owned by that user (passports,
+  // founder number, OTPs, collaborator links, etc.) cascades via the
+  // schema's onDelete: Cascade relations on User. Used for cleaning up
+  // test/scratch accounts created while testing a live environment
+  // directly (RDS/Railway aren't otherwise reachable from a laptop).
+  async deleteUsersByEmail(
+    emails: string[],
+  ): Promise<{ deleted: string[]; notFound: string[] }> {
+    const deleted: string[] = [];
+    const notFound: string[] = [];
+    for (const email of emails) {
+      const user = await this.prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        notFound.push(email);
+        continue;
+      }
+      await this.prisma.user.delete({ where: { id: user.id } });
+      deleted.push(email);
+    }
+    this.logger.log(
+      `deleteUsersByEmail: deleted ${deleted.length}, not found ${notFound.length}`,
+    );
+    return { deleted, notFound };
+  }
+
   async nukeAll(): Promise<{ passportsDeleted: number; propertiesDeleted: number }> {
     // Must delete passports first — Passport has FK to Property with no cascade on property side
     const passports = await this.prisma.passport.deleteMany({});
