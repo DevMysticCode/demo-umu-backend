@@ -19,6 +19,7 @@ import { SupportModule } from './support/support.module';
 import { LearnModule } from './learn/learn.module';
 import { PaymentModule } from './payment/payment.module';
 import { MaintenanceModule } from './maintenance/maintenance.module';
+import { AdminModule } from './admin/admin.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
 import { RewardsModule } from './rewards/rewards.module';
 import { KycModule } from './kyc/kyc.module';
@@ -94,6 +95,10 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     PaymentModule,
     // Only available in non-production envs — see PROD_BUILD comment above.
     ...(PROD_BUILD ? [] : [MaintenanceModule]),
+    // Narrow, always-available admin actions (currently just delete-user-
+    // by-email) — deliberately NOT gated by PROD_BUILD like MaintenanceModule
+    // above. See admin.controller.ts for why this one's safe in prod.
+    AdminModule,
     BuyerProfileModule,
     RewardsModule,
     KycModule,
