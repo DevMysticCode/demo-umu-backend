@@ -374,6 +374,8 @@ export class UmuComputeStack extends cdk.Stack {
             STRIPE_SECRET_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'STRIPE_SECRET_KEY'),
             STRIPE_WEBHOOK_SECRET: apprunner.Secret.fromSecretsManager(appSecret, 'STRIPE_WEBHOOK_SECRET'),
             RESEND_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'RESEND_API_KEY'),
+            RESEND_FROM: apprunner.Secret.fromSecretsManager(appSecret, 'RESEND_FROM'),
+            FRONTEND_URL: apprunner.Secret.fromSecretsManager(appSecret, 'FRONTEND_URL'),
             ADMIN_SECRET: apprunner.Secret.fromSecretsManager(appSecret, 'ADMIN_SECRET'),
             CORS_ORIGINS: apprunner.Secret.fromSecretsManager(appSecret, 'CORS_ORIGINS'),
             PERSONA_API_KEY: apprunner.Secret.fromSecretsManager(appSecret, 'PERSONA_API_KEY'),
