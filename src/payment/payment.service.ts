@@ -26,7 +26,7 @@ export const PASSPORT_UNLOCK_AMOUNT_PENCE = 9900;
 //     had approved KYC from an earlier claim — only the HMLR check is
 //     incurred this time.
 export const KYC_ONLY_AMOUNT_PENCE = 1999;
-export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 3599;
+export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 1999;
 export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 1599;
 
 @Injectable()
