@@ -1,4 +1,4 @@
-import { Controller, Post, Delete, Headers, HttpCode, HttpStatus, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Delete, Body, Headers, HttpCode, HttpStatus, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 
 @Controller('maintenance')
@@ -18,6 +18,20 @@ export class MaintenanceController {
   async fixImages(@Headers('x-admin-secret') secret: string) {
     this.guard(secret);
     return this.maintenanceService.clearPexelsImages();
+  }
+
+  /** Delete one or more user accounts by email (body: { emails: string[] }) */
+  @Delete('users')
+  @HttpCode(HttpStatus.OK)
+  async deleteUsers(
+    @Headers('x-admin-secret') secret: string,
+    @Body('emails') emails: string[],
+  ) {
+    this.guard(secret);
+    if (!Array.isArray(emails) || emails.length === 0) {
+      throw new BadRequestException('emails must be a non-empty array');
+    }
+    return this.maintenanceService.deleteUsersByEmail(emails);
   }
 
   /** Delete all Passport records (cascades sections, tasks, collaborators, etc.) */
