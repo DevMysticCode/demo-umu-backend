@@ -4,9 +4,11 @@ import {
   Controller,
   Delete,
   ForbiddenException,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 
@@ -26,6 +28,26 @@ export class AdminController {
     if (!expected || secret !== expected) {
       throw new ForbiddenException('Invalid or missing admin secret');
     }
+  }
+
+  /** Read-only: find accounts whose email contains any of the given
+   * comma-separated substrings — for reviewing a bulk delete before running
+   * it (query: ?contains=foo,bar) */
+  @Get('users/search')
+  @HttpCode(HttpStatus.OK)
+  async searchUsers(
+    @Headers('x-admin-secret') secret: string,
+    @Query('contains') contains: string,
+  ) {
+    this.guard(secret);
+    const substrings = (contains ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (substrings.length === 0) {
+      throw new BadRequestException('contains must be a non-empty comma-separated list');
+    }
+    return this.adminService.findUsersByEmailContains(substrings);
   }
 
   /** Delete one or more user accounts by email (body: { emails: string[] }) */

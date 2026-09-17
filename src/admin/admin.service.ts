@@ -7,6 +7,29 @@ export class AdminService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  // Read-only lookup so a bulk delete can be reviewed before it runs — RDS
+  // has no other query access from outside the VPC.
+  async findUsersByEmailContains(
+    substrings: string[],
+  ): Promise<Array<{ id: string; email: string; firstName: string | null; lastName: string | null; isVerified: boolean; createdAt: Date }>> {
+    return this.prisma.user.findMany({
+      where: {
+        OR: substrings.map((s) => ({
+          email: { contains: s, mode: 'insensitive' as const },
+        })),
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isVerified: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   // Deletes accounts by email — everything owned by that user (passports,
   // founder number, OTPs, collaborator links, etc.) cascades via the
   // schema's onDelete: Cascade relations on User.
