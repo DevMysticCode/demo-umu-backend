@@ -15,19 +15,20 @@ export const PASSPORT_UNLOCK_AMOUNT_PENCE = 9900;
 
 // Owner-claim pricing (KYC via Persona + HM Land Registry Online Ownership
 // Verification both cost us real money per call — these recover that cost).
+// Three tiers, priced by which of the two checks this claim actually still
+// needs to pay for (see createOwnerClaimPaymentIntent for how the tier is
+// picked from the OwnershipVerification snapshot):
 //
-//   - KYC_ONLY_AMOUNT_PENCE: KYC alone, for flows other than owner-claim
-//     (e.g. a future buyer-side KYC-only gate). Not currently wired to any
-//     endpoint — defined here so the price is centralised when one is built.
-//   - OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE: owner-claim where the user's
-//     KYC was NOT already approved before this claim — this claim pays for
-//     both a fresh Persona check and the HMLR ownership check.
-//   - OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE: owner-claim where the user already
-//     had approved KYC from an earlier claim — only the HMLR check is
-//     incurred this time.
-export const KYC_ONLY_AMOUNT_PENCE = 1999;
-export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 1999;
-export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 1599;
+//   - KYC_ONLY_AMOUNT_PENCE: only KYC is still owed — this exact
+//     (property, user) pair already has a successful HMLR match from an
+//     earlier attempt.
+//   - OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE: only HMLR is still owed — the
+//     user already had approved KYC from an earlier claim.
+//   - OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE: neither is done yet — this
+//     claim pays for both a fresh Persona check and the HMLR check.
+export const KYC_ONLY_AMOUNT_PENCE = 899; // £8.99
+export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 1999; // £19.99
+export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 1299; // £12.99
 
 @Injectable()
 export class PaymentService {
@@ -187,15 +188,19 @@ export class PaymentService {
           where: {
             propertyId_userId: { propertyId: passport.propertyId, userId },
           },
-          select: { kycAlreadyVerifiedAtStart: true },
+          select: { kycAlreadyVerifiedAtStart: true, hmlrAlreadyVerifiedAtStart: true },
         })
       : null;
-    // Missing snapshot shouldn't happen (startVerification always sets it
-    // before this point in the flow) — default to the higher tier rather
-    // than under-charging if it's ever null.
-    const amount = ov?.kycAlreadyVerifiedAtStart
+    // Missing snapshots shouldn't happen (startVerification always sets
+    // both before this point in the flow) — treat a missing flag as "not
+    // done" rather than under-charging if it's ever null.
+    const kycDone = ov?.kycAlreadyVerifiedAtStart === true;
+    const hmlrDone = ov?.hmlrAlreadyVerifiedAtStart === true;
+    const amount = kycDone && !hmlrDone
       ? OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE
-      : OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE;
+      : hmlrDone && !kycDone
+        ? KYC_ONLY_AMOUNT_PENCE
+        : OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE;
 
     const existingSuccess = await this.prisma.passportPayment.findFirst({
       where: { userId, passportId, status: 'succeeded' },
@@ -247,7 +252,9 @@ export class PaymentService {
       description:
         amount === OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE
           ? 'Property ownership verification (HM Land Registry) - UMovingU'
-          : 'Property ownership verification (identity + HM Land Registry) - UMovingU',
+          : amount === KYC_ONLY_AMOUNT_PENCE
+            ? 'Property ownership verification (identity check) - UMovingU'
+            : 'Property ownership verification (identity + HM Land Registry) - UMovingU',
       automatic_payment_methods: { enabled: true },
       metadata: {
         umuType: 'owner_claim',
