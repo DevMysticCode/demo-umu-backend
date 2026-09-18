@@ -94,24 +94,32 @@ model User {
   viewingRequestsSent           ViewingRequest[]          @relation("ViewingRequestProposedBy")
   viewingRequestsReceived       ViewingRequest[]          @relation("ViewingRequestInvited")
 
-  // "Founding Homeowner" certificate — one per user, first 1M claimants.
-  // number is a DB-native serial (autoincrement), so concurrent first
-  // claims still get distinct, gapless-enough, never-reused numbers
-  // without any app-level locking. assignedAt is fixed at issuance and
-  // never touched again — the certificate's "joined" date.
-  founderNumber                 FounderNumber?
+  // "Founding Homeowner" certificates — one per CLAIMED PROPERTY (not per
+  // user), first 1M claims. A user who claims a second property earns a
+  // second certificate with its own number. number is a DB-native serial
+  // (autoincrement), so concurrent first claims still get distinct,
+  // gapless-enough, never-reused numbers without any app-level locking.
+  // assignedAt is fixed at issuance and never touched again — the
+  // certificate's "joined" date.
+  founderNumbers                 FounderNumber[]
 }
 
 // Shared source of truth for the Founding Homeowner certificate — the
 // website's /certificate page reads this instead of its own (production-
 // broken) local storage, and it's what lets the mobile app show the same
-// number/date later without redoing this work.
+// number/date later without redoing this work. One row per claimed
+// passport (see passportId) — a user who claims a second property gets a
+// second row with its own number, not the same one reused.
 model FounderNumber {
   id         String   @id @default(uuid())
-  userId     String   @unique
+  userId     String
+  passportId String   @unique
   number     Int      @unique @default(autoincrement())
   assignedAt DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model PushToken {
@@ -476,6 +484,7 @@ model Passport {
   buyerNotes        BuyerNote[]
   activities        PassportActivity[]
   passportPayments  PassportPayment[]
+  founderNumber     FounderNumber?
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while

@@ -13,6 +13,7 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -116,13 +117,18 @@ export class ProfileController {
     return this.profileService.getUserPassports(req.user.id);
   }
 
-  // "Founding Homeowner" certificate — one per user, first 1M claimants.
-  // Get-or-assign so it's safe to call on every certificate page view;
-  // the DB-native serial (see prisma/schema.prisma FounderNumber.number)
-  // guarantees distinct numbers even if two requests race.
+  // "Founding Homeowner" certificate — one per CLAIMED PROPERTY, first 1M
+  // claims. Get-or-assign so it's safe to call on every certificate page
+  // view; the DB-native serial (see prisma/schema.prisma
+  // FounderNumber.number) guarantees distinct numbers even if two
+  // requests race. Ownership of passportId is checked in the service so
+  // nobody can mint a certificate against a property that isn't theirs.
   @Get('founder-number')
-  getFounderNumber(@Req() req: any) {
-    return this.profileService.getOrAssignFounderNumber(req.user.id);
+  getFounderNumber(@Req() req: any, @Query('passportId') passportId: string) {
+    if (!passportId) {
+      throw new BadRequestException('passportId is required');
+    }
+    return this.profileService.getOrAssignFounderNumber(req.user.id, passportId);
   }
 
   // Emails the (already-rendered) certificate image to the user's own

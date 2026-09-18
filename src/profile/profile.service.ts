@@ -365,30 +365,44 @@ export class ProfileService {
     });
   }
 
-  // Get-or-assign the caller's Founding Homeowner number. `number` is a
-  // DB-native serial (prisma/schema.prisma FounderNumber.number
-  // @default(autoincrement())), so this is safe under concurrent first
-  // requests for the same user without any app-level lock: the unique
-  // constraint on userId just makes the loser of a create-race re-read
-  // the winner's row instead of erroring out to the caller.
-  async getOrAssignFounderNumber(userId: string) {
+  // Get-or-assign the Founding Homeowner number for ONE CLAIMED PROPERTY
+  // (not the user overall) - a user who claims a second property earns a
+  // second certificate with its own number, not the same one again.
+  // `number` is a DB-native serial (prisma/schema.prisma
+  // FounderNumber.number @default(autoincrement())), so this is safe
+  // under concurrent first requests for the same passport without any
+  // app-level lock: the unique constraint on passportId just makes the
+  // loser of a create-race re-read the winner's row instead of erroring
+  // out to the caller.
+  async getOrAssignFounderNumber(userId: string, passportId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { ownerId: true },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this passport');
+    }
+
     const existing = await this.prisma.founderNumber.findUnique({
-      where: { userId },
+      where: { passportId },
     });
     // isNew tells the caller (the website) whether this is the very first
-    // time this user has ever asked for a number - that's the one moment
+    // time THIS PROPERTY has asked for a number - that's the one moment
     // it should fire the "here's your certificate" email, rather than
     // re-sending it on every subsequent /certificate page view.
     if (existing) return { ...existing, isNew: false };
 
     try {
-      const created = await this.prisma.founderNumber.create({ data: { userId } });
+      const created = await this.prisma.founderNumber.create({
+        data: { userId, passportId },
+      });
       return { ...created, isNew: true };
     } catch (err: any) {
       if (err?.code === 'P2002') {
-        // Another concurrent request for the same user won the race.
+        // Another concurrent request for the same passport won the race.
         const record = await this.prisma.founderNumber.findUnique({
-          where: { userId },
+          where: { passportId },
         });
         if (record) return { ...record, isNew: false };
       }
