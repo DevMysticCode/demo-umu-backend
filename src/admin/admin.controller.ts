@@ -63,4 +63,31 @@ export class AdminController {
     }
     return this.adminService.deleteUsersByEmail(emails);
   }
+
+  /** Read-only: every FounderNumber row, for reviewing before a one-off
+   * sequence reset. */
+  @Get('founder-numbers')
+  @HttpCode(HttpStatus.OK)
+  async listFounderNumbers(@Headers('x-admin-secret') secret: string) {
+    this.guard(secret);
+    return this.adminService.listFounderNumbers();
+  }
+
+  /** One-off: wipe FounderNumber and restart its sequence at `restartAt`
+   * (body: { restartAt: number, confirm: 'RESET-FOUNDER-SEQ' }). Meant to be
+   * called once, right after the founder-number model moved to one-per-
+   * claimed-property, to line the launch sequence up on both databases. */
+  @Delete('founder-numbers')
+  @HttpCode(HttpStatus.OK)
+  async resetFounderNumbers(
+    @Headers('x-admin-secret') secret: string,
+    @Body('restartAt') restartAt: number,
+    @Body('confirm') confirm: string,
+  ) {
+    this.guard(secret);
+    if (!Number.isInteger(restartAt) || restartAt <= 0) {
+      throw new BadRequestException('restartAt must be a positive integer');
+    }
+    return this.adminService.resetFounderNumberSequence(restartAt, confirm);
+  }
 }
