@@ -52,4 +52,44 @@ export class AdminService {
     );
     return { deleted, notFound };
   }
+
+  // Read-only: every FounderNumber row, for reviewing before a one-off
+  // sequence reset — RDS has no other query access from outside the VPC.
+  async listFounderNumbers(): Promise<
+    Array<{ number: number; userEmail: string; passportId: string; assignedAt: Date }>
+  > {
+    const rows = await this.prisma.founderNumber.findMany({
+      include: { user: { select: { email: true } } },
+      orderBy: { number: 'asc' },
+    });
+    return rows.map((r) => ({
+      number: r.number,
+      userEmail: r.user.email,
+      passportId: r.passportId,
+      assignedAt: r.assignedAt,
+    }));
+  }
+
+  // One-off: wipes every FounderNumber row and restarts the DB-native serial
+  // at `restartAt`, so the next assignment is that number. Used once, right
+  // after the FounderNumber model moved from one-per-user to
+  // one-per-claimed-property, to reset the launch sequence — not meant to be
+  // called again afterwards. `confirm` must literally be 'RESET-FOUNDER-SEQ'
+  // so this can't be hit by an empty/misrouted POST.
+  async resetFounderNumberSequence(
+    restartAt: number,
+    confirm: string,
+  ): Promise<{ deletedRows: number; sequenceRestartedAt: number }> {
+    if (confirm !== 'RESET-FOUNDER-SEQ') {
+      throw new Error("confirm must be 'RESET-FOUNDER-SEQ'");
+    }
+    const { count } = await this.prisma.founderNumber.deleteMany({});
+    await this.prisma.$executeRawUnsafe(
+      `ALTER SEQUENCE "FounderNumber_number_seq" RESTART WITH ${restartAt}`,
+    );
+    this.logger.log(
+      `resetFounderNumberSequence: deleted ${count} rows, restarted sequence at ${restartAt}`,
+    );
+    return { deletedRows: count, sequenceRestartedAt: restartAt };
+  }
 }

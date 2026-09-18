@@ -63,6 +63,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   // Expose prisma client methods
   $transaction = (...args: any[]) => (this.prisma as any).$transaction(...args);
+  $executeRawUnsafe = (...args: any[]) => (this.prisma as any).$executeRawUnsafe(...args);
 
   get user() {
     return this.prisma.user;
