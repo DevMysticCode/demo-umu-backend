@@ -401,6 +401,15 @@ model OwnershipVerification {
   // point-in-time snapshot, not a live read of kycStatus, because by the
   // time payment happens kycStatus is always 'approved' either way.
   kycAlreadyVerifiedAtStart Boolean?
+  // Mirrors kycAlreadyVerifiedAtStart, but for HMLR: true only when this
+  // exact (property, user) pair already has a successful HM Land Registry
+  // match from an earlier attempt (landRegistryMatchResult carries over
+  // untouched across repeated startVerification calls on the same row —
+  // see verifyOwnershipWithLandRegistry). Read at owner-claim payment time
+  // alongside kycAlreadyVerifiedAtStart to price the charge across all
+  // three tiers: both already done is not expected to reach payment, HMLR
+  // only, KYC only, or neither (full KYC+HMLR bundle).
+  hmlrAlreadyVerifiedAtStart Boolean?
   property                Property                    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@unique([propertyId, userId])

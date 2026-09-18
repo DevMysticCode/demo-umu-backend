@@ -5874,18 +5874,31 @@ export class PropertyService {
 
   async startVerification(propertyId: string, userId: string) {
     // Snapshot whether KYC was already approved BEFORE this claim attempt —
-    // used later to price the owner-claim charge (KYC+HMLR vs HMLR-only).
+    // used later to price the owner-claim charge across its three tiers.
     // Must be captured now: by the time payment happens, kycStatus is
     // always 'approved' (this attempt's own Persona flow may have just
     // completed it), so a live read at charge time can't tell the two
     // cases apart. Re-snapshotted on every fresh start-verification call
     // so a second claim attempt (e.g. a different property) prices off
     // its own KYC-at-the-time state, not a stale one from a prior claim.
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { kycStatus: true },
-    });
+    const [user, existing] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { kycStatus: true },
+      }),
+      this.prisma.ownershipVerification.findUnique({
+        where: { propertyId_userId: { propertyId, userId } },
+        select: { landRegistryMatchResult: true },
+      }),
+    ]);
     const kycAlreadyVerifiedAtStart = user?.kycStatus === 'approved';
+    // Same idea, but for HMLR: true only if an EARLIER attempt on this
+    // exact (property, user) pair already got a single match — read before
+    // the upsert below, since the upsert never touches landRegistry* itself
+    // (only verifyOwnershipWithLandRegistry does), so this is genuinely a
+    // snapshot of what happened before this attempt, not during it.
+    const hmlrAlreadyVerifiedAtStart =
+      existing?.landRegistryMatchResult === 'SINGLE_MATCH';
 
     return this.prisma.ownershipVerification.upsert({
       where: { propertyId_userId: { propertyId, userId } },
@@ -5893,12 +5906,14 @@ export class PropertyService {
         status: 'SUBMITTED',
         submittedAt: new Date(),
         kycAlreadyVerifiedAtStart,
+        hmlrAlreadyVerifiedAtStart,
       },
       create: {
         propertyId,
         userId,
         status: 'SUBMITTED',
         kycAlreadyVerifiedAtStart,
+        hmlrAlreadyVerifiedAtStart,
       },
     });
   }
