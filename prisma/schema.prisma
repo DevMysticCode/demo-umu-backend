@@ -11,6 +11,15 @@ model User {
   id                            String                 @id @default(uuid())
   email                         String                 @unique
   password                      String
+  // Set whenever the password changes (reset-password, change-password) —
+  // read by JwtAuthGuard to reject any bearer token issued (JWT `iat`)
+  // before this timestamp. JWTs are otherwise never revoked (7-day expiry,
+  // no server-side blacklist), so without this a stolen token keeps
+  // working for up to 7 days after the legitimate user changes their
+  // password believing they've locked an attacker out (security review
+  // 2026-09-22, M1). Null means "never changed" - no token is rejected
+  // on that basis alone.
+  passwordChangedAt             DateTime?
   createdAt                     DateTime               @default(now())
   dob                           DateTime?
   firstName                     String?

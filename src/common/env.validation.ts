@@ -93,6 +93,34 @@ const checks: EnvCheck[] = [
           ? null
           : 'must start with http:// or https://',
   },
+  // LandRegistryService silently falls back to HMLR's own published
+  // test-stub endpoint/credentials if any of these three are unset — not
+  // a secret leak (they're HMLR's own public test values), but if
+  // production is ever deployed without them set, ownership-verification
+  // calls silently hit the test stub and treat its canned responses as
+  // real, on the same trust boundary as C1/M4 (security review
+  // 2026-09-22, M5).
+  {
+    name: 'HMLR_OV_ENDPOINT',
+    description: 'HM Land Registry Online Owner Verification SOAP endpoint - must not be the bgtest.* stub in production',
+    prodOnly: true,
+    shape: (v) =>
+      v.includes('bgtest.') || v.includes('EOOV_StubService')
+        ? 'must not point at the HMLR test stub in production'
+        : null,
+  },
+  {
+    name: 'HMLR_USERNAME',
+    description: 'HM Land Registry Business Gateway username',
+    prodOnly: true,
+    shape: (v) => (v === 'BGUser001' ? 'must not be the HMLR test-stub username in production' : null),
+  },
+  {
+    name: 'HMLR_PASSWORD',
+    description: 'HM Land Registry Business Gateway password',
+    prodOnly: true,
+    shape: (v) => (v === 'landreg001' ? 'must not be the HMLR test-stub password in production' : null),
+  },
 ];
 
 export function validateEnv(env: NodeJS.ProcessEnv): void {

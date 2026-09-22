@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, createReadStream } from 'fs';
-import { extname, join } from 'path';
+import { join } from 'path';
 import { diskStorage } from 'multer';
 import multerS3 from 'multer-s3';
 import {
@@ -57,31 +57,80 @@ function s3(): S3Client {
   return _s3;
 }
 
+// Every accepted mimetype maps to a fixed, safe on-disk extension. The
+// stored filename's extension is ALWAYS derived from this table — from
+// the client-declared, allow-listed mimetype — never from the client's
+// `originalname`. Taking the extension from the client filename used to
+// let an attacker upload `filename="x.svg"` with `Content-Type: image/png`
+// (an allow-listed type) and have the file stored — and later served —
+// as `.svg`, which browsers render as an SVG *document* with a live
+// script context, regardless of the declared Content-Type at upload
+// time. `image/svg+xml` is deliberately absent from both mimetype lists
+// below and from this table (security review 2026-09-22, findings
+// H1/H3).
+const MIME_EXT: Readonly<Record<string, string>> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+  'application/pdf': '.pdf',
+};
+
+/** Photo uploads (avatars, job/property photos) — no document types. */
+export const IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const;
+
+/** Legal/evidence document uploads — photos plus PDF. */
+export const DOCUMENT_MIME_TYPES = [...IMAGE_MIME_TYPES, 'application/pdf'] as const;
+
 export interface UploadStorageOptions {
   /** Conceptual bucket — e.g. 'job-photos', 'documents', 'avatars'. */
   bucket: string;
   /** Per-file size cap in MB. Multer rejects with 413 above this. */
   maxMb: number;
-  /** Optional accept-list of exact MIME types (e.g. 'image/jpeg'). */
-  mimeAllowList?: readonly string[];
-  /** Optional MIME prefixes (e.g. 'image/'). Matches anything starting with. */
-  mimePrefix?: readonly string[];
+  /**
+   * Required allow-list of exact MIME types this bucket accepts. Every
+   * entry must have a mapping in MIME_EXT above. There is deliberately no
+   * "accept anything" default — a bucket that forgets to pass this now
+   * fails closed (multer rejects every file) instead of silently
+   * accepting arbitrary content, which is how H1/H3 happened.
+   */
+  mimeAllowList: readonly string[];
 }
 
-function buildFilename(originalName: string): string {
+function buildFilename(mimetype: string): string {
   const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-  return `${unique}${extname(originalName)}`;
+  // buildFileFilter below only lets an allow-listed mimetype through, and
+  // every allow-list this codebase defines (IMAGE_MIME_TYPES /
+  // DOCUMENT_MIME_TYPES) is covered in MIME_EXT — but if a future caller
+  // passes an ad-hoc list with a type missing from MIME_EXT, fail loudly
+  // with a clearly-fake extension rather than silently trusting anything.
+  const ext = MIME_EXT[mimetype] ?? '.unknown-mimetype';
+  return `${unique}${ext}`;
 }
 
 function buildFileFilter(
   opts: UploadStorageOptions,
-): MulterOptions['fileFilter'] {
-  if (!opts.mimeAllowList && !opts.mimePrefix) return undefined;
+): NonNullable<MulterOptions['fileFilter']> {
   return (_req, file, cb) => {
-    const exact = opts.mimeAllowList?.includes(file.mimetype) ?? false;
-    const prefixHit =
-      opts.mimePrefix?.some((p) => file.mimetype.startsWith(p)) ?? false;
-    cb(null, exact || prefixHit);
+    if (!opts.mimeAllowList.includes(file.mimetype)) {
+      cb(null, false);
+      return;
+    }
+    if (!(file.mimetype in MIME_EXT)) {
+      // Misconfiguration guard: an allow-listed mimetype with no safe
+      // extension mapping — reject rather than fall through to
+      // buildFilename's '.unknown-mimetype' fallback.
+      cb(new Error(`No extension mapping for allow-listed mimetype ${file.mimetype}`), false);
+      return;
+    }
+    cb(null, true);
   };
 }
 
@@ -102,9 +151,16 @@ export function createUploadStorage(opts: UploadStorageOptions): MulterOptions {
         // "Block Public Access" enabled when public buckets are in use,
         // or set up CloudFront in front and switch this to 'private'.
         acl: isPublic ? 'public-read' : 'private',
-        contentType: multerS3.AUTO_CONTENT_TYPE,
+        // NOT multerS3.AUTO_CONTENT_TYPE — that derives the S3 object's
+        // stored Content-Type from `file.originalname`'s extension (client-
+        // controlled), independent of the mimetype buildFileFilter already
+        // validated. A crafted filename could reintroduce the H1/H3 SVG
+        // issue purely via the response's Content-Type header, even with a
+        // safe stored key extension. Use the already-allow-listed
+        // `file.mimetype` directly instead.
+        contentType: (_req, file, cb) => cb(null, file.mimetype),
         key: (_req, file, cb) => {
-          cb(null, `${opts.bucket}/${buildFilename(file.originalname)}`);
+          cb(null, `${opts.bucket}/${buildFilename(file.mimetype)}`);
         },
         // Multer-S3 sets file.key (the S3 key) and file.location (the
         // full S3 URL) on the file object after upload. Controllers
@@ -128,7 +184,7 @@ export function createUploadStorage(opts: UploadStorageOptions): MulterOptions {
         cb(null, dest);
       },
       filename: (_req, file, cb) => {
-        cb(null, buildFilename(file.originalname));
+        cb(null, buildFilename(file.mimetype));
       },
     }),
     limits,
@@ -207,6 +263,20 @@ export function uploadsPathFrom(url: string | null | undefined): string | null {
   if (url.startsWith('/uploads/')) return url;
   const m = url.match(/^https?:\/\/[^/]+(\/uploads\/.+)$/);
   return m ? m[1] : null;
+}
+
+// Extensions this app has ever stored via buildFilename() (see MIME_EXT
+// above) — the only ones safe to serve with Content-Disposition: inline.
+// A file with any other extension gets forced to `attachment` at serve
+// time (FilesController) regardless of its actual bytes or stored
+// Content-Type — a defence-in-depth net for any file that predates the
+// H1/H3 fix (uploaded before extensions were derived from a validated
+// mimetype) rather than something exploitable by a new upload today.
+const SAFE_INLINE_EXTENSIONS = new Set(Object.values(MIME_EXT));
+
+export function isSafeToRenderInline(filename: string): boolean {
+  const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+  return SAFE_INLINE_EXTENSIONS.has(ext);
 }
 
 /**

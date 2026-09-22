@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateEnv } from './common/env.validation';
 import { initSentry } from './common/sentry';
+import { isSafeToRenderInline } from './common/storage';
 
 // Fail fast if the runtime env is misconfigured — better to crash on
 // boot than to discover at first request that DATABASE_URL or
@@ -67,7 +68,27 @@ async function bootstrap() {
     const uploadsRoot = join(process.cwd(), 'uploads');
     const publicBuckets = ['avatars', 'job-photos', 'property-images'];
     for (const bucket of publicBuckets) {
-      app.useStaticAssets(join(uploadsRoot, bucket), { prefix: `/uploads/${bucket}` });
+      app.useStaticAssets(join(uploadsRoot, bucket), {
+        prefix: `/uploads/${bucket}`,
+        setHeaders: (res, path) => {
+          // Defence in depth on top of the upload-time mimetype
+          // allow-list (storage.ts): a scoped CSP that denies this
+          // response any script/style/frame capability even if it were
+          // ever interpreted as HTML/SVG, plus nosniff so the browser
+          // never overrides our Content-Type by sniffing bytes, plus
+          // `attachment` for any file whose extension isn't one this
+          // app's own upload pipeline can produce (covers anything
+          // uploaded before this fix existed).
+          res.setHeader(
+            'Content-Security-Policy',
+            "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          );
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+          if (!isSafeToRenderInline(path)) {
+            res.setHeader('Content-Disposition', 'attachment');
+          }
+        },
+      });
     }
   }
 

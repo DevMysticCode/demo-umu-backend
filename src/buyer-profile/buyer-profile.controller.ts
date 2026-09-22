@@ -13,9 +13,11 @@ import {
   UploadedFile,
   BadRequestException,
   ForbiddenException,
+  Logger,
+  Ip,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { createUploadStorage } from '../common/storage';
+import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import {
   BuyerProfileService,
   UpdateBuyerProfileDto,
@@ -23,9 +25,12 @@ import {
   SignProfileDto,
 } from './buyer-profile.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
 @Controller('buyer-profile')
 export class BuyerProfileController {
+  private readonly logger = new Logger(BuyerProfileController.name);
+
   constructor(private buyerProfileService: BuyerProfileService) {}
 
   // GET /buyer-profile — current user's buyer profile (may be null)
@@ -57,7 +62,7 @@ export class BuyerProfileController {
   @UseGuards(JwtAuthGuard)
   @Post('documents/:kind')
   @UseInterceptors(
-    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20 })),
+    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
   async uploadReviewDocument(
     @Request() req,
@@ -70,7 +75,7 @@ export class BuyerProfileController {
   // ── Admin review queue (x-admin-secret, same pattern as /maintenance) ──
   private guardAdmin(secret: string | undefined) {
     const expected = process.env.ADMIN_SECRET;
-    if (!expected || secret !== expected) {
+    if (!expected || !timingSafeStringEqual(secret, expected)) {
       throw new ForbiddenException('Invalid or missing admin secret');
     }
   }
@@ -83,14 +88,28 @@ export class BuyerProfileController {
   }
 
   // POST /buyer-profile/admin/review/:profileId  body: { kind, decision: "approve"|"reject" }
+  //
+  // This endpoint approves KYC/AML buyer documents — higher-value than
+  // passport/property deletion elsewhere in the admin surface — yet is
+  // authenticated only by the shared static secret, with no per-admin
+  // identity or JWT/role check (security review 2026-09-22, M6). A real
+  // per-admin identity needs a schema addition (no isAdmin/role concept
+  // exists anywhere in this codebase today) that's a product decision,
+  // not a mechanical fix — logging the acting request's IP is the
+  // narrower, safe-to-add-now piece: at minimum every approve/reject is
+  // now traceable to a source IP and timestamp in the server logs.
   @Post('admin/review/:profileId')
   async reviewDocument(
     @Headers('x-admin-secret') secret: string,
     @Param('profileId') profileId: string,
     @Body('kind') kind: string,
     @Body('decision') decision: string,
+    @Ip() ip: string,
   ) {
     this.guardAdmin(secret);
+    this.logger.warn(
+      `admin review: profileId=${profileId} kind=${kind} decision=${decision} ip=${ip}`,
+    );
     return this.buyerProfileService.reviewDocument(profileId, kind, decision);
   }
 

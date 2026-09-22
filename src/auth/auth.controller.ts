@@ -24,6 +24,11 @@ const AUTH_THROTTLE = { default: { limit: 5, ttl: 60_000 } };
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  // Was unthrottled — a bare boolean-existence oracle with the generic
+  // 300 req/min/IP default was trivially scriptable into an email-
+  // enumeration/phishing-list-building tool (security review 2026-09-22,
+  // H7).
+  @Throttle(AUTH_THROTTLE)
   @Post('check-email')
   async checkEmail(@Body('email') email: string) {
     return this.authService.checkEmail(email);

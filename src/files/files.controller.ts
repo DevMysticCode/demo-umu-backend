@@ -13,7 +13,7 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { FilesService } from './files.service';
-import { isS3Mode, getS3Object } from '../common/storage';
+import { isS3Mode, getS3Object, isSafeToRenderInline } from '../common/storage';
 
 /**
  * Signed-URL file delivery for sensitive buckets.
@@ -76,7 +76,15 @@ export class FilesController {
     }
 
     res.set('Cache-Control', 'private, max-age=300');
-    res.set('Content-Disposition', 'inline');
+    // Only ever render inline the extensions this app's own upload
+    // pipeline can produce (buildFilename in storage.ts) — anything else
+    // (e.g. a file that predates the H1/H3 upload-validation fix) is
+    // forced to download instead, so the browser never gets a chance to
+    // interpret it as HTML/SVG in the page's own origin.
+    res.set(
+      'Content-Disposition',
+      isSafeToRenderInline(filename) ? 'inline' : 'attachment',
+    );
 
     if (isS3Mode) {
       // S3 mode: stream the object straight from S3 → response. Skips

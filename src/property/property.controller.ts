@@ -15,9 +15,9 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { join, extname } from 'path';
-import { existsSync, mkdirSync } from 'fs';
-import { SkipThrottle } from '@nestjs/throttler';
+import { join } from 'path';
+import { existsSync, mkdirSync, unlink } from 'fs';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import {
   PropertyService,
   PropertySearchFilterInput,
@@ -25,6 +25,32 @@ import {
 import { RunningCostsService } from './running-costs.service';
 import { BillParserService } from './bill-parser.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+
+// search/search-areas fan out to OS Places + EPC — paid, quota-capped
+// external APIs (DEPLOYMENT.md documents a real "Free Trial allowance
+// exceeded" failure on the OS Places 50 req/min cap). Leaving these
+// fully @SkipThrottle()'d let a single scripted client burn that quota
+// with no limit at all (security review 2026-09-22, H8). Generous
+// enough not to interrupt normal typing/autocomplete use.
+const SEARCH_THROTTLE = { default: { limit: 30, ttl: 60_000 } };
+// for-you fans out to ~5 upstream calls per request (OS Places + EPC +
+// enrichment) — same cost concern as search, tighter cap since it's a
+// heavier per-request fan-out.
+const FOR_YOU_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
+
+// Bill photo/scan formats — PDF is accepted too since bills often arrive
+// that way; parseBill degrades gracefully (empty result, not a crash) if
+// Tesseract can't extract text from it. Extension is always derived from
+// this table, never from the client's filename (see storage.ts's
+// MIME_EXT for why).
+const BILL_MIME_EXT: Readonly<Record<string, string>> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
+  'application/pdf': '.pdf',
+};
 
 @Controller('property')
 export class PropertyController {
@@ -34,11 +60,7 @@ export class PropertyController {
     private billParser: BillParserService,
   ) {}
 
-  // Read-only property discovery — no reason to throttle here. Bots
-  // scraping our public postcode search are cheaper to detect via
-  // upstream OS Places / EPC quota consumption than to block at our
-  // door, and the shared bucket kept 429-ing legit dev sessions.
-  @SkipThrottle()
+  @Throttle(SEARCH_THROTTLE)
   @Get('search')
   async searchProperties(
     @Query('q') query: string,
@@ -136,7 +158,7 @@ export class PropertyController {
   // Rightmove-style location typeahead — distinct areas (city + county),
   // not individual properties. Used by Explore's lightweight search
   // dropdown; see PropertyService.searchAreas for the grouping logic.
-  @SkipThrottle()
+  @Throttle(SEARCH_THROTTLE)
   @Get('search-areas')
   async searchAreas(@Query('q') query: string, @Query('limit') limit?: string) {
     if (!query || query.trim().length < 2) return { items: [] };
@@ -247,12 +269,12 @@ export class PropertyController {
     return this.propertyService.getLastHourSearchActivity();
   }
 
-  // Feed endpoint — fires from the explore page mount alongside every
-  // other cold read. Not sensible to throttle: JWT already gates it
-  // per-user, and the fan-out inside getForYou can trigger 5+ upstream
-  // API calls (OS Places + EPC + enrichment). Being throttled here
-  // just cascades into empty explore feeds for legit users.
-  @SkipThrottle()
+  // Feed endpoint — JWT-gated, but the fan-out inside getForYou can
+  // trigger 5+ upstream API calls (OS Places + EPC + enrichment) per
+  // request, so a fully unthrottled endpoint here is a quota/cost risk
+  // (security review 2026-09-22, H8) even though it's per-user. 20/min
+  // is well above any legitimate mount/refresh cadence.
+  @Throttle(FOR_YOU_THROTTLE)
   @Get('for-you')
   @UseGuards(JwtAuthGuard)
   async getForYou(
@@ -439,6 +461,16 @@ export class PropertyController {
   // Tesseract and parse the structured spend, supplier, and period. The
   // parsed result is persisted on the property and echoed back so the UI
   // can immediately reflect actual figures in the score / cost cards.
+  //
+  // Stays on local disk (not createUploadStorage/S3) even in production —
+  // Tesseract needs a real filesystem path to read, and the file is a
+  // scratch input for OCR text extraction, never served back to any
+  // client. Still had no mimetype filter at all before this fix, and
+  // derived its extension from the client filename like the other
+  // upload endpoints (security review 2026-09-22, H3) — fixed the same
+  // way: allow-list + extension derived from the validated mimetype, and
+  // the temp file is now deleted once OCR is done since nothing needs it
+  // afterwards.
   @Post(':id/bill-parse')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
@@ -451,10 +483,14 @@ export class PropertyController {
         },
         filename: (_req, file, cb) => {
           const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
+          const ext = BILL_MIME_EXT[file.mimetype] ?? '.bin';
+          cb(null, `${unique}${ext}`);
         },
       }),
       limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+      fileFilter: (_req, file, cb) => {
+        cb(null, file.mimetype in BILL_MIME_EXT);
+      },
     }),
   )
   async parseBill(
@@ -463,7 +499,11 @@ export class PropertyController {
     @UploadedFile() file: any,
   ) {
     if (!file) throw new NotFoundException('No file uploaded');
-    return this.billParser.parseAndSave(id, file.path, file.mimetype);
+    try {
+      return await this.billParser.parseAndSave(id, file.path, file.mimetype);
+    } finally {
+      unlink(file.path, () => {});
+    }
   }
 
   // ── KYC / ownership verification ───────────────────────────────────────

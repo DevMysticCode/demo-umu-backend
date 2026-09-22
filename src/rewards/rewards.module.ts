@@ -4,9 +4,14 @@ import { RewardsController } from './rewards.controller';
 import { RewardsService } from './rewards.service';
 import { StampEvaluatorService } from './stamp-evaluator';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PassportModule } from '../passport/passport.module';
 
 @Module({
-  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET })],
+  imports: [
+    PrismaModule,
+    JwtModule.register({ secret: process.env.JWT_SECRET }),
+    PassportModule,
+  ],
   controllers: [RewardsController],
   providers: [RewardsService, StampEvaluatorService],
   exports: [RewardsService, StampEvaluatorService],

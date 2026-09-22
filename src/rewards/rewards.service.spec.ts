@@ -36,7 +36,8 @@ function makeService() {
     $transaction: jest.fn((cb: any) => cb(tx)),
   };
 
-  const service = new RewardsService(prismaStub);
+  const passportServiceStub: any = { checkUserAccess: jest.fn() };
+  const service = new RewardsService(prismaStub, passportServiceStub);
   return { service, prismaStub, txUser, txLedger, txStampDef, txUserStamp, txRewardAction };
 }
 

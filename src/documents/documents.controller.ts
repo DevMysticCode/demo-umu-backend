@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage } from '../common/storage';
+import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import { DocumentsService } from './documents.service';
 
 @Controller('documents')
@@ -27,7 +27,7 @@ export class DocumentsController {
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20 })),
+    FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
   uploadDocument(
     @Req() req: any,

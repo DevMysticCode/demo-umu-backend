@@ -77,6 +77,29 @@ export class ViewingRequestsService {
     });
     if (!property) throw new NotFoundException('Property not found');
 
+    // The caller must actually own/manage this property (via a Passport
+    // they own or collaborate on) before they can send a "seller invites
+    // you to view" invite in their name. Without this, any authenticated
+    // user could invite any other user to view any property in the DB,
+    // impersonating the real owner in a real push/email and opening an
+    // unsolicited DM thread from the victim's inbox (security review
+    // 2026-09-22, H6).
+    const managesProperty = await this.prisma.passport.findFirst({
+      where: {
+        propertyId: input.propertyId,
+        OR: [
+          { ownerId: input.proposedById },
+          { collaborators: { some: { userId: input.proposedById } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (!managesProperty) {
+      throw new ForbiddenException(
+        'You do not manage this property, so you cannot invite viewings for it.',
+      );
+    }
+
     // Open (or reuse) the conversation between the two parties for this
     // property. Roles are hints — the seller side may actually be an
     // owner OR a collaborator; we just tag as 'owner' vs 'buyer' for
