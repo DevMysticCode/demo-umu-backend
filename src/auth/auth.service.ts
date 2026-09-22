@@ -455,7 +455,9 @@ export class AuthService {
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashed },
+      // passwordChangedAt: any bearer token issued before this instant
+      // stops working on the next request (JwtAuthGuard checks it).
+      data: { password: hashed, passwordChangedAt: new Date() },
     });
 
     return { message: 'Password updated' };
@@ -480,7 +482,8 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: payload.sub },
-      data: { password: hashedPassword },
+      // See changePassword() above for why this matters.
+      data: { password: hashedPassword, passwordChangedAt: new Date() },
     });
 
     return { message: 'Password updated successfully' };

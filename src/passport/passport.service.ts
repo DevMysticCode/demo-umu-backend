@@ -1503,9 +1503,12 @@ export class PassportService {
     const propertyTenure = (passport.property as any)?.tenure ?? null;
     const isLeasehold = this.isLeaseholdTenure(propertyTenure);
 
-    // Filter out leasehold section for non-leasehold properties
+    // Filter out leasehold section for non-leasehold properties, and any
+    // section the owner has marked PRIVATE (Vault) — that's meant to stay
+    // owner-only even after publish/unlock; a buyer who paid for
+    // buyer-unlock must not see it (security review 2026-09-22, H4).
     const visibleSections = passport.sections.filter(
-      (s) => s.key !== 'leasehold' || isLeasehold,
+      (s) => (s.key !== 'leasehold' || isLeasehold) && s.visibility !== 'PRIVATE',
     );
 
     const owner = (passport as any).owner;
@@ -1595,18 +1598,29 @@ export class PassportService {
     // Fetch the collaborator's user info BEFORE deletion so we can
     // still notify them by email afterwards. Without this we'd have
     // to keep the row around to know where to write.
-    const collaborator = await this.prisma.passportCollaborator.findUnique({
-      where: { id: collaboratorId },
+    //
+    // Scoped to passportId as well as id: PassportCollaborator.id is a
+    // global primary key, not scoped per-passport, so looking it up by
+    // id alone let an owner of ANY passport delete a collaborator row on
+    // a DIFFERENT passport they have no relationship with, as long as
+    // they could guess/obtain its UUID (security review 2026-09-22, H5).
+    const collaborator = await this.prisma.passportCollaborator.findFirst({
+      where: { id: collaboratorId, passportId },
       include: {
         user: {
           select: { email: true, firstName: true },
         },
       },
     });
+    if (!collaborator) {
+      throw new NotFoundException('Collaborator not found on this passport');
+    }
 
-    // Delete collaborator
-    await this.prisma.passportCollaborator.delete({
-      where: { id: collaboratorId },
+    // Delete collaborator — scoped the same way so the delete can never
+    // hit a row belonging to a different passport even if a composite
+    // unique lookup above weren't available.
+    await this.prisma.passportCollaborator.deleteMany({
+      where: { id: collaboratorId, passportId },
     });
 
     // Notify the (now-former) collaborator by email so they aren't
@@ -2103,6 +2117,10 @@ export class PassportService {
     const visibleSections = passport.sections.filter((s) => {
       if (s.key === 'leasehold' && !isLeasehold) return false;
       if (link.scope === 'tenant' && !TENANT_VISIBLE_SECTIONS.has(s.key)) return false;
+      // A section the owner marked PRIVATE (Vault) must never reach an
+      // anonymous, token-only share link viewer (security review
+      // 2026-09-22, H4).
+      if (s.visibility === 'PRIVATE') return false;
       return true;
     });
 

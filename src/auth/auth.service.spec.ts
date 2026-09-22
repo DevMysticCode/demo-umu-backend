@@ -346,7 +346,10 @@ describe('resetPassword', () => {
     expect(bcryptHash).toHaveBeenCalledWith('new-strong-password', 10);
     expect(prismaStub.user.update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      data: { password: '$2b$10$mockedhash' },
+      // passwordChangedAt is stamped so JwtAuthGuard can reject any
+      // bearer token issued before this reset (security review
+      // 2026-09-22, M1).
+      data: { password: '$2b$10$mockedhash', passwordChangedAt: expect.any(Date) },
     });
   });
 });

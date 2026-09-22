@@ -32,6 +32,7 @@ import {
   ApproveAccessDto,
 } from './verifier-api.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
 // ── Buyer-facing routes (JWT) ───────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export class VerifierAdminController {
     if (!expected) {
       throw new ForbiddenException('ADMIN_SECRET not configured');
     }
-    if (!adminSecret || adminSecret !== expected) {
+    if (!timingSafeStringEqual(adminSecret, expected)) {
       throw new ForbiddenException('Invalid admin secret');
     }
     if (!dto?.name || !dto?.contactEmail) {

@@ -1,8 +1,9 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Prisma, JourneyType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { getLevelProgress } from './levels';
 import { STAMP_CATALOGUE } from './stamp-catalogue';
+import { PassportService } from '../passport/passport.service';
 
 const STREAK_MILESTONES = [
   { days: 3, actionKey: 'STREAK_3_DAY' },
@@ -45,7 +46,10 @@ export interface AwardOptions {
 
 @Injectable()
 export class RewardsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private passportService: PassportService,
+  ) {}
 
   // Generic, config-driven award path — every new hook (KYC, ownership
   // verified, passport complete, ...) should call this rather than writing
@@ -376,13 +380,25 @@ export class RewardsService {
   // applicability signal (does this passport have a leasehold section),
   // see the comment on `requiresLeasehold` in stamp-catalogue.ts for why
   // the other conditional stamps aren't gated yet.
-  async getStampsCatalogue(passportId?: string) {
+  // Guarded by JwtAuthGuard only, with no ownership check on the given
+  // passportId — any signed-in user could pass any passport UUID and get
+  // back per-stamp `applicable` flags computed from that passport's real
+  // section/question answers (leasehold status, solar/drainage
+  // disclosures), a BOLA information leak (security review 2026-09-22,
+  // M3). userId is now required and checked before reading anything about
+  // the passport.
+  async getStampsCatalogue(userId: string, passportId?: string) {
     const stamps = await this.prisma.stampDefinition.findMany({
       where: { active: true },
       orderBy: { tier: 'asc' },
     });
 
     if (!passportId) return stamps.map((s) => ({ ...s, applicable: true }));
+
+    const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
 
     const leaseholdSection = await this.prisma.passportSection.findFirst({
       where: { passportId, key: 'leasehold' },

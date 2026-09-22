@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { RewardsService } from '../rewards/rewards.service';
 import * as crypto from 'crypto';
+import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
 const PERSONA_API_URL = 'https://api.withpersona.com/api/v1';
 
@@ -207,9 +208,13 @@ export class KycService {
       .update(`${parts.t}.${rawBody}`)
       .digest('hex');
 
-    if (
-      !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1))
-    ) {
+    // timingSafeStringEqual length-checks before calling
+    // crypto.timingSafeEqual — that call throws RangeError on a length
+    // mismatch rather than returning false, which used to surface as an
+    // uncaught 500 instead of this intended 400 whenever v1 was a
+    // different length to our computed digest (security review
+    // 2026-09-22, M10).
+    if (!timingSafeStringEqual(expected, parts.v1)) {
       throw new BadRequestException('Invalid Persona signature');
     }
 

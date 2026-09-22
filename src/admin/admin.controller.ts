@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
 // Deliberately separate from MaintenanceModule (excluded from production
 // builds — see app.module.ts's PROD_BUILD comment): that module holds
@@ -25,7 +26,7 @@ export class AdminController {
 
   private guard(secret: string | undefined) {
     const expected = process.env.ADMIN_SECRET;
-    if (!expected || secret !== expected) {
+    if (!expected || !timingSafeStringEqual(secret, expected)) {
       throw new ForbiddenException('Invalid or missing admin secret');
     }
   }

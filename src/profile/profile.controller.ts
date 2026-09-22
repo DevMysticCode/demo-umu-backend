@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage } from '../common/storage';
+import { createUploadStorage, IMAGE_MIME_TYPES } from '../common/storage';
 import { ProfileService } from './profile.service';
 import {
   UpdateProfileDto,
@@ -38,7 +38,7 @@ export class ProfileController {
 
   @Post('avatar')
   @UseInterceptors(
-    FileInterceptor('file', createUploadStorage({ bucket: 'avatars', maxMb: 5 })),
+    FileInterceptor('file', createUploadStorage({ bucket: 'avatars', maxMb: 5, mimeAllowList: IMAGE_MIME_TYPES })),
   )
   uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
     return this.profileService.uploadAvatar(req.user.id, file, req.hostname);

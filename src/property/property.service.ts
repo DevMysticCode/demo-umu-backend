@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { computePassportCompletion } from '../common/passport-completion';
 import { loadAndComputePassportReadiness } from '../common/passport-readiness';
 import { RewardsService } from '../rewards/rewards.service';
+import { captureException } from '../common/sentry';
 import { PassportService } from '../passport/passport.service';
 import { LandRegistryService } from '../land-registry/land-registry.service';
 import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
@@ -5924,31 +5930,32 @@ export class PropertyService {
     });
   }
 
+  // Confirms an ownership verification that the REAL HM Land Registry flow
+  // (verifyOwnershipWithLandRegistry / POST :id/land-registry-check) already
+  // completed — it never sets VERIFIED itself. This used to unconditionally
+  // upsert status:'VERIFIED' for any caller against any propertyId with no
+  // evidence check at all, which let any authenticated user forge ownership
+  // of a property they don't own (security review 2026-09-22, finding C1).
+  // We DELIBERATELY do NOT create a passport here — that would silently
+  // default to type=SELLER even when the user is claiming a LANDLORD
+  // passport, producing two passports per property (one SELLER from this
+  // path + one LANDLORD from the frontend's subsequent claimPassport call).
+  // The frontend's claimPassport(), called immediately after this, owns
+  // passport creation and knows the user's chosen type.
   async completeVerification(propertyId: string, userId: string) {
-    // Mark ownership verified. We DELIBERATELY do NOT create a passport
-    // here — that would silently default to type=SELLER even when the user
-    // is claiming a LANDLORD passport, producing two passports per property
-    // (one SELLER from this path + one LANDLORD from the frontend's
-    // subsequent claimPassport call). The frontend's claimPassport(),
-    // called immediately after this, owns passport creation and knows the
-    // user's chosen type.
-    await this.prisma.ownershipVerification.upsert({
+    const ov = await this.prisma.ownershipVerification.findUnique({
       where: { propertyId_userId: { propertyId, userId } },
-      update: { status: 'VERIFIED', verifiedAt: new Date() },
-      create: {
-        propertyId,
-        userId,
-        status: 'VERIFIED',
-        verifiedAt: new Date(),
-      },
     });
+    if (
+      !ov ||
+      ov.status !== 'VERIFIED' ||
+      ov.landRegistryMatchResult !== 'SINGLE_MATCH'
+    ) {
+      throw new ForbiddenException(
+        'Ownership has not been verified against HM Land Registry yet.',
+      );
+    }
     this.awardOwnershipVerified(propertyId, userId);
-
-    const property = await this.prisma.property.findUnique({
-      where: { id: propertyId },
-    });
-    if (!property) throw new Error('Property not found');
-
     return { ok: true };
   }
 
@@ -6019,11 +6026,29 @@ export class PropertyService {
     // from missing inputs. In bypass mode we're not calling HMLR
     // at all, and testers on fresh OTP-only signups (no name
     // captured yet) shouldn't be blocked from claiming.
-    const bypassEnabled =
+    const bypassConditionsMet =
       process.env.HMLR_BYPASS === 'true' ||
       (process.env.HMLR_OV_ENDPOINT ?? '').includes('bgtest.') ||
       (process.env.HMLR_OV_ENDPOINT ?? '').includes('EOOV_StubService') ||
       !process.env.HMLR_OV_ENDPOINT;
+    // Explicit NODE_ENV guard, not just env-var-shaped: the four
+    // conditions above are all things a secret-rotation mistake could
+    // trigger by accident (dropping HMLR_OV_ENDPOINT, an errant
+    // HMLR_BYPASS=true landing in the prod secret bundle) — without this,
+    // production would silently auto-verify every ownership claim with
+    // no HMLR call and no distinguishing error, which is the same trust
+    // boundary C1 (forged ownership verification) sits on (security
+    // review 2026-09-22, M4). In production, treat it as a
+    // misconfiguration to fix loudly rather than a bypass to honour.
+    const bypassEnabled = bypassConditionsMet && process.env.NODE_ENV !== 'production';
+    if (bypassConditionsMet && process.env.NODE_ENV === 'production') {
+      captureException(
+        new Error(
+          'HMLR bypass conditions met in production - refusing to auto-verify ownership. Check HMLR_OV_ENDPOINT/HMLR_BYPASS.',
+        ),
+        { propertyId, userId },
+      );
+    }
 
     if (bypassEnabled) {
       const bypassMessageId = `BYPASS-${propertyId.slice(0, 8)}-${Date.now()}`;

@@ -36,7 +36,33 @@ export class LlcService {
   // POST /property/:id/llc/refresh.
   private readonly ttlMs = 30 * 24 * 60 * 60 * 1000;
 
+  // Global daily cap on FORCE refreshes, on top of the controller's
+  // 3/min/IP throttle. The per-IP limit alone doesn't stop a script that
+  // rotates IPs or accounts from burning real HMLR API budget across many
+  // property IDs (security review 2026-09-22, M7) — there was no per-
+  // user or global cap at all before this. In-memory, reset at each
+  // UTC-day boundary: enough to catch runaway/scripted usage without a
+  // schema change; a persisted counter would be needed if this ever runs
+  // across multiple instances and needs to be exact.
+  private forceRefreshDayKey = '';
+  private forceRefreshCountToday = 0;
+  private readonly maxForceRefreshesPerDay = 500;
+
   constructor(private prisma: PrismaService) {}
+
+  private checkDailyForceRefreshBudget(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== this.forceRefreshDayKey) {
+      this.forceRefreshDayKey = today;
+      this.forceRefreshCountToday = 0;
+    }
+    if (this.forceRefreshCountToday >= this.maxForceRefreshesPerDay) {
+      throw new ServiceUnavailableException(
+        'LLC refresh budget for today has been reached - please try again tomorrow.',
+      );
+    }
+    this.forceRefreshCountToday += 1;
+  }
 
   /**
    * Read-through: returns the cached search if it exists and is within
@@ -58,6 +84,8 @@ export class LlcService {
       const age = Date.now() - existing.searchedAt.getTime();
       if (age < this.ttlMs) return existing;
     }
+
+    if (opts.force) this.checkDailyForceRefreshBudget();
 
     return this.refresh(property, existing?.id ?? null);
   }

@@ -14,11 +14,17 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { PassportService } from './passport.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
+import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode, IMAGE_MIME_TYPES } from '../common/storage';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
+
+// JWT-gated but was relying solely on the 300 req/min/IP global default —
+// each call is a paid Groq LLM invocation (security review 2026-09-22,
+// M8), mirroring the same fix on ChatController.
+const AI_SUMMARY_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 /**
  * Build an absolute upload URL. Prefers a request-derived scheme+host
@@ -338,7 +344,9 @@ export class PassportController {
       createUploadStorage({
         bucket: 'property-images',
         maxMb: 20,
-        mimePrefix: ['image/'],
+        // Not mimePrefix: ['image/'] any more - that also matched
+        // image/svg+xml (security review 2026-09-22, finding H1).
+        mimeAllowList: IMAGE_MIME_TYPES,
       }),
     ),
   )
@@ -416,6 +424,7 @@ export class PassportController {
 
   // ── AI Summary ───────────────────────────────────────────────────────────
 
+  @Throttle(AI_SUMMARY_THROTTLE)
   @Post(':id/ai-summary/:sectionKey')
   @UseGuards(JwtAuthGuard)
   async getSectionAiSummary(

@@ -14,7 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage, publicUrlFor } from '../common/storage';
+import { createUploadStorage, publicUrlFor, IMAGE_MIME_TYPES } from '../common/storage';
 import { MarketplaceService } from './marketplace.service';
 import { MarketplaceMessagesService } from './messages.service';
 import { EscrowService } from './escrow.service';
@@ -99,7 +99,7 @@ export class MarketplaceController {
       createUploadStorage({
         bucket: 'job-photos',
         maxMb: 8,
-        mimeAllowList: ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'],
+        mimeAllowList: IMAGE_MIME_TYPES,
       }),
     ),
   )

@@ -1,5 +1,6 @@
 import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PassportService } from '../passport/passport.service';
 
 const PASSPORT_SELECT = {
   id: true,
@@ -13,7 +14,10 @@ const PASSPORT_SELECT = {
 
 @Injectable()
 export class CollectionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private passportService: PassportService,
+  ) {}
 
   async getMyCollections(userId: string) {
     // All passports the user owns or collaborates on
@@ -74,6 +78,18 @@ export class CollectionService {
     if (!collection) throw new NotFoundException('Collection not found');
     if (collection.userId !== userId)
       throw new ForbiddenException('Not your collection');
+
+    // The collection ownership check above only proves the CALLER owns
+    // the collection — it never checked the caller has any relationship
+    // to the PASSPORT being added, unlike every other module that reads/
+    // writes a passport by id. Anyone who obtained a passport UUID (a
+    // leaked share link, a screenshot, a log line) could otherwise
+    // permanently attach it to their own collection and read its address,
+    // status, and type (security review 2026-09-22, M2).
+    const hasAccess = await this.passportService.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
 
     return this.prisma.passportCollectionItem.upsert({
       where: { collectionId_passportId: { collectionId, passportId } },
