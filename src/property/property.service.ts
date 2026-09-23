@@ -6014,37 +6014,50 @@ export class PropertyService {
     // their own homes see "Ownership not confirmed" every time.
     //
     // For now we synthesise a VERIFIED result whenever the OV
-    // endpoint is HMLR's test stub OR HMLR_BYPASS=true is set,
-    // and record the OwnershipVerification row with a distinctive
-    // messageId so a later audit query can find + reprocess
-    // these entries against the real endpoint. When the prod
-    // endpoint env is populated on Railway, this branch stops
-    // firing and real OOV takes over — no code change needed.
+    // endpoint looks unconfigured / test-stub-shaped, and record the
+    // OwnershipVerification row with a distinctive messageId so a later
+    // audit query can find + reprocess these entries against the real
+    // endpoint. Once real credentials are populated in an environment,
+    // this branch stops firing there and real OOV takes over — no code
+    // change needed.
     //
-    // Positioned BEFORE the firstName/surname + postcode/title
-    // guards because those exist to protect the real HMLR call
-    // from missing inputs. In bypass mode we're not calling HMLR
-    // at all, and testers on fresh OTP-only signups (no name
-    // captured yet) shouldn't be blocked from claiming.
-    const bypassConditionsMet =
-      process.env.HMLR_BYPASS === 'true' ||
-      (process.env.HMLR_OV_ENDPOINT ?? '').includes('bgtest.') ||
-      (process.env.HMLR_OV_ENDPOINT ?? '').includes('EOOV_StubService') ||
-      !process.env.HMLR_OV_ENDPOINT;
-    // Explicit NODE_ENV guard, not just env-var-shaped: the four
-    // conditions above are all things a secret-rotation mistake could
-    // trigger by accident (dropping HMLR_OV_ENDPOINT, an errant
-    // HMLR_BYPASS=true landing in the prod secret bundle) — without this,
-    // production would silently auto-verify every ownership claim with
-    // no HMLR call and no distinguishing error, which is the same trust
-    // boundary C1 (forged ownership verification) sits on (security
-    // review 2026-09-22, M4). In production, treat it as a
-    // misconfiguration to fix loudly rather than a bypass to honour.
-    const bypassEnabled = bypassConditionsMet && process.env.NODE_ENV !== 'production';
-    if (bypassConditionsMet && process.env.NODE_ENV === 'production') {
+    // Positioned BEFORE the firstName/surname + postcode/title guards
+    // because those exist to protect the real HMLR call from missing
+    // inputs. In bypass mode we're not calling HMLR at all, and testers
+    // on fresh OTP-only signups (no name captured yet) shouldn't be
+    // blocked from claiming.
+    //
+    // This is judged on whether the env *looks configured*, not on
+    // NODE_ENV alone (see env.validation.ts's warnIfHmlrLooksLikeTestStub,
+    // added for the same reason: this app has more than one
+    // NODE_ENV=production environment, and not all of them have live HMLR
+    // credentials — Railway is UAT/demo-flagged-production with no real
+    // HMLR access, AWS App Runner is real production with real access).
+    // A blanket "never bypass when NODE_ENV=production" check regressed
+    // this: it blocked Railway's bypass path entirely, so real testers hit
+    // the firstName/surname guard below with no way to complete a claim.
+    const hmlrEndpoint = process.env.HMLR_OV_ENDPOINT ?? '';
+    const looksUnconfiguredOrTestStub =
+      !hmlrEndpoint ||
+      hmlrEndpoint.includes('bgtest.') ||
+      hmlrEndpoint.includes('EOOV_StubService') ||
+      process.env.HMLR_USERNAME === 'BGUser001' ||
+      process.env.HMLR_PASSWORD === 'landreg001';
+    // HMLR_BYPASS=true is a manual override for demo/dev use. It's honoured
+    // outside production-flagged environments unconditionally, but inside
+    // one it's ignored unless the env also looks unconfigured — an
+    // accidental HMLR_BYPASS=true landing in a REAL production secret
+    // bundle (real HMLR creds present) must not silently disable ownership
+    // verification, which is the same trust boundary C1 (forged ownership
+    // verification) sits on (security review 2026-09-22, M4).
+    const explicitBypassFlag = process.env.HMLR_BYPASS === 'true';
+    const isProd = process.env.NODE_ENV === 'production';
+    const bypassEnabled =
+      looksUnconfiguredOrTestStub || (explicitBypassFlag && !isProd);
+    if (explicitBypassFlag && isProd && !looksUnconfiguredOrTestStub) {
       captureException(
         new Error(
-          'HMLR bypass conditions met in production - refusing to auto-verify ownership. Check HMLR_OV_ENDPOINT/HMLR_BYPASS.',
+          'HMLR_BYPASS=true set in a NODE_ENV=production environment that has what looks like real HMLR credentials configured - refusing to auto-verify ownership. Check for an accidental HMLR_BYPASS in this environment\'s secrets.',
         ),
         { propertyId, userId },
       );
