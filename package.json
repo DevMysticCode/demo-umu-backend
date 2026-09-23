@@ -39,6 +39,10 @@
     "hmlr:tls-evidence": "node src/scripts/hmlr-tls-evidence.mjs",
     "hmlr:wsdl": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register src/scripts/fetch-hmlr-wsdl.ts"
   },
+  "overrides": {
+    "multer": "^2.4.0",
+    "deepmerge-ts": "^8.0.2"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
     "@aws-sdk/client-sns": "^3.1079.0",
@@ -51,7 +55,6 @@
     "@nestjs/throttler": "^6.5.0",
     "@prisma/client": "^6.19.2",
     "@sentry/node": "^10.56.0",
-    "@types/nodemailer": "^7.0.11",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
@@ -59,7 +62,6 @@
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "multer-s3": "^3.0.1",
-    "nodemailer": "^8.0.3",
     "openai": "^6.32.0",
     "prisma": "^6.19.2",
     "reflect-metadata": "^0.2.2",

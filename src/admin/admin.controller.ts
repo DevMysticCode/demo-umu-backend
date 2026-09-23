@@ -8,6 +8,8 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
+  Post,
   Query,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
@@ -90,5 +92,25 @@ export class AdminController {
       throw new BadRequestException('restartAt must be a positive integer');
     }
     return this.adminService.resetFounderNumberSequence(restartAt, confirm);
+  }
+
+  /** Grant or revoke the isAdmin flag on one account by email (body:
+   * { isAdmin: boolean }). The only way any account ever becomes an
+   * admin — there is no self-service path. Used to gate endpoints that
+   * need a real per-operator identity on top of the shared admin secret
+   * (security review 2026-09-22, M6), e.g. buyer-profile's KYC review
+   * queue. */
+  @Post('users/:email/admin-role')
+  @HttpCode(HttpStatus.OK)
+  async setAdminRole(
+    @Headers('x-admin-secret') secret: string,
+    @Param('email') email: string,
+    @Body('isAdmin') isAdmin: boolean,
+  ) {
+    this.guard(secret);
+    if (typeof isAdmin !== 'boolean') {
+      throw new BadRequestException('isAdmin must be a boolean');
+    }
+    return this.adminService.setAdminRole(email, isAdmin);
   }
 }

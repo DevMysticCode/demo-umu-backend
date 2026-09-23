@@ -14,7 +14,6 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
-  Ip,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
@@ -72,43 +71,48 @@ export class BuyerProfileController {
     return this.buyerProfileService.uploadReviewDocument(req.user.id, kind, file);
   }
 
-  // ── Admin review queue (x-admin-secret, same pattern as /maintenance) ──
-  private guardAdmin(secret: string | undefined) {
+  // ── Admin review queue ───────────────────────────────────────────────
+  // Requires BOTH the shared x-admin-secret AND a JWT belonging to a user
+  // with isAdmin=true — the secret alone used to be the entire access
+  // control for approving KYC/AML buyer documents (higher-value than
+  // passport/property deletion elsewhere in the admin surface), with no
+  // way to tell which operator acted. isAdmin is granted only via
+  // POST /admin/users/:email/admin-role (also admin-secret-gated) - see
+  // AdminController (security review 2026-09-22, M6).
+  private guardAdmin(secret: string | undefined, req: any) {
     const expected = process.env.ADMIN_SECRET;
     if (!expected || !timingSafeStringEqual(secret, expected)) {
       throw new ForbiddenException('Invalid or missing admin secret');
+    }
+    if (!req.user?.isAdmin) {
+      throw new ForbiddenException('This account is not an admin');
     }
   }
 
   // GET /buyer-profile/admin/review-queue
   @Get('admin/review-queue')
-  async listReviewQueue(@Headers('x-admin-secret') secret: string) {
-    this.guardAdmin(secret);
+  @UseGuards(JwtAuthGuard)
+  async listReviewQueue(
+    @Headers('x-admin-secret') secret: string,
+    @Request() req: any,
+  ) {
+    this.guardAdmin(secret, req);
     return this.buyerProfileService.listPendingReviews();
   }
 
   // POST /buyer-profile/admin/review/:profileId  body: { kind, decision: "approve"|"reject" }
-  //
-  // This endpoint approves KYC/AML buyer documents — higher-value than
-  // passport/property deletion elsewhere in the admin surface — yet is
-  // authenticated only by the shared static secret, with no per-admin
-  // identity or JWT/role check (security review 2026-09-22, M6). A real
-  // per-admin identity needs a schema addition (no isAdmin/role concept
-  // exists anywhere in this codebase today) that's a product decision,
-  // not a mechanical fix — logging the acting request's IP is the
-  // narrower, safe-to-add-now piece: at minimum every approve/reject is
-  // now traceable to a source IP and timestamp in the server logs.
   @Post('admin/review/:profileId')
+  @UseGuards(JwtAuthGuard)
   async reviewDocument(
     @Headers('x-admin-secret') secret: string,
     @Param('profileId') profileId: string,
     @Body('kind') kind: string,
     @Body('decision') decision: string,
-    @Ip() ip: string,
+    @Request() req: any,
   ) {
-    this.guardAdmin(secret);
+    this.guardAdmin(secret, req);
     this.logger.warn(
-      `admin review: profileId=${profileId} kind=${kind} decision=${decision} ip=${ip}`,
+      `admin review: profileId=${profileId} kind=${kind} decision=${decision} by=${req.user.id}`,
     );
     return this.buyerProfileService.reviewDocument(profileId, kind, decision);
   }

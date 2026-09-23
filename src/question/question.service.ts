@@ -83,14 +83,24 @@ export class QuestionService {
   }
 
   async deleteQuestionCopy(userId: string, docId: string) {
+    // Ownership check fires here, before any of the document's own metadata
+    // (tags) is read — deleteDocument() below re-checks this properly with
+    // a full row fetch and is what actually enforces it (nothing was ever
+    // returned to a non-owning caller, so this was a code-quality ordering
+    // nit, not a live leak), but reading a byte of someone else's document
+    // before confirming ownership is still the wrong order to write
+    // (security review 2026-09-22, L10).
+    const owned = await this.prisma.userDocument.findUnique({
+      where: { id: docId },
+      select: { userId: true, tags: true },
+    });
+    if (owned && owned.userId !== userId) {
+      throw new ForbiddenException();
+    }
     // Read the tag before deleting so we know which question to re-check
     // afterwards — removing a landlord's only certificate shouldn't leave
     // the section showing complete with nothing on file.
-    const doc = await this.prisma.userDocument.findUnique({
-      where: { id: docId },
-      select: { tags: true },
-    });
-    const tag = (doc?.tags as string[] | null)?.find((t) => t.startsWith('landlord-cert:'));
+    const tag = (owned?.tags as string[] | null)?.find((t) => t.startsWith('landlord-cert:'));
     // Tag shape is either landlord-cert:<questionId> or, for a
     // multi-kind question (Deposit Protection's cert vs served-PI),
     // landlord-cert:<kind>:<questionId> — the id is always the LAST

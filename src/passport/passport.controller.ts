@@ -142,18 +142,12 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
+    // getPassport() now enforces access itself (see its own comment) -
+    // no separate checkUserAccess() call needed here any more.
     const passport = await this.passportService.getPassport(passportId, userId);
 
     if (!passport) {
       throw new ForbiddenException('Passport not found');
-    }
-
-    const hasAccess = await this.passportService.checkUserAccess(
-      passportId,
-      userId,
-    );
-    if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this passport');
     }
 
     return passport;

@@ -24,6 +24,10 @@ import {
 @Injectable()
 export class AuthService {
   private readonly OTP_EXPIRY_MINUTES = 10;
+  // Per-account OTP attempt lockout — on top of the 5 req/min/IP throttle,
+  // which alone doesn't stop a distributed attacker rotating source IPs
+  // against one target account (security review 2026-09-22, L1).
+  private readonly MAX_OTP_ATTEMPTS = 5;
   private readonly resend: Resend;
 
   constructor(
@@ -141,26 +145,44 @@ export class AuthService {
     return { message: 'Verification code sent to your email', email };
   }
 
+  // Shared by verifyOtp and verifyResetOtp: looks up the current
+  // (non-expired) OTP for this email regardless of the code the caller
+  // supplied, enforces the per-account attempt lockout, and only then
+  // checks whether the supplied code actually matches — incrementing the
+  // attempt counter on a miss. A found-but-locked-out row and a
+  // found-but-wrong-code row both throw the same generic message so a
+  // caller can't distinguish "row exists, wrong code" from "locked out"
+  // from "no OTP at all" by response shape.
+  private async checkAndConsumeOtpAttempt(
+    email: string,
+    code: string,
+  ): Promise<{ id: string }> {
+    const current = await this.prisma.otpCode.findFirst({
+      where: { email, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!current) {
+      throw new UnauthorizedException('Invalid or expired OTP');
+    }
+    if (current.attempts >= this.MAX_OTP_ATTEMPTS) {
+      throw new UnauthorizedException(
+        'Too many incorrect attempts - request a new code',
+      );
+    }
+    if (current.code !== code) {
+      await this.prisma.otpCode.update({
+        where: { id: current.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new UnauthorizedException('Invalid or expired OTP');
+    }
+    return { id: current.id };
+  }
+
   async verifyOtp(dto: VerifyOtpDto) {
     const { email, code } = dto;
 
-    // Find valid OTP
-    const otpRecord = await this.prisma.otpCode.findFirst({
-      where: {
-        email,
-        code,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    if (!otpRecord) {
-      throw new UnauthorizedException('Invalid or expired OTP');
-    }
+    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code);
 
     // Mark user as verified
     const user = await this.prisma.user.update({
@@ -390,18 +412,7 @@ export class AuthService {
   async verifyResetOtp(dto: VerifyResetOtpDto) {
     const { email, code } = dto;
 
-    const otpRecord = await this.prisma.otpCode.findFirst({
-      where: {
-        email,
-        code,
-        expiresAt: { gt: new Date() },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!otpRecord) {
-      throw new UnauthorizedException('Invalid or expired reset code');
-    }
+    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code);
 
     const user = await this.prisma.user.findUnique({
       where: { email },

@@ -16,6 +16,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, IMAGE_MIME_TYPES } from '../common/storage';
 import { ProfileService } from './profile.service';
@@ -142,6 +143,12 @@ export class ProfileController {
     return this.profileService.emailFounderCertificate(req.user.id, body?.imageBase64 ?? '');
   }
 
+  // Authenticated-only, but had no rate limit and returned full,
+  // unmasked email addresses - any logged-in user could brute-force
+  // short prefixes to enumerate other users' email addresses at scale
+  // (security review 2026-09-22, L2). Throttled here; the email itself
+  // is now partially masked in the service response.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('users/search')
   searchUsers(@Req() req: any, @Query('q') q: string) {
     return this.profileService.searchUsers(q, req.user.id);

@@ -20,6 +20,15 @@ model User {
   // 2026-09-22, M1). Null means "never changed" - no token is rejected
   // on that basis alone.
   passwordChangedAt             DateTime?
+  // No admin-role concept existed anywhere in this codebase before this -
+  // every "admin" endpoint (maintenance, this app's own AdminModule, the
+  // buyer-profile KYC review queue, verifier-api org onboarding) was
+  // authenticated by the shared x-admin-secret header alone, with no way
+  // to tell WHICH operator acted (security review 2026-09-22, M6). Default
+  // false; only ever flipped via the admin-secret-gated
+  // POST /admin/users/:email/admin-role endpoint - there's still no
+  // self-service way for a user to become an admin.
+  isAdmin                        Boolean                @default(false)
   createdAt                     DateTime               @default(now())
   dob                           DateTime?
   firstName                     String?
@@ -234,6 +243,14 @@ model OtpCode {
   code      String
   expiresAt DateTime
   createdAt DateTime @default(now())
+  // Failed-guess counter for THIS OTP row, incremented on every wrong-code
+  // verify attempt. Previously the only defence was the 5 req/min/IP
+  // throttle on the verify routes — a distributed attacker rotating
+  // source IPs wasn't limited by account at all (security review
+  // 2026-09-22, L1). Reset implicitly every time a fresh OTP is issued
+  // (requestOtp/forgotPassword delete the old row and create a new one
+  // with attempts=0).
+  attempts  Int      @default(0)
 
   @@index([email])
 }
@@ -1371,12 +1388,23 @@ model AccessRequest {
 }
 
 model AccessGrant {
-  id           String        @id @default(uuid())
-  requestId    String        @unique
-  request      AccessRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  accessToken  String        @unique // bearer token (UUID-shaped or longer)
-  refreshToken String?       @unique // optional, Sprint 2 OAuth
-  scopes       String[] // approved scopes (subset of request)
+  id        String        @id @default(uuid())
+  requestId String        @unique
+  request   AccessRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  // Was a bare `accessToken String @unique` holding the bearer token in
+  // plaintext - a DB read/leak would hand out directly-usable tokens
+  // (security review 2026-09-22, L3). accessTokenHash is what every
+  // authenticated request is actually looked up by (SHA-256, deterministic,
+  // fine for a high-entropy server-generated token - see
+  // common/key-derivation.ts); accessTokenEncrypted (AES-256-GCM, keyed by
+  // an HKDF subkey derived from JWT_SECRET) is the only place the original
+  // value can be recovered from, needed because getRequestStatus() re-serves
+  // the real token to its legitimate holder on every status poll, not just
+  // once at grant time.
+  accessTokenHash      String  @unique
+  accessTokenEncrypted String
+  refreshToken         String? @unique // optional, Sprint 2 OAuth
+  scopes               String[] // approved scopes (subset of request)
   expiresAt    DateTime // grant TTL — max 30 days
   revokedAt    DateTime? // buyer-revocable at any time
   createdAt    DateTime      @default(now())
@@ -1384,7 +1412,7 @@ model AccessGrant {
   useCount     Int           @default(0)
   logs         AccessLog[]
 
-  @@index([accessToken])
+  @@index([accessTokenHash])
 }
 
 model AccessLog {

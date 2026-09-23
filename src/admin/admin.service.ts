@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -91,5 +91,19 @@ export class AdminService {
       `resetFounderNumberSequence: deleted ${count} rows, restarted sequence at ${restartAt}`,
     );
     return { deletedRows: count, sequenceRestartedAt: restartAt };
+  }
+
+  // The only way any account ever becomes an admin — logged so there's an
+  // audit trail of who was granted/revoked and when (security review
+  // 2026-09-22, M6).
+  async setAdminRole(
+    email: string,
+    isAdmin: boolean,
+  ): Promise<{ email: string; isAdmin: boolean }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) throw new NotFoundException(`No account found for ${email}`);
+    await this.prisma.user.update({ where: { email }, data: { isAdmin } });
+    this.logger.warn(`setAdminRole: ${email} isAdmin=${isAdmin}`);
+    return { email, isAdmin };
   }
 }
