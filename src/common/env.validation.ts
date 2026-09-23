@@ -93,35 +93,42 @@ const checks: EnvCheck[] = [
           ? null
           : 'must start with http:// or https://',
   },
-  // LandRegistryService silently falls back to HMLR's own published
-  // test-stub endpoint/credentials if any of these three are unset — not
-  // a secret leak (they're HMLR's own public test values), but if
-  // production is ever deployed without them set, ownership-verification
-  // calls silently hit the test stub and treat its canned responses as
-  // real, on the same trust boundary as C1/M4 (security review
-  // 2026-09-22, M5).
-  {
-    name: 'HMLR_OV_ENDPOINT',
-    description: 'HM Land Registry Online Owner Verification SOAP endpoint - must not be the bgtest.* stub in production',
-    prodOnly: true,
-    shape: (v) =>
-      v.includes('bgtest.') || v.includes('EOOV_StubService')
-        ? 'must not point at the HMLR test stub in production'
-        : null,
-  },
-  {
-    name: 'HMLR_USERNAME',
-    description: 'HM Land Registry Business Gateway username',
-    prodOnly: true,
-    shape: (v) => (v === 'BGUser001' ? 'must not be the HMLR test-stub username in production' : null),
-  },
-  {
-    name: 'HMLR_PASSWORD',
-    description: 'HM Land Registry Business Gateway password',
-    prodOnly: true,
-    shape: (v) => (v === 'landreg001' ? 'must not be the HMLR test-stub password in production' : null),
-  },
 ];
+
+// LandRegistryService silently falls back to HMLR's own published
+// test-stub endpoint/credentials if any of these three are unset — not a
+// secret leak (they're HMLR's own public test values), but ownership-
+// verification calls then hit the test stub and treat its canned
+// responses as real. This was briefly a FATAL boot-time check (prodOnly
+// in `checks` above) — reverted immediately after it crash-looped a real
+// NODE_ENV=production deployment that runs on the HMLR bypass path by
+// design (this app has more than one "production-flagged" environment,
+// and not all of them have live HMLR credentials yet). verifyOwnership-
+// WithLandRegistry's own runtime guard (property.service.ts, M4) already
+// refuses to silently bypass and alerts via Sentry at the one place this
+// actually matters — the moment of a real ownership check — without
+// taking the whole service down over it. This is a non-fatal echo of the
+// same warning at boot, for visibility only.
+export function warnIfHmlrLooksLikeTestStub(env: NodeJS.ProcessEnv): void {
+  if (env.NODE_ENV !== 'production') return;
+  const endpoint = env.HMLR_OV_ENDPOINT ?? '';
+  const looksLikeStub =
+    !endpoint ||
+    endpoint.includes('bgtest.') ||
+    endpoint.includes('EOOV_StubService') ||
+    env.HMLR_USERNAME === 'BGUser001' ||
+    env.HMLR_PASSWORD === 'landreg001';
+  if (looksLikeStub) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[env] HMLR_OV_ENDPOINT/HMLR_USERNAME/HMLR_PASSWORD look unset or ' +
+        'test-stub-shaped in a production environment - ownership ' +
+        'verification will run in bypass mode. Not fatal; if this ' +
+        "environment is meant to have live HMLR access, check that it's " +
+        'actually configured.',
+    );
+  }
+}
 
 export function validateEnv(env: NodeJS.ProcessEnv): void {
   const isProd = env.NODE_ENV === 'production';

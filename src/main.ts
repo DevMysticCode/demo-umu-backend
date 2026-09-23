@@ -6,7 +6,7 @@ import { join } from 'path';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
-import { validateEnv } from './common/env.validation';
+import { validateEnv, warnIfHmlrLooksLikeTestStub } from './common/env.validation';
 import { initSentry } from './common/sentry';
 import { isSafeToRenderInline } from './common/storage';
 
@@ -14,6 +14,9 @@ import { isSafeToRenderInline } from './common/storage';
 // boot than to discover at first request that DATABASE_URL or
 // JWT_SECRET is missing. See ./common/env.validation for the schema.
 validateEnv(process.env);
+// Non-fatal — see env.validation.ts's comment on this function for why
+// this isn't in the fatal `checks` list above.
+warnIfHmlrLooksLikeTestStub(process.env);
 
 // Sentry must be initialised BEFORE NestFactory.create so its
 // http/express auto-instrumentation can monkey-patch the runtime.
