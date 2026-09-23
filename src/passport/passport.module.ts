@@ -22,7 +22,17 @@ import { FilesModule } from '../files/files.module';
   // resolveAnswerFileUrls comment in passport.service.ts.
   imports: [
     PrismaModule,
-    JwtModule,
+    // Bare `JwtModule` (no .register()) leaves JwtService with no secret
+    // configured. AuthModule's registration is `global: true`, but a
+    // module's own local import of the same provider shadows the global
+    // one for that module's injector - so every JwtAuthGuard-protected
+    // route on PassportController (including /passport/create) got a
+    // JwtService that threw "secret or public key must be provided" on
+    // every verify() call, surfaced to callers as "Invalid or expired
+    // token" regardless of how valid the token actually was. Match every
+    // other module in the app (capture/documents/llc/profile/push/
+    // rewards/truevalue) and register it with the real secret.
+    JwtModule.register({ secret: process.env.JWT_SECRET }),
     PaymentModule,
     PushModule,
     ConversationsModule,
