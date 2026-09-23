@@ -7,7 +7,7 @@ import { PassportModule } from '../passport/passport.module';
 import { RewardsModule } from '../rewards/rewards.module';
 
 @Module({
-  imports: [PrismaModule, JwtModule, PassportModule, RewardsModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), PassportModule, RewardsModule],
   providers: [TaskService],
   controllers: [TaskController],
 })

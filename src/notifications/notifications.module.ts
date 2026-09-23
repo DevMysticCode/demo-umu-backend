@@ -11,7 +11,7 @@ import { NotificationsController } from './notifications.controller';
  * (ConversationsService + PassportService already do).
  */
 @Module({
-  imports: [PrismaModule, JwtModule, PushModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), PushModule],
   providers: [NotificationsService],
   controllers: [NotificationsController],
   exports: [NotificationsService],

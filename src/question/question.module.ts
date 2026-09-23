@@ -11,7 +11,7 @@ import { DocumentsModule } from '../documents/documents.module';
   // DocumentsModule — reused for the Landlord Passport's multi-copy
   // certificate retention (client feedback items 1a/3). See
   // question.controller.ts's /copies endpoints.
-  imports: [PrismaModule, JwtModule, PassportModule, RewardsModule, DocumentsModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), PassportModule, RewardsModule, DocumentsModule],
   providers: [QuestionService],
   controllers: [QuestionController],
 })
