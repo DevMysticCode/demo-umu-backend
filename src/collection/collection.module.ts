@@ -6,7 +6,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '../passport/passport.module';
 
 @Module({
-  imports: [PrismaModule, JwtModule, PassportModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), PassportModule],
   providers: [CollectionService],
   controllers: [CollectionController],
 })

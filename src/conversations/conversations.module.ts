@@ -16,7 +16,7 @@ import { ViewingRequestsService } from './viewing-requests.service';
  * conversation without going through HTTP.
  */
 @Module({
-  imports: [PrismaModule, JwtModule, NotificationsModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), NotificationsModule],
   controllers: [ConversationsController],
   providers: [ConversationsService, ViewingRequestsService],
   exports: [ConversationsService, ViewingRequestsService],
