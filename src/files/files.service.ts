@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { deriveHmacKey } from '../common/key-derivation';
 
 /**
  * HMAC-signed URLs for sensitive file delivery.
@@ -12,9 +13,13 @@ import { PrismaService } from '../prisma/prisma.service';
  * Sign:    /files/<path>?u=<userId>&exp=<unix>&sig=<hex>
  * Verify:  HMAC-SHA256(secret, `${userId}|${path}|${exp}`).digest('hex')
  *
- * Secret is JWT_SECRET — already required at boot by env.validation.ts.
- * Rotating JWT_SECRET invalidates every signed URL, same as it
- * invalidates every JWT (intentional — one knob for both).
+ * Secret is an HKDF subkey derived from JWT_SECRET (see
+ * common/key-derivation.ts), not JWT_SECRET itself — this used to sign
+ * both JWTs and these URLs with the literal same key; a derived subkey
+ * means compromising one doesn't compromise the other, and either can be
+ * rotated independently by changing the subkey's `info` label (security
+ * review 2026-09-22, L4). Rotating JWT_SECRET still invalidates every
+ * signed URL, same as every JWT, since both derive from the same root.
  *
  * Ownership check (in verify()): we re-hit the DB to confirm the path
  * actually belongs to userId. Belt + braces: even if the HMAC is
@@ -32,10 +37,8 @@ export class FilesService {
 
   constructor(private prisma: PrismaService) {}
 
-  private secret(): string {
-    const s = process.env.JWT_SECRET;
-    if (!s) throw new Error('JWT_SECRET is not set');
-    return s;
+  private secret(): Buffer {
+    return deriveHmacKey('files-signed-url');
   }
 
   /**

@@ -99,7 +99,10 @@ async function bootstrap() {
   // credentials: true` combo, which would let any site read responses
   // from authenticated browsers.
   //
-  // Set CORS_ORIGINS on Railway to your real production hosts:
+  // Set CORS_ORIGINS on the AWS App Runner service (the production
+  // deploy target - Railway is UAT/demo only) to your real production
+  // hosts (security review 2026-09-22, L7 - this comment used to say
+  // "Railway" instead):
   //   CORS_ORIGINS=https://app.umovingu.com,https://www.umovingu.com,capacitor://localhost
   const defaultOrigins = [
     'http://localhost:3000',
@@ -120,7 +123,10 @@ async function bootstrap() {
   app.enableCors({
     origin: allowList,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
+    // Not credentials: true — auth is exclusively Bearer-JWT, no cookie
+    // path exists anywhere in this app, so this flag bought nothing but
+    // would widen risk if the allowlist logic above ever regressed to
+    // something permissive (security review 2026-09-22, L6).
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

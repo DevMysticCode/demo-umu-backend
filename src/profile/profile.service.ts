@@ -487,10 +487,32 @@ export class ProfileService {
 
     return users.map((u) => ({
       id: u.id,
-      email: u.email,
-      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email,
+      // Masked, not the full address - enough for the caller to confirm
+      // "yes, that's the person I meant to invite" without this search
+      // doubling as an email-harvesting tool for every match it returns
+      // (security review 2026-09-22, L2).
+      email: this.maskEmail(u.email),
+      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || this.maskEmail(u.email),
       avatarUrl: u.avatarUrl,
     }));
+  }
+
+  // "al**@gm**.com" - keeps the first 2 chars of the local part and the
+  // domain's TLD/structure recognisable (so a real collaborator search
+  // still looks trustworthy) without disclosing the full address.
+  private maskEmail(email: string): string {
+    const at = email.indexOf('@');
+    if (at <= 0) return email;
+    const local = email.slice(0, at);
+    const domain = email.slice(at + 1);
+    const maskedLocal =
+      local.length <= 2 ? local[0] + '*' : local.slice(0, 2) + '*'.repeat(Math.min(local.length - 2, 4));
+    const dotIndex = domain.lastIndexOf('.');
+    const maskedDomain =
+      dotIndex > 0
+        ? domain.slice(0, Math.min(2, dotIndex)) + '*'.repeat(Math.max(dotIndex - 2, 1)) + domain.slice(dotIndex)
+        : domain;
+    return `${maskedLocal}@${maskedDomain}`;
   }
 
   async getCollaborators(userId: string) {

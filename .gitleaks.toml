@@ -45,6 +45,13 @@ regexes = [
   '''AIzaSyA_lEpLKWJl6BS7rv2Fni3cR0NxuT8mGhk''',
   # User JWT from the leak (rotated via JWT_SECRET — same reason).
   '''eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUi''',
+  # NestJS's own default README.md boilerplate (CircleCI badge markdown,
+  # `?token=abc123def456`) — every fresh `nest new` scaffold ships this
+  # literal placeholder token. Confirmed not a real secret; flagged as
+  # generic-api-key purely on shape/entropy (security review 2026-09-22,
+  # real gitleaks sweep — same false positive the manual regex sweep
+  # already found and cleared).
+  '''abc123def456''',
 ]
 
 # Stop noisy patterns from triggering on real source. Generic

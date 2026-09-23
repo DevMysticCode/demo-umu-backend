@@ -41,6 +41,7 @@ function makeService() {
     otpCode: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      update: jest.fn(),
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
@@ -80,7 +81,7 @@ describe('verifyOtp', () => {
 
   it('flips isVerified, deletes OTP, issues JWT on success', async () => {
     const { svc, prismaStub, jwtStub } = makeService();
-    prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-1' });
+    prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-1', code: '123456', attempts: 0 });
     prismaStub.user.update.mockResolvedValue({
       id: 'user-1',
       email: 'x@y.com',
@@ -285,7 +286,7 @@ describe('verifyResetOtp', () => {
 
   it('issues a purpose-locked 15-min JWT on success and consumes the OTP', async () => {
     const { svc, prismaStub, jwtStub } = makeService();
-    prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-1' });
+    prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-1', code: '123456', attempts: 0 });
     prismaStub.user.findUnique.mockResolvedValue({ id: 'user-1', email: 'x@y.com' });
 
     const res = await svc.verifyResetOtp({ email: 'x@y.com', code: '123456' });

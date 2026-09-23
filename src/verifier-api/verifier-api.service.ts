@@ -35,12 +35,16 @@ import {
 import { randomBytes, scrypt as scryptCb, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
 import { PrismaService } from '../prisma/prisma.service';
+import { hashLookupToken, encryptForPurpose, decryptForPurpose } from '../common/key-derivation';
 
 const scrypt = promisify(scryptCb) as (
   pwd: string,
   salt: string,
   keylen: number,
 ) => Promise<Buffer>;
+
+// Label for the HKDF subkey used to encrypt/decrypt AccessGrant.accessTokenEncrypted.
+const ACCESS_TOKEN_ENC_PURPOSE = 'verifier-access-grant-token';
 
 // All scope names align with the PDTF vocabulary used in the prototype's
 // sample API response. Anything outside this set is rejected at request time.
@@ -233,7 +237,7 @@ export class VerifierApiService {
     };
     if (request.status === 'APPROVED' && request.grant) {
       out.access = {
-        accessToken: request.grant.accessToken,
+        accessToken: decryptForPurpose(ACCESS_TOKEN_ENC_PURPOSE, request.grant.accessTokenEncrypted),
         scopes: request.grant.scopes,
         tokenExpiresAt: request.grant.expiresAt.toISOString(),
         fetchUrl: '/api/v1/buyer-profile',
@@ -313,7 +317,8 @@ export class VerifierApiService {
       await tx.accessGrant.create({
         data: {
           requestId,
-          accessToken,
+          accessTokenHash: hashLookupToken(accessToken),
+          accessTokenEncrypted: encryptForPurpose(ACCESS_TOKEN_ENC_PURPOSE, accessToken),
           scopes: approvedScopes,
           expiresAt: grantExpiresAt,
         },
@@ -369,7 +374,7 @@ export class VerifierApiService {
   ) {
     if (!accessToken) throw new UnauthorizedException('Missing access token');
     const grant = await this.prisma.accessGrant.findUnique({
-      where: { accessToken },
+      where: { accessTokenHash: hashLookupToken(accessToken) },
       include: { request: { include: { org: true, client: true, buyer: true } } },
     });
     if (!grant) throw new UnauthorizedException('Invalid access token');

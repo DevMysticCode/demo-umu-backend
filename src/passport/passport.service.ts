@@ -162,7 +162,15 @@ export class PassportService {
     }
   }
 
+  // Self-enforces access instead of relying on every caller to pair this
+  // with a separate checkUserAccess() call first (there was only ever one
+  // call site, and it already did - but that made this a landmine for
+  // the next call site that forgets to, security review 2026-09-22, L9).
   async getPassport(passportId: string, viewerUserId: string) {
+    const hasAccess = await this.checkUserAccess(passportId, viewerUserId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
       include: {

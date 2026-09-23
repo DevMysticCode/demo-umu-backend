@@ -44,7 +44,7 @@ export class JwtAuthGuard implements CanActivate {
     // primary key on every request is the cost of closing that gap.
     const user = await this.prisma.user.findUnique({
       where: { id: decoded.sub },
-      select: { id: true, email: true, passwordChangedAt: true },
+      select: { id: true, email: true, passwordChangedAt: true, isAdmin: true },
     });
     if (!user) {
       throw new UnauthorizedException('Invalid or expired token');
@@ -59,6 +59,11 @@ export class JwtAuthGuard implements CanActivate {
     request.user = {
       id: user.id,
       email: user.email,
+      // Not a general-purpose authorization signal - every existing route
+      // in this app continues to gate on ownership/collaboration, not
+      // this flag. Only the admin-secret-gated endpoints that also
+      // require a JWT (security review 2026-09-22, M6) read it.
+      isAdmin: user.isAdmin,
     };
     return true;
   }
