@@ -404,11 +404,16 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async createShareLink(
     @Param('id') passportId: string,
-    @Body() body: { scope?: 'buyer' | 'tenant' } | undefined,
+    @Body() body: { scope?: 'buyer' | 'tenant'; documentIds?: string[] } | undefined,
     @Request() req: any,
   ) {
     const scope = body?.scope === 'tenant' ? 'tenant' : 'buyer';
-    return this.passportService.createShareLink(passportId, req.user.id, scope);
+    return this.passportService.createShareLink(
+      passportId,
+      req.user.id,
+      scope,
+      body?.documentIds,
+    );
   }
 
   @Get('shared/:token')
