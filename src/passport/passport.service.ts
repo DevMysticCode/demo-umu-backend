@@ -206,9 +206,76 @@ export class PassportService {
       },
     });
 
-    if (passport) this.resolveAnswerFileUrls(passport, viewerUserId);
+    if (passport) {
+      const isOwner = (passport as any).ownerId === viewerUserId;
+      await this.filterAnswerFileUrls(
+        passport,
+        isOwner ? { kind: 'owner' } : { kind: 'collaborator', userId: viewerUserId },
+      );
+      this.resolveAnswerFileUrls(passport, viewerUserId);
+    }
 
     return passport;
+  }
+
+  // ── Vault document-level access enforcement ─────────────────────────────
+  // The owner always sees every document. A collaborator only sees
+  // PUBLISHED documents plus ones explicitly granted to them
+  // (DocumentAccessGrant) — previously collaborators saw every document
+  // unfiltered, same as the owner. A buyer-unlock viewer only sees
+  // PUBLISHED documents (buyer-unlock is a self-service paid purchase, not
+  // an owner-confirmed send, so ELIGIBLE candidates don't apply). An
+  // anonymous share-link viewer sees whatever was snapshotted into that
+  // link's ShareManifestDocument at share-creation time, or PUBLISHED-only
+  // for links created before this feature existed (no manifest rows).
+  // Mutates the passport tree in place (matches resolveAnswerFileUrls'
+  // existing pattern) — sets fileUrl (and answerJson.fileUrl/url) to null
+  // rather than dropping the answer, since the question's text/JSON answer
+  // (if any) still belongs to the normal Passport-answers flow.
+  private async filterAnswerFileUrls(
+    passport: any,
+    ctx:
+      | { kind: 'owner' }
+      | { kind: 'collaborator'; userId: string }
+      | { kind: 'buyer' }
+      | { kind: 'sharelink'; manifestIds: Set<string> | null },
+  ): Promise<void> {
+    if (ctx.kind === 'owner') return;
+
+    let grantedIds: Set<string> | null = null;
+    if (ctx.kind === 'collaborator') {
+      const grants = await this.prisma.documentAccessGrant.findMany({
+        where: { collaboratorUserId: ctx.userId, questionAnswerId: { not: null } },
+        select: { questionAnswerId: true },
+      });
+      grantedIds = new Set(grants.map((g) => g.questionAnswerId as string));
+    }
+
+    for (const section of passport.sections ?? []) {
+      for (const task of section.tasks ?? []) {
+        for (const q of task.passportQuestions ?? []) {
+          const answer = q.answer;
+          if (!answer?.fileUrl) continue;
+
+          const allowed =
+            ctx.kind === 'collaborator'
+              ? answer.accessLevel === 'PUBLISHED' || (grantedIds?.has(answer.id) ?? false)
+              : ctx.kind === 'buyer'
+                ? answer.accessLevel === 'PUBLISHED'
+                : ctx.manifestIds
+                  ? ctx.manifestIds.has(answer.id)
+                  : answer.accessLevel === 'PUBLISHED';
+
+          if (!allowed) {
+            answer.fileUrl = null;
+            if (answer.answerJson && typeof answer.answerJson === 'object') {
+              delete answer.answerJson.fileUrl;
+              delete answer.answerJson.url;
+            }
+          }
+        }
+      }
+    }
   }
 
   // Question-answer file fields (fileUrl, and answerJson.fileUrl/url for
@@ -1519,6 +1586,15 @@ export class PassportService {
       (s) => (s.key !== 'leasehold' || isLeasehold) && s.visibility !== 'PRIVATE',
     );
 
+    await this.filterAnswerFileUrls(
+      { sections: visibleSections },
+      isOwner
+        ? { kind: 'owner' }
+        : isCollaborator
+          ? { kind: 'collaborator', userId }
+          : { kind: 'buyer' },
+    );
+
     const owner = (passport as any).owner;
     const ownerName = [owner?.firstName, owner?.lastName].filter(Boolean).join(' ') || owner?.email || '';
 
@@ -2022,6 +2098,7 @@ export class PassportService {
     passportId: string,
     userId: string,
     scope: 'buyer' | 'tenant' = 'buyer',
+    documentIds?: string[],
   ) {
     const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
     if (!passport) throw new NotFoundException('Passport not found');
@@ -2046,9 +2123,43 @@ export class PassportService {
     const token = require('crypto').randomUUID() as string;
     const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
 
-    await this.prisma.sharedPassportLink.create({
+    const link = await this.prisma.sharedPassportLink.create({
       data: { passportId, token, expiresAt, scope },
     });
+
+    // documentIds - the owner's confirmed selection from the "Review your
+    // Passport" screen (a subset of their currently ELIGIBLE/PUBLISHED
+    // documents). Snapshotted onto this specific link so a later change to
+    // a document's access level never silently alters what this recipient
+    // already received. Omitted entirely (undefined) falls back to every
+    // currently-PUBLISHED document at read time in getSharedPassport - see
+    // its own comment - which also covers links created before this
+    // feature existed.
+    if (documentIds?.length) {
+      const [answers, userDocs] = await Promise.all([
+        this.prisma.questionAnswer.findMany({
+          where: {
+            id: { in: documentIds },
+            accessLevel: { in: ['ELIGIBLE', 'PUBLISHED'] },
+            passportQuestion: {
+              passportSectionTask: { passportSection: { passportId } },
+            },
+          },
+          select: { id: true },
+        }),
+        this.prisma.userDocument.findMany({
+          where: { id: { in: documentIds }, userId, accessLevel: { in: ['ELIGIBLE', 'PUBLISHED'] } },
+          select: { id: true },
+        }),
+      ]);
+      const manifestRows = [
+        ...answers.map((a) => ({ sharedPassportLinkId: link.id, questionAnswerId: a.id })),
+        ...userDocs.map((d) => ({ sharedPassportLinkId: link.id, userDocumentId: d.id })),
+      ];
+      if (manifestRows.length) {
+        await this.prisma.shareManifestDocument.createMany({ data: manifestRows });
+      }
+    }
 
     // Prefer the explicit env var; otherwise fall back to the
     // production Vercel host in non-dev environments. Localhost was
@@ -2131,6 +2242,22 @@ export class PassportService {
       if (s.visibility === 'PRIVATE') return false;
       return true;
     });
+
+    // Document-level manifest for this specific link - see
+    // filterAnswerFileUrls' comment. `null` (no manifest rows at all, e.g.
+    // a link created before this feature existed, or one created with no
+    // documentIds) falls back to PUBLISHED-only inside the filter.
+    const manifestRows = await this.prisma.shareManifestDocument.findMany({
+      where: { sharedPassportLinkId: link.id },
+      select: { questionAnswerId: true },
+    });
+    const manifestIds = manifestRows.length
+      ? new Set(manifestRows.map((m) => m.questionAnswerId).filter(Boolean) as string[])
+      : null;
+    await this.filterAnswerFileUrls(
+      { sections: visibleSections },
+      { kind: 'sharelink', manifestIds },
+    );
 
     return {
       passport: { id: passport.id, addressLine1: passport.addressLine1, postcode: passport.postcode },

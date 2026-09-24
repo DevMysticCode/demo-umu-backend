@@ -247,6 +247,214 @@ export class DocumentsService {
     };
   }
 
+  // ── Passport Vault: per-document access levels ──────────────────────────
+  // "Home records" = QuestionAnswers with a file, scoped to THIS passport.
+  // "Personal documents" = the user's UserDocuments - these aren't tied to
+  // any one property, so the same personal-docs list appears under every
+  // passport the user owns (matches the client's brief: "Personal
+  // documents provides space for records the owner wants to keep without
+  // attaching them to the Passport").
+  private async assertPassportAccess(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: {
+        id: true,
+        ownerId: true,
+        collaborators: { where: { userId }, select: { id: true } },
+      },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    const isCollaborator = passport.collaborators.length > 0;
+    if (!isOwner && !isCollaborator) {
+      throw new ForbiddenException('Not authorised for this passport');
+    }
+    return { isOwner };
+  }
+
+  private async mapAnswerDocs(passportId: string, userId: string) {
+    const answers = await this.prisma.questionAnswer.findMany({
+      where: {
+        fileUrl: { not: null },
+        passportQuestion: {
+          passportSectionTask: { passportSection: { passportId } },
+        },
+      },
+      include: {
+        accessGrants: { include: { collaborator: { select: { id: true, firstName: true, lastName: true } } } },
+        passportQuestion: { include: { questionTemplate: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return answers.map((a) => ({
+      id: a.id,
+      kind: 'answer' as const,
+      title: a.passportQuestion.questionTemplate.title,
+      fileUrl: this.resolveUrl(a.fileUrl!, userId),
+      accessLevel: a.accessLevel,
+      sharedWith: a.accessGrants.map((g) => ({
+        id: g.collaborator.id,
+        name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
+      })),
+      createdAt: a.createdAt,
+      uploadedAt: formatDate(a.createdAt),
+    }));
+  }
+
+  private async mapPersonalDocs(userId: string) {
+    const docs = await this.prisma.userDocument.findMany({
+      where: { userId },
+      include: {
+        accessGrants: { include: { collaborator: { select: { id: true, firstName: true, lastName: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return docs.map((d) => ({
+      id: d.id,
+      kind: 'user' as const,
+      title: d.name,
+      fileUrl: this.resolveUrl(d.fileUrl, userId),
+      accessLevel: d.accessLevel,
+      sharedWith: d.accessGrants.map((g) => ({
+        id: g.collaborator.id,
+        name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
+      })),
+      createdAt: d.createdAt,
+      uploadedAt: formatDate(d.createdAt),
+    }));
+  }
+
+  async getPassportVaultDocuments(passportId: string, userId: string) {
+    await this.assertPassportAccess(passportId, userId);
+    const [homeRecords, personalDocuments] = await Promise.all([
+      this.mapAnswerDocs(passportId, userId),
+      this.mapPersonalDocs(userId),
+    ]);
+    return { homeRecords, personalDocuments };
+  }
+
+  // For the "Review your Passport" screen — the current candidates for
+  // inclusion in a share/publish, before the owner confirms which of them
+  // actually go out this time.
+  async getSharePreview(passportId: string, userId: string) {
+    const { homeRecords, personalDocuments } = await this.getPassportVaultDocuments(
+      passportId,
+      userId,
+    );
+    const eligible = (d: { accessLevel: string }) =>
+      d.accessLevel === 'ELIGIBLE' || d.accessLevel === 'PUBLISHED';
+    return {
+      homeRecords: homeRecords.filter(eligible),
+      personalDocuments: personalDocuments.filter(eligible),
+    };
+  }
+
+  private async findDocOwner(
+    kind: 'answer' | 'user',
+    id: string,
+  ): Promise<{ ownerId: string; passportId: string | null } | null> {
+    if (kind === 'answer') {
+      const answer = await this.prisma.questionAnswer.findUnique({
+        where: { id },
+        select: {
+          passportQuestion: {
+            select: {
+              passportSectionTask: {
+                select: { passportSection: { select: { passportId: true, passport: { select: { ownerId: true } } } } },
+              },
+            },
+          },
+        },
+      });
+      const section = answer?.passportQuestion?.passportSectionTask?.passportSection;
+      if (!section) return null;
+      return { ownerId: section.passport.ownerId, passportId: section.passportId };
+    }
+    const doc = await this.prisma.userDocument.findUnique({ where: { id }, select: { userId: true } });
+    return doc ? { ownerId: doc.userId, passportId: null } : null;
+  }
+
+  async setDocumentAccess(
+    kind: 'answer' | 'user',
+    id: string,
+    userId: string,
+    accessLevel: string,
+  ) {
+    const valid = ['PRIVATE', 'SELECTED', 'ELIGIBLE', 'PUBLISHED'];
+    if (!valid.includes(accessLevel)) {
+      throw new BadRequestException('Invalid access level');
+    }
+    const owner = await this.findDocOwner(kind, id);
+    if (!owner) throw new NotFoundException('Document not found');
+    if (owner.ownerId !== userId) throw new ForbiddenException('You do not own this document');
+
+    if (kind === 'answer') {
+      await this.prisma.questionAnswer.update({ where: { id }, data: { accessLevel: accessLevel as any } });
+    } else {
+      await this.prisma.userDocument.update({ where: { id }, data: { accessLevel: accessLevel as any } });
+    }
+    return { id, accessLevel };
+  }
+
+  async addDocumentGrant(
+    kind: 'answer' | 'user',
+    id: string,
+    userId: string,
+    collaboratorUserId: string,
+  ) {
+    const owner = await this.findDocOwner(kind, id);
+    if (!owner) throw new NotFoundException('Document not found');
+    if (owner.ownerId !== userId) throw new ForbiddenException('You do not own this document');
+
+    // For a passport-linked document, only that passport's existing
+    // collaborators can be granted document-level access - "selected
+    // people" narrows what an already-invited collaborator can see, it
+    // doesn't invite a new person (that's still Add Collaborator).
+    if (kind === 'answer' && owner.passportId) {
+      const isCollaborator = await this.prisma.passportCollaborator.findFirst({
+        where: { passportId: owner.passportId, userId: collaboratorUserId },
+      });
+      if (!isCollaborator) {
+        throw new BadRequestException(
+          'That person must be added as a Passport collaborator first.',
+        );
+      }
+    }
+
+    const data =
+      kind === 'answer'
+        ? { questionAnswerId: id, collaboratorUserId }
+        : { userDocumentId: id, collaboratorUserId };
+    await this.prisma.documentAccessGrant.upsert({
+      where:
+        kind === 'answer'
+          ? { questionAnswerId_collaboratorUserId: { questionAnswerId: id, collaboratorUserId } }
+          : { userDocumentId_collaboratorUserId: { userDocumentId: id, collaboratorUserId } },
+      create: data,
+      update: {},
+    });
+    return { ok: true };
+  }
+
+  async removeDocumentGrant(
+    kind: 'answer' | 'user',
+    id: string,
+    userId: string,
+    collaboratorUserId: string,
+  ) {
+    const owner = await this.findDocOwner(kind, id);
+    if (!owner) throw new NotFoundException('Document not found');
+    if (owner.ownerId !== userId) throw new ForbiddenException('You do not own this document');
+
+    await this.prisma.documentAccessGrant.deleteMany({
+      where:
+        kind === 'answer'
+          ? { questionAnswerId: id, collaboratorUserId }
+          : { userDocumentId: id, collaboratorUserId },
+    });
+    return { ok: true };
+  }
+
   async deleteDocument(userId: string, documentId: string) {
     const doc = await this.prisma.userDocument.findUnique({
       where: { id: documentId },

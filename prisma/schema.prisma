@@ -79,6 +79,7 @@ model User {
   collaboratorsAdded            UserCollaborator[]     @relation("CollaboratorOwner")
   collaboratorOf                UserCollaborator[]     @relation("CollaboratorUser")
   userDocuments                 UserDocument[]
+  documentAccessGrants          DocumentAccessGrant[]
   wishlistedProperties          UserWishlist[]
   savedProperties               UserSavedProperty[]
   recentlyViewedProperties      RecentlyViewedProperty[]
@@ -586,12 +587,13 @@ model UserCollaborator {
 }
 
 model BuyerPassportAccess {
-  id         String   @id @default(uuid())
-  passportId String
-  userId     String
-  unlockedAt DateTime @default(now())
-  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(uuid())
+  passportId           String
+  userId               String
+  unlockedAt           DateTime                @default(now())
+  passport             Passport                @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareManifestEntries ShareManifestDocument[]
 
   @@unique([passportId, userId])
   @@index([passportId])
@@ -875,13 +877,19 @@ model PassportQuestion {
 }
 
 model QuestionAnswer {
-  id                 String           @id @default(uuid())
-  passportQuestionId String           @unique
-  answerText         String?
-  answerJson         Json?
-  fileUrl            String?
-  createdAt          DateTime         @default(now())
-  passportQuestion   PassportQuestion @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(uuid())
+  passportQuestionId   String                  @unique
+  answerText           String?
+  answerJson           Json?
+  fileUrl              String?
+  createdAt            DateTime                @default(now())
+  passportQuestion     PassportQuestion        @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
+  // Vault document-level access - additive on top of the section-level
+  // SectionVisibility toggle the mobile app still reads/writes untouched.
+  // See DocumentAccessLevel.
+  accessLevel          DocumentAccessLevel     @default(PRIVATE)
+  accessGrants         DocumentAccessGrant[]
+  shareManifestEntries ShareManifestDocument[]
 }
 
 model UserWishlist {
@@ -974,18 +982,77 @@ model UserReminder {
 }
 
 model UserDocument {
-  id        String    @id @default(uuid())
-  userId    String
-  name      String
-  fileUrl   String
-  fileSize  Int?
-  mimeType  String?
-  tags      Json?
-  expiresAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String                  @id @default(uuid())
+  userId               String
+  name                 String
+  fileUrl              String
+  fileSize             Int?
+  mimeType             String?
+  tags                 Json?
+  expiresAt            DateTime?
+  createdAt            DateTime                @default(now())
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Freestanding (non-passport-linked) Vault uploads used to be hardcoded
+  // PRIVATE in documents.service.ts with no stored setting at all - now a
+  // real per-document tier, same as QuestionAnswer's.
+  accessLevel          DocumentAccessLevel     @default(PRIVATE)
+  accessGrants         DocumentAccessGrant[]
+  shareManifestEntries ShareManifestDocument[]
 
   @@index([userId])
+}
+
+// Vault document access tiers, additive to the pre-existing section-level
+// SectionVisibility (mobile app, untouched). PRIVATE - owner only, default.
+// SELECTED - specific collaborators via DocumentAccessGrant. ELIGIBLE - a
+// standing "candidate for inclusion" flag; which eligible documents actually
+// go out is decided fresh each time on the share/publish review screen and
+// snapshotted into ShareManifestDocument, so a later access-level change
+// never silently alters what a recipient already received. PUBLISHED -
+// permanently visible on the published Passport.
+enum DocumentAccessLevel {
+  PRIVATE
+  SELECTED
+  ELIGIBLE
+  PUBLISHED
+}
+
+// Tier SELECTED: grants one collaborator access to exactly one document.
+// Exactly one of questionAnswerId/userDocumentId is set per row.
+model DocumentAccessGrant {
+  id                 String          @id @default(uuid())
+  questionAnswerId   String?
+  userDocumentId     String?
+  collaboratorUserId String
+  createdAt          DateTime        @default(now())
+  questionAnswer     QuestionAnswer? @relation(fields: [questionAnswerId], references: [id], onDelete: Cascade)
+  userDocument       UserDocument?   @relation(fields: [userDocumentId], references: [id], onDelete: Cascade)
+  collaborator       User            @relation(fields: [collaboratorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([questionAnswerId, collaboratorUserId])
+  @@unique([userDocumentId, collaboratorUserId])
+  @@index([collaboratorUserId])
+}
+
+// Snapshot of exactly which documents were included in one specific share
+// link or buyer-unlock, written once when that share/publish action is
+// confirmed (passport.service.ts's createShareLink/createBuyerAccess).
+// Exactly one of sharedPassportLinkId/buyerPassportAccessId, and exactly
+// one of questionAnswerId/userDocumentId, is set per row.
+model ShareManifestDocument {
+  id                     String               @id @default(uuid())
+  sharedPassportLinkId   String?
+  buyerPassportAccessId  String?
+  questionAnswerId       String?
+  userDocumentId         String?
+  createdAt              DateTime             @default(now())
+  sharedPassportLink     SharedPassportLink?  @relation(fields: [sharedPassportLinkId], references: [id], onDelete: Cascade)
+  buyerPassportAccess    BuyerPassportAccess? @relation(fields: [buyerPassportAccessId], references: [id], onDelete: Cascade)
+  questionAnswer         QuestionAnswer?      @relation(fields: [questionAnswerId], references: [id], onDelete: Cascade)
+  userDocument           UserDocument?        @relation(fields: [userDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([sharedPassportLinkId])
+  @@index([buyerPassportAccessId])
 }
 
 enum PassportStatus {
@@ -1230,15 +1297,16 @@ model TenancySignLink {
 }
 
 model SharedPassportLink {
-  id         String   @id @default(uuid())
-  passportId String
-  token      String   @unique
+  id                   String                  @id @default(uuid())
+  passportId           String
+  token                String                  @unique
   // "buyer" (default — seller passport sharing) or "tenant" (landlord
   // passport sharing — exposes only the tenant-relevant document subset).
-  scope      String   @default("buyer")
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  scope                String                  @default("buyer")
+  expiresAt            DateTime
+  createdAt            DateTime                @default(now())
+  passport             Passport                @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  shareManifestEntries ShareManifestDocument[]
 
   @@index([token])
   @@index([passportId])
