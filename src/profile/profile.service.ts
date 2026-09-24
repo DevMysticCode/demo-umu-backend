@@ -435,10 +435,25 @@ export class ProfileService {
       subject: 'Your Founding Homeowner certificate',
       html: `
         <p>Hi ${firstName},</p>
-        <p>Congratulations on claiming your property with UMovingU — you're
-        officially one of our first Founding Homeowners. Your certificate is
-        attached.</p>
-        <p>Thanks for being here early.<br/>The UMovingU team</p>
+        <p>You've claimed your property with Umovingu. Welcome to the
+        Founding Homeowners Movement.</p>
+        <p>Your certificate is attached. It marks your place among the
+        homeowners helping us build a better way to understand, manage and
+        share information about our homes.</p>
+        <p>We started this movement because homeowners should own their
+        property information, and nobody should have to buy a home blind.
+        Every property claimed helps bring us closer to a network built
+        around the people who live in homes, rather than information
+        scattered across the moving process.</p>
+        <p>As a Founding Homeowner, you'll have free access to Umovingu's
+        core platform for life. If you choose a service that carries a
+        third party cost, we'll show you that cost before you decide to
+        use it. You'll also be invited to share your experience and help
+        shape what we build next.</p>
+        <p>This is the start of your home's story with Umovingu, and we're
+        glad you're part of it.</p>
+        <p><em>You own the home. Own its story.</em></p>
+        <p>Maxine Wilson<br/>Founder and CEO, Umovingu</p>
       `,
       attachments: [
         {
