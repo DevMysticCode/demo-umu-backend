@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -30,6 +31,14 @@ export class AuthService {
   private readonly MAX_OTP_ATTEMPTS = 5;
   private readonly resend: Resend;
 
+  // Access/refresh split (security review follow-up, 2026-09-25). The
+  // access JWT is now short-lived and carries the same sub/email payload as
+  // before; the refresh token is a long, opaque random string — never a
+  // JWT — stored server-side only as a SHA-256 hash, so it can actually be
+  // revoked (logout, password change, reuse-after-theft detection), unlike
+  // the old single 7-day JWT which nothing could invalidate early.
+  private readonly REFRESH_TOKEN_TTL_DAYS = 30;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -40,6 +49,133 @@ export class AuthService {
 
   private generateOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  private hashToken(raw: string): string {
+    return crypto.createHash('sha256').update(raw).digest('hex');
+  }
+
+  private issueAccessToken(userId: string, email: string): string {
+    return this.jwtService.sign({ sub: userId, email });
+  }
+
+  private async issueRefreshToken(
+    userId: string,
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<string> {
+    const raw = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(
+      Date.now() + this.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+    );
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: this.hashToken(raw),
+        expiresAt,
+        userAgent: meta?.userAgent,
+        ip: meta?.ip,
+      },
+    });
+    return raw;
+  }
+
+  /** Issues a fresh access+refresh pair for a just-authenticated user. */
+  private async issueTokenPair(
+    userId: string,
+    email: string,
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<{ token: string; refreshToken: string }> {
+    const token = this.issueAccessToken(userId, email);
+    const refreshToken = await this.issueRefreshToken(userId, meta);
+    return { token, refreshToken };
+  }
+
+  /**
+   * Exchanges a valid, unexpired, unrevoked refresh token for a new
+   * access/refresh pair, rotating the refresh token in the same operation
+   * (old one is marked revoked + linked to its replacement, never reused).
+   *
+   * If the presented token was ALREADY revoked — meaning it was already
+   * rotated (or explicitly logged out) once before — that's a strong signal
+   * someone is replaying a stolen refresh token after the legitimate client
+   * already moved on. We respond by revoking every other outstanding
+   * refresh token for that user, forcing every session (attacker's and
+   * victim's alike) to re-authenticate, rather than silently honouring the
+   * replay.
+   */
+  async refresh(
+    rawRefreshToken: string,
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<{ token: string; refreshToken: string }> {
+    if (!rawRefreshToken) {
+      throw new UnauthorizedException('Refresh token required');
+    }
+    const tokenHash = this.hashToken(rawRefreshToken);
+    const existing = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
+    if (!existing) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    if (existing.revokedAt) {
+      // Reuse of an already-rotated/revoked token — treat as compromise.
+      await this.prisma.refreshToken.updateMany({
+        where: { userId: existing.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      throw new UnauthorizedException(
+        'This refresh token has already been used - all sessions for this account have been signed out as a precaution.',
+      );
+    }
+    if (existing.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: existing.userId },
+      select: { id: true, email: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Account no longer exists');
+    }
+
+    const newRawRefreshToken = await this.issueRefreshToken(user.id, meta);
+    await this.prisma.refreshToken.update({
+      where: { id: existing.id },
+      data: {
+        revokedAt: new Date(),
+        replacedByTokenHash: this.hashToken(newRawRefreshToken),
+        lastUsedAt: new Date(),
+      },
+    });
+
+    return {
+      token: this.issueAccessToken(user.id, user.email),
+      refreshToken: newRawRefreshToken,
+    };
+  }
+
+  /** Revokes a single refresh token (used by logout). Never throws on an
+   * already-invalid token — logout should always succeed client-side. */
+  async revokeRefreshToken(rawRefreshToken: string): Promise<void> {
+    if (!rawRefreshToken) return;
+    const tokenHash = this.hashToken(rawRefreshToken);
+    await this.prisma.refreshToken
+      .updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      })
+      .catch(() => undefined);
+  }
+
+  /** Revokes every outstanding refresh token for a user — called on
+   * password change/reset so a compromised-but-not-yet-caught session is
+   * killed the moment the legitimate user regains control. */
+  private async revokeAllRefreshTokensForUser(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
   }
 
   // "Create UMU account" — 250 pts per the client's Major Actions Points
@@ -198,15 +334,12 @@ export class AuthService {
       where: { id: otpRecord.id },
     });
 
-    // ✅ ISSUE JWT HERE
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const { token, refreshToken } = await this.issueTokenPair(user.id, user.email);
 
     return {
       message: 'Email verified successfully',
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -280,15 +413,12 @@ export class AuthService {
       throw new ConflictException('Failed to create or update user');
     }
 
-    // Generate JWT token for automatic login
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const { token, refreshToken } = await this.issueTokenPair(user.id, user.email);
 
     return {
       message: 'User registered successfully',
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -318,15 +448,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    // Generate JWT
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-    });
+    const { token, refreshToken } = await this.issueTokenPair(user.id, user.email);
 
     return {
       message: 'Login successful',
       token,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -470,6 +597,10 @@ export class AuthService {
       // stops working on the next request (JwtAuthGuard checks it).
       data: { password: hashed, passwordChangedAt: new Date() },
     });
+    // Refresh tokens are opaque, so passwordChangedAt alone can't reject
+    // them — revoke every outstanding one explicitly, matching what
+    // passwordChangedAt already does for access tokens.
+    await this.revokeAllRefreshTokensForUser(userId);
 
     return { message: 'Password updated' };
   }
@@ -496,6 +627,7 @@ export class AuthService {
       // See changePassword() above for why this matters.
       data: { password: hashedPassword, passwordChangedAt: new Date() },
     });
+    await this.revokeAllRefreshTokensForUser(payload.sub);
 
     return { message: 'Password updated successfully' };
   }
