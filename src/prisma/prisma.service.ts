@@ -73,6 +73,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.otpCode;
   }
 
+  get refreshToken() {
+    return this.prisma.refreshToken;
+  }
+
   get passport() {
     return this.prisma.passport;
   }
@@ -354,5 +358,21 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
 
   get llcCharge() {
     return this.prisma.llcCharge;
+  }
+
+  get passportEvent() {
+    return this.prisma.passportEvent;
+  }
+
+  get passportAction() {
+    return this.prisma.passportAction;
+  }
+
+  get passportRule() {
+    return this.prisma.passportRule;
+  }
+
+  get documentVersion() {
+    return this.prisma.documentVersion;
   }
 }

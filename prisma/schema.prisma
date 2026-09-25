@@ -20,6 +20,7 @@ model User {
   // 2026-09-22, M1). Null means "never changed" - no token is rejected
   // on that basis alone.
   passwordChangedAt             DateTime?
+  refreshTokens                  RefreshToken[]
   // No admin-role concept existed anywhere in this codebase before this -
   // every "admin" endpoint (maintenance, this app's own AdminModule, the
   // buyer-profile KYC review queue, verifier-api org onboarding) was
@@ -254,6 +255,34 @@ model OtpCode {
   attempts  Int      @default(0)
 
   @@index([email])
+}
+
+// Session tokens for the access/refresh split (security review follow-up,
+// 2026-09-25 — previously login issued one flat 7-day JWT with no way to
+// revoke it short of a password change; logout was client-side-only
+// theater). The access JWT is now short-lived and stateless as before; this
+// table is what actually gets checked/revoked on logout, password change,
+// or refresh-token reuse (theft) detection. The raw token is never stored —
+// only its SHA-256 hash — so a DB read/leak doesn't hand out usable
+// credentials directly.
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  // Set when this token is rotated out in favour of a newer one — lets a
+  // reuse of an already-rotated token (a strong signal of theft) be told
+  // apart from a token that was explicitly revoked (logout).
+  replacedByTokenHash String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  userAgent  String?
+  ip         String?
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Property {
@@ -521,6 +550,8 @@ model Passport {
   activities        PassportActivity[]
   passportPayments  PassportPayment[]
   founderNumber     FounderNumber?
+  events            PassportEvent[]
+  actions           PassportAction[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -560,6 +591,16 @@ model PassportCollaborator {
   createdAt  DateTime @default(now())
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Added for the History/Manage-visibility feature — previously a
+  // collaborator was all-or-nothing (identical access to the owner, see
+  // PassportService.checkUserAccess). Null role/sectionKeys preserves that
+  // exact existing behaviour for every collaborator row created before this
+  // field existed, so this is additive, not a breaking migration.
+  role         String? // e.g. "Solicitor", "Estate agent", "Co-owner", "Buyer", "Other" — display only today
+  sectionKeys  Json? // null = full access (today's default behaviour); otherwise an array of SectionTemplate.key values this collaborator may see
+  historyAccess Boolean @default(true)
+  expiresAt    DateTime?
 
   @@unique([passportId, userId])
   @@index([passportId])
@@ -654,6 +695,182 @@ model PassportActivity {
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([passportId, createdAt])
+}
+
+// ── History (v2 event log) ────────────────────────────────────────────────
+// Replaces PassportActivity's narrow "type+title+actor" shape for the
+// History feature (client handoff, 2026-09-25). Left PassportActivity and
+// its GET :id/timeline endpoint untouched so the three live frontends keep
+// working unmodified during rollout — this is a new, additive table read by
+// a new GET :id/history endpoint. Frontends cut over to it in a later phase,
+// at which point PassportActivity/timeline can be retired.
+//
+// "Append-only" here describes application behaviour and access control
+// (nothing in this codebase ever updates/deletes a row), not cryptographic
+// immutability — the client's spec is explicit that this must never be
+// described to users as "immutable" or "block-stamped".
+model PassportEvent {
+  id         String   @id @default(uuid())
+  passportId String
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  // When the underlying change happened vs. when this row was written —
+  // normally identical (same transaction), but kept distinct per the spec
+  // so a future async/outbox write path doesn't need a schema change.
+  occurredAt DateTime @default(now())
+  recordedAt DateTime @default(now())
+
+  eventType String // e.g. QUESTION_ANSWER_CHANGED, DOCUMENT_UPLOADED — see PassportEventType constants
+
+  actorType        PassportEventActorType
+  actorId          String? // userId when actorType is a person
+  actingOnBehalfOf String? // userId — set when an admin acts for an owner
+
+  entityType String? // QUESTION_ANSWER, DOCUMENT, COLLABORATOR, SECTION, PASSPORT, ACTION, ACCESS_GRANT…
+  entityId   String?
+  sectionId  String? // SectionTemplate.key, when applicable
+
+  sourceType String? // OWNER_INPUT, SOURCE_IMPORT, SYSTEM, PROFESSIONAL_REVIEW
+
+  // Restricted-detail payloads — the list endpoint never returns these
+  // fields; only the (separately permission-checked) event-detail endpoint
+  // does. Deliberately Json, not a FK to a specific version table, so this
+  // table stays generic across entity types.
+  beforeRef Json?
+  afterRef  Json?
+
+  visibilityClass PassportEventVisibility @default(OWNER_ONLY)
+
+  correlationId String? // ties an answer change + rule evaluation + action together
+  ruleId        String?
+  ruleVersion   Int?
+
+  metadata Json?
+
+  @@index([passportId, occurredAt])
+  @@index([passportId, eventType])
+  @@index([correlationId])
+}
+
+enum PassportEventActorType {
+  OWNER
+  COLLABORATOR
+  SYSTEM
+  ADMIN
+  SOURCE
+}
+
+enum PassportEventVisibility {
+  OWNER_ONLY
+  COLLABORATOR
+  BUYER
+  PUBLIC
+}
+
+// A versioned rule that evaluates question answers/evidence and can create a
+// PassportAction. The catalogue is intentionally near-empty at launch — the
+// client's own handoff says the ~500-question rule catalogue "cannot be
+// mapped accurately" yet and needs legal/content review; this table is the
+// engine, not the content.
+model PassportRule {
+  id          String  @id @default(uuid())
+  ruleKey     String // stable human-referenceable key, e.g. "windows_fensa_evidence"
+  version     Int     @default(1)
+  enabled     Boolean @default(true)
+  jurisdiction String? // null = all jurisdictions
+
+  // Question(s) this rule watches — QuestionTemplate.id values.
+  questionIds Json
+
+  // Small serialized condition the engine evaluates against current answers
+  // (see rules.service.ts) — kept as a string so it can be versioned/audited
+  // without a schema change per new condition shape.
+  conditionExpression String
+
+  severity             String
+  userTitle            String
+  userExplanation      String
+  followUpQuestionIds  Json?
+  acceptedEvidenceTypes Json?
+  suggestedSteps       Json?
+  actionType           String?
+  professionalReviewFlag Boolean @default(false)
+  sourceReference      String?
+  contentReviewedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  actions   PassportAction[]
+
+  @@unique([ruleKey, version])
+  @@index([enabled])
+}
+
+model PassportAction {
+  id         String   @id @default(uuid())
+  passportId String
+  passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  ruleId      String
+  rule        PassportRule @relation(fields: [ruleId], references: [id])
+  ruleVersion Int
+
+  // Stable key for the (passport, rule, subject) triple — e.g. the answered
+  // question's id, or another entity the action concerns — used to find an
+  // existing active action before creating a duplicate, and to re-target a
+  // superseded action's replacement.
+  subjectEntityId String
+
+  status PassportActionStatus @default(OPEN)
+
+  title           String
+  explanation     String
+  suggestedSteps  Json?
+  severity        String?
+
+  linkedQuestionId String?
+  linkedAnswerRef  Json?
+
+  supersededByActionId String?
+  supersedesReason     String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  addressedAt DateTime?
+  addressedBy String?
+
+  @@index([passportId, status])
+  @@index([passportId, ruleId, subjectEntityId])
+}
+
+enum PassportActionStatus {
+  OPEN
+  ADDRESSED
+  SUPERSEDED
+  REOPENED
+}
+
+// Retains prior versions of a passport document so "replaced"/"removed from
+// view" are real, retrievable states rather than silent overwrites/deletes
+// (documents.service.ts previously did a hard delete with zero retention).
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String // UserDocument.id — the lineage anchor, kept even after the current doc is removed
+  version    Int
+  fileUrl    String
+  fileSize   Int?
+  mimeType   String?
+  name       String?
+  action     DocumentVersionAction
+  createdAt  DateTime @default(now())
+  createdBy  String? // userId
+
+  @@index([documentId, version])
+}
+
+enum DocumentVersionAction {
+  UPLOADED
+  REPLACED
+  REMOVED
 }
 
 // Reward points ledger — mirrors PassportActivity's append-only shape but
@@ -883,6 +1100,11 @@ model QuestionAnswer {
   answerJson           Json?
   fileUrl              String?
   createdAt            DateTime                @default(now())
+  // Previously missing — question.service.ts upserts answers in place with
+  // no way to tell "answered once" from "answered, then changed" without
+  // this. History events capture the actual before/after values themselves
+  // (PassportEvent.beforeRef/afterRef); this is just for basic bookkeeping.
+  updatedAt            DateTime                @default(now()) @updatedAt
   passportQuestion     PassportQuestion        @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
   // Vault document-level access - additive on top of the section-level
   // SectionVisibility toggle the mobile app still reads/writes untouched.
@@ -998,6 +1220,13 @@ model UserDocument {
   accessLevel          DocumentAccessLevel     @default(PRIVATE)
   accessGrants         DocumentAccessGrant[]
   shareManifestEntries ShareManifestDocument[]
+  // Soft-delete — documents.service.ts used to hard-delete with zero
+  // retention. A DocumentVersion(action: REMOVED) row is written alongside
+  // this so "removed from current view" is a real History event with a
+  // recoverable prior state, per the client's History spec ("removal from
+  // view does not silently erase history").
+  deletedAt            DateTime?
+  version              Int                     @default(1)
 
   @@index([userId])
 }
