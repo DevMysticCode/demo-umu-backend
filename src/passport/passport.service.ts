@@ -5,6 +5,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PassportEventsService } from './passport-events.service';
+import { PassportEventType } from './passport-event-types';
 import { PaymentService } from '../payment/payment.service';
 import { PushService } from '../push/push.service';
 import { ConversationsService } from '../conversations/conversations.service';
@@ -17,7 +19,10 @@ import {
   PassportSection,
   PassportSectionTask,
   QuestionTemplate,
+  Prisma,
 } from '@prisma/client';
+
+type PrismaTransactionClient = Prisma.TransactionClient;
 import { TASK_DESCRIPTIONS, TASK_ORDERS } from '../constants/task-metadata';
 import {
   loadAndComputePassportReadiness,
@@ -48,6 +53,7 @@ export class PassportService {
     private conversations: ConversationsService,
     private notifications: NotificationsService,
     private files: FilesService,
+    private events: PassportEventsService,
   ) {
     this.groq = new OpenAI({
       apiKey: process.env.GROQ_API_KEY,
@@ -517,6 +523,18 @@ export class PassportService {
         },
       });
 
+      await this.events.logEvent({
+        passportId: passport.id,
+        eventType: PassportEventType.PASSPORT_CLAIM_SUBMITTED,
+        actorType: 'OWNER',
+        actorId: userId,
+        entityType: 'PASSPORT',
+        entityId: passport.id,
+        sourceType: 'OWNER_INPUT',
+        visibilityClass: 'OWNER_ONLY',
+        afterRef: { addressLine1, postcode, status: passport.status },
+      });
+
       return { passportId: passport.id, status: passport.status };
     }
 
@@ -571,7 +589,19 @@ export class PassportService {
       },
     });
 
-    await this.seedPassportContent(passport.id, passportType, isHmo, isLeasehold);
+    await this.seedPassportContent(this.prisma as unknown as PrismaTransactionClient, passport.id, passportType, isHmo, isLeasehold);
+
+    await this.events.logEvent({
+      passportId: passport.id,
+      eventType: PassportEventType.PASSPORT_CREATED,
+      actorType: 'OWNER',
+      actorId: userId,
+      entityType: 'PASSPORT',
+      entityId: passport.id,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      afterRef: { addressLine1, postcode, type: passportType },
+    });
 
     return {
       passportId: passport.id,
@@ -670,6 +700,8 @@ export class PassportService {
     assertKycVerified(user);
 
     let propertyTenure: string | null = null;
+    let ovId: string | null = null;
+    let ovHasPassportId = true;
     if (passport.propertyId) {
       const ov = await this.prisma.ownershipVerification.findUnique({
         where: {
@@ -681,12 +713,8 @@ export class PassportService {
           'Ownership has not been verified against HM Land Registry yet.',
         );
       }
-      if (!ov.passportId) {
-        await this.prisma.ownershipVerification.update({
-          where: { id: ov.id },
-          data: { passportId: passport.id },
-        });
-      }
+      ovId = ov.id;
+      ovHasPassportId = !!ov.passportId;
 
       const prop = await this.prisma.property.findUnique({
         where: { id: passport.propertyId },
@@ -707,13 +735,60 @@ export class PassportService {
       );
     }
 
-    await this.seedPassportContent(passport.id, passport.type, passport.isHmo, isLeasehold);
-    await this.prisma.passport.update({
-      where: { id: passport.id },
-      data: { status: 'IN_PROGRESS' },
-    });
+    // Everything from here on runs inside a single DB transaction, with the
+    // passport row explicitly locked (`FOR UPDATE`) for its duration. This
+    // closes a race where two near-simultaneous activate calls (double-click,
+    // client retry-on-timeout) could both pass the PENDING_PAYMENT check
+    // above, both start seeding sections/tasks/questions, and leave a
+    // partially-seeded passport permanently stuck (the retry would then hit
+    // a duplicate-key error on the very first already-created section and
+    // fail forever, with status never reaching IN_PROGRESS). Locking the row
+    // serializes concurrent callers: the loser blocks until the winner's
+    // transaction commits, then re-checks status and finds it's no longer
+    // PENDING_PAYMENT, so it just returns. If seeding fails partway for any
+    // reason, the whole transaction rolls back and status stays
+    // PENDING_PAYMENT, so a retry starts clean instead of wedging.
+    // (security review 2026-09-25)
+    return this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ status: string }[]>`
+        SELECT status FROM "Passport" WHERE id = ${passportId} FOR UPDATE
+      `;
+      if (!locked[0] || locked[0].status !== 'PENDING_PAYMENT') {
+        // Lost the race — another concurrent call already activated this
+        // passport (or it changed state some other way). Nothing to do.
+        return { passportId: passport.id };
+      }
 
-    return { passportId: passport.id };
+      if (ovId && !ovHasPassportId) {
+        await tx.ownershipVerification.update({
+          where: { id: ovId },
+          data: { passportId: passport.id },
+        });
+      }
+
+      await this.seedPassportContent(tx, passport.id, passport.type as string, passport.isHmo, isLeasehold);
+      await tx.passport.update({
+        where: { id: passport.id },
+        data: { status: 'IN_PROGRESS' },
+      });
+
+      await this.events.logEvent(
+        {
+          passportId: passport.id,
+          eventType: PassportEventType.PASSPORT_ACTIVATED,
+          actorType: 'OWNER',
+          actorId: userId,
+          entityType: 'PASSPORT',
+          entityId: passport.id,
+          sourceType: 'OWNER_INPUT',
+          visibilityClass: 'OWNER_ONLY',
+          afterRef: { status: 'IN_PROGRESS' },
+        },
+        tx,
+      );
+
+      return { passportId: passport.id };
+    });
   }
 
   /**
@@ -725,6 +800,7 @@ export class PassportService {
    * ~80 question-template writes.
    */
   private async seedPassportContent(
+    tx: PrismaTransactionClient,
     passportId: string,
     passportType: string,
     isHmo: boolean,
@@ -738,7 +814,7 @@ export class PassportService {
     const keyPrefixMatches = (key: string) =>
       isLandlord ? key.startsWith('landlord_') : !key.startsWith('landlord_');
 
-    const allTemplates = await this.prisma.questionTemplate.findMany({
+    const allTemplates = await tx.questionTemplate.findMany({
       orderBy: [{ sectionKey: 'asc' }, { taskKey: 'asc' }, { order: 'asc' }],
     });
     const templates = allTemplates.filter((t) => keyPrefixMatches(t.sectionKey));
@@ -747,7 +823,7 @@ export class PassportService {
     const groupedBySection = this.groupTemplatesBySection(templates);
 
     // Fetch section templates in display order, then filter by key prefix.
-    const allSectionTemplates = await this.prisma.sectionTemplate.findMany({
+    const allSectionTemplates = await tx.sectionTemplate.findMany({
       orderBy: { order: 'asc' },
     });
     const sectionTemplates = allSectionTemplates.filter((st) =>
@@ -770,7 +846,7 @@ export class PassportService {
       const sectionStatus = sectionTemplate.order === 1 ? 'ACTIVE' : 'LOCKED';
 
       // Create passport section with template metadata
-      const section = await this.prisma.passportSection.create({
+      const section = await tx.passportSection.create({
         data: {
           passportId,
           key: sectionKey,
@@ -800,7 +876,7 @@ export class PassportService {
         const taskOrder = TASK_ORDERS[sectionKey]?.[taskKey] || 999;
 
         // Create task
-        const task = await this.prisma.passportSectionTask.create({
+        const task = await tx.passportSectionTask.create({
           data: {
             passportSectionId: section.id,
             key: taskKey,
@@ -812,7 +888,7 @@ export class PassportService {
 
         // Create questions for this task
         for (const groupedQ of questions) {
-          await this.prisma.passportQuestion.create({
+          await tx.passportQuestion.create({
             data: {
               passportSectionTaskId: task.id,
               questionTemplateId: groupedQ.template.id,
@@ -1058,6 +1134,7 @@ export class PassportService {
     passportId: string,
     requesterId: string,
     email: string,
+    opts?: { role?: string; sectionKeys?: string[] | null; historyAccess?: boolean },
   ) {
     // Verify requester is the owner
     const passport = await this.prisma.passport.findUnique({
@@ -1106,6 +1183,9 @@ export class PassportService {
       data: {
         passportId,
         userId: user.id,
+        role: opts?.role ?? null,
+        sectionKeys: opts?.sectionKeys ?? undefined,
+        ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
       },
       include: {
         user: {
@@ -1156,6 +1236,19 @@ export class PassportService {
       });
     })();
 
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.COLLABORATOR_INVITED,
+      actorType: 'OWNER',
+      actorId: requesterId,
+      entityType: 'COLLABORATOR',
+      entityId: collaborator.id,
+      sectionId: null,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      afterRef: { email: user.email, role: opts?.role ?? null },
+    });
+
     return {
       message: 'Collaborator added successfully',
       collaborator: {
@@ -1166,6 +1259,58 @@ export class PassportService {
         lastName: collaborator.user.lastName,
         createdAt: collaborator.createdAt,
       },
+    };
+  }
+
+  // Update an existing collaborator's role/section-scope/history-access
+  // (client History handoff, 2026-09-25 — "PATCH collaborators: named
+  // invitations and access scopes; server creates events"). Owner only,
+  // scoped to (collaboratorId, passportId) together for the same reason
+  // removeCollaborator is (security review 2026-09-22, H5).
+  async updateCollaboratorScope(
+    passportId: string,
+    requesterId: string,
+    collaboratorId: string,
+    opts: { role?: string | null; sectionKeys?: string[] | null; historyAccess?: boolean },
+  ) {
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== requesterId) {
+      throw new ForbiddenException('Only the owner can change collaborator access');
+    }
+    const existing = await this.prisma.passportCollaborator.findFirst({
+      where: { id: collaboratorId, passportId },
+    });
+    if (!existing) throw new NotFoundException('Collaborator not found on this passport');
+
+    const updated = await this.prisma.passportCollaborator.update({
+      where: { id: collaboratorId },
+      data: {
+        ...(opts.role !== undefined ? { role: opts.role } : {}),
+        ...(opts.sectionKeys !== undefined ? { sectionKeys: opts.sectionKeys ?? undefined } : {}),
+        ...(opts.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+      },
+    });
+
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.COLLABORATOR_SCOPE_CHANGED,
+      actorType: 'OWNER',
+      actorId: requesterId,
+      entityType: 'COLLABORATOR',
+      entityId: collaboratorId,
+      sectionId: null,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      beforeRef: { role: existing.role, sectionKeys: existing.sectionKeys, historyAccess: existing.historyAccess },
+      afterRef: { role: updated.role, sectionKeys: updated.sectionKeys, historyAccess: updated.historyAccess },
+    });
+
+    return {
+      id: updated.id,
+      role: updated.role,
+      sectionKeys: updated.sectionKeys,
+      historyAccess: updated.historyAccess,
     };
   }
 
@@ -1199,6 +1344,10 @@ export class PassportService {
       firstName: c.user.firstName,
       lastName: c.user.lastName,
       createdAt: c.createdAt,
+      role: c.role,
+      sectionKeys: c.sectionKeys,
+      historyAccess: c.historyAccess,
+      expiresAt: c.expiresAt,
     }));
   }
 
@@ -1727,6 +1876,19 @@ export class PassportService {
       })();
     }
 
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.COLLABORATOR_REMOVED,
+      actorType: 'OWNER',
+      actorId: requesterId,
+      entityType: 'COLLABORATOR',
+      entityId: collaboratorId,
+      sectionId: null,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      beforeRef: { email: collaborator.user?.email ?? null },
+    });
+
     return {
       message: 'Collaborator removed successfully',
     };
@@ -1768,6 +1930,15 @@ export class PassportService {
     if (!passport) throw new ForbiddenException('Passport not found');
     if (passport.ownerId !== userId)
       throw new ForbiddenException('Only the owner can publish this passport');
+    if (passport.status === 'PUBLISHED') {
+      // Already published — retried/duplicate call, harmless no-op.
+      return { id: passport.id, status: passport.status };
+    }
+    if (passport.status !== 'IN_PROGRESS') {
+      throw new ForbiddenException(
+        'This passport must be activated (payment, KYC, and ownership verification complete) before it can be published.',
+      );
+    }
 
     const readiness = await this.computeReadiness(passportId);
     if (!readiness.canPublish) {
@@ -1788,6 +1959,17 @@ export class PassportService {
       title: 'Passport published - live to buyers',
       actor: 'You',
       icon: '🚀',
+    });
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.PASSPORT_PUBLISHED,
+      actorType: 'OWNER',
+      actorId: userId,
+      entityType: 'PASSPORT',
+      entityId: passportId,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      afterRef: { status: 'PUBLISHED' },
     });
     return updated;
   }
@@ -1812,6 +1994,18 @@ export class PassportService {
       title: 'Passport unpublished - back to private',
       actor: 'You',
       icon: '🔒',
+    });
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.PASSPORT_UNPUBLISHED,
+      actorType: 'OWNER',
+      actorId: userId,
+      entityType: 'PASSPORT',
+      entityId: passportId,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      beforeRef: { status: 'PUBLISHED' },
+      afterRef: { status: 'IN_PROGRESS' },
     });
     return updated;
   }
@@ -1991,6 +2185,18 @@ export class PassportService {
       actor: 'You',
       icon: visibility === 'PRIVATE' ? '🔒' : '🌐',
       metadata: { sectionKey: updated.key },
+    });
+    await this.events.logEvent({
+      passportId: p.id,
+      eventType: PassportEventType.SECTION_VISIBILITY_CHANGED,
+      actorType: isOwner ? 'OWNER' : 'COLLABORATOR',
+      actorId: userId,
+      entityType: 'SECTION',
+      entityId: sectionId,
+      sectionId: updated.key,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      afterRef: { visibility },
     });
     return updated;
   }

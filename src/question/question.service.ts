@@ -10,6 +10,9 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
+import { PassportEventsService } from '../passport/passport-events.service';
+import { PassportActionsService } from '../passport/passport-actions.service';
+import { PassportEventType } from '../passport/passport-event-types';
 import { RewardsService } from '../rewards/rewards.service';
 import { DocumentsService } from '../documents/documents.service';
 import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
@@ -19,6 +22,8 @@ export class QuestionService {
   constructor(
     private prisma: PrismaService,
     private passportService: PassportService,
+    private events: PassportEventsService,
+    private actions: PassportActionsService,
     private rewardsService: RewardsService,
     private documentsService: DocumentsService,
   ) {}
@@ -182,6 +187,15 @@ export class QuestionService {
       answerText = String(dto.value);
     }
 
+    // Captured before the upsert overwrites it, so the History event can
+    // record what changed (client History spec: "preserve the previous and
+    // new response"). QuestionAnswer has no version history of its own —
+    // this is the only place the prior value is ever visible again.
+    const previousAnswer = await this.prisma.questionAnswer.findUnique({
+      where: { passportQuestionId: questionId },
+      select: { answerText: true, answerJson: true, fileUrl: true },
+    });
+
     await this.prisma.questionAnswer.upsert({
       where: { passportQuestionId: questionId },
       update: {
@@ -196,6 +210,49 @@ export class QuestionService {
         fileUrl,
       },
     });
+
+    const isCleared = answerText == null && answerJson == null && fileUrl == null;
+    // Re-saving the exact same value (a duplicate submit, a form re-render
+    // that fires an unchanged autosave, etc.) must not create a second
+    // History entry — client spec build check #2: "Re-saving unchanged data
+    // does not create duplicate history." Compare by value, not just
+    // presence, before deciding whether anything actually changed.
+    const valueUnchanged =
+      !!previousAnswer &&
+      previousAnswer.answerText === answerText &&
+      JSON.stringify(previousAnswer.answerJson ?? null) === JSON.stringify(answerJson ?? null) &&
+      previousAnswer.fileUrl === fileUrl;
+
+    if (!valueUnchanged) {
+      await this.events.logEvent({
+        passportId,
+        eventType: isCleared
+          ? PassportEventType.QUESTION_ANSWER_CLEARED
+          : previousAnswer
+            ? PassportEventType.QUESTION_ANSWER_CHANGED
+            : PassportEventType.QUESTION_ANSWER_ADDED,
+        actorType: 'OWNER',
+        actorId: userId,
+        entityType: 'QUESTION_ANSWER',
+        entityId: questionId,
+        sectionId: question.passportSectionTask.passportSection.key,
+        sourceType: 'OWNER_INPUT',
+        visibilityClass: 'OWNER_ONLY',
+        beforeRef: previousAnswer
+          ? { answerText: previousAnswer.answerText, answerJson: previousAnswer.answerJson, fileUrl: previousAnswer.fileUrl }
+          : null,
+        afterRef: { answerText, answerJson, fileUrl },
+        correlationId: questionId,
+      });
+    }
+
+    // Rule engine: evaluate after the answer is saved and its event logged,
+    // per the spec's sequence (save → evaluate using current answers →
+    // create/supersede action → return). Never let a rule-evaluation
+    // failure block the answer save that already succeeded.
+    this.actions
+      .evaluateRulesForQuestion(passportId, question.questionTemplateId, userId)
+      .catch((err) => console.error('[Rules] evaluation failed:', err?.message ?? err));
 
     const wasAlreadyCompleted = question.status === 'COMPLETED';
 
@@ -269,6 +326,11 @@ export class QuestionService {
     const relative = publicUrlFor('passport-docs', storedFilename(file));
     const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
 
+    const previousAnswer = await this.prisma.questionAnswer.findUnique({
+      where: { passportQuestionId: questionId },
+      select: { fileUrl: true, answerJson: true },
+    });
+
     // Persist the upload as the question's answer + carry the original
     // filename in answerJson so the UI can show "Gas Safety 2026.pdf"
     // instead of the random server-side filename.
@@ -296,6 +358,23 @@ export class QuestionService {
     await this.prisma.passportQuestion.update({
       where: { id: questionId },
       data: { status: 'COMPLETED' },
+    });
+
+    await this.events.logEvent({
+      passportId,
+      eventType: previousAnswer?.fileUrl
+        ? PassportEventType.DOCUMENT_REPLACED
+        : PassportEventType.DOCUMENT_UPLOADED,
+      actorType: 'OWNER',
+      actorId: userId,
+      entityType: 'QUESTION_ANSWER',
+      entityId: questionId,
+      sectionId: question.passportSectionTask.passportSection.key,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      beforeRef: previousAnswer?.fileUrl ? { fileUrl: previousAnswer.fileUrl, ...(previousAnswer.answerJson as object ?? {}) } : null,
+      afterRef: { fileUrl, fileName: file.originalname, mimeType: file.mimetype, size: file.size },
+      correlationId: questionId,
     });
 
     return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };

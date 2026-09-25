@@ -4,6 +4,7 @@ import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { FilesModule } from '../files/files.module';
+import { PassportModule } from '../passport/passport.module';
 
 @Module({
   imports: [
@@ -12,6 +13,9 @@ import { FilesModule } from '../files/files.module';
     // FilesModule exports FilesService so resolveUrl() can build the
     // signed /files/... URLs for private buckets (documents/).
     FilesModule,
+    // PassportEventsService — so document upload/replace/remove write
+    // History events (client History handoff, 2026-09-25).
+    PassportModule,
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService],

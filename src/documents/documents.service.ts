@@ -90,7 +90,7 @@ export class DocumentsService {
   async getDocuments(userId: string) {
     // 1. User-uploaded documents
     const userDocs = await this.prisma.userDocument.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -198,7 +198,7 @@ export class DocumentsService {
   // which is exactly right here (an exact tag, not a substring search).
   async getDocumentsByTag(userId: string, tag: string) {
     const docs = await this.prisma.userDocument.findMany({
-      where: { userId, tags: { array_contains: [tag] } as any },
+      where: { userId, deletedAt: null, tags: { array_contains: [tag] } as any },
       orderBy: { createdAt: 'desc' },
     });
     return docs.map((doc) => ({
@@ -230,6 +230,19 @@ export class DocumentsService {
         mimeType: file.mimetype,
         tags: tags ?? [],
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+
+    await this.prisma.documentVersion.create({
+      data: {
+        documentId: doc.id,
+        version: 1,
+        fileUrl: doc.fileUrl,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        name: doc.name,
+        action: 'UPLOADED',
+        createdBy: userId,
       },
     });
 
@@ -303,7 +316,7 @@ export class DocumentsService {
 
   private async mapPersonalDocs(userId: string) {
     const docs = await this.prisma.userDocument.findMany({
-      where: { userId },
+      where: { userId, deletedAt: null },
       include: {
         accessGrants: { include: { collaborator: { select: { id: true, firstName: true, lastName: true } } } },
       },
@@ -462,6 +475,24 @@ export class DocumentsService {
     if (!doc) throw new NotFoundException('Document not found');
     if (doc.userId !== userId) throw new ForbiddenException();
 
+    // Snapshot before removing the file bytes, so "removed from current
+    // view" is a retrievable History/audit entry rather than a silent hard
+    // delete (client History spec: "removal from view does not silently
+    // erase history"). We still delete the underlying file — only the
+    // metadata is retained.
+    await this.prisma.documentVersion.create({
+      data: {
+        documentId: doc.id,
+        version: doc.version + 1,
+        fileUrl: doc.fileUrl,
+        fileSize: doc.fileSize,
+        mimeType: doc.mimeType,
+        name: doc.name,
+        action: 'REMOVED',
+        createdBy: userId,
+      },
+    });
+
     if (isS3Mode) {
       // doc.fileUrl shape: '/uploads/documents/<filename>' — strip the
       // leading /uploads/ to get the S3 key bucket/filename form.
@@ -476,7 +507,10 @@ export class DocumentsService {
       }
     }
 
-    await this.prisma.userDocument.delete({ where: { id: documentId } });
+    await this.prisma.userDocument.update({
+      where: { id: documentId },
+      data: { deletedAt: new Date(), version: { increment: 1 } },
+    });
     return { message: 'Document deleted' };
   }
 }
