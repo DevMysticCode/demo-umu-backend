@@ -9,6 +9,7 @@ import {
   ForgotPasswordDto,
   VerifyResetOtpDto,
   ResetPasswordDto,
+  RefreshTokenDto,
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
 
@@ -61,11 +62,26 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
-  async logout(@Request() req: any) {
-    // JWT is stateless — token is cleared client-side.
-    // This endpoint exists so the client can confirm with the server and
-    // gives a hook for future token-blacklist / session cleanup.
+  async logout(@Body() body: { refreshToken?: string }) {
+    // Access JWT itself is still stateless and just expires on its own
+    // (now 1h, not 7d — see auth.module.ts); what logout can actually make
+    // true immediately is revoking the refresh token, so this session can't
+    // silently renew itself after the user thinks they've signed out.
+    await this.authService.revokeRefreshToken(body?.refreshToken ?? '');
     return { success: true, message: 'Logged out successfully' };
+  }
+
+  // Unauthenticated by design — the refresh token itself IS the credential
+  // here, same as password-reset's resetToken. Throttled like the other
+  // credential-bearing routes.
+  @Throttle(AUTH_THROTTLE)
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(@Body() dto: RefreshTokenDto, @Request() req: any) {
+    return this.authService.refresh(dto.refreshToken, {
+      userAgent: req.headers?.['user-agent'],
+      ip: req.ip,
+    });
   }
 
   @Throttle(AUTH_THROTTLE)

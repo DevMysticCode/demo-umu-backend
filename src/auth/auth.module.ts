@@ -11,7 +11,12 @@ import { RewardsModule } from '../rewards/rewards.module';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '7d' },
+      // Shortened from 7d to 1h now that a proper refresh-token flow exists
+      // (AuthService.refresh) — the access token's blast radius if leaked
+      // is now an hour, not a week, and the frontend silently exchanges it
+      // for a new one via /auth/refresh before/when it expires (security
+      // review follow-up, 2026-09-25).
+      signOptions: { expiresIn: '1h' },
     }),
     RewardsModule,
   ],
