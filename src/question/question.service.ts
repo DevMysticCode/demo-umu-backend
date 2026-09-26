@@ -16,6 +16,7 @@ import { PassportEventType } from '../passport/passport-event-types';
 import { RewardsService } from '../rewards/rewards.service';
 import { DocumentsService } from '../documents/documents.service';
 import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
+import { resolveFrontendBaseUrl } from '../common/frontend-url';
 
 @Injectable()
 export class QuestionService {
@@ -424,13 +425,8 @@ export class QuestionService {
   // tenant is unauthenticated, so the ownership/signed-URL machinery
   // every other upload uses doesn't apply, and a signature PNG is small
   // enough that a Postgres text column is the simpler, safer choice.
-  private frontendBaseUrl(): string {
-    return (
-      process.env.FRONTEND_URL ??
-      (process.env.NODE_ENV === 'production'
-        ? 'https://demo-umu-frontend.vercel.app'
-        : 'http://localhost:3000')
-    );
+  private frontendBaseUrl(requestOrigin?: string | null): string {
+    return resolveFrontendBaseUrl(requestOrigin);
   }
 
   // Tenancy Agreement re-issues and Inventory check-outs now save
@@ -459,14 +455,19 @@ export class QuestionService {
     return flat;
   }
 
-  async createTenancySignLink(questionId: string, userId: string, kind: 'tenancy' | 'inventory' = 'tenancy') {
+  async createTenancySignLink(
+    questionId: string,
+    userId: string,
+    kind: 'tenancy' | 'inventory' = 'tenancy',
+    requestOrigin?: string | null,
+  ) {
     await this.assertQuestionAccess(questionId, userId);
     const token = randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days - signing can take a while
     const link = await this.prisma.tenancySignLink.create({
       data: { passportQuestionId: questionId, token, kind, expiresAt },
     });
-    return { token: link.token, url: `${this.frontendBaseUrl()}/sign/${kind}/${link.token}` };
+    return { token: link.token, url: `${this.frontendBaseUrl(requestOrigin)}/sign/${kind}/${link.token}` };
   }
 
   async getTenancySignData(token: string) {

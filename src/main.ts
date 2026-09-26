@@ -9,6 +9,7 @@ import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateEnv, warnIfHmlrLooksLikeTestStub } from './common/env.validation';
 import { initSentry } from './common/sentry';
 import { isSafeToRenderInline } from './common/storage';
+import { ALLOWED_ORIGINS } from './common/cors-origins';
 
 // Fail fast if the runtime env is misconfigured — better to crash on
 // boot than to discover at first request that DATABASE_URL or
@@ -107,24 +108,10 @@ async function bootstrap() {
   // hosts (security review 2026-09-22, L7 - this comment used to say
   // "Railway" instead):
   //   CORS_ORIGINS=https://app.umovingu.com,https://www.umovingu.com,capacitor://localhost
-  const defaultOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:3002',
-    'https://demo-umu-frontend.vercel.app',
-    'capacitor://localhost', // iOS Capacitor webview
-    'ionic://localhost',     // legacy Capacitor scheme on Android
-    'http://localhost',
-    'https://localhost',
-  ];
-  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-  const allowList = corsOrigins.length ? corsOrigins : defaultOrigins;
-
+  // List itself lives in common/cors-origins.ts, shared with
+  // frontend-url.ts's link-building logic — the two must never drift apart.
   app.enableCors({
-    origin: allowList,
+    origin: ALLOWED_ORIGINS(),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     // Not credentials: true — auth is exclusively Bearer-JWT, no cookie
     // path exists anywhere in this app, so this flag bought nothing but

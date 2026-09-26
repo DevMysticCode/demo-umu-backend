@@ -14,6 +14,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { FilesService } from '../files/files.service';
 import { PUBLIC_BUCKETS, uploadsPathFrom } from '../common/storage';
 import { assertKycVerified } from '../common/kyc';
+import { resolveFrontendBaseUrl } from '../common/frontend-url';
 import {
   Passport,
   PassportSection,
@@ -63,17 +64,14 @@ export class PassportService {
   }
 
   /**
-   * Frontend URL builder for links included in outbound emails. Same
-   * env-driven fallback pattern the share-link builder uses so a
-   * missing FRONTEND_URL never ships localhost links to real users.
+   * Frontend URL builder for links included in outbound emails. Delegates
+   * to resolveFrontendBaseUrl() so email links point at whichever web
+   * frontend actually triggered the action, when known (see
+   * common/frontend-url.ts for why a single static URL can't be right
+   * across 2 web frontends + the iOS app).
    */
-  private frontendBaseUrl(): string {
-    return (
-      process.env.FRONTEND_URL ??
-      (process.env.NODE_ENV === 'production'
-        ? 'https://demo-umu-frontend.vercel.app'
-        : 'http://localhost:3000')
-    );
+  private frontendBaseUrl(requestOrigin?: string | null): string {
+    return resolveFrontendBaseUrl(requestOrigin);
   }
 
   private async sendCollaboratorAddedEmail(params: {
@@ -84,9 +82,10 @@ export class PassportService {
     passportId: string;
     propertyAddressLine1: string | null;
     propertyPostcode: string | null;
+    requestOrigin?: string | null;
   }) {
     if (!process.env.RESEND_API_KEY) return; // no-op if email isn't configured
-    const link = `${this.frontendBaseUrl()}/passportview/${params.passportId}`;
+    const link = `${this.frontendBaseUrl(params.requestOrigin)}/passportview/${params.passportId}`;
     const ownerName =
       [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
       'The property owner';
@@ -1135,6 +1134,7 @@ export class PassportService {
     requesterId: string,
     email: string,
     opts?: { role?: string; sectionKeys?: string[] | null; historyAccess?: boolean },
+    requestOrigin?: string | null,
   ) {
     // Verify requester is the owner
     const passport = await this.prisma.passport.findUnique({
@@ -1233,6 +1233,7 @@ export class PassportService {
         passportId,
         propertyAddressLine1: property?.addressLine1 ?? null,
         propertyPostcode: property?.postcode ?? null,
+        requestOrigin,
       });
     })();
 
@@ -2305,6 +2306,7 @@ export class PassportService {
     userId: string,
     scope: 'buyer' | 'tenant' = 'buyer',
     documentIds?: string[],
+    requestOrigin?: string | null,
   ) {
     const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
     if (!passport) throw new NotFoundException('Passport not found');
@@ -2367,15 +2369,7 @@ export class PassportService {
       }
     }
 
-    // Prefer the explicit env var; otherwise fall back to the
-    // production Vercel host in non-dev environments. Localhost was
-    // the previous fallback which shipped through to the mobile
-    // share sheet on prod when FRONTEND_URL wasn't set on Railway.
-    const baseUrl =
-      process.env.FRONTEND_URL ??
-      (process.env.NODE_ENV === 'production'
-        ? 'https://demo-umu-frontend.vercel.app'
-        : 'http://localhost:3000');
+    const baseUrl = resolveFrontendBaseUrl(requestOrigin);
     const url =
       scope === 'tenant'
         ? `${baseUrl}/shared-tenant/${token}`

@@ -193,8 +193,12 @@ export class BuyerProfileController {
 
   @UseGuards(JwtAuthGuard)
   @Post('shares')
-  async createShare(@Request() req, @Body() dto: CreateShareDto) {
-    return this.buyerProfileService.createShare(req.user.id, dto);
+  async createShare(
+    @Request() req,
+    @Body() dto: CreateShareDto,
+    @Headers('origin') origin: string | undefined,
+  ) {
+    return this.buyerProfileService.createShare(req.user.id, dto, origin);
   }
 
   @UseGuards(JwtAuthGuard)

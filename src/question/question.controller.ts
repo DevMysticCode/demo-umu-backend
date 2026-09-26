@@ -7,6 +7,7 @@ import {
   Body,
   Query,
   Ip,
+  Headers,
   UseGuards,
   Request,
   UseInterceptors,
@@ -127,9 +128,15 @@ export class QuestionController {
   async createTenancySignLink(
     @Param('questionId') questionId: string,
     @Body('kind') kind: 'tenancy' | 'inventory',
+    @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
-    return this.questionService.createTenancySignLink(questionId, req.user.id, kind || 'tenancy');
+    return this.questionService.createTenancySignLink(
+      questionId,
+      req.user.id,
+      kind || 'tenancy',
+      origin,
+    );
   }
 
   @Get('tenancy-sign/:token')
