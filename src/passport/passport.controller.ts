@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   UseGuards,
   Request,
   ForbiddenException,
@@ -190,14 +191,17 @@ export class PassportController {
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
+    @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
     const userId = req.user.id;
-    return this.passportService.addCollaborator(passportId, userId, email, {
-      role,
-      sectionKeys,
-      historyAccess,
-    });
+    return this.passportService.addCollaborator(
+      passportId,
+      userId,
+      email,
+      { role, sectionKeys, historyAccess },
+      origin,
+    );
   }
 
   @Patch(':id/collaborators/:collaboratorId')
@@ -504,6 +508,7 @@ export class PassportController {
   async createShareLink(
     @Param('id') passportId: string,
     @Body() body: { scope?: 'buyer' | 'tenant'; documentIds?: string[] } | undefined,
+    @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
     const scope = body?.scope === 'tenant' ? 'tenant' : 'buyer';
@@ -512,6 +517,7 @@ export class PassportController {
       req.user.id,
       scope,
       body?.documentIds,
+      origin,
     );
   }
 

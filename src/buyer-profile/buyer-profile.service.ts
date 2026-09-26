@@ -18,6 +18,7 @@ import { Resend } from 'resend';
 import OpenAI from 'openai';
 import { PrismaService } from '../prisma/prisma.service';
 import { publicUrlFor, storedFilename } from '../common/storage';
+import { resolveFrontendBaseUrl } from '../common/frontend-url';
 import { isKycVerified } from '../common/kyc';
 
 // All fields decorated so that the global ValidationPipe (whitelist: true)
@@ -109,14 +110,9 @@ export class BuyerProfileService {
     });
   }
 
-  /** Same env-driven fallback pattern used elsewhere for outbound email links. */
-  private frontendBaseUrl(): string {
-    return (
-      process.env.FRONTEND_URL ??
-      (process.env.NODE_ENV === 'production'
-        ? 'https://demo-umu-frontend.vercel.app'
-        : 'http://localhost:3000')
-    );
+  /** Delegates to resolveFrontendBaseUrl() — see common/frontend-url.ts. */
+  private frontendBaseUrl(requestOrigin?: string | null): string {
+    return resolveFrontendBaseUrl(requestOrigin);
   }
 
   async getMine(userId: string) {
@@ -490,7 +486,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
     });
   }
 
-  async createShare(userId: string, dto: CreateShareDto) {
+  async createShare(userId: string, dto: CreateShareDto, requestOrigin?: string | null) {
     const profile = await this.prisma.buyerProfile.findUnique({
       where: { userId },
     });
@@ -536,6 +532,7 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
           share,
           dto.recipientEmail,
           dto.recipientName ?? null,
+          requestOrigin,
         );
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -557,13 +554,14 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
     share: { token: string; expiresAt: Date },
     recipientEmail: string,
     recipientName: string | null,
+    requestOrigin?: string | null,
   ): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: profile.userId },
       select: { firstName: true, lastName: true, email: true },
     });
     const buyerName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A UMovingU buyer';
-    const link = `${this.frontendBaseUrl()}/shared-buyer/${share.token}`;
+    const link = `${this.frontendBaseUrl(requestOrigin)}/shared-buyer/${share.token}`;
     const expiryDate = share.expiresAt.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
     });
