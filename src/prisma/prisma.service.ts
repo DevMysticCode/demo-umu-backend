@@ -356,6 +356,26 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.passportCollaboratorInvite;
   }
 
+  get questionSourceMapping() {
+    return this.prisma.questionSourceMapping;
+  }
+
+  get questionAnswerGuidance() {
+    return this.prisma.questionAnswerGuidance;
+  }
+
+  get resolutionPathway() {
+    return this.prisma.resolutionPathway;
+  }
+
+  get pathwayQuestionLink() {
+    return this.prisma.pathwayQuestionLink;
+  }
+
+  get pathwayJourney() {
+    return this.prisma.pathwayJourney;
+  }
+
   get captureEvent() {
     return this.prisma.captureEvent;
   }

@@ -43,6 +43,11 @@ export const PassportEventType = {
   SHARE_LINK_CREATED: 'SHARE_LINK_CREATED',
   BUYER_ACCESS_GRANTED: 'BUYER_ACCESS_GRANTED',
 
+  // Resolution pathways (client handoff, 2026-09-29) — see PathwayService.
+  PATHWAY_STARTED: 'PATHWAY_STARTED',
+  PATHWAY_STEP_ANSWERED: 'PATHWAY_STEP_ANSWERED',
+  PATHWAY_OUTCOME_REACHED: 'PATHWAY_OUTCOME_REACHED',
+
   // Publication
   PASSPORT_PUBLISHED: 'PASSPORT_PUBLISHED',
   PASSPORT_UNPUBLISHED: 'PASSPORT_UNPUBLISHED',
@@ -84,6 +89,9 @@ const CATEGORY_BY_EVENT_TYPE: Record<string, HistoryCategoryValue> = {
   [PassportEventType.ACTION_REOPENED]: HistoryCategory.ACTIONS,
   [PassportEventType.ACTION_ADDRESSED]: HistoryCategory.ACTIONS,
   [PassportEventType.ACTION_EVIDENCE_ADDED]: HistoryCategory.ACTIONS,
+  [PassportEventType.PATHWAY_STARTED]: HistoryCategory.ACTIONS,
+  [PassportEventType.PATHWAY_STEP_ANSWERED]: HistoryCategory.ACTIONS,
+  [PassportEventType.PATHWAY_OUTCOME_REACHED]: HistoryCategory.ACTIONS,
 
   [PassportEventType.COLLABORATOR_INVITED]: HistoryCategory.ACCESS,
   [PassportEventType.COLLABORATOR_INVITE_SENT]: HistoryCategory.ACCESS,

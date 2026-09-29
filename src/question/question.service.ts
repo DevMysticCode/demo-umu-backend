@@ -12,6 +12,7 @@ import { AnswerQuestionDto } from './dto/answer-question.dto';
 import { PassportService } from '../passport/passport.service';
 import { PassportEventsService } from '../passport/passport-events.service';
 import { PassportActionsService } from '../passport/passport-actions.service';
+import { PathwayService } from '../passport/pathway.service';
 import { PassportEventType } from '../passport/passport-event-types';
 import { RewardsService } from '../rewards/rewards.service';
 import { DocumentsService } from '../documents/documents.service';
@@ -25,6 +26,7 @@ export class QuestionService {
     private passportService: PassportService,
     private events: PassportEventsService,
     private actions: PassportActionsService,
+    private pathways: PathwayService,
     private rewardsService: RewardsService,
     private documentsService: DocumentsService,
   ) {}
@@ -254,6 +256,14 @@ export class QuestionService {
     this.actions
       .evaluateRulesForQuestion(passportId, question.questionTemplateId, userId)
       .catch((err) => console.error('[Rules] evaluation failed:', err?.message ?? err));
+
+    // Resolution pathways: open a guided pathway when this answer matches a
+    // known trigger (client handoff, 2026-09-29). Silently no-ops for the
+    // ~80% of questions not yet mapped to source content — see
+    // src/scripts/import-passport-content.ts.
+    this.pathways
+      .checkTriggersForAnswer(passportId, question.questionTemplateId, answerJson ?? answerText, userId)
+      .catch((err) => console.error('[Pathways] trigger check failed:', err?.message ?? err));
 
     const wasAlreadyCompleted = question.status === 'COMPLETED';
 
@@ -609,5 +619,39 @@ export class QuestionService {
     await this.prisma.tenancySignLink.update({ where: { token }, data: { usedAt: new Date() } });
 
     return { success: true };
+  }
+
+  // Inline "you answered X, here's what that means" panel (client handoff,
+  // 2026-09-29). Returns null when this question isn't mapped to source
+  // content yet, or when this exact answer value has no guidance row -
+  // the frontend just shows nothing in that case, same as today.
+  async getGuidanceForAnswer(questionId: string, answerValue: unknown) {
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: questionId },
+      select: { questionTemplateId: true },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+    return this.pathways.getGuidanceForQuestion(question.questionTemplateId, answerValue);
+  }
+
+  // Combined "what should the question screen show right after saving this
+  // answer" lookup: inline guidance for the exact answer given, plus
+  // whether it just opened (or previously opened) a guided pathway.
+  async getGuidanceAndPathway(questionId: string, answerValue: unknown, userId: string) {
+    const question = await this.prisma.passportQuestion.findUnique({
+      where: { id: questionId },
+      include: { passportSectionTask: { include: { passportSection: { select: { passportId: true } } } } },
+    });
+    if (!question) throw new NotFoundException('Question not found');
+    const passportId = question.passportSectionTask.passportSection.passportId;
+    const [guidance, journeyResult] = await Promise.all([
+      this.pathways.getGuidanceForQuestion(question.questionTemplateId, answerValue),
+      this.pathways.getJourneyForQuestion(passportId, userId, question.questionTemplateId),
+    ]);
+    return {
+      guidance,
+      journey: journeyResult?.journey ?? null,
+      pathway: journeyResult?.pathway ?? null,
+    };
   }
 }

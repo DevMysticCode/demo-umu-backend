@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { PassportService } from './passport.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportActionsService } from './passport-actions.service';
+import { PathwayService } from './pathway.service';
+import { PathwayController } from './pathway.controller';
 import { PassportController } from './passport.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
@@ -41,8 +43,8 @@ import { FilesModule } from '../files/files.module';
     NotificationsModule,
     FilesModule,
   ],
-  providers: [PassportService, PassportEventsService, PassportActionsService],
-  controllers: [PassportController],
-  exports: [PassportService, PassportEventsService, PassportActionsService],
+  providers: [PassportService, PassportEventsService, PassportActionsService, PathwayService],
+  controllers: [PassportController, PathwayController],
+  exports: [PassportService, PassportEventsService, PassportActionsService, PathwayService],
 })
 export class PassportModule {}
