@@ -39,6 +39,20 @@ export class QuestionController {
     return this.questionService.answerQuestion(questionId, userId, dto);
   }
 
+  // Combined guidance + pathway-journey lookup, meant to be called right
+  // after POST :questionId/answer with the same answer value, so the
+  // question screen can show both the inline explanation and any guided
+  // pathway that answer just opened in a single round trip.
+  @Get(':questionId/guidance')
+  @UseGuards(JwtAuthGuard)
+  async getGuidance(
+    @Param('questionId') questionId: string,
+    @Query('answer') answer: string,
+    @Request() req: any,
+  ) {
+    return this.questionService.getGuidanceAndPathway(questionId, answer, req.user.id);
+  }
+
   @Post(':questionId/upload')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(

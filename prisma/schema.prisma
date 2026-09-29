@@ -585,6 +585,7 @@ model Passport {
   founderNumber     FounderNumber?
   events            PassportEvent[]
   actions           PassportAction[]
+  pathwayJourneys   PathwayJourney[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -1131,8 +1132,165 @@ model QuestionTemplate {
   createdAt           DateTime           @default(now())
   passportQuestions   PassportQuestion[]
   sectionTemplate     SectionTemplate    @relation(fields: [sectionKey], references: [key])
+  sourceMappings      QuestionSourceMapping[]
 
   @@index([sectionKey, taskKey])
+}
+
+// ─── Resolution pathways content (client handoff, 2026-09-29) ──────────────
+//
+// Two content layers, both loaded from client-supplied files under
+// prisma/content/source/ by src/scripts/import-passport-content.ts, never
+// hand-edited in the DB - the client's next file revision is the only way
+// this content changes, so re-running the import is the whole review loop.
+//
+// 1. QuestionAnswerGuidance - lightweight, on (almost) every question: what
+//    a given answer means and what to do about it. From the "answer paths"
+//    review file (614 questions/child-prompts, 1842 branches).
+// 2. ResolutionPathway - deep, multi-step guided wizards for the 38 issue
+//    families that need more than an explanation. From the question-bank
+//    workbook's "Resolution pathways"/"Pathway steps" tabs.
+//
+// Every row carries `status` (draft | conveyancer_reviewed | live) - the
+// source files ship with everything in draft, since none of the 1842
+// answer-guidance branches were marked deployment-ready by the client's own
+// review tool. The frontend renders draft content with a "Draft guidance"
+// label rather than hiding it (client decision, 2026-09-29), so none of
+// this needs to be hidden while it's reviewed - only labelled.
+
+// Maps a question from the client's source documents (identified by the
+// review tool's `source_paragraph`, NOT a live database id - paragraph
+// numbers are just where the question sits in the original Word export) to
+// the real live QuestionTemplate it corresponds to. Seeded best-effort by
+// exact title matching on import; anything left unmapped just means that
+// question's guidance can't attach to the live app yet until confirmed here.
+model QuestionSourceMapping {
+  id                     String    @id @default(uuid())
+  sourceParagraph        Int       @unique
+  sourceQuestionId       Int? // 1-278 from the workbook's Mapping tab; null for child prompts, which aren't in that tab
+  section                String
+  sourceQuestionText     String
+  pdtfPath               String?
+  baspi5Ref              String?
+  ta6Ref                 String?
+  ta7Ref                 String?
+  ta10Ref                String?
+  liveQuestionTemplateId String?
+  liveQuestionTemplate   QuestionTemplate? @relation(fields: [liveQuestionTemplateId], references: [id])
+  matchConfidence        String? // "exact_title" | "manual" | null (unmapped)
+  matchNotes             String?
+  confirmedAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([liveQuestionTemplateId])
+}
+
+// One row per (source question/child-prompt, specific answer value) - the
+// "you answered X, here's what that means" panel. Not every branch implies
+// an issue: most just confirm nothing further is needed. `nextPromptParagraphs`
+// lists the child prompts this answer should reveal, each usually a real
+// node (by source_paragraph); two "worked flow" example nodes reference a
+// synthetic_id placeholder instead, with no real node behind it yet.
+model QuestionAnswerGuidance {
+  id                    String    @id @default(uuid())
+  sourceParagraph       Int
+  parentSourceParagraph Int?
+  nodeType              String // "main" | "child"
+  section               String
+  sourceQuestionText    String
+  answerValue           String
+  answerValueProvenance String? // "source" | "proposed_composite" - whether the answer option came from the client's export verbatim or was drafted to cover a gap
+  outcomeCode           String?
+  ownerExplanation      String
+  ownerNextStep         String?
+  evidenceToAdd         String?
+  timeIfUnresolved      String?
+  nextPromptParagraphs  Json? // {source_paragraph?, synthetic_id?, ...}[]
+  copyDepth             String?
+  status                String    @default("draft") // draft | conveyancer_reviewed | live
+  blockReason           String?
+  sourceFileVersion     String
+  contentVersion        Int       @default(1)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([sourceParagraph, answerValue])
+  @@index([sourceParagraph])
+}
+
+// A guided multi-step resolution wizard for one of the 38 issue families
+// (P01-P38). `steps` and `handover` are kept as JSON matching the client's
+// own data shape (Step[]/Option[] - see the developer handoff) rather than
+// normalised into rows, since this is edited as a whole document on each
+// client revision, never queried step-by-step.
+model ResolutionPathway {
+  id                String    @id // "P01".."P38"
+  name              String
+  issue             String
+  whyItMatters      String
+  timeNow           String
+  timeAtSale        String
+  checkFirst        String
+  startStep         String
+  steps             Json // Step[]: {id, kind, title, body, time, cost, warning, options:[{label,next,requiresUpload}]}
+  handover          Json? // Option[]: {name, what, time, notes}
+  stopPoint         String?
+  toValidate        String?
+  status            String    @default("draft") // draft | conveyancer_reviewed | live
+  validatedBy       String?
+  validatedOn       DateTime?
+  contentVersion    Int       @default(1)
+  sourceFileVersion String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  questionLinks     PathwayQuestionLink[]
+  journeys          PathwayJourney[]
+}
+
+// Which passport questions can open a given pathway, and what counts as a
+// clean vs. trigger answer for it. A question can link to more than one
+// pathway (run in the order they were linked).
+model PathwayQuestionLink {
+  id                 String            @id @default(uuid())
+  pathwayId          String
+  pathway            ResolutionPathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+  sourceParagraph    Int?
+  sourceQuestionId   Int?
+  section            String
+  sourceQuestionText String
+  cleanAnswer        String
+  triggerAnswer      String
+  pdtfPath           String?
+  baspi5Ref          String?
+  ta6Ref             String?
+  ta7Ref             String?
+  ta10Ref            String?
+
+  @@index([pathwayId])
+}
+
+// One homeowner's progress through a pathway on one passport. Pinned to the
+// pathway's contentVersion at start, per the client's versioning
+// requirement - a later content revision never rewrites a journey already
+// under way; only new journeys pick up the new version.
+model PathwayJourney {
+  id                        String            @id @default(uuid())
+  passportId                String
+  passport                  Passport          @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  pathwayId                 String
+  pathway                   ResolutionPathway @relation(fields: [pathwayId], references: [id])
+  triggerQuestionTemplateId String?
+  contentVersion            Int
+  currentStepId             String
+  stepAnswers               Json // [{stepId, answerLabel, evidenceFileUrls, timestamp}]
+  status                    String    @default("IN_PROGRESS") // IN_PROGRESS | RESOLVED | CHECK | FLAG | ESCALATE
+  startedAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  completedAt               DateTime?
+
+  @@index([passportId])
+  @@index([passportId, pathwayId])
 }
 
 model PassportQuestion {
