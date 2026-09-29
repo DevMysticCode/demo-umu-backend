@@ -183,6 +183,40 @@ export class PassportController {
     return this.passportService.getPassportPropertyFacts(passportId, req.user.id);
   }
 
+  // Step 1 of the interactive add-collaborator modal: check whether the
+  // typed email has an account before asking for role/access.
+  @Post(':id/collaborators/check-email')
+  @UseGuards(JwtAuthGuard)
+  async checkCollaboratorEmail(
+    @Param('id') passportId: string,
+    @Body('email') email: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.checkCollaboratorEmail(passportId, req.user.id, email);
+  }
+
+  // Step 2b: the typed email has no account yet - invite them to join
+  // Umovingu; they're added as a collaborator automatically once they sign up.
+  @Post(':id/collaborators/invite')
+  @UseGuards(JwtAuthGuard)
+  async inviteCollaborator(
+    @Param('id') passportId: string,
+    @Body('email') email: string,
+    @Body('role') role: string | undefined,
+    @Body('sectionKeys') sectionKeys: string[] | undefined,
+    @Body('historyAccess') historyAccess: boolean | undefined,
+    @Headers('origin') origin: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.passportService.inviteCollaborator(
+      passportId,
+      req.user.id,
+      email,
+      { role, sectionKeys, historyAccess },
+      origin,
+    );
+  }
+
   @Post(':id/collaborators')
   @UseGuards(JwtAuthGuard)
   async addCollaborator(
@@ -294,6 +328,26 @@ export class PassportController {
     @Request() req: any,
   ) {
     return this.passportService.unpublishPassport(passportId, req.user.id);
+  }
+
+  // Content-projection visibility ("Manage visibility") — a standalone
+  // Private/Public switch, independent of publish/unpublish above. See the
+  // service methods' comment for why apps with no buyer-marketplace concept
+  // (umu-website-integration) need this separately.
+  @Get(':id/visibility')
+  @UseGuards(JwtAuthGuard)
+  async getPublicVisibility(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getPublicVisibility(passportId, req.user.id);
+  }
+
+  @Patch(':id/visibility')
+  @UseGuards(JwtAuthGuard)
+  async setPublicVisibility(
+    @Param('id') passportId: string,
+    @Body('isPublic') isPublic: boolean,
+    @Request() req: any,
+  ) {
+    return this.passportService.setPublicVisibility(passportId, req.user.id, !!isPublic);
   }
 
   // Timeline / activity ledger — feeds the (soon to be retired) Timeline

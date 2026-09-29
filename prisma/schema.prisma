@@ -122,6 +122,11 @@ model User {
   // assignedAt is fixed at issuance and never touched again — the
   // certificate's "joined" date.
   founderNumbers                 FounderNumber[]
+
+  // "Register your interest" onboarding step — one row per user, upserted
+  // in place on every save (including edits from the member hub's "Manage
+  // Interests"). See UserInterest below.
+  interest                        UserInterest?
 }
 
 // Shared source of truth for the Founding Homeowner certificate — the
@@ -140,6 +145,22 @@ model FounderNumber {
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// The onboarding "What brings you to Umovingu?" interest picker (6 cards +
+// a free-text area/postcode multi-select + an email opt-in). Was
+// client-side-only (localStorage) until this model was added, so a user's
+// selections didn't survive switching devices and no confirmation email
+// could be sent. One row per user, upserted on every save/edit.
+model UserInterest {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  interestIds  String[]
+  areas        String[]
+  emailOptIn   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PushToken {
@@ -535,6 +556,17 @@ model Passport {
   convertedTo       Passport[]               @relation("PassportConverted")
   status            PassportStatus           @default(IN_PROGRESS)
   createdAt         DateTime                 @default(now())
+  // Content-projection visibility ("Manage visibility" — client History
+  // handoff, 2026-09-25, section 7): a standalone Private/Public switch,
+  // deliberately independent of `status`/PUBLISHED above. `status` drives
+  // the buyer-marketplace listing (readiness checks, KYC/payment gating,
+  // "Match to buyers") on apps that have that feature; this field is for
+  // apps with no marketplace concept (umu-website-integration) that still
+  // need a real public/private projection of PUBLISHED-tier vault items,
+  // reviewed and confirmed before it takes effect. Flipping one never
+  // implies the other.
+  publicVisibility      Boolean              @default(false)
+  publicVisibilitySetAt DateTime?
   // Resume tracking — last task the owner / collaborator visited so the
   // "Pick up where you left off" button can route them straight back.
   lastVisitedTaskId String?
@@ -543,6 +575,7 @@ model Passport {
   property          Property?                @relation(fields: [propertyId], references: [id])
   sections          PassportSection[]
   collaborators     PassportCollaborator[]
+  collaboratorInvites PassportCollaboratorInvite[]
   collectionItems   PassportCollectionItem[]
   buyerAccesses     BuyerPassportAccess[]
   sharedLinks       SharedPassportLink[]
@@ -605,6 +638,30 @@ model PassportCollaborator {
   @@unique([passportId, userId])
   @@index([passportId])
   @@index([userId])
+}
+
+// An "add collaborator" attempt for an email with no Umovingu account yet.
+// The owner's chosen role/access are held here and applied automatically
+// the moment that email finishes registering (see
+// AuthService.register/acceptPendingCollaboratorInvites) - no separate
+// invite token to click, since OTP-verifying that email during signup is
+// already proof of ownership.
+model PassportCollaboratorInvite {
+  id              String    @id @default(uuid())
+  passportId      String
+  invitedByUserId String
+  email           String
+  role            String?
+  sectionKeys     Json?
+  historyAccess   Boolean   @default(true)
+  status          String    @default("pending") // pending | accepted | cancelled
+  createdAt       DateTime  @default(now())
+  acceptedAt      DateTime?
+  passport        Passport  @relation(fields: [passportId], references: [id], onDelete: Cascade)
+
+  @@unique([passportId, email])
+  @@index([email])
+  @@index([passportId])
 }
 
 model UserCollaborator {

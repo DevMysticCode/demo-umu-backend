@@ -19,7 +19,20 @@ import {
   CreateSolicitorDto,
   UpdateSolicitorDto,
   AddCollaboratorDto,
+  UpsertInterestDto,
 } from './dto/update-profile.dto';
+
+// Kept in sync with the website's INTEREST_OPTIONS
+// (umu-website-integration/composables/useInterests.ts) — only used to
+// turn the stored ids into readable text for the confirmation email.
+const INTEREST_LABELS: Record<string, string> = {
+  buying: 'Buying a home',
+  renting: 'Renting a home',
+  owning: 'Owning a home',
+  letting: 'Letting a property',
+  understanding: 'Understanding homes and Passports',
+  exploring: 'Just exploring',
+};
 
 @Injectable()
 export class ProfileService {
@@ -469,6 +482,98 @@ export class ProfileService {
     if (result.error) {
       throw new BadRequestException(
         `Could not send certificate email: ${result.error.message}`,
+      );
+    }
+    return { sent: true };
+  }
+
+  async getInterest(userId: string) {
+    return this.prisma.userInterest.findUnique({ where: { userId } });
+  }
+
+  // "What brings you to Umovingu?" onboarding step (and its "Manage
+  // Interests" edit from the member hub) — upserts one row per user and,
+  // if they've opted in, emails a confirmation in the same voice as the
+  // Founding Homeowner certificate email, on both first registration and
+  // later edits (client request, 2026-09-30).
+  async upsertInterest(userId: string, dto: UpsertInterestDto) {
+    const existing = await this.prisma.userInterest.findUnique({ where: { userId } });
+
+    const record = await this.prisma.userInterest.upsert({
+      where: { userId },
+      create: {
+        userId,
+        interestIds: dto.interestIds,
+        areas: dto.areas,
+        emailOptIn: dto.emailOptIn,
+      },
+      update: {
+        interestIds: dto.interestIds,
+        areas: dto.areas,
+        emailOptIn: dto.emailOptIn,
+      },
+    });
+
+    if (dto.emailOptIn) {
+      // The save itself already succeeded at this point - don't fail the
+      // whole request (and mislead the UI into thinking nothing was
+      // saved) just because the confirmation email didn't go out.
+      try {
+        await this.emailInterestConfirmation(userId, dto, existing ? 'updated' : 'registered');
+      } catch (err) {
+        console.error('[interests] confirmation email failed:', err);
+      }
+    }
+
+    return record;
+  }
+
+  private async emailInterestConfirmation(
+    userId: string,
+    dto: UpsertInterestDto,
+    kind: 'registered' | 'updated',
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, firstName: true },
+    });
+    if (!user?.email) return;
+
+    const firstName = user.firstName?.trim() || 'there';
+    const interestText =
+      dto.interestIds.map((id) => INTEREST_LABELS[id] ?? id).join(', ') || 'exploring Umovingu';
+    const areaText = dto.areas.length ? dto.areas.join(', ') : null;
+    const subject =
+      kind === 'registered' ? "We've got your interest, thanks!" : 'Your interests have been updated';
+    const intro =
+      kind === 'registered'
+        ? "Thanks for registering your interest with Umovingu. We've noted what brings you here so we can keep you posted on the right things."
+        : "You've updated your interests with Umovingu — here's what we now have on file for you.";
+
+    const result = await this.certificateResend.emails.send({
+      from: this.certificateFrom,
+      to: [user.email],
+      subject,
+      html: `
+        <p>Hi ${firstName},</p>
+        <p>${intro}</p>
+        <p>You told us you're interested in: <strong>${interestText}</strong>.${
+          areaText ? ` You're keeping an eye on: <strong>${areaText}</strong>.` : ''
+        }</p>
+        <p>We started Umovingu because homeowners should own their property
+        information, and nobody should have to buy a home blind. Every
+        person who joins us helps bring us closer to a network built
+        around the people who live in homes, rather than information
+        scattered across the moving process.</p>
+        <p>We'll be in touch as we build the things that matter most to
+        you. You can update your interests at any time from your account.</p>
+        <p><em>You own the home. Own its story.</em></p>
+        <p>Maxine Wilson<br/>Founder and CEO, Umovingu</p>
+      `,
+    });
+    if (result.error) {
+      throw new BadRequestException(
+        `Could not send interest confirmation email: ${result.error.message}`,
       );
     }
     return { sent: true };
