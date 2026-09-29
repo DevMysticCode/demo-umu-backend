@@ -4,10 +4,15 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { RewardsModule } from '../rewards/rewards.module';
+import { PassportModule } from '../passport/passport.module';
 
 @Module({
   imports: [
     PrismaModule,
+    // So register() can auto-accept any pending "add collaborator" invite
+    // sent to this email before the account existed (see
+    // AuthService.register -> PassportService.acceptPendingCollaboratorInvites).
+    PassportModule,
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SECRET,

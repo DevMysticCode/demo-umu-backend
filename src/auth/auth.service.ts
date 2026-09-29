@@ -11,6 +11,7 @@ import { Resend } from 'resend';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RewardsService } from '../rewards/rewards.service';
+import { PassportService } from '../passport/passport.service';
 import { captureException } from '../common/sentry';
 import {
   RequestOtpDto,
@@ -43,6 +44,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private rewards: RewardsService,
+    private passportService: PassportService,
   ) {
     this.resend = new Resend(process.env.RESEND_API_KEY ?? '');
   }
@@ -412,6 +414,16 @@ export class AuthService {
     if (!user) {
       throw new ConflictException('Failed to create or update user');
     }
+
+    // Auto-accept any "add collaborator" invites an owner sent to this
+    // email before this account existed. Safe without a click-through
+    // token: verifying the OTP for this email during signup already
+    // proves the person registering owns it.
+    void this.passportService
+      .acceptPendingCollaboratorInvites(user.id, user.email)
+      .catch((err) =>
+        console.error('[auth] accepting pending collaborator invites failed:', err),
+      );
 
     const { token, refreshToken } = await this.issueTokenPair(user.id, user.email);
 

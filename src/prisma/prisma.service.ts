@@ -348,6 +348,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.founderNumber;
   }
 
+  get userInterest() {
+    return this.prisma.userInterest;
+  }
+
+  get passportCollaboratorInvite() {
+    return this.prisma.passportCollaboratorInvite;
+  }
+
   get captureEvent() {
     return this.prisma.captureEvent;
   }

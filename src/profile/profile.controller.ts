@@ -30,6 +30,7 @@ import {
   UpdateSolicitorDto,
   AddCollaboratorDto,
   UpsertPreferencesDto,
+  UpsertInterestDto,
 } from './dto/update-profile.dto';
 
 @Controller('profile')
@@ -141,6 +142,19 @@ export class ProfileController {
   @HttpCode(HttpStatus.OK)
   emailFounderCertificate(@Req() req: any, @Body() body: { imageBase64?: string }) {
     return this.profileService.emailFounderCertificate(req.user.id, body?.imageBase64 ?? '');
+  }
+
+  // "What brings you to Umovingu?" onboarding step + "Manage Interests"
+  // edit. Upserts (one row per user) and emails a confirmation when the
+  // user has opted in, on both first registration and later edits.
+  @Post('interests')
+  upsertInterest(@Req() req: any, @Body() dto: UpsertInterestDto) {
+    return this.profileService.upsertInterest(req.user.id, dto);
+  }
+
+  @Get('interests')
+  getInterest(@Req() req: any) {
+    return this.profileService.getInterest(req.user.id);
   }
 
   // Authenticated-only, but had no rate limit and returned full,

@@ -1128,6 +1128,268 @@ export class PassportService {
     return passport.ownerId === userId || passport.collaborators.length > 0;
   }
 
+  // Step 1 of the interactive "Add collaborator" flow (client request,
+  // 2026-09-30): before showing the role/access fields, the owner checks
+  // whether the typed email belongs to an existing account. Owner-only,
+  // same gate as addCollaborator itself.
+  async checkCollaboratorEmail(passportId: string, requesterId: string, email: string) {
+    const normalised = email?.trim().toLowerCase();
+    if (!normalised) throw new BadRequestException('email is required');
+
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== requesterId) {
+      throw new ForbiddenException('Only the owner can add collaborators');
+    }
+
+    const owner = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { email: true },
+    });
+    if (owner?.email?.toLowerCase() === normalised) {
+      return { status: 'is-owner' as const };
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { email: normalised } });
+    if (user) {
+      const existingCollaborator = await this.prisma.passportCollaborator.findUnique({
+        where: { passportId_userId: { passportId, userId: user.id } },
+      });
+      if (existingCollaborator) {
+        return { status: 'already-collaborator' as const };
+      }
+      return { status: 'found' as const, firstName: user.firstName };
+    }
+
+    const pendingInvite = await this.prisma.passportCollaboratorInvite.findUnique({
+      where: { passportId_email: { passportId, email: normalised } },
+    });
+    if (pendingInvite?.status === 'pending') {
+      return { status: 'already-invited' as const };
+    }
+
+    return { status: 'not-found' as const };
+  }
+
+  // Step 2b: the typed email has no account. Rather than a dead end, the
+  // owner can invite them to join Umovingu - the role/access they choose
+  // now is held on the invite and applied automatically the moment that
+  // email completes signup (see AuthService.register ->
+  // acceptPendingCollaboratorInvites), with no separate invite link/token
+  // to click through.
+  async inviteCollaborator(
+    passportId: string,
+    requesterId: string,
+    email: string,
+    opts?: { role?: string; sectionKeys?: string[] | null; historyAccess?: boolean },
+    requestOrigin?: string | null,
+  ) {
+    const normalised = email?.trim().toLowerCase();
+    if (!normalised) throw new BadRequestException('email is required');
+
+    const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== requesterId) {
+      throw new ForbiddenException('Only the owner can add collaborators');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({ where: { email: normalised } });
+    if (existingUser) {
+      throw new BadRequestException('This email already has an Umovingu account - add them directly instead of inviting.');
+    }
+
+    const invite = await this.prisma.passportCollaboratorInvite.upsert({
+      where: { passportId_email: { passportId, email: normalised } },
+      create: {
+        passportId,
+        invitedByUserId: requesterId,
+        email: normalised,
+        role: opts?.role ?? null,
+        sectionKeys: opts?.sectionKeys ?? undefined,
+        ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+      },
+      update: {
+        invitedByUserId: requesterId,
+        role: opts?.role ?? null,
+        sectionKeys: opts?.sectionKeys ?? undefined,
+        ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+        status: 'pending',
+        acceptedAt: null,
+      },
+    });
+
+    const [owner, property] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { firstName: true, lastName: true },
+      }),
+      passport.propertyId
+        ? this.prisma.property.findUnique({
+            where: { id: passport.propertyId },
+            select: { addressLine1: true, postcode: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    await this.sendJoinUmovinguInviteEmail({
+      to: normalised,
+      ownerFirstName: owner?.firstName ?? null,
+      ownerLastName: owner?.lastName ?? null,
+      propertyAddressLine1: property?.addressLine1 ?? null,
+      propertyPostcode: property?.postcode ?? null,
+      requestOrigin,
+    });
+
+    await this.events.logEvent({
+      passportId,
+      eventType: PassportEventType.COLLABORATOR_INVITE_SENT,
+      actorType: 'OWNER',
+      actorId: requesterId,
+      entityType: 'COLLABORATOR',
+      entityId: invite.id,
+      sectionId: null,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      afterRef: { email: normalised, role: opts?.role ?? null },
+    });
+
+    return { message: 'Invitation sent', invite: { id: invite.id, email: invite.email } };
+  }
+
+  // Called from AuthService.register right after an account is created
+  // (or an OTP-only shell account is completed) - applies every pending
+  // invite addressed to this email across all passports at once, in case
+  // more than one owner invited the same person before they signed up.
+  async acceptPendingCollaboratorInvites(userId: string, email: string) {
+    const normalised = email.trim().toLowerCase();
+    const invites = await this.prisma.passportCollaboratorInvite.findMany({
+      where: { email: normalised, status: 'pending' },
+    });
+    if (!invites.length) return;
+
+    for (const invite of invites) {
+      try {
+        const passport = await this.prisma.passport.findUnique({ where: { id: invite.passportId } });
+        if (!passport || passport.ownerId === userId) {
+          await this.prisma.passportCollaboratorInvite.update({
+            where: { id: invite.id },
+            data: { status: 'cancelled' },
+          });
+          continue;
+        }
+
+        await this.prisma.passportCollaborator.upsert({
+          where: { passportId_userId: { passportId: invite.passportId, userId } },
+          create: {
+            passportId: invite.passportId,
+            userId,
+            role: invite.role,
+            sectionKeys: invite.sectionKeys ?? undefined,
+            historyAccess: invite.historyAccess,
+          },
+          update: {},
+        });
+        await this.prisma.passportCollaboratorInvite.update({
+          where: { id: invite.id },
+          data: { status: 'accepted', acceptedAt: new Date() },
+        });
+
+        const [owner, property, invitee] = await Promise.all([
+          this.prisma.user.findUnique({
+            where: { id: invite.invitedByUserId },
+            select: { firstName: true, lastName: true },
+          }),
+          passport.propertyId
+            ? this.prisma.property.findUnique({
+                where: { id: passport.propertyId },
+                select: { addressLine1: true, postcode: true },
+              })
+            : Promise.resolve(null),
+          this.prisma.user.findUnique({ where: { id: userId }, select: { firstName: true } }),
+        ]);
+        await this.sendCollaboratorAddedEmail({
+          to: normalised,
+          inviteeFirstName: invitee?.firstName ?? null,
+          ownerFirstName: owner?.firstName ?? null,
+          ownerLastName: owner?.lastName ?? null,
+          passportId: invite.passportId,
+          propertyAddressLine1: property?.addressLine1 ?? null,
+          propertyPostcode: property?.postcode ?? null,
+        });
+        void this.push.send(userId, {
+          title: 'You were invited to a passport',
+          body: 'Tap to open the passport you can now collaborate on.',
+          data: { kind: 'collaborator_invite', passportId: invite.passportId },
+        });
+        await this.events.logEvent({
+          passportId: invite.passportId,
+          eventType: PassportEventType.COLLABORATOR_INVITED,
+          actorType: 'OWNER',
+          actorId: invite.invitedByUserId,
+          entityType: 'COLLABORATOR',
+          entityId: invite.id,
+          sectionId: null,
+          sourceType: 'OWNER_INPUT',
+          visibilityClass: 'OWNER_ONLY',
+          afterRef: { email: normalised, role: invite.role, viaInvite: true },
+        });
+      } catch (err) {
+        console.error(`[collaborator invite] failed to accept invite ${invite.id}:`, err);
+      }
+    }
+  }
+
+  private async sendJoinUmovinguInviteEmail(params: {
+    to: string;
+    ownerFirstName: string | null;
+    ownerLastName: string | null;
+    propertyAddressLine1: string | null;
+    propertyPostcode: string | null;
+    requestOrigin?: string | null;
+  }) {
+    if (!process.env.RESEND_API_KEY) return;
+    const signupLink = `${this.frontendBaseUrl(params.requestOrigin)}/onboarding/signup?email=${encodeURIComponent(params.to)}&ref=collaborator-invite`;
+    const ownerName =
+      [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
+      'A property owner on Umovingu';
+    const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
+      .filter(Boolean)
+      .join(', ');
+    try {
+      await this.resend.emails.send({
+        from: this.EMAIL_FROM,
+        to: params.to,
+        subject: `${ownerName} wants to add you as a collaborator on Umovingu`,
+        html: `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <h2 style="color:#1f2024;font-size:22px;margin:0 0 12px;">You've been invited to Umovingu</h2>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 16px;">Hi,</p>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 20px;">
+    <strong>${ownerName}</strong> would like to add you as a collaborator on the Property Passport
+    ${propertyLine ? `for <strong>${propertyLine}</strong>` : 'for their property'} - so you can help
+    complete it, see its documents, and follow its progress alongside them.
+  </p>
+  <p style="color:#4a4b52;font-size:15px;line-height:1.55;margin:0 0 20px;">
+    You don't have an Umovingu account yet, so here's what happens next:
+  </p>
+  <ol style="color:#4a4b52;font-size:15px;line-height:1.7;margin:0 0 20px;padding-left:20px;">
+    <li>Create your free account with this email address.</li>
+    <li>Verify it with the one-time code we'll send you.</li>
+    <li>You'll be added as a collaborator automatically - no extra steps.</li>
+  </ol>
+  <div style="text-align:center;margin:28px 0;">
+    <a href="${signupLink}" style="display:inline-block;background:#00a19a;color:#fff;text-decoration:none;padding:14px 28px;border-radius:12px;font-weight:700;font-size:15px;">Create your account</a>
+  </div>
+  <p style="color:#8f9094;font-size:13px;line-height:1.5;margin:0;">If the button doesn't work, paste this link into your browser:<br/><span style="word-break:break-all;color:#00857f;">${signupLink}</span></p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">You're receiving this because ${ownerName} invited you on Umovingu. If you weren't expecting this, you can safely ignore it.</p>
+</div>`,
+      });
+    } catch (err) {
+      console.warn(`[collaborator invite email] send failed for ${params.to}: ${(err as Error).message}`);
+    }
+  }
+
   // Add collaborator by email
   async addCollaborator(
     passportId: string,
@@ -2007,6 +2269,75 @@ export class PassportService {
       visibilityClass: 'OWNER_ONLY',
       beforeRef: { status: 'PUBLISHED' },
       afterRef: { status: 'IN_PROGRESS' },
+    });
+    return updated;
+  }
+
+  // ── Content-projection visibility ("Manage visibility") ────────────────
+  // Standalone Private/Public switch for apps with no buyer-marketplace
+  // concept (umu-website-integration) — see the `publicVisibility` field
+  // comment on the Passport model for why this is deliberately independent
+  // of publishPassport/unpublishPassport's `status` above. No readiness/KYC
+  // gating: those preconditions belong to the marketplace listing, not to
+  // a plain private/public content toggle (client History handoff,
+  // 2026-09-25, section 7).
+  async getPublicVisibility(passportId: string, userId: string) {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { id: true, publicVisibility: true, publicVisibilitySetAt: true },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    return passport;
+  }
+
+  async setPublicVisibility(passportId: string, userId: string, isPublic: boolean) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('Only the owner can change passport visibility');
+    }
+    if (passport.publicVisibility === isPublic) {
+      // Already in the requested state — retried/duplicate call, harmless no-op.
+      return {
+        id: passport.id,
+        publicVisibility: passport.publicVisibility,
+        publicVisibilitySetAt: passport.publicVisibilitySetAt,
+      };
+    }
+
+    const now = new Date();
+    const updated = await this.prisma.passport.update({
+      where: { id: passportId },
+      data: { publicVisibility: isPublic, publicVisibilitySetAt: now },
+      select: { id: true, publicVisibility: true, publicVisibilitySetAt: true },
+    });
+    await this.logActivity(passportId, {
+      type: isPublic ? 'PUBLISHED' : 'UNPUBLISHED',
+      title: isPublic
+        ? 'Passport visibility set to public'
+        : 'Passport visibility set to private',
+      actor: 'You',
+      icon: isPublic ? '🚀' : '🔒',
+    });
+    await this.events.logEvent({
+      passportId,
+      eventType: isPublic
+        ? PassportEventType.PASSPORT_PUBLISHED
+        : PassportEventType.PASSPORT_UNPUBLISHED,
+      actorType: 'OWNER',
+      actorId: userId,
+      entityType: 'PASSPORT',
+      entityId: passportId,
+      sourceType: 'OWNER_INPUT',
+      visibilityClass: 'OWNER_ONLY',
+      beforeRef: { publicVisibility: passport.publicVisibility },
+      afterRef: { publicVisibility: isPublic },
     });
     return updated;
   }

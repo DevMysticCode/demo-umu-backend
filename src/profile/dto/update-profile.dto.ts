@@ -187,3 +187,16 @@ export class UpsertPreferencesDto {
   @IsNumber()
   propertyValue?: number;
 }
+
+export class UpsertInterestDto {
+  @IsArray()
+  @IsString({ each: true })
+  interestIds: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  areas: string[];
+
+  @IsBoolean()
+  emailOptIn: boolean;
+}

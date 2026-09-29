@@ -45,6 +45,11 @@ function makeService() {
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue(null),
+      updateMany: jest.fn().mockResolvedValue(null),
+      findFirst: jest.fn(),
+    },
   };
   const jwtStub: any = {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
@@ -54,7 +59,16 @@ function makeService() {
     award: jest.fn().mockResolvedValue(null),
     confirmAward: jest.fn().mockResolvedValue(null),
   };
-  return { svc: new AuthService(prismaStub, jwtStub, rewardsStub), prismaStub, jwtStub, rewardsStub };
+  const passportServiceStub: any = {
+    acceptPendingCollaboratorInvites: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    svc: new AuthService(prismaStub, jwtStub, rewardsStub, passportServiceStub),
+    prismaStub,
+    jwtStub,
+    rewardsStub,
+    passportServiceStub,
+  };
 }
 
 beforeAll(() => {

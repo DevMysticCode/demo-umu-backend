@@ -34,6 +34,10 @@ export const PassportEventType = {
 
   // Access
   COLLABORATOR_INVITED: 'COLLABORATOR_INVITED',
+  // A collaborator invite sent to an email with no Umovingu account yet
+  // (distinct from COLLABORATOR_INVITED, which fires once someone with an
+  // existing account is actually added as a PassportCollaborator).
+  COLLABORATOR_INVITE_SENT: 'COLLABORATOR_INVITE_SENT',
   COLLABORATOR_REMOVED: 'COLLABORATOR_REMOVED',
   COLLABORATOR_SCOPE_CHANGED: 'COLLABORATOR_SCOPE_CHANGED',
   SHARE_LINK_CREATED: 'SHARE_LINK_CREATED',
@@ -82,6 +86,7 @@ const CATEGORY_BY_EVENT_TYPE: Record<string, HistoryCategoryValue> = {
   [PassportEventType.ACTION_EVIDENCE_ADDED]: HistoryCategory.ACTIONS,
 
   [PassportEventType.COLLABORATOR_INVITED]: HistoryCategory.ACCESS,
+  [PassportEventType.COLLABORATOR_INVITE_SENT]: HistoryCategory.ACCESS,
   [PassportEventType.COLLABORATOR_REMOVED]: HistoryCategory.ACCESS,
   [PassportEventType.COLLABORATOR_SCOPE_CHANGED]: HistoryCategory.ACCESS,
   [PassportEventType.SHARE_LINK_CREATED]: HistoryCategory.ACCESS,
