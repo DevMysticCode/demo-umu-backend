@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportEventType } from './passport-event-types';
@@ -21,6 +22,7 @@ import {
   PassportSectionTask,
   QuestionTemplate,
   Prisma,
+  SectionStatus,
 } from '@prisma/client';
 
 type PrismaTransactionClient = Prisma.TransactionClient;
@@ -748,6 +750,11 @@ export class PassportService {
     // reason, the whole transaction rolls back and status stays
     // PENDING_PAYMENT, so a retry starts clean instead of wedging.
     // (security review 2026-09-25)
+    // seedPassportContent below does ~120 sequential writes (one per
+    // section/task, batched per-task for questions) against a remote
+    // Postgres instance - comfortably past Prisma's 5s default interactive-
+    // transaction timeout on real network latency (seen as a P2028
+    // "transaction not found" error once the deadline hit mid-loop).
     return this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<{ status: string }[]>`
         SELECT status FROM "Passport" WHERE id = ${passportId} FOR UPDATE
@@ -787,7 +794,7 @@ export class PassportService {
       );
 
       return { passportId: passport.id };
-    });
+    }, { timeout: 20000 });
   }
 
   /**
@@ -829,7 +836,41 @@ export class PassportService {
       keyPrefixMatches(st.key),
     );
 
-    // Create sections, tasks, and questions using SectionTemplate order
+    // Build every section/task/question row in memory first, with ids
+    // generated client-side, then write each level in ONE createMany call.
+    // The previous version did one sequential `create()` per section, per
+    // task, AND per question - ~450 awaited round trips for a seller
+    // passport (~18 sections, ~50 tasks, ~300 questions). Against this
+    // remote Postgres instance's real network latency, that blew first
+    // Prisma's 5s default interactive-transaction timeout, then a
+    // generously-raised 20s one (P2028 "transaction not found"/"already
+    // closed" - see the seedPassportContent caller). Three bulk inserts
+    // instead of ~450 sequential ones is the actual fix; the raised
+    // timeout above stays as a safety margin, not the primary fix.
+    const sectionRows: Array<{
+      id: string;
+      passportId: string;
+      key: string;
+      title: string;
+      subtitle: string | null;
+      description: string | null;
+      imageKey: string | null;
+      order: number;
+      status: SectionStatus;
+    }> = [];
+    const taskRows: Array<{
+      id: string;
+      passportSectionId: string;
+      key: string;
+      title: string;
+      description: string | null;
+      order: number;
+    }> = [];
+    const questionRows: Array<{
+      passportSectionTaskId: string;
+      questionTemplateId: string;
+    }> = [];
+
     for (const sectionTemplate of sectionTemplates) {
       const sectionKey = sectionTemplate.key;
       const tasksForSection = groupedBySection.get(sectionKey);
@@ -843,19 +884,18 @@ export class PassportService {
 
       // Determine section status (first by order is ACTIVE, rest are LOCKED)
       const sectionStatus = sectionTemplate.order === 1 ? 'ACTIVE' : 'LOCKED';
+      const sectionId = randomUUID();
 
-      // Create passport section with template metadata
-      const section = await tx.passportSection.create({
-        data: {
-          passportId,
-          key: sectionKey,
-          title: sectionTemplate.title,
-          subtitle: sectionTemplate.subtitle,
-          description: sectionTemplate.description,
-          imageKey: sectionTemplate.icon,
-          order: sectionTemplate.order,
-          status: sectionStatus,
-        },
+      sectionRows.push({
+        id: sectionId,
+        passportId,
+        key: sectionKey,
+        title: sectionTemplate.title,
+        subtitle: sectionTemplate.subtitle,
+        description: sectionTemplate.description,
+        imageKey: sectionTemplate.icon,
+        order: sectionTemplate.order,
+        status: sectionStatus,
       });
 
       if (!tasksForSection) continue;
@@ -873,29 +913,29 @@ export class PassportService {
         const taskDescription =
           TASK_DESCRIPTIONS[sectionKey]?.[taskKey] || null;
         const taskOrder = TASK_ORDERS[sectionKey]?.[taskKey] || 999;
+        const taskId = randomUUID();
 
-        // Create task
-        const task = await tx.passportSectionTask.create({
-          data: {
-            passportSectionId: section.id,
-            key: taskKey,
-            title: this.formatTaskKey(taskKey),
-            description: taskDescription,
-            order: taskOrder,
-          },
+        taskRows.push({
+          id: taskId,
+          passportSectionId: sectionId,
+          key: taskKey,
+          title: this.formatTaskKey(taskKey),
+          description: taskDescription,
+          order: taskOrder,
         });
 
-        // Create questions for this task
         for (const groupedQ of questions) {
-          await tx.passportQuestion.create({
-            data: {
-              passportSectionTaskId: task.id,
-              questionTemplateId: groupedQ.template.id,
-            },
+          questionRows.push({
+            passportSectionTaskId: taskId,
+            questionTemplateId: groupedQ.template.id,
           });
         }
       }
     }
+
+    if (sectionRows.length) await tx.passportSection.createMany({ data: sectionRows });
+    if (taskRows.length) await tx.passportSectionTask.createMany({ data: taskRows });
+    if (questionRows.length) await tx.passportQuestion.createMany({ data: questionRows });
   }
 
   /**
