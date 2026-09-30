@@ -338,6 +338,20 @@ export class PathwayService {
         },
       });
       if (guidance) return guidance;
+      // No row for this exact literal value (common for MULTIPART answers,
+      // whose saved value is a whole {partKey: value} object rather than a
+      // single string, and for any free-text/date/upload question with no
+      // discrete options at all) - fall back to this question's general
+      // guidance rather than showing nothing.
+      const fallback = await this.prisma.questionAnswerGuidance.findUnique({
+        where: {
+          sourceParagraph_answerValue: {
+            sourceParagraph: mapping.sourceParagraph,
+            answerValue: '__default__',
+          },
+        },
+      });
+      if (fallback) return fallback;
     }
     return null;
   }
