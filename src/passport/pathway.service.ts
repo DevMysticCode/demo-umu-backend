@@ -65,25 +65,71 @@ export class PathwayService {
     answerValue: unknown,
     actorId: string,
   ): Promise<void> {
-    const mapping = await this.prisma.questionSourceMapping.findFirst({
+    // One live MULTIPART question's template id can carry several source
+    // paragraphs at once (its own parent question plus any child prompts
+    // nested inside it, e.g. "building_works" is both source 207 and its
+    // glazing child, source 212) - check every mapping onto this template,
+    // not just the first one, or a child prompt's trigger is silently
+    // shadowed by its parent's.
+    const mappings = await this.prisma.questionSourceMapping.findMany({
       where: { liveQuestionTemplateId: questionTemplateId },
     });
-    if (!mapping) return; // question not yet mapped to source content - nothing to do
+    if (!mappings.length) return; // question not yet mapped to source content - nothing to do
 
     const links = await this.prisma.pathwayQuestionLink.findMany({
       where: {
-        OR: [
-          mapping.sourceQuestionId != null ? { sourceQuestionId: mapping.sourceQuestionId } : undefined,
-          { sourceParagraph: mapping.sourceParagraph },
-        ].filter(Boolean) as any,
+        OR: mappings.flatMap((mapping) =>
+          [
+            mapping.sourceQuestionId != null ? { sourceQuestionId: mapping.sourceQuestionId } : undefined,
+            { sourceParagraph: mapping.sourceParagraph },
+          ].filter(Boolean),
+        ) as any,
       },
     });
     if (!links.length) return;
 
-    const answered = normaliseAnswer(answerValue);
+    // A MULTIPART question's answerJson is an object keyed by partKey (e.g.
+    // { Are_irregular_boundaries: 'yes', photos: '...' }) - the trigger lives
+    // on one specific part, not the whole object, so check every part value
+    // as well as the whole answer stringified (for RADIO/simple questions).
+    // A DATE part nests further as { value, date } (see the frontend's own
+    // auto-save extraction) - unwrap that one extra level too.
+    const candidates = [normaliseAnswer(answerValue)];
+    if (answerValue && typeof answerValue === 'object' && !Array.isArray(answerValue)) {
+      for (const v of Object.values(answerValue as Record<string, unknown>)) {
+        candidates.push(normaliseAnswer(v));
+        if (v && typeof v === 'object' && !Array.isArray(v) && 'value' in (v as Record<string, unknown>)) {
+          candidates.push(normaliseAnswer((v as Record<string, unknown>).value));
+        }
+      }
+    }
+
     for (const link of links) {
-      if (normaliseAnswer(link.triggerAnswer) !== answered) continue;
-      await this.startPathwayJourney(passportId, link.pathwayId, questionTemplateId, actorId);
+      const matches = candidates.includes(normaliseAnswer(link.triggerAnswer));
+      if (matches) {
+        await this.startPathwayJourney(passportId, link.pathwayId, questionTemplateId, actorId);
+        continue;
+      }
+      // The homeowner changed this answer away from the value that opened
+      // this pathway (e.g. Yes -> No) - the journey it opened no longer
+      // applies, so close it rather than leaving a stale, no-longer-relevant
+      // flow that a later page visit would otherwise keep resurfacing.
+      const stale = await this.prisma.pathwayJourney.findFirst({
+        where: { passportId, pathwayId: link.pathwayId, triggerQuestionTemplateId: questionTemplateId, status: 'IN_PROGRESS' },
+      });
+      if (!stale) continue;
+      await this.prisma.pathwayJourney.delete({ where: { id: stale.id } });
+      await this.events.logEvent({
+        passportId,
+        eventType: PassportEventType.PATHWAY_OUTCOME_REACHED,
+        actorType: 'OWNER',
+        actorId,
+        entityType: 'PATHWAY_JOURNEY',
+        entityId: stale.id,
+        sourceType: 'OWNER_INPUT',
+        visibilityClass: 'OWNER_ONLY',
+        metadata: { pathwayId: link.pathwayId, closedReason: 'trigger_answer_changed' },
+      });
     }
   }
 
@@ -154,12 +200,6 @@ export class PathwayService {
     await this.assertAccess(passportId, userId);
     const journey = await this.prisma.pathwayJourney.findUnique({ where: { id: journeyId } });
     if (!journey || journey.passportId !== passportId) throw new NotFoundException('Journey not found');
-    if (journey.status !== 'IN_PROGRESS') {
-      throw new BadRequestException('This pathway has already reached an outcome');
-    }
-    if (journey.currentStepId !== stepId) {
-      throw new BadRequestException('That is not the current step for this journey');
-    }
 
     const pathway = await this.prisma.resolutionPathway.findUnique({ where: { id: journey.pathwayId } });
     if (!pathway) throw new NotFoundException('Pathway not found');
@@ -172,8 +212,25 @@ export class PathwayService {
       throw new BadRequestException('This answer requires at least one uploaded file or photo');
     }
 
-    const stepAnswers = Array.isArray(journey.stepAnswers) ? (journey.stepAnswers as any[]) : [];
-    stepAnswers.push({ stepId, answerLabel, evidenceFileUrls: evidenceFileUrls ?? [], timestamp: new Date().toISOString() });
+    const existingAnswers = Array.isArray(journey.stepAnswers) ? (journey.stepAnswers as any[]) : [];
+    const priorIndex = existingAnswers.findIndex((a) => a.stepId === stepId);
+    const newAnswer = { stepId, answerLabel, evidenceFileUrls: evidenceFileUrls ?? [], timestamp: new Date().toISOString() };
+
+    let stepAnswers: any[];
+    if (journey.status === 'IN_PROGRESS' && journey.currentStepId === stepId) {
+      // The ordinary case: answering the one step the journey is waiting on.
+      stepAnswers = [...existingAnswers, newAnswer];
+    } else if (priorIndex !== -1) {
+      // Editing an earlier step, exactly as the source prototype allows -
+      // every prior prompt in its flow stays clickable, and picking a
+      // different answer there supersedes whatever was answered after it
+      // (the guide's own "supersede downstream on upstream change" rule).
+      // This also lets a homeowner reopen a journey that already reached an
+      // outcome, by changing an earlier answer.
+      stepAnswers = [...existingAnswers.slice(0, priorIndex), newAnswer];
+    } else {
+      throw new BadRequestException('That step has not been reached in this journey yet');
+    }
 
     let update: any = { stepAnswers };
 
@@ -192,7 +249,7 @@ export class PathwayService {
     } else {
       const nextStep = steps.find((s) => s.id === option.next);
       if (!nextStep) throw new BadRequestException(`Pathway content error: unknown next step "${option.next}"`);
-      update = { ...update, currentStepId: option.next };
+      update = { ...update, currentStepId: option.next, status: 'IN_PROGRESS', completedAt: null };
     }
 
     const updated = await this.prisma.pathwayJourney.update({ where: { id: journeyId }, data: update });
@@ -263,18 +320,26 @@ export class PathwayService {
   // ─── Content (guidance + pathway lookups) ────────────────────────────────
 
   async getGuidanceForQuestion(questionTemplateId: string, answerValue: unknown) {
-    const mapping = await this.prisma.questionSourceMapping.findFirst({
+    // Same one-template/several-source-paragraphs case as
+    // checkTriggersForAnswer() above - try every mapping onto this template
+    // and return the first paragraph whose guidance actually matches this
+    // answer, rather than assuming the first mapping row is the right one.
+    const mappings = await this.prisma.questionSourceMapping.findMany({
       where: { liveQuestionTemplateId: questionTemplateId },
     });
-    if (!mapping) return null;
-    return this.prisma.questionAnswerGuidance.findUnique({
-      where: {
-        sourceParagraph_answerValue: {
-          sourceParagraph: mapping.sourceParagraph,
-          answerValue: String(answerValue ?? ''),
+    if (!mappings.length) return null;
+    for (const mapping of mappings) {
+      const guidance = await this.prisma.questionAnswerGuidance.findUnique({
+        where: {
+          sourceParagraph_answerValue: {
+            sourceParagraph: mapping.sourceParagraph,
+            answerValue: String(answerValue ?? ''),
+          },
         },
-      },
-    });
+      });
+      if (guidance) return guidance;
+    }
+    return null;
   }
 
   async getPathway(pathwayId: string) {
