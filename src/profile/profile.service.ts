@@ -514,15 +514,19 @@ export class ProfileService {
       },
     });
 
-    if (dto.emailOptIn) {
-      // The save itself already succeeded at this point - don't fail the
-      // whole request (and mislead the UI into thinking nothing was
-      // saved) just because the confirmation email didn't go out.
-      try {
-        await this.emailInterestConfirmation(userId, dto, existing ? 'updated' : 'registered');
-      } catch (err) {
-        console.error('[interests] confirmation email failed:', err);
-      }
+    // This confirmation is a one-time "we've got it" acknowledgement, not
+    // the ongoing feature-update emails dto.emailOptIn actually controls
+    // (its checkbox reads "Email me when features related to my interests
+    // become available", defaults unchecked, and almost nobody ticks it) -
+    // gating the confirmation behind that opt-in meant registering or
+    // updating interests silently sent no email at all for most users.
+    // Always send it; the save itself already succeeded at this point, so
+    // don't fail the whole request (and mislead the UI into thinking
+    // nothing was saved) just because the confirmation email didn't go out.
+    try {
+      await this.emailInterestConfirmation(userId, dto, existing ? 'updated' : 'registered');
+    } catch (err) {
+      console.error('[interests] confirmation email failed:', err);
     }
 
     return record;
