@@ -76,6 +76,37 @@ function loadOutcomeRows(): OutcomeRow[] {
     .filter((r) => Number.isFinite(r.sourceParagraph));
 }
 
+interface ChildPromptRow {
+  sourceParagraph: number;
+  parentParagraph: number;
+  section: string;
+  childPrompt: string;
+}
+
+// The "Child prompts" tab documents each conditional sub-question (e.g.
+// "Are you completing this form on behalf of the seller? [shown only if...
+// no]") but carries no bucket text of its own - only the parent's rule
+// family. Guidance for a child paragraph therefore reuses its PARENT's
+// ordinary/attention/unsure copy (looked up by parentParagraph against the
+// "Question outcomes" rows), while classification still runs against the
+// CHILD's own prompt text, since a child's Yes/No can mean something
+// different from its parent's.
+function loadChildPromptRows(): ChildPromptRow[] {
+  const wb = XLSX.readFile(WORKBOOK_PATH);
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets['Child prompts'], { header: 1, blankrows: false });
+  return rows
+    .slice(1)
+    .map((r) => ({
+      sourceParagraph: Number(r[0]),
+      parentParagraph: Number(r[1]),
+      section: String(r[2] ?? ''),
+      // Strip a trailing "[shown only if ...]" display-condition note - that's
+      // about when the field appears, not part of the question text itself.
+      childPrompt: String(r[4] ?? '').replace(/\s*\[shown only if.*?\]\s*$/i, '').trim(),
+    }))
+    .filter((r) => Number.isFinite(r.sourceParagraph) && Number.isFinite(r.parentParagraph));
+}
+
 // ─── Bucket classification (UK residential conveyancing judgment) ─────────
 // A disclosure-style question ("has X ever happened", "is there a dispute
 // about Y") is a problem when the answer is Yes. A requirement-style
@@ -122,115 +153,210 @@ function classifyOption(
   return { bucket: 'ordinary', confident: false }; // ambiguous or both patterns matched
 }
 
-function bucketText(row: OutcomeRow, bucket: Bucket): string {
-  return bucket === 'ordinary' ? row.ifOrdinary : bucket === 'attention' ? row.ifAttention : row.ifUnsure;
+function bucketText(texts: { ordinary: string; attention: string; unsure: string }, bucket: Bucket): string {
+  return bucket === 'ordinary' ? texts.ordinary : bucket === 'attention' ? texts.attention : texts.unsure;
 }
 
-async function main() {
-  const rows = loadOutcomeRows();
-  console.log(`Loaded ${rows.length} question-outcome rows.`);
+function normaliseText(s: string | null | undefined): string {
+  if (!s) return '';
+  return s.toLowerCase().replace(/^\d+\.\s*/, '').replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+}
 
-  const mappings = await prisma.questionSourceMapping.findMany({
-    where: { sourceParagraph: { in: rows.map((r) => r.sourceParagraph) } },
-  });
-  const mappingByParagraph = new Map(mappings.map((m) => [m.sourceParagraph, m]));
+// Find the decision control for THIS specific question on a live template:
+// its own options for a plain RADIO/CHECKBOX question, or - for MULTIPART -
+// the one part whose own title matches this question's text. Several
+// unrelated source paragraphs can share one big combined MULTIPART template
+// (e.g. one "Lease extension application" form covers status, ground rent,
+// rent-increase terms and calculation as five separate parts) - grabbing
+// "the first RADIO/CHECKBOX part" regardless of which paragraph was asking
+// produced nonsense (a "How is the rent increase calculated?" question
+// paired with a sibling part's "Accepted by landlord" options). Only fall
+// back to "the one RADIO/CHECKBOX part" when the template has exactly one -
+// with several and no title match, there's no safe way to tell which part
+// this paragraph means, so return no options rather than guess.
+function getLiveOptions(
+  template: { type: string; options: unknown; parts: unknown },
+  questionText: string,
+): Array<{ label: string; value: string }> {
+  if ((template.type === 'RADIO' || template.type === 'CHECKBOX') && Array.isArray(template.options)) {
+    return template.options as any[];
+  }
+  if (template.type === 'MULTIPART' && Array.isArray(template.parts)) {
+    const decisionParts = (template.parts as any[]).filter((p) => p?.type === 'RADIO' || p?.type === 'CHECKBOX');
+    const titleMatch = decisionParts.find((p) => normaliseText(p.title) === normaliseText(questionText));
+    if (titleMatch?.options) return titleMatch.options;
+    if (decisionParts.length === 1 && decisionParts[0]?.options) return decisionParts[0].options;
+  }
+  return [];
+}
 
-  let matchedQuestions = 0;
-  let unmatchedQuestions = 0;
-  let rowsWritten = 0;
-  let confidentOptions = 0;
-  let defaultedOptions = 0;
-  const needsReview: string[] = [];
+interface Stats {
+  matched: number;
+  unmatched: number;
+  rowsWritten: number;
+  confident: number;
+  defaulted: number;
+  needsReview: string[];
+}
 
-  for (const row of rows) {
-    const mapping = mappingByParagraph.get(row.sourceParagraph);
-    if (!mapping?.liveQuestionTemplateId) {
-      unmatchedQuestions++;
-      continue;
+async function writeGuidanceForNode(
+  liveQuestionTemplateId: string | null | undefined,
+  sourceParagraph: number,
+  parentSourceParagraph: number | null,
+  nodeType: 'main' | 'child',
+  section: string,
+  questionText: string,
+  bucketTexts: { ordinary: string; attention: string; unsure: string },
+  whatOwnerCanDo: string | null,
+  evidenceToGather: string | null,
+  timeIfUnresolved: string | null,
+  ruleFamily: string | null,
+  stats: Stats,
+) {
+  if (!liveQuestionTemplateId) {
+    stats.unmatched++;
+    return;
+  }
+  const template = await prisma.questionTemplate.findUnique({ where: { id: liveQuestionTemplateId } });
+  if (!template) return;
+  stats.matched++;
+
+  const options = getLiveOptions(template, questionText);
+
+  // Replace whatever the old 1842-row import wrote for this paragraph.
+  await prisma.questionAnswerGuidance.deleteMany({ where: { sourceParagraph } });
+
+  const toWrite: Prisma.QuestionAnswerGuidanceCreateManyInput[] = [];
+  const seenValues = new Set<string>();
+
+  for (const opt of options) {
+    if (!opt?.value || seenValues.has(opt.value)) continue;
+    seenValues.add(opt.value);
+    const { bucket, confident } = classifyOption(opt.label ?? '', questionText);
+    if (confident) stats.confident++;
+    else {
+      stats.defaulted++;
+      stats.needsReview.push(`${sourceParagraph} | ${section} | ${questionText} | option "${opt.label}"`);
     }
-    matchedQuestions++;
-
-    const template = await prisma.questionTemplate.findUnique({ where: { id: mapping.liveQuestionTemplateId } });
-    if (!template) continue;
-
-    // Find the primary decision control: the template's own options for a
-    // plain RADIO/CHECKBOX question, or the first RADIO/CHECKBOX part of a
-    // MULTIPART question - same "primary part" convention already used for
-    // the boundary/glazing pathway triggers.
-    let options: Array<{ label: string; value: string }> = [];
-    if ((template.type === 'RADIO' || template.type === 'CHECKBOX') && Array.isArray(template.options)) {
-      options = template.options as any[];
-    } else if (template.type === 'MULTIPART' && Array.isArray(template.parts)) {
-      const decisionPart = (template.parts as any[]).find(
-        (p) => p?.type === 'RADIO' || p?.type === 'CHECKBOX',
-      );
-      if (decisionPart?.options) options = decisionPart.options;
-    }
-
-    // Replace whatever the old 1842-row import wrote for this paragraph.
-    await prisma.questionAnswerGuidance.deleteMany({ where: { sourceParagraph: row.sourceParagraph } });
-
-    const toWrite: Prisma.QuestionAnswerGuidanceCreateManyInput[] = [];
-    const seenValues = new Set<string>();
-
-    for (const opt of options) {
-      if (!opt?.value || seenValues.has(opt.value)) continue;
-      seenValues.add(opt.value);
-      const { bucket, confident } = classifyOption(opt.label ?? '', row.question);
-      if (confident) confidentOptions++;
-      else {
-        defaultedOptions++;
-        needsReview.push(`${row.sourceParagraph} | ${row.section} | ${row.question} | option "${opt.label}"`);
-      }
-      toWrite.push({
-        sourceParagraph: row.sourceParagraph,
-        nodeType: 'main',
-        section: row.section,
-        sourceQuestionText: row.question,
-        answerValue: opt.value,
-        answerValueProvenance: 'source',
-        outcomeCode: bucket,
-        ownerExplanation: bucketText(row, bucket),
-        ownerNextStep: row.whatOwnerCanDo,
-        evidenceToAdd: row.evidenceToGather,
-        timeIfUnresolved: bucket === 'ordinary' ? null : row.timeIfUnresolved,
-        copyDepth: row.ruleFamily,
-        status: 'draft',
-        sourceFileVersion: SOURCE_FILE_VERSION,
-      });
-    }
-
-    // Always add a catch-all row (ordinary-bucket text) so a question with
-    // no discrete options - or an option value this pass didn't see - still
-    // shows something, once getGuidanceForQuestion() falls back to it.
     toWrite.push({
-      sourceParagraph: row.sourceParagraph,
-      nodeType: 'main',
-      section: row.section,
-      sourceQuestionText: row.question,
-      answerValue: DEFAULT_ANSWER_VALUE,
-      answerValueProvenance: 'proposed_composite',
-      outcomeCode: 'ordinary',
-      ownerExplanation: row.ifOrdinary,
-      ownerNextStep: row.whatOwnerCanDo,
-      evidenceToAdd: row.evidenceToGather,
-      timeIfUnresolved: null,
-      copyDepth: row.ruleFamily,
+      sourceParagraph,
+      parentSourceParagraph,
+      nodeType,
+      section,
+      sourceQuestionText: questionText,
+      answerValue: opt.value,
+      answerValueProvenance: 'source',
+      outcomeCode: bucket,
+      ownerExplanation: bucketText(bucketTexts, bucket),
+      ownerNextStep: whatOwnerCanDo,
+      evidenceToAdd: evidenceToGather,
+      timeIfUnresolved: bucket === 'ordinary' ? null : timeIfUnresolved,
+      copyDepth: ruleFamily,
       status: 'draft',
       sourceFileVersion: SOURCE_FILE_VERSION,
     });
-
-    await prisma.questionAnswerGuidance.createMany({ data: toWrite, skipDuplicates: true });
-    rowsWritten += toWrite.length;
   }
 
-  console.log(`\nMatched questions (have a live template): ${matchedQuestions}`);
-  console.log(`Unmatched questions (no live template yet - skipped): ${unmatchedQuestions}`);
-  console.log(`QuestionAnswerGuidance rows written: ${rowsWritten}`);
-  console.log(`Options classified with confidence: ${confidentOptions}`);
-  console.log(`Options defaulted to "ordinary" (needs manual review): ${defaultedOptions}`);
-  console.log(`\nSample needing manual review (first 25 of ${needsReview.length}):`);
-  needsReview.slice(0, 25).forEach((s) => console.log('  ' + s));
+  // Always add a catch-all row (ordinary-bucket text) so a question with no
+  // discrete options - or an option value this pass didn't see - still
+  // shows something, once getGuidanceForQuestion() falls back to it.
+  toWrite.push({
+    sourceParagraph,
+    parentSourceParagraph,
+    nodeType,
+    section,
+    sourceQuestionText: questionText,
+    answerValue: DEFAULT_ANSWER_VALUE,
+    answerValueProvenance: 'proposed_composite',
+    outcomeCode: 'ordinary',
+    ownerExplanation: bucketTexts.ordinary,
+    ownerNextStep: whatOwnerCanDo,
+    evidenceToAdd: evidenceToGather,
+    timeIfUnresolved: null,
+    copyDepth: ruleFamily,
+    status: 'draft',
+    sourceFileVersion: SOURCE_FILE_VERSION,
+  });
+
+  await prisma.questionAnswerGuidance.createMany({ data: toWrite, skipDuplicates: true });
+  stats.rowsWritten += toWrite.length;
+}
+
+async function main() {
+  const outcomeRows = loadOutcomeRows();
+  const childRows = loadChildPromptRows();
+  console.log(`Loaded ${outcomeRows.length} main question-outcome rows and ${childRows.length} child-prompt rows.`);
+
+  const allParagraphs = [...outcomeRows.map((r) => r.sourceParagraph), ...childRows.map((r) => r.sourceParagraph)];
+  const mappings = await prisma.questionSourceMapping.findMany({ where: { sourceParagraph: { in: allParagraphs } } });
+  const mappingByParagraph = new Map(mappings.map((m) => [m.sourceParagraph, m]));
+  const outcomeByParagraph = new Map(outcomeRows.map((r) => [r.sourceParagraph, r]));
+
+  const mainStats: Stats = { matched: 0, unmatched: 0, rowsWritten: 0, confident: 0, defaulted: 0, needsReview: [] };
+  const childStats: Stats = { matched: 0, unmatched: 0, rowsWritten: 0, confident: 0, defaulted: 0, needsReview: [] };
+
+  // ── Phase 1: main questions (each has its own bucket text) ──────────────
+  for (const row of outcomeRows) {
+    await writeGuidanceForNode(
+      mappingByParagraph.get(row.sourceParagraph)?.liveQuestionTemplateId,
+      row.sourceParagraph,
+      null,
+      'main',
+      row.section,
+      row.question,
+      { ordinary: row.ifOrdinary, attention: row.ifAttention, unsure: row.ifUnsure },
+      row.whatOwnerCanDo,
+      row.evidenceToGather,
+      row.timeIfUnresolved,
+      row.ruleFamily,
+      mainStats,
+    );
+  }
+
+  // ── Phase 2: child prompts (reuse their PARENT's bucket text - the file
+  // gives no bucket text of its own for a child, only its parent's rule
+  // family - but classify against the CHILD's own prompt wording, since a
+  // child's Yes/No can carry different meaning from its parent's) ────────
+  let childrenWithNoParentOutcome = 0;
+  for (const row of childRows) {
+    const parentOutcome = outcomeByParagraph.get(row.parentParagraph);
+    if (!parentOutcome) {
+      childrenWithNoParentOutcome++;
+      continue;
+    }
+    await writeGuidanceForNode(
+      mappingByParagraph.get(row.sourceParagraph)?.liveQuestionTemplateId,
+      row.sourceParagraph,
+      row.parentParagraph,
+      'child',
+      row.section,
+      row.childPrompt,
+      { ordinary: parentOutcome.ifOrdinary, attention: parentOutcome.ifAttention, unsure: parentOutcome.ifUnsure },
+      parentOutcome.whatOwnerCanDo,
+      parentOutcome.evidenceToGather,
+      parentOutcome.timeIfUnresolved,
+      parentOutcome.ruleFamily,
+      childStats,
+    );
+  }
+
+  console.log(`\n── Main questions ──`);
+  console.log(`Matched (have a live template): ${mainStats.matched}`);
+  console.log(`Unmatched (no live template yet - skipped): ${mainStats.unmatched}`);
+  console.log(`Options classified with confidence: ${mainStats.confident} | defaulted: ${mainStats.defaulted}`);
+
+  console.log(`\n── Child prompts ──`);
+  console.log(`Matched (have a live template): ${childStats.matched}`);
+  console.log(`Unmatched (no live template yet - skipped): ${childStats.unmatched}`);
+  console.log(`Skipped - parent has no outcome row: ${childrenWithNoParentOutcome}`);
+  console.log(`Options classified with confidence: ${childStats.confident} | defaulted: ${childStats.defaulted}`);
+
+  console.log(`\nTotal QuestionAnswerGuidance rows written: ${mainStats.rowsWritten + childStats.rowsWritten}`);
+
+  console.log(`\nSample main-question rows needing manual review (first 15 of ${mainStats.needsReview.length}):`);
+  mainStats.needsReview.slice(0, 15).forEach((s) => console.log('  ' + s));
+  console.log(`\nSample child-prompt rows needing manual review (first 15 of ${childStats.needsReview.length}):`);
+  childStats.needsReview.slice(0, 15).forEach((s) => console.log('  ' + s));
 }
 
 main()
