@@ -161,6 +161,15 @@ export class PassportController {
     return passport;
   }
 
+  // Jurisdiction guard (UMU_278 handoff, 2 Oct 2026) - lets the frontend
+  // show a one-time notice when this property is in Scotland or Northern
+  // Ireland, where the pack's guidance/pathways don't apply.
+  @Get(':id/jurisdiction')
+  @UseGuards(JwtAuthGuard)
+  async getJurisdiction(@Param('id') passportId: string, @Request() req: any) {
+    return this.passportService.getJurisdiction(passportId, req.user.id);
+  }
+
   @Get(':id/sections')
   @UseGuards(JwtAuthGuard)
   async getPassportSections(
@@ -205,6 +214,9 @@ export class PassportController {
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
+    @Body('permission') permission: string | undefined,
+    @Body('accessDuration') accessDuration: string | undefined,
+    @Body('expiresAt') expiresAt: string | undefined,
     @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
@@ -212,7 +224,7 @@ export class PassportController {
       passportId,
       req.user.id,
       email,
-      { role, sectionKeys, historyAccess },
+      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
       origin,
     );
   }
@@ -225,6 +237,9 @@ export class PassportController {
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
+    @Body('permission') permission: string | undefined,
+    @Body('accessDuration') accessDuration: string | undefined,
+    @Body('expiresAt') expiresAt: string | undefined,
     @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
@@ -233,7 +248,7 @@ export class PassportController {
       passportId,
       userId,
       email,
-      { role, sectionKeys, historyAccess },
+      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
       origin,
     );
   }
@@ -246,13 +261,16 @@ export class PassportController {
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
+    @Body('permission') permission: string | undefined,
+    @Body('accessDuration') accessDuration: string | undefined,
+    @Body('expiresAt') expiresAt: string | undefined,
     @Request() req: any,
   ) {
     return this.passportService.updateCollaboratorScope(
       passportId,
       req.user.id,
       collaboratorId,
-      { role, sectionKeys, historyAccess },
+      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
     );
   }
 

@@ -315,6 +315,14 @@ model Property {
   city                  String?
   county                String?
   postcode              String
+  // Jurisdiction guard (UMU_278 handoff, 2 Oct 2026): "England" | "Wales" |
+  // "Scotland" | "Northern Ireland", resolved from the postcode via
+  // postcodes.io (resolvePropertyNation(), passport.service.ts). The seller
+  // passport content pack explicitly covers England and Wales only and
+  // says not to extrapolate it to Scotland or Northern Ireland - this is
+  // what PassportService.getJurisdiction() checks. Null until resolved
+  // (lazily backfilled on first check, not a blocking migration).
+  nation                String?
   latitude              Float?
   longitude             Float?
   propertyType          String?
@@ -586,6 +594,7 @@ model Passport {
   events            PassportEvent[]
   actions           PassportAction[]
   pathwayJourneys   PathwayJourney[]
+  userDocuments     UserDocument[]
 
   // One passport per (owner, property, type) — prevents the same user
   // accidentally creating two seller passports on the same property, while
@@ -631,9 +640,25 @@ model PassportCollaborator {
   // PassportService.checkUserAccess). Null role/sectionKeys preserves that
   // exact existing behaviour for every collaborator row created before this
   // field existed, so this is additive, not a breaking migration.
-  role         String? // e.g. "Solicitor", "Estate agent", "Co-owner", "Buyer", "Other" — display only today
+  role         String? // e.g. "Solicitor / Conveyancer", "Estate agent", "Co-owner", "Surveyor", "Buyer", "Other" — display only today
   sectionKeys  Json? // null = full access (today's default behaviour); otherwise an array of SectionTemplate.key values this collaborator may see
   historyAccess Boolean @default(true)
+  // Added for the Add Collaborator feature (client handoff, 2 Oct 2026):
+  // "view" (read-only, today's implicit default — preserved for every row
+  // created before this field existed), "view_add" (can add new
+  // information/documents but not change what the owner or another
+  // collaborator already added), "view_add_update_own" (can also amend
+  // information THEY added, never someone else's). Not yet enforced on
+  // every write path — see QuestionService.answerQuestion for where it is
+  // enforced today; enforcing it on documents/vault writes is a follow-up.
+  permission      String?   @default("view")
+  // How long this grant lasts: "until_removed" (today's only real
+  // behaviour — expiresAt stays null), "until_completion" (intent only for
+  // now — nothing currently revokes access automatically when the
+  // passport is marked complete/published; a scheduled sweep or a check at
+  // publish time is a follow-up), or "specific_date" (expiresAt is the
+  // actual cutoff, already enforced wherever expiresAt is checked).
+  accessDuration  String?   @default("until_removed")
   expiresAt    DateTime?
 
   @@unique([passportId, userId])
@@ -655,6 +680,9 @@ model PassportCollaboratorInvite {
   role            String?
   sectionKeys     Json?
   historyAccess   Boolean   @default(true)
+  permission      String?   @default("view")
+  accessDuration  String?   @default("until_removed")
+  expiresAt       DateTime?
   status          String    @default("pending") // pending | accepted | cancelled
   createdAt       DateTime  @default(now())
   acceptedAt      DateTime?
@@ -737,9 +765,13 @@ model PassportSectionTask {
   @@index([passportSectionId])
 }
 
-// Immutable activity ledger for a Passport — drives the Timeline tab.
-// Each row records a verified event (issued, section completed, doc uploaded,
-// match, publish, …) with a pseudo block-hash for visual tamper-evidence.
+// Recorded-activity ledger for a Passport — drives the Timeline tab. An
+// app-writable row with a server createdAt; not cryptographically verified
+// or immutable (UMU_278 handoff, 2 Oct 2026: "Do not label this immutable,
+// block-stamped or verified merely because an event has a timestamp" - see
+// PassportService.logActivity, which used to generate a random "0x…" chip
+// styled to look like a block-hash, since removed). PassportEvent is the
+// newer v2 log (see its own comment) meant to eventually replace this one.
 model PassportActivity {
   id         String   @id @default(uuid())
   passportId String
@@ -747,7 +779,9 @@ model PassportActivity {
   title      String // human-readable headline
   actor      String // "You", "UmovingU matching engine", agency name, etc.
   icon       String? // single emoji used in the prototype timeline rail
-  hash       String // short pseudo block-hash for the verified stamp
+  // No longer generated (see model comment) - kept nullable rather than
+  // dropped so existing rows' old fake values don't need a migration.
+  hash       String?
   metadata   Json? // optional structured payload (sectionKey, etc.)
   createdAt  DateTime @default(now())
   passport   Passport @relation(fields: [passportId], references: [id], onDelete: Cascade)
@@ -1180,6 +1214,15 @@ model QuestionSourceMapping {
   matchConfidence        String? // "exact_title" | "manual" | null (unmapped)
   matchNotes             String?
   confirmedAt            DateTime?
+  // Child/conditional-prompt nodes only (UMU_278 handoff, 2 Oct 2026): when
+  // this prompt should actually show, as {field: "umu.qNN.primary" | a
+  // child's own id, equals?: string, not_in?: string[]}. `field` is a
+  // CONTENT id (another QuestionSourceMapping row, resolved via its own
+  // sourceQuestionId/node), not a live field name - the pack's own
+  // "recommended_condition", proposed rather than confirmed against the
+  // live form; null for every main question and any child the pack left
+  // unconditional.
+  recommendedCondition   Json?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -1208,6 +1251,16 @@ model QuestionAnswerGuidance {
   timeIfUnresolved      String?
   nextPromptParagraphs  Json? // {source_paragraph?, synthetic_id?, ...}[]
   copyDepth             String?
+  // Full structured outcome panel (UMU_278 handoff, 2 Oct 2026): {title,
+  // style, meaning, why_now, owner_actions: string[], possible_outcomes:
+  // {title, explanation}[], evidence: string[], time: {preparation,
+  // resolution_or_transaction_impact, basis} | null, completion,
+  // source_ids: string[], professional_help?, transaction_context?}. The
+  // flat fields above (ownerExplanation etc.) stay populated too, derived
+  // from this, for any older code that reads them directly - this is the
+  // one to render from going forward since it preserves every outcome's
+  // full body text, not just a title (the pack's own requirement).
+  panel                 Json?
   status                String    @default("draft") // draft | conveyancer_reviewed | live
   blockReason           String?
   sourceFileVersion     String
@@ -1320,6 +1373,13 @@ model QuestionAnswer {
   // this. History events capture the actual before/after values themselves
   // (PassportEvent.beforeRef/afterRef); this is just for basic bookkeeping.
   updatedAt            DateTime                @default(now()) @updatedAt
+  // Who last wrote this answer (owner or a collaborator) - added to let a
+  // "view_add_update_own" collaborator permission (Add Collaborator
+  // feature, client handoff, 2 Oct 2026) actually tell "own" from
+  // "someone else's" rather than guessing. Null for every answer saved
+  // before this field existed; treated as "not theirs" for a collaborator
+  // permission check, same as any other author.
+  lastEditedByUserId   String?
   passportQuestion     PassportQuestion        @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
   // Vault document-level access - additive on top of the section-level
   // SectionVisibility toggle the mobile app still reads/writes untouched.
@@ -1429,6 +1489,19 @@ model UserDocument {
   expiresAt            DateTime?
   createdAt            DateTime                @default(now())
   user                 User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Vault rebuild (client mockup, 2 Oct 2026): one of the 8 folder
+  // categories ("property_information" | "ownership_legal" |
+  // "energy_utilities" | "compliance" | "improvements_maintenance" |
+  // "appliances_warranties" | "manuals" | "photos"); null for anything
+  // uploaded before this field existed, shown under "Other".
+  category             String?
+  // Null = "My private documents" (not tied to any property). Set = a
+  // "Property documents" upload, linked to this passport - the mockup's
+  // top-level Property/Private split. A document can be unlinked later
+  // without deleting it (set back to null), matching the mockup's "Unlink
+  // from property" action.
+  passportId           String?
+  passport             Passport?               @relation(fields: [passportId], references: [id], onDelete: SetNull)
   // Freestanding (non-passport-linked) Vault uploads used to be hardcoded
   // PRIVATE in documents.service.ts with no stored setting at all - now a
   // real per-document tier, same as QuestionAnswer's.
@@ -1444,6 +1517,7 @@ model UserDocument {
   version              Int                     @default(1)
 
   @@index([userId])
+  @@index([passportId])
 }
 
 // Vault document access tiers, additive to the pre-existing section-level

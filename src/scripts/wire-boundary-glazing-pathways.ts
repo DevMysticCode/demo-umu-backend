@@ -143,6 +143,28 @@ async function main() {
 
 // ─── Boundary steps (B0 is the live Yes/No answer that opens this journey) ─
 
+// Target codes (client content pack, UMU_278 developer handoff, 2 Oct
+// 2026): no, initial_unsure, incomplete, conflict, dispute_mismatch,
+// dispute, historic_mismatch, historic, mismatch, check, moved_explained,
+// ordinary - see pathway-outcome-codes.ts for why "no"/"initial_unsure"
+// (the q133 primary answer itself) and "incomplete" (unreachable in a
+// step-sequential journey) aren't terminals here.
+//
+// The previous version of this graph asked "what type of irregularity" (B0)
+// purely to route the player to the same shared "does it match the plan"
+// question, then threw the chosen type away - so a contradictory combination
+// like "the land looks different from the plan" (type) + "yes, it matches"
+// (matches) could never be told apart from an ordinary match. The pack's
+// reference evaluator (UMU_Question_Rules.js boundaryCode()) needs that
+// combination to read as "conflict", and needs an honest "moved, and the
+// plan still matches" case to read as "moved_explained" rather than plain
+// "ordinary" - both require remembering which type was chosen. Below, each
+// type answer gets its own "matches" step instance (matches_shape /
+// matches_moved / matches_different / matches_unknown_type) so that context
+// survives into the terminal. Everything downstream of "has anyone disputed
+// this" only depends on one boolean (does the title appear to mismatch?),
+// so those steps (and their status/evidence follow-ups) are shared across
+// every type branch that lands in the same track.
 const BOUNDARY_STEPS = [
   {
     id: 'type',
@@ -152,10 +174,10 @@ const BOUNDARY_STEPS = [
     time: '1 minute',
     cost: 'Free',
     options: [
-      { label: 'Just an unusual shape', next: 'matches' },
+      { label: 'Just an unusual shape', next: 'matches_shape' },
       { label: 'A fence or feature has moved', next: 'moved_detail' },
-      { label: 'The land I use looks different from the plan', next: 'matches' },
-      { label: "I'm not sure", next: 'matches' },
+      { label: 'The land I use looks different from the plan', next: 'matches_different' },
+      { label: "I'm not sure", next: 'matches_unknown_type' },
     ],
     warning: null,
   },
@@ -166,75 +188,229 @@ const BOUNDARY_STEPS = [
     body: "Briefly note what moved (a fence, wall or hedge) and roughly when, in your passport. This is your account, not proof on its own - a moved feature doesn't by itself show a title problem.",
     time: '2 minutes',
     cost: 'Free',
-    options: [{ label: 'Continue', next: 'matches' }],
+    options: [{ label: 'Continue', next: 'matches_moved' }],
     warning: null,
   },
+
+  // \u2500\u2500 "Does it match the title plan?" - one instance per type context \u2500\u2500\u2500\u2500\u2500\u2500
   {
-    id: 'matches',
+    id: 'matches_shape',
     kind: 'question',
     title: 'Looking at the title plan and the land you use, do they appear to match?',
     body: 'Title plans usually show a general boundary, not an exact legal line. If you haven\u2019t checked, say so - an unviewed plan is not the same as "No".',
     time: '5 minutes',
     cost: 'Free',
     options: [
-      { label: 'Yes, it matches', next: 'dispute_match' },
-      { label: 'No, it looks different', next: 'dispute_mismatch' },
-      { label: "I haven't checked / not sure", next: 'dispute_unsure' },
+      { label: 'Yes, it matches', next: 'dispute_shape_match' },
+      { label: 'No, it looks different', next: 'dispute_shape_mismatch' },
+      { label: "I haven't checked / not sure", next: 'dispute_shape_unsure' },
     ],
     warning: null,
   },
   {
-    id: 'dispute_match',
+    id: 'matches_moved',
+    kind: 'question',
+    title: 'Looking at the title plan and the land you use, do they appear to match?',
+    body: 'Title plans usually show a general boundary, not an exact legal line. If you haven\u2019t checked, say so - an unviewed plan is not the same as "No".',
+    time: '5 minutes',
+    cost: 'Free',
+    options: [
+      { label: 'Yes, it matches', next: 'dispute_moved_match' },
+      { label: 'No, it looks different', next: 'dispute_moved_mismatch' },
+      { label: "I haven't checked / not sure", next: 'dispute_moved_unsure' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'matches_different',
+    kind: 'question',
+    title: 'Looking at the title plan and the land you use, do they appear to match?',
+    body: 'You already told us the land you use looks different from the plan - this confirms it, or tells us if you\u2019ve actually checked since.',
+    time: '5 minutes',
+    cost: 'Free',
+    options: [
+      { label: 'Yes, on reflection it matches', next: 'dispute_conflict' },
+      { label: 'No, it looks different', next: 'dispute_different_mismatch' },
+      { label: "I haven't checked / not sure", next: 'dispute_different_mismatch' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'matches_unknown_type',
+    kind: 'question',
+    title: 'Looking at the title plan and the land you use, do they appear to match?',
+    body: 'Title plans usually show a general boundary, not an exact legal line. If you haven\u2019t checked, say so - an unviewed plan is not the same as "No".',
+    time: '5 minutes',
+    cost: 'Free',
+    options: [
+      { label: 'Yes, it matches', next: 'dispute_typeunknown_check' },
+      { label: 'No, it looks different', next: 'dispute_typeunknown_mismatch' },
+      { label: "I haven't checked / not sure", next: 'dispute_typeunknown_check' },
+    ],
+    warning: null,
+  },
+
+  // \u2500\u2500 "Has anyone disputed this?" - per-context no-dispute terminal, but
+  // every "Yes" converges on one of the two shared status/evidence chains
+  // below (grouped by whether the title appears to mismatch) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  {
+    id: 'dispute_shape_match',
     kind: 'question',
     title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
     body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
     time: '1 minute',
     cost: 'Free',
     options: [
-      { label: 'No', next: 'RESOLVED' },
-      { label: "I'm not sure", next: 'CHECK' },
+      { label: 'No', next: 'code:ordinary' },
+      { label: "I'm not sure", next: 'code:ordinary' },
       { label: 'Yes', next: 'dispute_status_match' },
     ],
     warning: null,
   },
   {
-    id: 'dispute_mismatch',
+    id: 'dispute_moved_match',
     kind: 'question',
     title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
     body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
     time: '1 minute',
     cost: 'Free',
     options: [
-      { label: 'No', next: 'extent_evidence' },
-      { label: "I'm not sure", next: 'extent_evidence' },
+      { label: 'No', next: 'code:moved_explained' },
+      { label: "I'm not sure", next: 'code:moved_explained' },
+      { label: 'Yes', next: 'dispute_status_match' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_shape_unsure',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'code:check' },
+      { label: "I'm not sure", next: 'code:check' },
+      { label: 'Yes', next: 'dispute_status_match' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_moved_unsure',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'code:check' },
+      { label: "I'm not sure", next: 'code:check' },
+      { label: 'Yes', next: 'dispute_status_match' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_typeunknown_check',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'code:check' },
+      { label: "I'm not sure", next: 'code:check' },
+      { label: 'Yes', next: 'dispute_status_match' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_conflict',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'Before this, you said the land looks different from the plan, and now that it matches - we\u2019ll keep both answers on record rather than choosing one for you. This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'code:conflict' },
+      { label: "I'm not sure", next: 'code:conflict' },
       { label: 'Yes', next: 'dispute_status_mismatch' },
     ],
     warning: null,
   },
   {
-    id: 'dispute_unsure',
+    id: 'dispute_shape_mismatch',
     kind: 'question',
     title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
     body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
     time: '1 minute',
     cost: 'Free',
     options: [
-      { label: 'No', next: 'CHECK' },
-      { label: "I'm not sure", next: 'CHECK' },
-      { label: 'Yes', next: 'dispute_status_unsure' },
+      { label: 'No', next: 'extent_evidence_shape' },
+      { label: "I'm not sure", next: 'extent_evidence_shape' },
+      { label: 'Yes', next: 'dispute_status_mismatch' },
     ],
     warning: null,
   },
   {
-    id: 'extent_evidence',
+    id: 'dispute_moved_mismatch',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'extent_evidence_moved' },
+      { label: "I'm not sure", next: 'extent_evidence_moved' },
+      { label: 'Yes', next: 'dispute_status_mismatch' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_different_mismatch',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'extent_evidence_different' },
+      { label: "I'm not sure", next: 'extent_evidence_different' },
+      { label: 'Yes', next: 'dispute_status_mismatch' },
+    ],
+    warning: null,
+  },
+  {
+    id: 'dispute_typeunknown_mismatch',
+    kind: 'question',
+    title: 'Has a neighbour or anyone else questioned or disputed this boundary?',
+    body: 'This is about whether anyone has actually raised it, not whether one could in theory.',
+    time: '1 minute',
+    cost: 'Free',
+    options: [
+      { label: 'No', next: 'extent_evidence_typeunknown' },
+      { label: "I'm not sure", next: 'extent_evidence_typeunknown' },
+      { label: 'Yes', next: 'dispute_status_mismatch' },
+    ],
+    warning: null,
+  },
+
+  // \u2500\u2500 Mismatch, no dispute - build the case file. Four near-identical
+  // steps (one per type context) only so each can report its own "what you
+  // told us" line; all terminate at the same code:mismatch. \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  ...(['shape', 'moved', 'different', 'typeunknown'] as const).map((ctx) => ({
+    id: `extent_evidence_${ctx}`,
     kind: 'upload',
     title: 'Build the boundary case file',
     body: 'A visual difference is not proof of a legal mistake - gather the documents and show precisely what looks different. Add your current title plan and register, any older transfer or deed plan, dated photos of the fence/garden, and a short note of what looks different and when you first noticed it.',
     time: '30 minutes',
     cost: 'Free',
-    options: [{ label: 'Evidence added', next: 'FLAG', requiresUpload: true }],
+    options: [{ label: 'Evidence added', next: 'code:mismatch', requiresUpload: true }],
     warning: "Don't move a fence or send a legal notice on the basis of this screen.",
-  },
+  })),
+
+  // \u2500\u2500 Shared "Yes, disputed" chains - the title-plan-mismatch boolean is
+  // all that decides the final code from here, regardless of which type
+  // context led in. \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   {
     id: 'dispute_status_match',
     kind: 'question',
@@ -266,28 +442,13 @@ const BOUNDARY_STEPS = [
     warning: null,
   },
   {
-    id: 'dispute_status_unsure',
-    kind: 'question',
-    title: 'What happened with the disagreement?',
-    body: 'Note when it began, what each side says, and what has already been discussed.',
-    time: '5 minutes',
-    cost: 'Free',
-    options: [
-      { label: 'Still ongoing', next: 'dispute_evidence_match' },
-      { label: 'Discussed but not settled in writing', next: 'dispute_evidence_match' },
-      { label: "I don't know its current status", next: 'dispute_evidence_match' },
-      { label: 'Resolved in writing', next: 'dispute_resolved_match' },
-    ],
-    warning: null,
-  },
-  {
     id: 'dispute_evidence_match',
     kind: 'upload',
     title: 'Record the dispute',
     body: "Write down what each person says the boundary is, when the disagreement began, and what has already been discussed. Keep letters, messages, any survey and photographs. Only give the neighbour's details if you choose to - it's optional and used only for a professional's review, not to contact them automatically.",
     time: '30 minutes',
     cost: 'Free',
-    options: [{ label: 'Evidence added', next: 'ESCALATE', requiresUpload: true }],
+    options: [{ label: 'Evidence added', next: 'code:dispute', requiresUpload: true }],
     warning: "Don't move a fence or raise it with the neighbour to fix it before taking advice.",
   },
   {
@@ -297,7 +458,7 @@ const BOUNDARY_STEPS = [
     body: "Write down what each person says the boundary is, when the disagreement began, and what has already been discussed. Keep letters, messages, any survey and photographs, plus the title plan/older deeds for the plan-mismatch concern already flagged - this is tracked as one boundary case.",
     time: '30 minutes',
     cost: 'Free',
-    options: [{ label: 'Evidence added', next: 'ESCALATE', requiresUpload: true }],
+    options: [{ label: 'Evidence added', next: 'code:dispute_mismatch', requiresUpload: true }],
     warning: "Don't move a fence or raise it with the neighbour to fix it before taking advice.",
   },
   {
@@ -307,7 +468,7 @@ const BOUNDARY_STEPS = [
     body: 'Upload the agreement or correspondence and record when it was agreed. A buyer may still ask about a past dispute, so a conveyancer can check what the document settles and how it should be disclosed.',
     time: '10 minutes',
     cost: 'Free',
-    options: [{ label: 'Agreement added', next: 'CHECK', requiresUpload: true }],
+    options: [{ label: 'Agreement added', next: 'code:historic', requiresUpload: true }],
     warning: null,
   },
   {
@@ -317,13 +478,19 @@ const BOUNDARY_STEPS = [
     body: 'Upload the agreement or correspondence and record when it was agreed. The plan/land difference you flagged earlier is a separate, still-open concern - add the title plan, older deeds and dated photos for that alongside it.',
     time: '20 minutes',
     cost: 'Free',
-    options: [{ label: 'Documents added', next: 'FLAG', requiresUpload: true }],
+    options: [{ label: 'Documents added', next: 'code:historic_mismatch', requiresUpload: true }],
     warning: null,
   },
 ] as const;
 
 // ─── Glazing steps (reconstructed from the old prototype's renderWindows())
 
+// Target codes (client content pack, UMU_278 developer handoff, 2 Oct
+// 2026): no_work, date_unknown, incomplete, before, record_added,
+// record_held, searching, missing_record, check_record. "no_work" is the
+// main question's own "No" answer (guidance panel, not a journey);
+// "incomplete" is unreachable in a step-sequential journey - see
+// pathway-outcome-codes.ts.
 const GLAZING_STEPS = [
   {
     id: 'when',
@@ -333,9 +500,9 @@ const GLAZING_STEPS = [
     time: '1 minute',
     cost: 'Free',
     options: [
-      { label: 'Before 1 April 2002', next: 'RESOLVED' },
+      { label: 'Before 1 April 2002', next: 'code:before' },
       { label: 'On or after 1 April 2002', next: 'evidence' },
-      { label: "I'm not sure of the date", next: 'CHECK' },
+      { label: "I'm not sure of the date", next: 'code:date_unknown' },
     ],
     warning: null,
   },
@@ -349,7 +516,11 @@ const GLAZING_STEPS = [
     options: [
       { label: 'Yes, a scheme certificate', next: 'upload_evidence' },
       { label: 'Yes, building control evidence', next: 'upload_evidence' },
-      { label: "I'm not sure", next: 'CHECK' },
+      // Owner says a relevant record exists but isn't ready to add it now -
+      // the pack's own distinction between "record_held" (known to exist,
+      // not yet added) and "missing_record" (genuinely can't be found).
+      { label: 'I have it, but haven\u2019t added it yet', next: 'code:record_held' },
+      { label: "I'm not sure", next: 'code:check_record' },
       { label: 'I cannot find one', next: 'search_records' },
     ],
     warning: null,
@@ -361,7 +532,7 @@ const GLAZING_STEPS = [
     body: 'Upload the certificate or building control document so it\u2019s ready for a buyer enquiry.',
     time: '10 minutes',
     cost: 'Free',
-    options: [{ label: 'Evidence added', next: 'RESOLVED', requiresUpload: true }],
+    options: [{ label: 'Evidence added', next: 'code:record_added', requiresUpload: true }],
     warning: null,
   },
   {
@@ -373,6 +544,7 @@ const GLAZING_STEPS = [
     cost: 'Free',
     options: [
       { label: 'Found a record', next: 'upload_evidence' },
+      { label: 'Still looking, check back later', next: 'code:searching' },
       { label: 'Checked these sources, found no record', next: 'no_record_found' },
     ],
     warning: null,
@@ -384,7 +556,7 @@ const GLAZING_STEPS = [
     body: 'Keep the invoice, search results and the dates in your passport. A reviewer can check whether a record was actually required and discuss the available routes - one possible route is a local authority building control regularisation assessment (gov.uk/building-regulations-approval/how-to-apply), which can involve inspection or remedial work. It is not retrospective planning permission. A council can take up to 8 weeks to issue a certificate after a satisfactory inspection.',
     time: 'Several weeks or longer if regularisation is needed',
     cost: 'Varies - a regularisation application has a fee',
-    options: [{ label: 'Noted, keep this open', next: 'FLAG' }],
+    options: [{ label: 'Noted, keep this open', next: 'code:missing_record' }],
     warning: null,
   },
 ] as const;

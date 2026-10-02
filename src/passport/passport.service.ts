@@ -42,6 +42,23 @@ interface GroupedQuestion {
   template: QuestionTemplate;
 }
 
+// A collaborator grant's duration (Add Collaborator feature, client
+// handoff, 2 Oct 2026): "until_removed" and "until_completion" both keep
+// expiresAt null (until_completion has nothing that currently revokes
+// access automatically — see the accessDuration schema comment); only
+// "specific_date" actually sets a cutoff. Centralised here so every write
+// path (add/invite/accept/update) resolves it the same way.
+function resolveAccessDuration(
+  accessDuration: string | undefined,
+  expiresAt: string | undefined,
+): { accessDuration?: string; expiresAt?: Date | null } {
+  if (accessDuration === undefined) return {};
+  if (accessDuration === 'specific_date') {
+    return { accessDuration, expiresAt: expiresAt ? new Date(expiresAt) : null };
+  }
+  return { accessDuration, expiresAt: null };
+}
+
 @Injectable()
 export class PassportService {
   private groq: OpenAI;
@@ -375,16 +392,90 @@ export class PassportService {
     };
   }
 
+  // Jurisdiction guard (UMU_278 handoff, 2 Oct 2026): the seller passport
+  // content pack - every QuestionAnswerGuidance row and ResolutionPathway
+  // imported from it - explicitly covers England and Wales only ("Do not
+  // apply England-only building-safety certificate steps to Wales or
+  // extrapolate the pack to Scotland or Northern Ireland"). Resolves and
+  // caches the property's nation via postcodes.io (free, no API key,
+  // already used elsewhere in this app), then exposes a simple
+  // supported/unsupported check the guidance/pathway layer can gate on.
+  private async resolvePropertyNation(propertyId: string, postcode: string): Promise<string | null> {
+    const existing = await this.prisma.property.findUnique({ where: { id: propertyId }, select: { nation: true } });
+    if (existing?.nation) return existing.nation;
+    try {
+      const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode.replace(/\s+/g, ''))}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const nation: string | undefined = data?.result?.country;
+      if (!nation) return null;
+      await this.prisma.property.update({ where: { id: propertyId }, data: { nation } });
+      return nation;
+    } catch {
+      return null; // network hiccup - treat as unknown, never block on a failed lookup
+    }
+  }
+
+  // Returns { nation, supported, notice }. `supported` is false only for a
+  // confirmed Scotland/Northern Ireland property - an unresolved postcode
+  // (no property on file, lookup failed) defaults to supported=true so a
+  // transient issue never blocks a genuine England/Wales seller.
+  async getJurisdiction(passportId: string, userId: string) {
+    const hasAccess = await this.checkUserAccess(passportId, userId);
+    if (!hasAccess) throw new ForbiddenException('You do not have access to this passport');
+
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { propertyId: true, postcode: true, property: { select: { id: true, postcode: true } } },
+    });
+    if (!passport) throw new NotFoundException('Passport not found');
+
+    const propertyId = passport.property?.id;
+    const postcode = passport.property?.postcode ?? passport.postcode;
+    const nation = propertyId ? await this.resolvePropertyNation(propertyId, postcode) : null;
+    const unsupported = nation === 'Scotland' || nation === 'Northern Ireland';
+
+    return {
+      nation,
+      supported: !unsupported,
+      notice: unsupported
+        ? `This passport's question guidance and resolution pathways are authored for England and Wales and do not apply in ${nation}. Answers are still saved, but the educational content shown may not reflect ${nation} law - a qualified local adviser should be used instead.`
+        : null,
+    };
+  }
+
   async getPassportSections(passportId: string, userId: string) {
     // Verify passport exists and user has access (owner or collaborator)
-    const hasAccess = await this.checkUserAccess(passportId, userId);
-    if (!hasAccess) {
+    const passportForAccess = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: {
+        ownerId: true,
+        collaborators: { where: { userId }, select: { sectionKeys: true } },
+      },
+    });
+    if (!passportForAccess) throw new ForbiddenException('Passport not found');
+    const isOwner = passportForAccess.ownerId === userId;
+    const collaboratorRow = passportForAccess.collaborators[0];
+    if (!isOwner && !collaboratorRow) {
       throw new ForbiddenException('You do not have access to this passport');
     }
+    // A collaborator scoped to specific sections (Add Collaborator "Select
+    // Sections" feature) only ever sees those - previously this field was
+    // stored but never actually enforced here, so every collaborator saw
+    // every section regardless of what they'd been granted. null means
+    // full access (today's default for every collaborator added before
+    // this field existed).
+    const allowedSectionKeys =
+      !isOwner && collaboratorRow?.sectionKeys
+        ? new Set(collaboratorRow.sectionKeys as string[])
+        : null;
 
     // Fetch sections with tasks
     const sections = await this.prisma.passportSection.findMany({
-      where: { passportId },
+      where: {
+        passportId,
+        ...(allowedSectionKeys ? { key: { in: [...allowedSectionKeys] } } : {}),
+      },
       include: {
         tasks: {
           include: {
@@ -1168,6 +1259,39 @@ export class PassportService {
     return passport.ownerId === userId || passport.collaborators.length > 0;
   }
 
+  // Read access is checkUserAccess() above; this is the write-side check
+  // (Add Collaborator permission levels, client handoff, 2 Oct 2026) - the
+  // owner can always write. A collaborator's permission is "view" (no
+  // writes at all), "view_add" (can answer a currently-unanswered
+  // question, never change one that already has an answer, regardless of
+  // who wrote it), or "view_add_update_own" (can also change an answer
+  // they themselves last wrote - never someone else's, including the
+  // owner's). The caller passes whether the question already has an
+  // answer and, if so, who last wrote it, since only it has that context.
+  async checkWriteAccess(
+    passportId: string,
+    userId: string,
+    existingAnswer: { lastEditedByUserId: string | null } | null,
+  ): Promise<{ allowed: boolean; isOwner: boolean }> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      include: { collaborators: { where: { userId } } },
+    });
+    if (!passport) return { allowed: false, isOwner: false };
+    if (passport.ownerId === userId) return { allowed: true, isOwner: true };
+
+    const collaborator = passport.collaborators[0];
+    if (!collaborator) return { allowed: false, isOwner: false };
+
+    const permission = collaborator.permission ?? 'view';
+    if (permission === 'view') return { allowed: false, isOwner: false };
+    if (!existingAnswer) return { allowed: true, isOwner: false }; // adding new info — both view_add and view_add_update_own may
+    if (permission === 'view_add_update_own') {
+      return { allowed: existingAnswer.lastEditedByUserId === userId, isOwner: false };
+    }
+    return { allowed: false, isOwner: false }; // view_add: existing answer, not theirs to change
+  }
+
   // Step 1 of the interactive "Add collaborator" flow (client request,
   // 2026-09-30): before showing the role/access fields, the owner checks
   // whether the typed email belongs to an existing account. Owner-only,
@@ -1221,7 +1345,14 @@ export class PassportService {
     passportId: string,
     requesterId: string,
     email: string,
-    opts?: { role?: string; sectionKeys?: string[] | null; historyAccess?: boolean },
+    opts?: {
+      role?: string;
+      sectionKeys?: string[] | null;
+      historyAccess?: boolean;
+      permission?: string;
+      accessDuration?: string;
+      expiresAt?: string;
+    },
     requestOrigin?: string | null,
   ) {
     const normalised = email?.trim().toLowerCase();
@@ -1247,12 +1378,16 @@ export class PassportService {
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+        ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
+        ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
       },
       update: {
         invitedByUserId: requesterId,
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+        ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
+        ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
         status: 'pending',
         acceptedAt: null,
       },
@@ -1326,6 +1461,9 @@ export class PassportService {
             role: invite.role,
             sectionKeys: invite.sectionKeys ?? undefined,
             historyAccess: invite.historyAccess,
+            permission: invite.permission,
+            accessDuration: invite.accessDuration,
+            expiresAt: invite.expiresAt,
           },
           update: {},
         });
@@ -1435,7 +1573,14 @@ export class PassportService {
     passportId: string,
     requesterId: string,
     email: string,
-    opts?: { role?: string; sectionKeys?: string[] | null; historyAccess?: boolean },
+    opts?: {
+      role?: string;
+      sectionKeys?: string[] | null;
+      historyAccess?: boolean;
+      permission?: string;
+      accessDuration?: string;
+      expiresAt?: string;
+    },
     requestOrigin?: string | null,
   ) {
     // Verify requester is the owner
@@ -1488,6 +1633,8 @@ export class PassportService {
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+        ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
+        ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
       },
       include: {
         user: {
@@ -1561,6 +1708,10 @@ export class PassportService {
         firstName: collaborator.user.firstName,
         lastName: collaborator.user.lastName,
         createdAt: collaborator.createdAt,
+        role: collaborator.role,
+        permission: collaborator.permission,
+        accessDuration: collaborator.accessDuration,
+        expiresAt: collaborator.expiresAt,
       },
     };
   }
@@ -1574,7 +1725,14 @@ export class PassportService {
     passportId: string,
     requesterId: string,
     collaboratorId: string,
-    opts: { role?: string | null; sectionKeys?: string[] | null; historyAccess?: boolean },
+    opts: {
+      role?: string | null;
+      sectionKeys?: string[] | null;
+      historyAccess?: boolean;
+      permission?: string;
+      accessDuration?: string;
+      expiresAt?: string;
+    },
   ) {
     const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
     if (!passport) throw new ForbiddenException('Passport not found');
@@ -1592,6 +1750,8 @@ export class PassportService {
         ...(opts.role !== undefined ? { role: opts.role } : {}),
         ...(opts.sectionKeys !== undefined ? { sectionKeys: opts.sectionKeys ?? undefined } : {}),
         ...(opts.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
+        ...(opts.permission !== undefined ? { permission: opts.permission } : {}),
+        ...resolveAccessDuration(opts.accessDuration, opts.expiresAt),
       },
     });
 
@@ -1605,8 +1765,22 @@ export class PassportService {
       sectionId: null,
       sourceType: 'OWNER_INPUT',
       visibilityClass: 'OWNER_ONLY',
-      beforeRef: { role: existing.role, sectionKeys: existing.sectionKeys, historyAccess: existing.historyAccess },
-      afterRef: { role: updated.role, sectionKeys: updated.sectionKeys, historyAccess: updated.historyAccess },
+      beforeRef: {
+        role: existing.role,
+        sectionKeys: existing.sectionKeys,
+        historyAccess: existing.historyAccess,
+        permission: existing.permission,
+        accessDuration: existing.accessDuration,
+        expiresAt: existing.expiresAt,
+      },
+      afterRef: {
+        role: updated.role,
+        sectionKeys: updated.sectionKeys,
+        historyAccess: updated.historyAccess,
+        permission: updated.permission,
+        accessDuration: updated.accessDuration,
+        expiresAt: updated.expiresAt,
+      },
     });
 
     return {
@@ -1614,6 +1788,9 @@ export class PassportService {
       role: updated.role,
       sectionKeys: updated.sectionKeys,
       historyAccess: updated.historyAccess,
+      permission: updated.permission,
+      accessDuration: updated.accessDuration,
+      expiresAt: updated.expiresAt,
     };
   }
 
@@ -1650,6 +1827,8 @@ export class PassportService {
       role: c.role,
       sectionKeys: c.sectionKeys,
       historyAccess: c.historyAccess,
+      permission: c.permission,
+      accessDuration: c.accessDuration,
       expiresAt: c.expiresAt,
     }));
   }
@@ -2383,15 +2562,15 @@ export class PassportService {
   }
 
   // ── Timeline / activity ledger ─────────────────────────────────────────
-  // Pseudo block-hash for the verified stamp — visual only (matches the
-  // prototype's "0x….." chip). Tamper-evidence in real terms comes from the
-  // immutable row + createdAt; the hash is for display.
-  private pseudoHash(): string {
-    const hex = '0123456789abcdef';
-    const rand = (n: number) =>
-      Array.from({ length: n }, () => hex[Math.floor(Math.random() * 16)]).join('');
-    return `0x${rand(4)}…${rand(2)}`;
-  }
+  // This used to generate a random "0x…" chip styled to look like a
+  // blockchain/cryptographic stamp, purely for visual effect - removed
+  // (UMU_278 handoff, 2 Oct 2026: "Do not label this immutable, block-
+  // stamped or verified merely because an event has a timestamp"). A
+  // random hex string proves nothing and nothing here reads it back for
+  // real tamper-evidence, so manufacturing one to look authoritative was
+  // actively misleading. This ledger is an honest "recorded activity" log
+  // (a created-at timestamp on an app-writable row), not a verified or
+  // immutable one - say so if this ever needs UI copy, don't imply more.
 
   /** Internal helper: write an event to the timeline. */
   async logActivity(
@@ -2412,7 +2591,6 @@ export class PassportService {
           title: entry.title,
           actor: entry.actor,
           icon: entry.icon ?? null,
-          hash: this.pseudoHash(),
           metadata: entry.metadata ?? undefined,
         },
       });
@@ -2482,7 +2660,6 @@ export class PassportService {
         title: e.title,
         actor: e.actor,
         icon: e.icon,
-        hash: e.hash,
         createdAt: e.createdAt,
       })),
     };
@@ -2493,7 +2670,7 @@ export class PassportService {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
       include: {
-        collaborators: { where: { userId }, select: { id: true } },
+        collaborators: { where: { userId }, select: { id: true, sectionKeys: true } },
         sections: {
           orderBy: { order: 'asc' },
           select: {
@@ -2509,11 +2686,16 @@ export class PassportService {
     });
     if (!passport) throw new ForbiddenException('Passport not found');
     const isOwner = passport.ownerId === userId;
-    const isCollab = (passport as any).collaborators?.length > 0;
-    if (!isOwner && !isCollab) {
+    const collaboratorRow = (passport as any).collaborators?.[0];
+    if (!isOwner && !collaboratorRow) {
       throw new ForbiddenException('Not authorised to view this vault');
     }
-    return { sections: (passport as any).sections };
+    const allowedSectionKeys =
+      !isOwner && collaboratorRow?.sectionKeys ? new Set(collaboratorRow.sectionKeys as string[]) : null;
+    const sections = allowedSectionKeys
+      ? (passport as any).sections.filter((s: any) => allowedSectionKeys.has(s.key))
+      : (passport as any).sections;
+    return { sections };
   }
 
   async setSectionVisibility(
