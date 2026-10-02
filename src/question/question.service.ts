@@ -196,8 +196,24 @@ export class QuestionService {
     // this is the only place the prior value is ever visible again.
     const previousAnswer = await this.prisma.questionAnswer.findUnique({
       where: { passportQuestionId: questionId },
-      select: { answerText: true, answerJson: true, fileUrl: true },
+      select: { answerText: true, answerJson: true, fileUrl: true, lastEditedByUserId: true },
     });
+
+    // Collaborator permission levels (Add Collaborator feature, client
+    // handoff, 2 Oct 2026) - the owner always passes; see
+    // PassportService.checkWriteAccess for what each level actually means.
+    const writeAccess = await this.passportService.checkWriteAccess(
+      passportId,
+      userId,
+      previousAnswer ? { lastEditedByUserId: previousAnswer.lastEditedByUserId } : null,
+    );
+    if (!writeAccess.allowed) {
+      throw new ForbiddenException(
+        previousAnswer
+          ? 'Your collaborator access does not allow changing an answer someone else added'
+          : 'Your collaborator access is view-only',
+      );
+    }
 
     await this.prisma.questionAnswer.upsert({
       where: { passportQuestionId: questionId },
@@ -205,12 +221,14 @@ export class QuestionService {
         answerText,
         answerJson,
         fileUrl,
+        lastEditedByUserId: userId,
       },
       create: {
         passportQuestionId: questionId,
         answerText,
         answerJson,
         fileUrl,
+        lastEditedByUserId: userId,
       },
     });
 
@@ -628,10 +646,17 @@ export class QuestionService {
   async getGuidanceForAnswer(questionId: string, answerValue: unknown) {
     const question = await this.prisma.passportQuestion.findUnique({
       where: { id: questionId },
-      select: { questionTemplateId: true },
+      select: {
+        questionTemplateId: true,
+        passportSectionTask: { select: { passportSection: { select: { passportId: true } } } },
+      },
     });
     if (!question) throw new NotFoundException('Question not found');
-    return this.pathways.getGuidanceForQuestion(question.questionTemplateId, answerValue);
+    return this.pathways.getGuidanceForQuestion(
+      question.questionTemplateId,
+      answerValue,
+      question.passportSectionTask.passportSection.passportId,
+    );
   }
 
   // Combined "what should the question screen show right after saving this
@@ -645,7 +670,7 @@ export class QuestionService {
     if (!question) throw new NotFoundException('Question not found');
     const passportId = question.passportSectionTask.passportSection.passportId;
     const [guidance, journeyResult] = await Promise.all([
-      this.pathways.getGuidanceForQuestion(question.questionTemplateId, answerValue),
+      this.pathways.getGuidanceForQuestion(question.questionTemplateId, answerValue, passportId),
       this.pathways.getJourneyForQuestion(passportId, userId, question.questionTemplateId),
     ]);
     return {

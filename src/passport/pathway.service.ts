@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportEventType } from './passport-event-types';
 import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
+import { isTerminalNext, terminalStatusFor, severityOf } from './pathway-outcome-codes';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -23,8 +24,12 @@ interface PathwayStep {
   options: PathwayStepOption[];
 }
 
-const OUTCOME_KEYS = ['RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'];
-const SEVERITY_ORDER: Record<string, number> = { ESCALATE: 0, FLAG: 1, CHECK: 2 };
+// Kept for the cross-pathway chaining check below (a plain "P09"-style
+// next). Terminal detection itself now goes through isTerminalNext(), which
+// also recognises the fine-grained "code:xxx" outcomes P09/P39 use - see
+// pathway-outcome-codes.ts for why a flat list of 4 keys isn't enough
+// anymore.
+const SEVERITY_RANK: Record<'ESCALATE' | 'FLAG' | 'CHECK', number> = { ESCALATE: 0, FLAG: 1, CHECK: 2 };
 
 function normaliseAnswer(v: unknown): string {
   return String(v ?? '').trim().toLowerCase();
@@ -57,6 +62,60 @@ export class PathwayService {
     private events: PassportEventsService,
   ) {}
 
+  // Jurisdiction guard (UMU_278 handoff, 2 Oct 2026) - see
+  // PassportService.resolvePropertyNation for the full comment; duplicated
+  // here as a small private helper rather than injecting PassportService,
+  // since this is the only place in this file that needs it. Scotland/
+  // Northern Ireland properties don't get NEW pathway content; an
+  // in-progress journey a user already started is left alone rather than
+  // yanked mid-flow.
+  private async getNation(passportId: string): Promise<string | null> {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: { postcode: true, property: { select: { id: true, postcode: true, nation: true } } },
+    });
+    if (!passport?.property) return null;
+    if (passport.property.nation) return passport.property.nation;
+    try {
+      const postcode = (passport.property.postcode ?? passport.postcode).replace(/\s+/g, '');
+      const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const nation = data?.result?.country ?? null;
+      if (nation) await this.prisma.property.update({ where: { id: passport.property.id }, data: { nation } });
+      return nation;
+    } catch {
+      return null; // unresolved postcode never blocks - see getJurisdiction's own comment
+    }
+  }
+
+  private async isUnsupportedJurisdiction(passportId: string): Promise<boolean> {
+    const nation = await this.getNation(passportId);
+    return nation === 'Scotland' || nation === 'Northern Ireland';
+  }
+
+  // England-only legal mechanisms (Building Safety Act 2022 Landlord's
+  // Certificate / cladding notices - source id BUILDINGSAFETY) do not apply
+  // in Wales, unlike most of this pack which covers both nations together
+  // (see the paired source ids on most questions, e.g. PLANNING+PLANNINGWA,
+  // FLOODEN+FLOODWA). A panel that cites BUILDINGSAFETY with no WALESSAFETY
+  // counterpart gets this appended note for a Wales property, per the
+  // handoff's explicit "do not apply England-only building-safety
+  // certificate steps to Wales" instruction.
+  private readonly WALES_BUILDING_SAFETY_NOTE =
+    "This specific requirement comes from England's Building Safety Act regime and does not apply in Wales, which has its own building-safety framework - check what actually applies to a Welsh property before treating this as required.";
+
+  private applyWalesCaveat<T extends { panel: unknown; sourceParagraph: number } | null>(guidance: T, nation: string | null): T {
+    if (!guidance || nation !== 'Wales') return guidance;
+    const panel = guidance.panel as any;
+    const sourceIds: string[] = panel?.source_ids ?? [];
+    if (!sourceIds.includes('BUILDINGSAFETY') || sourceIds.includes('WALESSAFETY')) return guidance;
+    return {
+      ...guidance,
+      panel: { ...panel, why_now: [panel?.why_now, this.WALES_BUILDING_SAFETY_NOTE].filter(Boolean).join(' ') },
+    };
+  }
+
   // ─── Trigger detection (called from QuestionService.answerQuestion) ──────
 
   async checkTriggersForAnswer(
@@ -75,6 +134,7 @@ export class PathwayService {
       where: { liveQuestionTemplateId: questionTemplateId },
     });
     if (!mappings.length) return; // question not yet mapped to source content - nothing to do
+    if (await this.isUnsupportedJurisdiction(passportId)) return; // see isUnsupportedJurisdiction's comment
 
     const links = await this.prisma.pathwayQuestionLink.findMany({
       where: {
@@ -181,12 +241,13 @@ export class PathwayService {
     const journey = await this.prisma.pathwayJourney.findUnique({ where: { id: journeyId } });
     if (!journey || journey.passportId !== passportId) throw new NotFoundException('Journey not found');
     const pathway = await this.prisma.resolutionPathway.findUnique({ where: { id: journey.pathwayId } });
-    return { journey, pathway };
+    return { journey: { ...journey, severity: journey.status === 'IN_PROGRESS' ? null : severityOf(journey.status) }, pathway };
   }
 
   async listJourneys(passportId: string, userId: string) {
     await this.assertAccess(passportId, userId);
-    return this.prisma.pathwayJourney.findMany({ where: { passportId }, orderBy: { startedAt: 'desc' } });
+    const journeys = await this.prisma.pathwayJourney.findMany({ where: { passportId }, orderBy: { startedAt: 'desc' } });
+    return journeys.map((j) => ({ ...j, severity: j.status === 'IN_PROGRESS' ? null : severityOf(j.status) }));
   }
 
   async advanceJourney(
@@ -233,11 +294,12 @@ export class PathwayService {
     }
 
     let update: any = { stepAnswers };
+    const terminal = isTerminalNext(option.next);
 
-    if (OUTCOME_KEYS.includes(option.next)) {
+    if (terminal) {
       update = {
         ...update,
-        status: option.next,
+        status: terminalStatusFor(option.next),
         currentStepId: stepId,
         completedAt: new Date(),
       };
@@ -256,7 +318,7 @@ export class PathwayService {
 
     await this.events.logEvent({
       passportId,
-      eventType: OUTCOME_KEYS.includes(option.next)
+      eventType: terminal
         ? PassportEventType.PATHWAY_OUTCOME_REACHED
         : PassportEventType.PATHWAY_STEP_ANSWERED,
       actorType: 'OWNER',
@@ -269,7 +331,7 @@ export class PathwayService {
       afterRef: { stepId, answerLabel, next: option.next },
     });
 
-    return updated;
+    return { ...updated, severity: terminal ? severityOf(updated.status) : null };
   }
 
   // Stores a piece of pathway-step evidence (private bucket, same pattern
@@ -293,33 +355,37 @@ export class PathwayService {
     return this.prisma.pathwayJourney.update({ where: { id: journeyId }, data: { status: 'CHECK' } });
   }
 
-  // "My flags" - every journey that reached a non-RESOLVED outcome (CHECK,
-  // FLAG or ESCALATE), sorted by severity then section.
+  // "My flags" - every journey that hasn't reached a RESOLVED-tier outcome
+  // (CHECK/FLAG/ESCALATE tier, generic or one of P09/P39's fine-grained
+  // codes - see pathway-outcome-codes.ts), sorted by severity then section.
+  // IN_PROGRESS journeys are excluded (they're not an "outcome" yet).
   async listFlags(passportId: string, userId: string) {
     await this.assertAccess(passportId, userId);
     const journeys = await this.prisma.pathwayJourney.findMany({
-      where: { passportId, status: { in: ['CHECK', 'FLAG', 'ESCALATE'] } },
+      where: { passportId, status: { not: 'IN_PROGRESS' } },
       orderBy: { updatedAt: 'desc' },
     });
+    const flagged = journeys.filter((j) => severityOf(j.status) !== 'RESOLVED');
     const pathways = await this.prisma.resolutionPathway.findMany({
-      where: { id: { in: journeys.map((j) => j.pathwayId) } },
+      where: { id: { in: flagged.map((j) => j.pathwayId) } },
     });
     const pathwayById = new Map(pathways.map((p) => [p.id, p]));
-    return journeys
+    return flagged
       .map((j) => ({
         journeyId: j.id,
         pathwayId: j.pathwayId,
         status: j.status,
+        severity: severityOf(j.status),
         issue: pathwayById.get(j.pathwayId)?.issue ?? pathwayById.get(j.pathwayId)?.name,
         section: null as string | null,
         updatedAt: j.updatedAt,
       }))
-      .sort((a, b) => (SEVERITY_ORDER[a.status] ?? 9) - (SEVERITY_ORDER[b.status] ?? 9));
+      .sort((a, b) => SEVERITY_RANK[a.severity as 'ESCALATE' | 'FLAG' | 'CHECK'] - SEVERITY_RANK[b.severity as 'ESCALATE' | 'FLAG' | 'CHECK']);
   }
 
   // ─── Content (guidance + pathway lookups) ────────────────────────────────
 
-  async getGuidanceForQuestion(questionTemplateId: string, answerValue: unknown) {
+  async getGuidanceForQuestion(questionTemplateId: string, answerValue: unknown, passportId?: string) {
     // Same one-template/several-source-paragraphs case as
     // checkTriggersForAnswer() above - try every mapping onto this template
     // and return the first paragraph whose guidance actually matches this
@@ -328,6 +394,11 @@ export class PathwayService {
       where: { liveQuestionTemplateId: questionTemplateId },
     });
     if (!mappings.length) return null;
+    // Jurisdiction guard (UMU_278 handoff) - this pack's guidance never
+    // applies in Scotland/Northern Ireland; return nothing rather than
+    // show England/Wales-authored content as if it were universal.
+    const nation = passportId ? await this.getNation(passportId) : null;
+    if (nation === 'Scotland' || nation === 'Northern Ireland') return null;
     for (const mapping of mappings) {
       const guidance = await this.prisma.questionAnswerGuidance.findUnique({
         where: {
@@ -337,7 +408,7 @@ export class PathwayService {
           },
         },
       });
-      if (guidance) return guidance;
+      if (guidance) return this.applyWalesCaveat(guidance, nation);
       // No row for this exact literal value (common for MULTIPART answers,
       // whose saved value is a whole {partKey: value} object rather than a
       // single string, and for any free-text/date/upload question with no
@@ -351,7 +422,7 @@ export class PathwayService {
           },
         },
       });
-      if (fallback) return fallback;
+      if (fallback) return this.applyWalesCaveat(fallback, nation);
     }
     return null;
   }
@@ -377,7 +448,7 @@ export class PathwayService {
     });
     if (!journey) return null;
     const pathway = await this.prisma.resolutionPathway.findUnique({ where: { id: journey.pathwayId } });
-    return { journey, pathway };
+    return { journey: { ...journey, severity: journey.status === 'IN_PROGRESS' ? null : severityOf(journey.status) }, pathway };
   }
 
   private async assertAccess(passportId: string, userId: string) {

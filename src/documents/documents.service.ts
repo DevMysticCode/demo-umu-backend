@@ -18,6 +18,20 @@ import {
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
+// The 8 Vault folder categories (client mockup, 2 Oct 2026). Order here is
+// the display order on the category grid.
+export const VAULT_CATEGORIES = [
+  { key: 'property_information', label: 'Property information' },
+  { key: 'ownership_legal', label: 'Ownership & legal' },
+  { key: 'energy_utilities', label: 'Energy & utilities' },
+  { key: 'compliance', label: 'Compliance' },
+  { key: 'improvements_maintenance', label: 'Improvements & maintenance' },
+  { key: 'appliances_warranties', label: 'Appliances & warranties' },
+  { key: 'manuals', label: 'Manuals' },
+  { key: 'photos', label: 'Photos' },
+] as const;
+const VAULT_CATEGORY_KEYS = new Set(VAULT_CATEGORIES.map((c) => c.key));
+
 // `documents/` is a private bucket — access goes via /files/* signed URLs
 // rather than the static /uploads/* mount (which intentionally doesn't
 // serve sensitive buckets — see main.ts).
@@ -216,8 +230,18 @@ export class DocumentsService {
     name: string,
     tags: string[],
     expiresAt?: string,
+    category?: string,
+    passportId?: string,
   ) {
     if (!file) throw new BadRequestException('No file provided');
+    if (category && !VAULT_CATEGORY_KEYS.has(category as any)) {
+      throw new BadRequestException('Invalid category');
+    }
+    if (passportId) {
+      // Must be the owner or a collaborator to file a document under this
+      // property - same gate as every other passport-scoped write.
+      await this.assertPassportAccess(passportId, userId);
+    }
 
     const fileUrl = publicUrlFor('documents', storedFilename(file));
 
@@ -230,6 +254,8 @@ export class DocumentsService {
         mimeType: file.mimetype,
         tags: tags ?? [],
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        category: category ?? null,
+        passportId: passportId ?? null,
       },
     });
 
@@ -254,6 +280,9 @@ export class DocumentsService {
       mimeType: doc.mimeType ?? '',
       tags: (doc.tags as string[]) ?? [],
       expiresAt: doc.expiresAt,
+      category: doc.category,
+      passportId: doc.passportId,
+      accessLevel: doc.accessLevel,
       createdAt: doc.createdAt,
       uploadedAt: formatDate(doc.createdAt),
       source: 'user' as const,
@@ -346,6 +375,183 @@ export class DocumentsService {
     return { homeRecords, personalDocuments };
   }
 
+  // Vault landing (client mockup, 2 Oct 2026): the 3-way Property
+  // documents / My private documents / Shared with me split, each with
+  // per-category file counts for the grid on the next screen.
+  async getVaultOverview(passportId: string, userId: string) {
+    await this.assertPassportAccess(passportId, userId);
+
+    const [propertyDocs, privateDocs, sharedGrants] = await Promise.all([
+      this.prisma.userDocument.findMany({
+        where: { passportId, userId, deletedAt: null },
+        select: { category: true },
+      }),
+      this.prisma.userDocument.findMany({
+        where: { passportId: null, userId, deletedAt: null },
+        select: { category: true },
+      }),
+      this.prisma.documentAccessGrant.findMany({
+        where: { collaboratorUserId: userId },
+        select: { id: true },
+      }),
+    ]);
+
+    const countByCategory = (docs: { category: string | null }[]) =>
+      VAULT_CATEGORIES.map((c) => ({
+        ...c,
+        count: docs.filter((d) => d.category === c.key).length,
+      }));
+
+    return {
+      propertyDocuments: { count: propertyDocs.length, categories: countByCategory(propertyDocs) },
+      privateDocuments: { count: privateDocs.length, categories: countByCategory(privateDocs) },
+      sharedWithMeCount: sharedGrants.length,
+    };
+  }
+
+  // Category detail list (mockup's "Vault > Property documents > Manuals"
+  // screen). scope 'property' = this passport's documents; 'private' =
+  // the user's own private documents, independent of any passport.
+  async getCategoryDocuments(
+    passportId: string,
+    userId: string,
+    category: string,
+    scope: 'property' | 'private',
+  ) {
+    await this.assertPassportAccess(passportId, userId);
+    if (!VAULT_CATEGORY_KEYS.has(category as any)) {
+      throw new BadRequestException('Invalid category');
+    }
+    const docs = await this.prisma.userDocument.findMany({
+      where: {
+        userId,
+        category,
+        deletedAt: null,
+        passportId: scope === 'property' ? passportId : null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return docs.map((d) => ({
+      id: d.id,
+      title: d.name,
+      fileUrl: this.resolveUrl(d.fileUrl, userId),
+      size: formatSize(d.fileSize ?? null),
+      mimeType: d.mimeType ?? '',
+      category: d.category,
+      passportId: d.passportId,
+      accessLevel: d.accessLevel,
+      createdAt: d.createdAt,
+      uploadedAt: formatDate(d.createdAt),
+    }));
+  }
+
+  // Shared-with-me (mockup's "Shared with me" vault row): every document
+  // another owner has granted this user SELECTED access to.
+  async getSharedWithMe(userId: string) {
+    const grants = await this.prisma.documentAccessGrant.findMany({
+      where: { collaboratorUserId: userId },
+      include: {
+        userDocument: true,
+        questionAnswer: { include: { passportQuestion: { include: { questionTemplate: true } } } },
+      },
+    });
+    return grants
+      .map((g) => {
+        if (g.userDocument && !g.userDocument.deletedAt) {
+          const d = g.userDocument;
+          return {
+            id: d.id,
+            kind: 'user' as const,
+            title: d.name,
+            fileUrl: this.resolveUrl(d.fileUrl, userId),
+            uploadedAt: formatDate(d.createdAt),
+          };
+        }
+        if (g.questionAnswer) {
+          const a = g.questionAnswer;
+          return {
+            id: a.id,
+            kind: 'answer' as const,
+            title: a.passportQuestion.questionTemplate.title,
+            fileUrl: a.fileUrl ? this.resolveUrl(a.fileUrl, userId) : '',
+            uploadedAt: formatDate(a.createdAt),
+          };
+        }
+        return null;
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }
+
+  // Document detail (mockup's Details/Sharing/History tabs). Owner only -
+  // same documents a collaborator was individually granted come through
+  // getSharedWithMe instead, with a narrower read-only shape.
+  async getDocumentDetail(userId: string, documentId: string) {
+    const doc = await this.prisma.userDocument.findUnique({
+      where: { id: documentId },
+      include: {
+        accessGrants: { include: { collaborator: { select: { id: true, firstName: true, lastName: true, email: true } } } },
+        passport: { select: { id: true, addressLine1: true, postcode: true } },
+      },
+    });
+    if (!doc || doc.deletedAt) throw new NotFoundException('Document not found');
+    if (doc.userId !== userId) throw new ForbiddenException('You do not own this document');
+
+    const versions = await this.prisma.documentVersion.findMany({
+      where: { documentId: doc.id },
+      orderBy: { version: 'desc' },
+    });
+
+    return {
+      id: doc.id,
+      title: doc.name,
+      fileUrl: this.resolveUrl(doc.fileUrl, userId),
+      size: formatSize(doc.fileSize ?? null),
+      mimeType: doc.mimeType ?? '',
+      category: doc.category,
+      accessLevel: doc.accessLevel,
+      passport: doc.passport,
+      createdAt: doc.createdAt,
+      uploadedAt: formatDate(doc.createdAt),
+      sharedWith: doc.accessGrants.map((g) => ({
+        id: g.collaborator.id,
+        name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
+        email: g.collaborator.email,
+      })),
+      history: versions.map((v) => ({
+        version: v.version,
+        action: v.action,
+        name: v.name,
+        createdAt: v.createdAt,
+      })),
+    };
+  }
+
+  // Updates a document's name/category/property link (mockup's Document
+  // details "Save changes" + "Unlink from property"). Owner only.
+  async updateDocumentMeta(
+    userId: string,
+    documentId: string,
+    opts: { name?: string; category?: string | null; passportId?: string | null },
+  ) {
+    const doc = await this.prisma.userDocument.findUnique({ where: { id: documentId } });
+    if (!doc || doc.deletedAt) throw new NotFoundException('Document not found');
+    if (doc.userId !== userId) throw new ForbiddenException('You do not own this document');
+    if (opts.category && !VAULT_CATEGORY_KEYS.has(opts.category as any)) {
+      throw new BadRequestException('Invalid category');
+    }
+    if (opts.passportId) await this.assertPassportAccess(opts.passportId, userId);
+
+    const updated = await this.prisma.userDocument.update({
+      where: { id: documentId },
+      data: {
+        ...(opts.name !== undefined ? { name: opts.name } : {}),
+        ...(opts.category !== undefined ? { category: opts.category } : {}),
+        ...(opts.passportId !== undefined ? { passportId: opts.passportId } : {}),
+      },
+    });
+    return { id: updated.id, name: updated.name, category: updated.category, passportId: updated.passportId };
+  }
+
   // For the "Review your Passport" screen — the current candidates for
   // inclusion in a share/publish, before the owner confirms which of them
   // actually go out this time.
@@ -383,8 +589,8 @@ export class DocumentsService {
       if (!section) return null;
       return { ownerId: section.passport.ownerId, passportId: section.passportId };
     }
-    const doc = await this.prisma.userDocument.findUnique({ where: { id }, select: { userId: true } });
-    return doc ? { ownerId: doc.userId, passportId: null } : null;
+    const doc = await this.prisma.userDocument.findUnique({ where: { id }, select: { userId: true, passportId: true } });
+    return doc ? { ownerId: doc.userId, passportId: doc.passportId } : null;
   }
 
   async setDocumentAccess(
@@ -423,7 +629,7 @@ export class DocumentsService {
     // collaborators can be granted document-level access - "selected
     // people" narrows what an already-invited collaborator can see, it
     // doesn't invite a new person (that's still Add Collaborator).
-    if (kind === 'answer' && owner.passportId) {
+    if (owner.passportId) {
       const isCollaborator = await this.prisma.passportCollaborator.findFirst({
         where: { passportId: owner.passportId, userId: collaboratorUserId },
       });

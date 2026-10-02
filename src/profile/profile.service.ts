@@ -263,7 +263,17 @@ export class ProfileService {
 
   async getUserPassports(userId: string) {
     const passports = await this.prisma.passport.findMany({
-      where: { ownerId: userId },
+      // PENDING_PAYMENT rows have no type and no seeded sections yet (a
+      // property claim takes payment before the owner picks seller/
+      // landlord - see Passport.type's own schema comment), so they must
+      // never be the dashboard's "main passport" pick. Before this filter,
+      // an abandoned/incomplete claim being the most-recently-created
+      // passport would outrank a user's real, completed passport whenever
+      // they had no SELLER-typed one yet (dashboard.vue falls back to
+      // "all" passports, index 0, when its own seller-type filter finds
+      // none) - landing them on a sectionless passportview page with no
+      // explanation. Found via a real user report, 2 Oct 2026.
+      where: { ownerId: userId, status: { not: 'PENDING_PAYMENT' } },
       include: {
         property: true,
         // Sections + their tasks + their questions + answers so we can

@@ -242,10 +242,12 @@ export class TaskService {
           data: { status: 'COMPLETED' },
         });
 
-        // Record an immutable activity-ledger entry — surfaces on the Timeline tab.
+        // Record an activity-ledger entry — surfaces on the Timeline tab. Not
+        // "verified" - the owner answered every question, nobody has
+        // professionally checked it (UMU_278 handoff, 2 Oct 2026).
         await this.passportService.logActivity(currentSection.passportId, {
           type: 'SECTION_COMPLETED',
-          title: `${currentSection.title} completed & verified`,
+          title: `${currentSection.title} completed`,
           actor: 'You',
           icon: '📎',
           metadata: { sectionKey: currentSection.key },
