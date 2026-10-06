@@ -56,6 +56,16 @@ export const TASK_DESCRIPTIONS: Record<string, Record<string, string>> = {
       'If the installed solar panels belong to the seller or if an external solar panel provider owns them.',
     solar_panel_roof_lease:
       'Whether a lease of the air/ roof space where the panels were installed has been obtained by the provider. ',
+    solar_hot_water_only:
+      'Whether the solar system is used only for hot water or heating, rather than generating electricity.',
+    solar_maintenance_agreement:
+      'Whether there is a maintenance agreement in place for the solar power system.',
+    solar_battery_storage:
+      'Whether the property has a battery for storing solar power, and its capacity.',
+    solar_national_grid:
+      'Whether the system feeds into the National Grid, and any Feed-in Tariff or Smart Export Guarantee in place.',
+    solar_building_regs_certificate:
+      'The building regulations completion certificate or compliance certificate (e.g. MCS) for the solar installation.',
     listed_building:
       "Confirmation of the property's listing status, if applicable.",
     conservation_orders:
@@ -245,9 +255,14 @@ export const TASK_ORDERS: Record<string, Record<string, number>> = {
     solar_panels: 6,
     solar_panels_ownership: 7,
     solar_panel_roof_lease: 8,
-    listed_building: 9,
-    conservation_orders: 10,
-    tree_preservation_orders: 11,
+    solar_hot_water_only: 9,
+    solar_maintenance_agreement: 10,
+    solar_battery_storage: 11,
+    solar_national_grid: 12,
+    solar_building_regs_certificate: 13,
+    listed_building: 14,
+    conservation_orders: 15,
+    tree_preservation_orders: 16,
   },
   guaranteesAndWarranties: {
     notes: 1,

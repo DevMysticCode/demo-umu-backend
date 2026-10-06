@@ -22,6 +22,7 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
 import { AdminModule } from './admin/admin.module';
 import { BuyerProfileModule } from './buyer-profile/buyer-profile.module';
 import { RewardsModule } from './rewards/rewards.module';
+import { TrueValueModule } from './truevalue/truevalue.module';
 import { KycModule } from './kyc/kyc.module';
 import { VerifierApiModule } from './verifier-api/verifier-api.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
@@ -101,6 +102,7 @@ const PROD_BUILD = process.env.NODE_ENV === 'production';
     AdminModule,
     BuyerProfileModule,
     RewardsModule,
+    TrueValueModule,
     KycModule,
     VerifierApiModule,
     MarketplaceModule,

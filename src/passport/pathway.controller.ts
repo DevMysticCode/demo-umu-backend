@@ -53,7 +53,7 @@ export class PathwayController {
   advanceJourney(
     @Param('passportId') passportId: string,
     @Param('journeyId') journeyId: string,
-    @Body() dto: { stepId: string; answerLabel: string; evidenceFileUrls?: string[] },
+    @Body() dto: { stepId: string; answerLabel: string; evidenceFileUrls?: string[]; notes?: string },
     @Request() req: any,
   ) {
     return this.pathways.advanceJourney(
@@ -63,6 +63,7 @@ export class PathwayController {
       dto.answerLabel,
       req.user.id,
       dto.evidenceFileUrls,
+      dto.notes,
     );
   }
 

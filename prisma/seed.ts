@@ -340,43 +340,58 @@ const QUESTION_TEMPLATES: QSeed[] = [
   {
     sectionKey: 'ownershipProfile',
     taskKey: 'notes',
-    title: 'About this form',
-    description: 'You must read notes before starting.',
+    title: 'About this notes',
+    description: 'Read this before you start.',
     instructionText:
       'Please indicate ownership by written instruction or by reference to a plan:',
     type: 'NOTE',
     placeholder: 'Enter your notes here...',
+    // Rewritten in UMU's own voice (client guidance, 2026-10-05) - the
+    // previous copy here was the TA6 Seller's Property Information Form's
+    // own buyer/seller notes, close to verbatim (a copyright exposure, not
+    // a criminal one, but not something to launch with). One unified
+    // passage instead of separate buyer/seller tabs: most UMU homeowners
+    // are years from having a buyer, so "Notes for Buyers" didn't fit: the
+    // buyer-facing equivalent belongs on the shared/viewer side of the
+    // Property Passport, not here (see the separate "Using this Property
+    // Passport" viewer panel). No "Definitions" block and no "completing
+    // this is not mandatory" line - the benefit of building the passport
+    // now is the opening paragraph instead.
     prewrittenTemplates: {
-      infoCard: {
-        title: 'About this form',
-        description:
-          'This form is completed by the seller to supply the detailed information and documents which may be relied upon for the conveyancing process.',
-        icon: 'ownershipProfileNotes',
-        sections: [
-          {
-            title: 'Definitions',
-            content:
-              'Seller means all sellers together where the property is owned by more than one person. Buyer means all buyers together where the property is being bought by more than one person. Property includes all buildings and land within its boundaries.',
-          },
-        ],
-      },
-      buyers: [
-        'If the seller gives you, separately from this form, any information concerning the property (in writing or in conversation, whether through an estate agent or solicitor or directly to you) on which you wish to rely when buying the property, you should tell your solicitor.',
-        'You are entitled to rely on the replies given to enquiries but in relation to the physical condition of the property, the replies should not be treated as a substitute for undertaking your own survey or making your own independent enquiries, which you are recommended to do.',
-        'The seller is only obliged to give answers based on their own information. They may not have knowledge of legal or technical matters. You should not expect the seller to have knowledge of, or give information about, matters prior to their ownership of the property.',
-        'Please ask your solicitor. Completing this form is not mandatory, but omissions or delay in providing some information may delay the sale.',
-        'If you later become aware of any information which would alter any replies you have given, you must inform your solicitor immediately. This is as important as giving the right answers in the first place. Do not change any arrangements concerning the property with anyone (such as a tenant or neighbor) without first consulting your solicitor.',
-        'It is very important that your answers are accurate. If you give incorrect or incomplete information to the buyer (on this form or otherwise in writing or in conversation, whether through your estate agent or solicitor or directly to the buyer), the buyer may make a claim for compensation from you or refuse to complete the purchase.',
-        'You should answer the questions based upon information known to you (or, in the case of legal representatives, you or the owner). You are not expected to have expert knowledge of legal or technical matters, or matters that occurred prior to your ownership of the property.',
-        'Please give your solicitor any letters, agreements or other papers which help answer the questions. If you are aware of any which you are not supplying with the answers, tell your solicitor. If you do not have any documentation you may need to obtain copies at your own expense. Also pass to your solicitor any notices you have received concerning the property and any which arrive at any time before completion of the sale.',
-      ],
-      sellers: [
-        "The answers should be prepared by the person or persons who are named as owner on the deeds or Land Registry title or by the owner's legal representative(s) if selling under a power of attorney or grant of probate or representation. If there is more than one seller, you should prepare the answers together or, if only one seller prepares the form, the other(s) should check the answers given and all sellers should sign the form.",
-        'If you do not know the answer to any question, you must say so. If you are unsure of the meaning of any questions or answers, please ask your solicitor. Completing this form is not mandatory, but omissions or delay in providing some information may delay the sale.',
-        'If you later become aware of any information which would alter any replies you have given, you must inform your solicitor immediately. This is as important as giving the right answers in the first place. Do not change any arrangements concerning the property with anyone (such as a tenant or neighbor) without first consulting your solicitor.',
-        'It is very important that your answers are accurate. If you give incorrect or incomplete information to the buyer (on this form or otherwise in writing or in conversation, whether through your estate agent or solicitor or directly to the buyer), the buyer may make a claim for compensation from you or refuse to complete the purchase.',
-        'You should answer the questions based upon information known to you (or, in the case of legal representatives, you or the owner). You are not expected to have expert knowledge of legal or technical matters, or matters that occurred prior to your ownership of the property.',
-        'Please give your solicitor any letters, agreements or other papers which help answer the questions. If you are aware of any which you are not supplying with the answers, tell your solicitor. If you do not have any documentation you may need to obtain copies at your own expense. Also pass to your solicitor any notices you have received concerning the property and any which arrive at any time before completion of the sale.',
+      content: [
+        {
+          type: 'paragraph',
+          text: "Your passport is your home's story: the information and documents a buyer and their conveyancer will want when you sell. Building it now means no surprises later.",
+        },
+        { type: 'heading', text: 'Who should answer' },
+        {
+          type: 'paragraph',
+          text: "The answers should come from the owners named on the title. If there's more than one owner, work through it together, or have each owner check the answers. If you're acting for someone else, for example under a power of attorney or after a death, answer on their behalf.",
+        },
+        { type: 'heading', text: '"I don\'t know" is a good answer' },
+        {
+          type: 'paragraph',
+          text: "If you're not sure, say so. You aren't expected to be an expert, or to know about things before you owned the home. A guess that turns out wrong causes far more trouble than an honest \"don't know\".",
+        },
+        { type: 'heading', text: 'Why accuracy matters' },
+        {
+          type: 'paragraph',
+          text: "When you sell, your buyer relies on what you tell them, whether it comes from your passport, your estate agent or a conversation. If something turns out to be wrong or missing, a buyer could pull out or claim compensation.",
+        },
+        { type: 'heading', text: 'Keep it up to date' },
+        {
+          type: 'paragraph',
+          text: 'If anything changes, such as new work, a letter from the council or a disagreement with a neighbour, update your passport. Before changing any arrangement with a tenant or neighbour, speak to a conveyancer first.',
+        },
+        { type: 'heading', text: 'Add your paperwork' },
+        {
+          type: 'paragraph',
+          text: "Upload any letters, certificates, agreements or notices that help answer a question. Many are in the paperwork from when you bought. If something's missing, we'll show you how to get a copy.",
+        },
+        {
+          type: 'callout',
+          text: 'UMU gives information, not legal advice.',
+        },
       ],
     },
     points: 0,
@@ -641,57 +656,6 @@ const QUESTION_TEMPLATES: QSeed[] = [
         scaleMinLabel: 'Good',
         scaleMaxLabel: 'Bad',
         order: 5,
-      },
-      {
-        partKey: 'things_to_be_aware',
-        type: 'date',
-        title: 'Things to be aware of...',
-        description: '',
-        options: [
-          {
-            label: 'Bin Days',
-            value: 'bin_days',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Early Tuesdays',
-          },
-          {
-            label: 'Local football traffic',
-            value: 'local_football',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Some Saturdays',
-          },
-        ],
-        order: 6,
-      },
-      {
-        partKey: 'home_usage_text',
-        type: 'text',
-        title: 'Home usage patterns',
-        description: '',
-        placeholder:
-          'e.g. We mostly use the kitchen / living room / garden to gather.',
-        rows: 3,
-        groupKey: 'home_usage',
-        order: 7,
-      },
-      {
-        partKey: 'home_wfh',
-        type: 'date',
-        title: '',
-        description: '',
-        groupKey: 'home_usage',
-        options: [
-          {
-            label: 'We WFH',
-            value: 'wfh',
-            hasDate: true,
-            inputType: 'text',
-            datePlaceholder: 'e.g. Sometimes',
-          },
-        ],
-        order: 8,
       },
     ],
     points: 100,
@@ -1469,7 +1433,7 @@ const QUESTION_TEMPLATES: QSeed[] = [
       'Boundary responsibility determines who pays for maintenance, repairs, or replacement of fences, walls, hedges, or other boundary features. Look for `T` marks on your property title plan or check your deeds for the each side.',
     options: [
       { label: 'Neighbour', value: 'neighbour' },
-      { label: 'You', value: 'you' },
+      { label: 'Seller', value: 'you' },
       { label: 'Shared', value: 'shared' },
       { label: 'Unknown', value: 'unknown' },
     ],
@@ -2757,8 +2721,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'replaced_materials',
         title:
-          'Does the property benefit from any of the following guarantees or warranties:',
-        description: 'Roofing',
+          'Does the property benefit from any roofing guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
         type: 'RADIO',
         helpText:
           'Checks if any roofing was installed/replaced/repaired (including flat roofs).If yes, give what was done, dates, contractor, materials, compliance proof (Building Control/CompetentRoofer), and any warranty.',
@@ -2799,8 +2764,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'gase_safe',
         title:
-          'Does the property benefit from any of the following guarantees or warranties:',
-        description: 'Central Heating',
+          'Does the property benefit from any central heating guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
         type: 'RADIO',
         helpText:
           'Checks if the property has central heating (any type: gas, electric, oil, heat pump). If yes, give system type, install/last-service dates, installer, compliance docs (e.g., Gas Safe/Building Control), and any warranty/manuals.',
@@ -2841,8 +2807,9 @@ const QUESTION_TEMPLATES: QSeed[] = [
       {
         partKey: 'underpinning_strengthens',
         title:
-          'Does the property benefit from any of the following guarantees or warranties:',
-        description: 'Underpinning',
+          'Does the property benefit from any underpinning guarantees or warranties?',
+        description:
+          'If yes, please provide details of the provider, policy number, start and end date, a copy of the certificate and any claims made under the warranty with details and outcomes.',
         type: 'RADIO',
         helpText:
           'Underpinning strengthens the foundations (often after subsidence).If done, provide date/location, engineer/contractor, Building Control sign-off, and any warranty; missing docs may trigger extra surveys/indemnity.',
