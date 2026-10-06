@@ -257,6 +257,7 @@ export class PathwayService {
     answerLabel: string,
     userId: string,
     evidenceFileUrls?: string[],
+    notes?: string,
   ) {
     await this.assertAccess(passportId, userId);
     const journey = await this.prisma.pathwayJourney.findUnique({ where: { id: journeyId } });
@@ -275,7 +276,13 @@ export class PathwayService {
 
     const existingAnswers = Array.isArray(journey.stepAnswers) ? (journey.stepAnswers as any[]) : [];
     const priorIndex = existingAnswers.findIndex((a) => a.stepId === stepId);
-    const newAnswer = { stepId, answerLabel, evidenceFileUrls: evidenceFileUrls ?? [], timestamp: new Date().toISOString() };
+    const newAnswer = {
+      stepId,
+      answerLabel,
+      evidenceFileUrls: evidenceFileUrls ?? [],
+      notes: notes?.trim() || null,
+      timestamp: new Date().toISOString(),
+    };
 
     let stepAnswers: any[];
     if (journey.status === 'IN_PROGRESS' && journey.currentStepId === stepId) {

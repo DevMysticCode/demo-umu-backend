@@ -444,6 +444,29 @@ export class PassportService {
     };
   }
 
+  // See PassportController.getPassportAccess for why this exists
+  // separately from getPassportSections below.
+  async getPassportAccess(passportId: string, userId: string) {
+    const passport = await this.prisma.passport.findUnique({
+      where: { id: passportId },
+      select: {
+        ownerId: true,
+        collaborators: { where: { userId }, select: { permission: true } },
+      },
+    });
+    if (!passport) throw new ForbiddenException('Passport not found');
+    const isOwner = passport.ownerId === userId;
+    const collaboratorRow = passport.collaborators[0];
+    if (!isOwner && !collaboratorRow) {
+      throw new ForbiddenException('You do not have access to this passport');
+    }
+    return {
+      isOwner,
+      isCollaborator: !isOwner && !!collaboratorRow,
+      permission: isOwner ? null : (collaboratorRow?.permission ?? 'view'),
+    };
+  }
+
   async getPassportSections(passportId: string, userId: string) {
     // Verify passport exists and user has access (owner or collaborator)
     const passportForAccess = await this.prisma.passport.findUnique({
@@ -1322,7 +1345,12 @@ export class PassportService {
       if (existingCollaborator) {
         return { status: 'already-collaborator' as const };
       }
-      return { status: 'found' as const, firstName: user.firstName };
+      // Deliberately no name/identity in this response beyond "an account
+      // exists" - the owner typed this exact email themselves, so
+      // confirming a match is fine, but this must never become a way to
+      // learn who an email belongs to (privacy, 3 Oct 2026 - this used to
+      // return firstName).
+      return { status: 'found' as const };
     }
 
     const pendingInvite = await this.prisma.passportCollaboratorInvite.findUnique({
@@ -1596,9 +1624,15 @@ export class PassportService {
       throw new ForbiddenException('Only the owner can add collaborators');
     }
 
-    // Find user by email
+    // Find user by email. Normalised the same way checkCollaboratorEmail/
+    // inviteCollaborator already do - this one was the odd one out, doing a
+    // raw lookup instead, so an email that differed only by case (or had
+    // stray whitespace from the frontend's checkResult.email) silently
+    // 404'd here instead of finding the account the owner had just been
+    // shown as "found" one step earlier.
+    const normalisedEmail = email?.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email },
+      where: { email: normalisedEmail },
     });
 
     if (!user) {

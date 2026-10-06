@@ -180,6 +180,23 @@ export class PassportController {
     return this.passportService.getPassportSections(passportId, userId);
   }
 
+  // Lightweight ownership check for the seller passportview page: a
+  // collaborator has legitimate view access to /sections (above) and sees
+  // the same page as the owner, but owner-only actions on it (add/remove
+  // collaborator, publish) silently reject them with no way to tell in
+  // advance why. Client bug report, 2026-10-06 - a collaborator who'd
+  // switched test accounts assumed they were the owner and read the
+  // correct 403 as a bug. The frontend uses this to hide/disable those
+  // actions instead of letting a collaborator hit a guaranteed rejection.
+  @Get(':id/access')
+  @UseGuards(JwtAuthGuard)
+  async getPassportAccess(
+    @Param('id') passportId: string,
+    @Request() req: any,
+  ) {
+    return this.passportService.getPassportAccess(passportId, req.user.id);
+  }
+
   // Address / UPRN / title number we already hold for this passport's
   // property — used to pre-fill the "address of the property" question
   // instead of asking the owner to re-type known facts.
