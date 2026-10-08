@@ -93,6 +93,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.passportSectionTask;
   }
 
+  get passportFieldVisibility() {
+    return this.prisma.passportFieldVisibility;
+  }
+
   get questionTemplate() {
     return this.prisma.questionTemplate;
   }
