@@ -473,7 +473,7 @@ export class PassportService {
       where: { id: passportId },
       select: {
         ownerId: true,
-        collaborators: { where: { userId }, select: { sectionKeys: true } },
+        collaborators: { where: { userId }, select: { sectionKeys: true, taskKeys: true } },
       },
     });
     if (!passportForAccess) throw new ForbiddenException('Passport not found');
@@ -491,6 +491,14 @@ export class PassportService {
     const allowedSectionKeys =
       !isOwner && collaboratorRow?.sectionKeys
         ? new Set(collaboratorRow.sectionKeys as string[])
+        : null;
+    // Drill-down from sectionKeys (Add Collaborator "Section details" step):
+    // { [sectionKey]: taskKey[] }. A section present here is narrowed to
+    // only those tasks; a section absent here keeps every task once the
+    // section itself is allowed. Owner always sees every task.
+    const allowedTaskKeysBySection =
+      !isOwner && collaboratorRow?.taskKeys
+        ? (collaboratorRow.taskKeys as Record<string, string[]>)
         : null;
 
     // Fetch sections with tasks
@@ -539,6 +547,10 @@ export class PassportService {
     // Transform tasks to include question counts
     const transformedSections = sections.map((section) => {
       const template = sectionTemplateMap.get(section.key);
+      const allowedTaskKeys = allowedTaskKeysBySection?.[section.key];
+      const visibleTasks = allowedTaskKeys
+        ? section.tasks.filter((t) => allowedTaskKeys.includes(t.key))
+        : section.tasks;
       return {
         id: section.id,
         key: section.key,
@@ -550,7 +562,7 @@ export class PassportService {
         order: section.order,
         helpContent: template?.helpContent ?? null,
         helpVideoUrl: template?.helpVideoUrl ?? null,
-        tasks: section.tasks.map((task) => ({
+        tasks: visibleTasks.map((task) => ({
           id: task.id,
           key: task.key,
           title: task.title,
@@ -1387,6 +1399,7 @@ export class PassportService {
     opts?: {
       role?: string;
       sectionKeys?: string[] | null;
+      taskKeys?: Record<string, string[]> | null;
       historyAccess?: boolean;
       permission?: string;
       accessDuration?: string;
@@ -1416,6 +1429,7 @@ export class PassportService {
         email: normalised,
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
+        taskKeys: opts?.taskKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
         ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
         ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
@@ -1424,6 +1438,7 @@ export class PassportService {
         invitedByUserId: requesterId,
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
+        taskKeys: opts?.taskKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
         ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
         ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
@@ -1499,6 +1514,7 @@ export class PassportService {
             userId,
             role: invite.role,
             sectionKeys: invite.sectionKeys ?? undefined,
+            taskKeys: invite.taskKeys ?? undefined,
             historyAccess: invite.historyAccess,
             permission: invite.permission,
             accessDuration: invite.accessDuration,
@@ -1615,6 +1631,7 @@ export class PassportService {
     opts?: {
       role?: string;
       sectionKeys?: string[] | null;
+      taskKeys?: Record<string, string[]> | null;
       historyAccess?: boolean;
       permission?: string;
       accessDuration?: string;
@@ -1677,6 +1694,7 @@ export class PassportService {
         userId: user.id,
         role: opts?.role ?? null,
         sectionKeys: opts?.sectionKeys ?? undefined,
+        taskKeys: opts?.taskKeys ?? undefined,
         ...(opts?.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
         ...(opts?.permission !== undefined ? { permission: opts.permission } : {}),
         ...resolveAccessDuration(opts?.accessDuration, opts?.expiresAt),
@@ -1773,6 +1791,7 @@ export class PassportService {
     opts: {
       role?: string | null;
       sectionKeys?: string[] | null;
+      taskKeys?: Record<string, string[]> | null;
       historyAccess?: boolean;
       permission?: string;
       accessDuration?: string;
@@ -1794,6 +1813,7 @@ export class PassportService {
       data: {
         ...(opts.role !== undefined ? { role: opts.role } : {}),
         ...(opts.sectionKeys !== undefined ? { sectionKeys: opts.sectionKeys ?? undefined } : {}),
+        ...(opts.taskKeys !== undefined ? { taskKeys: opts.taskKeys ?? undefined } : {}),
         ...(opts.historyAccess !== undefined ? { historyAccess: opts.historyAccess } : {}),
         ...(opts.permission !== undefined ? { permission: opts.permission } : {}),
         ...resolveAccessDuration(opts.accessDuration, opts.expiresAt),
@@ -1813,6 +1833,7 @@ export class PassportService {
       beforeRef: {
         role: existing.role,
         sectionKeys: existing.sectionKeys,
+        taskKeys: existing.taskKeys,
         historyAccess: existing.historyAccess,
         permission: existing.permission,
         accessDuration: existing.accessDuration,
@@ -1821,6 +1842,7 @@ export class PassportService {
       afterRef: {
         role: updated.role,
         sectionKeys: updated.sectionKeys,
+        taskKeys: updated.taskKeys,
         historyAccess: updated.historyAccess,
         permission: updated.permission,
         accessDuration: updated.accessDuration,
@@ -1832,6 +1854,7 @@ export class PassportService {
       id: updated.id,
       role: updated.role,
       sectionKeys: updated.sectionKeys,
+      taskKeys: updated.taskKeys,
       historyAccess: updated.historyAccess,
       permission: updated.permission,
       accessDuration: updated.accessDuration,
@@ -1871,6 +1894,7 @@ export class PassportService {
       createdAt: c.createdAt,
       role: c.role,
       sectionKeys: c.sectionKeys,
+      taskKeys: c.taskKeys,
       historyAccess: c.historyAccess,
       permission: c.permission,
       accessDuration: c.accessDuration,
