@@ -7,6 +7,7 @@ export const DEFAULT_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
+  'http://localhost:3003',
   'https://demo-umu-frontend.vercel.app',
   'capacitor://localhost', // iOS Capacitor webview
   'ionic://localhost',     // legacy Capacitor scheme on Android
