@@ -230,6 +230,7 @@ export class PassportController {
     @Body('email') email: string,
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
+    @Body('taskKeys') taskKeys: Record<string, string[]> | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
     @Body('permission') permission: string | undefined,
     @Body('accessDuration') accessDuration: string | undefined,
@@ -241,7 +242,7 @@ export class PassportController {
       passportId,
       req.user.id,
       email,
-      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
+      { role, sectionKeys, taskKeys, historyAccess, permission, accessDuration, expiresAt },
       origin,
     );
   }
@@ -253,6 +254,7 @@ export class PassportController {
     @Body('email') email: string,
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
+    @Body('taskKeys') taskKeys: Record<string, string[]> | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
     @Body('permission') permission: string | undefined,
     @Body('accessDuration') accessDuration: string | undefined,
@@ -265,7 +267,7 @@ export class PassportController {
       passportId,
       userId,
       email,
-      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
+      { role, sectionKeys, taskKeys, historyAccess, permission, accessDuration, expiresAt },
       origin,
     );
   }
@@ -277,6 +279,7 @@ export class PassportController {
     @Param('collaboratorId') collaboratorId: string,
     @Body('role') role: string | undefined,
     @Body('sectionKeys') sectionKeys: string[] | undefined,
+    @Body('taskKeys') taskKeys: Record<string, string[]> | undefined,
     @Body('historyAccess') historyAccess: boolean | undefined,
     @Body('permission') permission: string | undefined,
     @Body('accessDuration') accessDuration: string | undefined,
@@ -287,7 +290,7 @@ export class PassportController {
       passportId,
       req.user.id,
       collaboratorId,
-      { role, sectionKeys, historyAccess, permission, accessDuration, expiresAt },
+      { role, sectionKeys, taskKeys, historyAccess, permission, accessDuration, expiresAt },
     );
   }
 

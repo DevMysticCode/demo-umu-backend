@@ -642,6 +642,13 @@ model PassportCollaborator {
   // field existed, so this is additive, not a breaking migration.
   role         String? // e.g. "Solicitor / Conveyancer", "Estate agent", "Co-owner", "Surveyor", "Buyer", "Other" — display only today
   sectionKeys  Json? // null = full access (today's default behaviour); otherwise an array of SectionTemplate.key values this collaborator may see
+  // Drill-down from sectionKeys (Add Collaborator "Section details" step,
+  // client prototype, 8 Oct 2026) - { [sectionKey]: taskKey[] }. A section
+  // key present here narrows that section to only the listed tasks; a
+  // section key granted via sectionKeys but absent here keeps full access
+  // to all its tasks (today's behaviour, and every row created before this
+  // field existed). Irrelevant when sectionKeys is null (whole-passport access).
+  taskKeys     Json?
   historyAccess Boolean @default(true)
   // Added for the Add Collaborator feature (client handoff, 2 Oct 2026):
   // "view" (read-only, today's implicit default — preserved for every row
@@ -679,6 +686,7 @@ model PassportCollaboratorInvite {
   email           String
   role            String?
   sectionKeys     Json?
+  taskKeys        Json? // same shape/meaning as PassportCollaborator.taskKeys, carried over on accept
   historyAccess   Boolean   @default(true)
   permission      String?   @default("view")
   accessDuration  String?   @default("until_removed")
