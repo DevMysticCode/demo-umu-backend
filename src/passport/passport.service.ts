@@ -1177,8 +1177,14 @@ export class PassportService {
   // actions (only the owner can delete a passport; a collaborator has
   // edit rights but not admin rights).
   async getUserPassports(userId: string) {
+    // PENDING_PAYMENT is a draft row (claim started, payment/verification
+    // never completed) - never a real, issued passport, so it must never
+    // appear in "my passports". Client bug report, 2026-10-08: a user who
+    // started a claim and backed out before paying still saw the property
+    // listed under their account, and opening it round-tripped through
+    // passportview before redirecting back into the claim flow.
     const owned = await this.prisma.passport.findMany({
-      where: { ownerId: userId },
+      where: { ownerId: userId, status: { not: 'PENDING_PAYMENT' } },
       select: {
         id: true,
         addressLine1: true,
@@ -1191,7 +1197,7 @@ export class PassportService {
     });
 
     const collaborated = await this.prisma.passportCollaborator.findMany({
-      where: { userId },
+      where: { userId, passport: { status: { not: 'PENDING_PAYMENT' } } },
       include: {
         passport: {
           select: {
