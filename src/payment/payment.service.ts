@@ -26,9 +26,9 @@ export const PASSPORT_UNLOCK_AMOUNT_PENCE = 9900;
 //     user already had approved KYC from an earlier claim.
 //   - OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE: neither is done yet — this
 //     claim pays for both a fresh Persona check and the HMLR check.
-export const KYC_ONLY_AMOUNT_PENCE = 899; // £8.99
+export const KYC_ONLY_AMOUNT_PENCE = 1299; // £12.99
 export const OWNER_CLAIM_KYC_PLUS_HMLR_AMOUNT_PENCE = 1999; // £19.99
-export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 1299; // £12.99
+export const OWNER_CLAIM_HMLR_ONLY_AMOUNT_PENCE = 700; // £7.00
 
 @Injectable()
 export class PaymentService {
