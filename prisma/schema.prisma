@@ -575,24 +575,6 @@ model Passport {
   // implies the other.
   publicVisibility      Boolean              @default(false)
   publicVisibilitySetAt DateTime?
-  // Manage Visibility (client definitive handoff, 2 Oct 2026) - a real
-  // Private/Shared/Public hierarchy (SectionVisibility, extended with
-  // SHARED) spanning Passport -> section -> task -> field. Deliberately a
-  // separate concept from both `status`/PUBLISHED (which still drives the
-  // buyer-marketplace flow on website-new/mobile-webapp) and
-  // `publicVisibility` above (website-integration's own simpler toggle,
-  // left untouched) - flipping one never implies another. Scoped to
-  // website-new and mobile-webapp only; website-integration doesn't use
-  // this field.
-  visibility                 SectionVisibility          @default(PRIVATE)
-  // The synthetic "Property overview" card (address, type, key features,
-  // photos, floorplan, local area) isn't backed by QuestionAnswers like
-  // the 17 real TA6 sections, so it has no PassportSection/Task row of its
-  // own to hang a visibility field on - this is its section-level entry in
-  // the Manage Visibility list; its field-level entries live in
-  // PassportFieldVisibility below.
-  propertyOverviewVisibility SectionVisibility          @default(PUBLIC)
-  fieldVisibilities          PassportFieldVisibility[]
   // Resume tracking — last task the owner / collaborator visited so the
   // "Pick up where you left off" button can route them straight back.
   lastVisitedTaskId String?
@@ -776,35 +758,11 @@ model PassportSectionTask {
   order             Int
   status            TaskStatus         @default(PENDING)
   createdAt         DateTime           @default(now())
-  // Manage Visibility task-level entry (client definitive handoff, 2 Oct
-  // 2026) - the drill-down granularity for the 17 real, QuestionAnswer-
-  // driven sections (per-question would be 10-50+ toggles in one section;
-  // per-task is the practical unit). Effective visibility is the most
-  // restrictive of Passport.visibility, the parent section's visibility
-  // and this field - see PassportService.effectiveVisibility.
-  visibility        SectionVisibility  @default(PUBLIC)
   passportQuestions PassportQuestion[]
   passportSection   PassportSection    @relation(fields: [passportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([passportSectionId, key])
   @@index([passportSectionId])
-}
-
-// Field-level Manage Visibility entries for a section with no real Task
-// structure to hang visibility on - today just the synthetic "Property
-// overview" card (Passport.propertyOverviewVisibility is its section-level
-// entry). Generic fieldKey/sectionKey rather than a dedicated table so
-// another non-task-based section can reuse this later without a migration.
-model PassportFieldVisibility {
-  id         String            @id @default(uuid())
-  passportId String
-  sectionKey String            @default("propertyOverview")
-  fieldKey   String
-  visibility SectionVisibility @default(PUBLIC)
-  passport   Passport          @relation(fields: [passportId], references: [id], onDelete: Cascade)
-
-  @@unique([passportId, sectionKey, fieldKey])
-  @@index([passportId])
 }
 
 // Recorded-activity ledger for a Passport — drives the Timeline tab. An
@@ -1640,12 +1598,6 @@ enum PassportType {
 enum SectionVisibility {
   PUBLIC
   PRIVATE
-  // Visible to collaborators scoped to this section/passport (via
-  // PassportCollaborator.sectionKeys), but not on the public Passport -
-  // added for Manage Visibility (client definitive handoff, 2 Oct 2026).
-  // Existing PassportSection rows all pre-date this value, so PUBLIC/
-  // PRIVATE keep meaning exactly what they did before; this is additive.
-  SHARED
 }
 
 enum OwnershipVerificationStatus {
