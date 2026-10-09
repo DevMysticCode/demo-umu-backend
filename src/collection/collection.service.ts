@@ -20,14 +20,23 @@ export class CollectionService {
   ) {}
 
   async getMyCollections(userId: string) {
-    // All passports the user owns or collaborates on
+    // All passports the user owns or collaborates on. PENDING_PAYMENT is a
+    // draft row (claim started, payment/verification never completed) -
+    // never a real, issued passport, so it must never appear here, same
+    // rule as PassportService.getUserPassports and
+    // ProfileService.getUserPassports. This was the one place that never
+    // got that fix: a property whose claim a user abandoned before paying
+    // still showed in their Collections grid and opening it round-tripped
+    // straight to /passportview/:id with the draft's own id, which then
+    // bounced back into the claim flow with no explanation (client bug
+    // report, 9 Oct 2026).
     const ownedPassports = await this.prisma.passport.findMany({
-      where: { ownerId: userId },
+      where: { ownerId: userId, status: { not: 'PENDING_PAYMENT' } },
       select: PASSPORT_SELECT,
     });
 
     const collabItems = await this.prisma.passportCollaborator.findMany({
-      where: { userId },
+      where: { userId, passport: { status: { not: 'PENDING_PAYMENT' } } },
       include: { passport: { select: PASSPORT_SELECT } },
     });
 
@@ -38,11 +47,13 @@ export class CollectionService {
       }
     }
 
-    // Collections
+    // Collections - same PENDING_PAYMENT exclusion on items, in case a
+    // draft claim was ever explicitly filed into a named collection.
     const collections = await this.prisma.passportCollection.findMany({
       where: { userId },
       include: {
         items: {
+          where: { passport: { status: { not: 'PENDING_PAYMENT' } } },
           include: { passport: { select: PASSPORT_SELECT } },
           orderBy: { id: 'asc' },
         },
