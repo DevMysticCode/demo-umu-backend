@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { join } from 'path';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateEnv, warnIfHmlrLooksLikeTestStub } from './common/env.validation';
@@ -99,9 +100,7 @@ async function bootstrap() {
   // CORS allow-list driven by env. Comma-separated origins (full
   // scheme+host, no trailing slash). Falls back to a sensible default
   // covering local dev and the Capacitor mobile shells when the env
-  // var is unset — never permits the audit-flagged `origin: true,
-  // credentials: true` combo, which would let any site read responses
-  // from authenticated browsers.
+  // var is unset.
   //
   // Set CORS_ORIGINS on the AWS App Runner service (the production
   // deploy target - Railway is UAT/demo only) to your real production
@@ -110,13 +109,20 @@ async function bootstrap() {
   //   CORS_ORIGINS=https://app.umovingu.com,https://www.umovingu.com,capacitor://localhost
   // List itself lives in common/cors-origins.ts, shared with
   // frontend-url.ts's link-building logic — the two must never drift apart.
+  //
+  // credentials: true (auth hardening, 12 Oct 2026): the refresh token
+  // moved out of localStorage into an httpOnly cookie (see
+  // auth.controller.ts's refresh/:app route), so the browser now needs
+  // permission to send/receive cookies cross-origin. Safe to combine with
+  // credentials here specifically because `origin` above is always a
+  // concrete allow-list, never `true`/`'*'` - the previously-flagged
+  // dangerous combo (security review 2026-09-22, L6) was credentials with
+  // a WILDCARD origin, not credentials with an explicit list.
+  app.use(cookieParser());
   app.enableCors({
     origin: ALLOWED_ORIGINS(),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    // Not credentials: true — auth is exclusively Bearer-JWT, no cookie
-    // path exists anywhere in this app, so this flag bought nothing but
-    // would widen risk if the allowlist logic above ever regressed to
-    // something permissive (security review 2026-09-22, L6).
+    credentials: true,
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
