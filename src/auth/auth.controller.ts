@@ -1,4 +1,16 @@
-import { Controller, Post, Body, UseGuards, Request, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Res,
+  Param,
+  Headers,
+  BadRequestException,
+  HttpCode,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
@@ -9,9 +21,16 @@ import {
   ForgotPasswordDto,
   VerifyResetOtpDto,
   ResetPasswordDto,
-  RefreshTokenDto,
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
+import {
+  UmuApp,
+  isUmuApp,
+  REFRESH_COOKIE_NAME,
+  refreshCookiePath,
+  refreshCookieOptions,
+  assertTrustedOrigin,
+} from './refresh-cookie';
 
 // Credential-sensitive endpoints override the global 'default' bucket's
 // limit down to 5 req/min/IP, scoped to just these routes (there's no
@@ -41,47 +60,95 @@ export class AuthController {
     return this.authService.requestOtp(dto);
   }
 
+  // X-Umu-App identifies which of the three frontends is calling, so the
+  // refresh token can be set as an httpOnly cookie scoped to THAT app's own
+  // /auth/refresh/:app path (auth hardening, 12 Oct 2026 — see
+  // refresh-cookie.ts). Rejecting an unrecognised/missing value here, not
+  // just defaulting, because a wrong value would silently scope the cookie
+  // to the wrong path and the frontend would never be able to refresh.
+  private requireApp(app: string | undefined): UmuApp {
+    if (!isUmuApp(app)) {
+      throw new BadRequestException('Missing or unrecognised X-Umu-App header');
+    }
+    return app;
+  }
+
   @Throttle(AUTH_THROTTLE)
   @Post('verify-otp')
-  async verifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyOtp(dto);
+  async verifyOtp(
+    @Body() dto: VerifyOtpDto,
+    @Headers('x-umu-app') appHeader: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const app = this.requireApp(appHeader);
+    const { refreshToken, ...rest } = await this.authService.verifyOtp(dto);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions(app));
+    return rest;
   }
 
   @Throttle(AUTH_THROTTLE)
   @Post('register')
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Headers('x-umu-app') appHeader: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const app = this.requireApp(appHeader);
+    const { refreshToken, ...rest } = await this.authService.register(dto);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions(app));
+    return rest;
   }
 
   @Throttle(AUTH_THROTTLE)
   @Post('login')
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Headers('x-umu-app') appHeader: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const app = this.requireApp(appHeader);
+    const { refreshToken, ...rest } = await this.authService.login(dto);
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions(app));
+    return rest;
   }
 
-  @Post('logout')
-  @UseGuards(JwtAuthGuard)
+  // Not JwtAuthGuard-gated: the access token may already be expired by the
+  // time a user clicks "log out" (it's only 1h), and the authority to log
+  // out comes from the refresh-token cookie itself, same reasoning as the
+  // comment below on refresh/:app.
+  @Post('logout/:app')
   @HttpCode(200)
-  async logout(@Body() body: { refreshToken?: string }) {
-    // Access JWT itself is still stateless and just expires on its own
-    // (now 1h, not 7d — see auth.module.ts); what logout can actually make
-    // true immediately is revoking the refresh token, so this session can't
-    // silently renew itself after the user thinks they've signed out.
-    await this.authService.revokeRefreshToken(body?.refreshToken ?? '');
+  async logout(
+    @Param('app') appParam: string,
+    @Request() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const app = this.requireApp(appParam);
+    assertTrustedOrigin(req.headers?.origin);
+    await this.authService.revokeRefreshToken(req.cookies?.[REFRESH_COOKIE_NAME] ?? '');
+    res.clearCookie(REFRESH_COOKIE_NAME, { path: refreshCookiePath(app) });
     return { success: true, message: 'Logged out successfully' };
   }
 
-  // Unauthenticated by design — the refresh token itself IS the credential
-  // here, same as password-reset's resetToken. Throttled like the other
-  // credential-bearing routes.
+  // Unauthenticated by design — the refresh-token cookie itself IS the
+  // credential here, same as password-reset's resetToken. Throttled like
+  // the other credential-bearing routes. The Origin check matters more
+  // here than almost anywhere else in this API: CORS alone only stops an
+  // attacker PAGE from reading the response, not from making the browser
+  // send this request (with its httpOnly cookie attached) in the first
+  // place — that's what makes this a CSRF-shaped endpoint.
   @Throttle(AUTH_THROTTLE)
-  @Post('refresh')
+  @Post('refresh/:app')
   @HttpCode(200)
-  async refresh(@Body() dto: RefreshTokenDto, @Request() req: any) {
-    return this.authService.refresh(dto.refreshToken, {
-      userAgent: req.headers?.['user-agent'],
-      ip: req.ip,
-    });
+  async refresh(@Param('app') appParam: string, @Request() req: any, @Res({ passthrough: true }) res: Response) {
+    const app = this.requireApp(appParam);
+    assertTrustedOrigin(req.headers?.origin);
+    const { refreshToken, ...rest } = await this.authService.refresh(
+      req.cookies?.[REFRESH_COOKIE_NAME] ?? '',
+      { userAgent: req.headers?.['user-agent'], ip: req.ip },
+    );
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions(app));
+    return rest;
   }
 
   @Throttle(AUTH_THROTTLE)
