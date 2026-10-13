@@ -64,11 +64,18 @@ export class PaymentService {
   ): Promise<{ clientSecret: string; paymentId: string }> {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, status: true },
     });
     if (!passport) throw new NotFoundException('Passport not found');
     if (passport.ownerId === userId) {
       throw new BadRequestException('You already own this passport');
+    }
+    // Without this, a buyer who obtains a passport id before the owner
+    // publishes it could still pay to unlock it - bypassing the owner's
+    // publish/unpublish privacy control entirely (security review, 13 Oct
+    // 2026).
+    if (passport.status !== 'PUBLISHED') {
+      throw new ForbiddenException('This passport is not yet published for buyers');
     }
 
     const existingAccess = await this.prisma.buyerPassportAccess.findUnique({

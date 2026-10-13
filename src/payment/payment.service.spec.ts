@@ -24,6 +24,7 @@ jest.mock('stripe', () => {
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
@@ -74,9 +75,21 @@ describe('createPassportPaymentIntent - refusal paths', () => {
     );
   });
 
+  it('REJECTS payment on a not-yet-published passport - security review 13 Oct 2026', async () => {
+    const { svc, prismaStub } = makeService();
+    prismaStub.passport.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerId: 'owner-x',
+      status: 'IN_PROGRESS',
+    });
+    await expect(svc.createPassportPaymentIntent('user-1', 'p1')).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
   it('returns 409 when the user already has buyer access', async () => {
     const { svc, prismaStub } = makeService();
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x', status: 'PUBLISHED' });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue({ id: 'access-1' });
     await expect(svc.createPassportPaymentIntent('user-1', 'p1')).rejects.toThrow(
       ConflictException,
@@ -85,7 +98,7 @@ describe('createPassportPaymentIntent - refusal paths', () => {
 
   it('returns 409 when a successful payment already exists (caller should hit /buyer-unlock)', async () => {
     const { svc, prismaStub } = makeService();
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x', status: 'PUBLISHED' });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.passportPayment.findFirst.mockImplementation(({ where }: any) =>
       where.status === 'succeeded' ? { id: 'pp-1' } : null,
@@ -99,7 +112,7 @@ describe('createPassportPaymentIntent - refusal paths', () => {
 describe('createPassportPaymentIntent - happy + reuse paths', () => {
   it('creates a Stripe intent + DB row when the user is fresh', async () => {
     const { svc, prismaStub } = makeService();
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x', status: 'PUBLISHED' });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.passportPayment.findFirst.mockResolvedValue(null);
     prismaStub.passportPayment.create.mockResolvedValue({ id: 'pp-new' });
@@ -125,7 +138,7 @@ describe('createPassportPaymentIntent - happy + reuse paths', () => {
 
   it('reuses a still-valid pending intent instead of stacking up dead ones', async () => {
     const { svc, prismaStub } = makeService();
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x', status: 'PUBLISHED' });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.passportPayment.findFirst.mockImplementation(({ where }: any) =>
       where.status === 'pending'
@@ -147,7 +160,7 @@ describe('createPassportPaymentIntent - happy + reuse paths', () => {
 
   it('supersedes a pending row whose Stripe intent has been canceled', async () => {
     const { svc, prismaStub } = makeService();
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x', status: 'PUBLISHED' });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.passportPayment.findFirst.mockImplementation(({ where }: any) =>
       where.status === 'pending'

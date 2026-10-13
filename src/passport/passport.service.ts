@@ -2174,12 +2174,19 @@ export class PassportService {
   async createBuyerAccess(passportId: string, userId: string) {
     const passport = await this.prisma.passport.findUnique({
       where: { id: passportId },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, status: true },
     });
     if (!passport) throw new NotFoundException('Passport not found');
 
     if (passport.ownerId === userId) {
       return { passportId };
+    }
+
+    // Mirrors payment.service.ts's createPassportPaymentIntent check -
+    // also needed here in case the owner unpublished between the buyer's
+    // payment and this unlock call (security review, 13 Oct 2026).
+    if (passport.status !== 'PUBLISHED') {
+      throw new ForbiddenException('This passport is not yet published for buyers');
     }
 
     const existing = await this.prisma.buyerPassportAccess.findUnique({

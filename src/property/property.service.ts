@@ -14,7 +14,7 @@ import { LandRegistryService } from '../land-registry/land-registry.service';
 import type { VerifyOwnershipResult } from '../land-registry/land-registry.types';
 import { Property, Prisma } from '@prisma/client';
 import { Resend } from 'resend';
-import { buildStreetViewUrl, resolveStreetViewUrl } from './street-view';
+import { buildStreetViewUrl, resolveStreetViewUrl, proxiedStreetViewUrl } from './street-view';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
 //
@@ -2229,11 +2229,12 @@ export class PropertyService {
           : `${dpa.BUILDING_NUMBER ?? ''} ${dpa.THOROUGHFARE_NAME ?? ''}`.trim();
         const addressLine1 = titleCase(rawAddress1);
 
-        // Google Street View — built via the shared util so future key
-        // rotations only need a .env swap. Stored in the DB as a cache,
-        // but resolveStreetViewUrl in the response layer will override
-        // whatever's stored with a fresh URL anyway.
-        const imageUrl = buildStreetViewUrl(coords.lat, coords.lon);
+        // Google Street View — proxied URL (no raw API key, even in the
+        // DB) via the shared util so future key rotations only need a
+        // .env swap. Stored in the DB as a cache, but resolveStreetViewUrl
+        // in the response layer will override whatever's stored with a
+        // fresh URL anyway.
+        const imageUrl = proxiedStreetViewUrl(coords.lat, coords.lon);
 
         const globalIndex = offset + i;
 
@@ -3358,8 +3359,10 @@ export class PropertyService {
     ]);
 
     // Detail-page hero uses a slightly higher pitch than the search
-    // card thumbnail, but everything else is identical.
-    const streetViewUrl = buildStreetViewUrl(lat, lon, { pitch: 10 });
+    // card thumbnail, but everything else is identical. Proxied, same
+    // reasoning as resolveStreetViewUrl - this goes straight into the
+    // client-facing response, so it must never carry the raw API key.
+    const streetViewUrl = proxiedStreetViewUrl(lat, lon, { pitch: 10 });
 
     const floodData =
       floodRiskRaw.status === 'fulfilled' ? floodRiskRaw.value : null;
@@ -5657,6 +5660,28 @@ export class PropertyService {
     });
   }
 
+  // Fetches the Street View image bytes server-side using GOOGLE_API_KEY
+  // and returns them for the controller to stream back - the key itself
+  // never reaches the browser at any layer (not even in a redirect's
+  // Location header), unlike returning the raw Google URL directly
+  // (security review, 13 Oct 2026). lat/lon aren't secret - they're
+  // already public on the property page - so this proxy route needs no
+  // auth, just the same reasoning as the other public property-image
+  // endpoints.
+  async fetchStreetViewImage(
+    lat: number,
+    lon: number,
+    opts: { size?: string; fov?: number; pitch?: number; radius?: number },
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const googleUrl = buildStreetViewUrl(lat, lon, opts);
+    if (!googleUrl) return null;
+    const res = await fetch(googleUrl);
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') ?? 'image/jpeg';
+    const buffer = Buffer.from(await res.arrayBuffer());
+    return { buffer, contentType };
+  }
+
   // Returns the best available homescore for a property (owner's first, then any) — no auth needed.
   // Uses the SELLER passport's owner since landlord passports are private.
   async getPublicHomeScore(propertyId: string) {
@@ -5845,8 +5870,10 @@ export class PropertyService {
 
   async selfDeclarePropertyDetails(
     propertyId: string,
+    userId: string,
     body: { tenure?: string; propertyType?: string },
   ) {
+    await this.assertPropertyManager(propertyId, userId);
     const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
     });
@@ -7220,9 +7247,38 @@ export class PropertyService {
     };
   }
 
+  // Shared owner/collaborator check for property-scoped endpoints that
+  // aren't routed through PassportService (self-declare, bill-parse,
+  // matched-buyers) - these take a propertyId, not a passportId, so they
+  // can't call PassportService.checkUserAccess directly. Throws if the
+  // caller isn't the owner or a collaborator on ANY passport attached to
+  // this property (security review, 13 Oct 2026 - these endpoints had no
+  // ownership check at all before this).
+  async assertPropertyManager(propertyId: string, userId: string): Promise<void> {
+    const property = await this.prisma.property.findUnique({
+      where: { id: propertyId },
+      select: {
+        passports: {
+          select: {
+            ownerId: true,
+            collaborators: { where: { userId }, select: { id: true } },
+          },
+        },
+      },
+    });
+    if (!property) throw new NotFoundException('Property not found');
+    const isManager = property.passports.some(
+      (p) => p.ownerId === userId || p.collaborators.length > 0,
+    );
+    if (!isManager) {
+      throw new ForbiddenException('You do not manage this property');
+    }
+  }
+
   // ── Matched buyers ─────────────────────────────────────────────────────────
 
-  async getMatchedBuyers(propertyId: string) {
+  async getMatchedBuyers(propertyId: string, userId: string) {
+    await this.assertPropertyManager(propertyId, userId);
     // Pull the property AND its passport team in one round-trip so we
     // can filter matched buyers to strictly external users. Without
     // this, the seller sees their own collaborators (and themselves)
