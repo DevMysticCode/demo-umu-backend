@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { deriveHmacKey } from '../common/key-derivation';
+import { isWithinCollaboratorScope } from '../common/collaborator-scope';
 
 /**
  * HMAC-signed URLs for sensitive file delivery.
@@ -147,27 +148,56 @@ export class FilesService {
 
     // QuestionAnswer rows don't have a userId of their own — ownership
     // flows up through PassportQuestion → PassportSectionTask →
-    // PassportSection → Passport. We allow access if the user owns the
-    // passport OR has been added as a collaborator on it.
+    // PassportSection → Passport. The owner always has access; a
+    // collaborator only has access to files within their granted
+    // sectionKeys/taskKeys scope (previously this just checked "is the
+    // user a collaborator at all", which let a collaborator scoped to
+    // one section download files from every other section too — security
+    // review, 13 Oct 2026).
     const asAnswer = await this.prisma.questionAnswer.findFirst({
-      where: {
-        fileUrl: { endsWith: bareUrl },
+      where: { fileUrl: { endsWith: bareUrl } },
+      select: {
         passportQuestion: {
-          passportSectionTask: {
-            passportSection: {
-              passport: {
-                OR: [
-                  { ownerId: userId },
-                  { collaborators: { some: { userId } } },
-                ],
+          select: {
+            passportSectionTask: {
+              select: {
+                key: true,
+                passportSection: {
+                  select: {
+                    key: true,
+                    passport: {
+                      select: {
+                        ownerId: true,
+                        collaborators: {
+                          where: { userId },
+                          select: { sectionKeys: true, taskKeys: true },
+                        },
+                      },
+                    },
+                  },
+                },
               },
             },
           },
         },
       },
-      select: { id: true },
     });
-    if (asAnswer) return true;
+    if (asAnswer) {
+      const passport = asAnswer.passportQuestion.passportSectionTask.passportSection.passport;
+      if (passport.ownerId === userId) return true;
+      const collaboratorRow = passport.collaborators[0];
+      if (
+        collaboratorRow &&
+        isWithinCollaboratorScope(
+          collaboratorRow.sectionKeys as string[] | null,
+          collaboratorRow.taskKeys as Record<string, string[]> | null,
+          asAnswer.passportQuestion.passportSectionTask.passportSection.key,
+          asAnswer.passportQuestion.passportSectionTask.key,
+        )
+      ) {
+        return true;
+      }
+    }
 
     return false;
   }

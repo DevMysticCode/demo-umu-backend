@@ -8,6 +8,7 @@ import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
+import { isWithinCollaboratorScope } from '../common/collaborator-scope';
 import {
   publicUrlFor,
   storedFilename,
@@ -302,19 +303,33 @@ export class DocumentsService {
       select: {
         id: true,
         ownerId: true,
-        collaborators: { where: { userId }, select: { id: true } },
+        collaborators: { where: { userId }, select: { sectionKeys: true, taskKeys: true } },
       },
     });
     if (!passport) throw new NotFoundException('Passport not found');
     const isOwner = passport.ownerId === userId;
-    const isCollaborator = passport.collaborators.length > 0;
-    if (!isOwner && !isCollaborator) {
+    const collaboratorRow = passport.collaborators[0];
+    if (!isOwner && !collaboratorRow) {
       throw new ForbiddenException('Not authorised for this passport');
     }
-    return { isOwner };
+    return {
+      isOwner,
+      sectionKeys: isOwner ? null : (collaboratorRow?.sectionKeys as string[] | null),
+      taskKeys: isOwner ? null : (collaboratorRow?.taskKeys as Record<string, string[]> | null),
+    };
   }
 
-  private async mapAnswerDocs(passportId: string, userId: string) {
+  // scope is the caller's own access (from assertPassportAccess) - a
+  // collaborator scoped to specific sections/tasks only sees answer
+  // documents within that scope, matching PassportService.
+  // getPassportSections' scoping. Previously this had no scoping at all,
+  // so any collaborator saw every section's documents regardless of what
+  // they were granted (security review, 13 Oct 2026).
+  private async mapAnswerDocs(
+    passportId: string,
+    userId: string,
+    scope: { isOwner: boolean; sectionKeys: string[] | null; taskKeys: Record<string, string[]> | null },
+  ) {
     const answers = await this.prisma.questionAnswer.findMany({
       where: {
         fileUrl: { not: null },
@@ -324,23 +339,39 @@ export class DocumentsService {
       },
       include: {
         accessGrants: { include: { collaborator: { select: { id: true, firstName: true, lastName: true } } } },
-        passportQuestion: { include: { questionTemplate: true } },
+        passportQuestion: {
+          include: {
+            questionTemplate: true,
+            passportSectionTask: { select: { key: true, passportSection: { select: { key: true } } } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
-    return answers.map((a) => ({
-      id: a.id,
-      kind: 'answer' as const,
-      title: a.passportQuestion.questionTemplate.title,
-      fileUrl: this.resolveUrl(a.fileUrl!, userId),
-      accessLevel: a.accessLevel,
-      sharedWith: a.accessGrants.map((g) => ({
-        id: g.collaborator.id,
-        name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
-      })),
-      createdAt: a.createdAt,
-      uploadedAt: formatDate(a.createdAt),
-    }));
+    return answers
+      .filter(
+        (a) =>
+          scope.isOwner ||
+          isWithinCollaboratorScope(
+            scope.sectionKeys,
+            scope.taskKeys,
+            a.passportQuestion.passportSectionTask.passportSection.key,
+            a.passportQuestion.passportSectionTask.key,
+          ),
+      )
+      .map((a) => ({
+        id: a.id,
+        kind: 'answer' as const,
+        title: a.passportQuestion.questionTemplate.title,
+        fileUrl: this.resolveUrl(a.fileUrl!, userId),
+        accessLevel: a.accessLevel,
+        sharedWith: a.accessGrants.map((g) => ({
+          id: g.collaborator.id,
+          name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
+        })),
+        createdAt: a.createdAt,
+        uploadedAt: formatDate(a.createdAt),
+      }));
   }
 
   private async mapPersonalDocs(userId: string) {
@@ -367,9 +398,9 @@ export class DocumentsService {
   }
 
   async getPassportVaultDocuments(passportId: string, userId: string) {
-    await this.assertPassportAccess(passportId, userId);
+    const scope = await this.assertPassportAccess(passportId, userId);
     const [homeRecords, personalDocuments] = await Promise.all([
-      this.mapAnswerDocs(passportId, userId),
+      this.mapAnswerDocs(passportId, userId, scope),
       this.mapPersonalDocs(userId),
     ]);
     return { homeRecords, personalDocuments };

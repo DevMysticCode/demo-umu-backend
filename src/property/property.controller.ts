@@ -18,6 +18,7 @@ import { diskStorage } from 'multer';
 import { join } from 'path';
 import { existsSync, mkdirSync, unlink } from 'fs';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import {
   PropertyService,
   PropertySearchFilterInput,
@@ -188,9 +189,10 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   async selfDeclarePropertyDetails(
     @Param('id') id: string,
+    @Request() req: any,
     @Body() body: { tenure?: string; propertyType?: string },
   ) {
-    return this.propertyService.selfDeclarePropertyDetails(id, body);
+    return this.propertyService.selfDeclarePropertyDetails(id, req.user.id, body);
   }
 
   @Get(':id/verification-status')
@@ -225,6 +227,39 @@ export class PropertyController {
   }
 
   // These must stay above @Get(':id') to avoid route conflict
+
+  // Proxies the Street View Static API image so GOOGLE_API_KEY never
+  // reaches the browser (security review, 13 Oct 2026 - every property's
+  // imageUrl used to embed the raw key). lat/lon aren't secret - already
+  // public on the property page - so no auth guard, matching the other
+  // public property-data endpoints (epc-*, sold-history, etc.).
+  @Get('street-view-image')
+  async getStreetViewImage(
+    @Query('lat') lat: string,
+    @Query('lon') lon: string,
+    @Query('size') size: string | undefined,
+    @Query('fov') fov: string | undefined,
+    @Query('pitch') pitch: string | undefined,
+    @Query('radius') radius: string | undefined,
+    @Res() res: Response,
+  ) {
+    const parsedLat = Number(lat);
+    const parsedLon = Number(lon);
+    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLon)) {
+      throw new NotFoundException('Invalid coordinates');
+    }
+    const image = await this.propertyService.fetchStreetViewImage(parsedLat, parsedLon, {
+      size,
+      fov: fov ? Number(fov) : undefined,
+      pitch: pitch ? Number(pitch) : undefined,
+      radius: radius ? Number(radius) : undefined,
+    });
+    if (!image) throw new NotFoundException('Street View image not available');
+    res.set('Content-Type', image.contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(image.buffer);
+  }
+
   @Get('wishlist')
   @UseGuards(JwtAuthGuard)
   async getWishlist(@Request() req: any) {
@@ -495,11 +530,13 @@ export class PropertyController {
   )
   async parseBill(
     @Param('id') id: string,
+    @Request() req: any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     @UploadedFile() file: any,
   ) {
     if (!file) throw new NotFoundException('No file uploaded');
     try {
+      await this.propertyService.assertPropertyManager(id, req.user.id);
       return await this.billParser.parseAndSave(id, file.path, file.mimetype);
     } finally {
       unlink(file.path, () => {});
@@ -588,8 +625,9 @@ export class PropertyController {
   }
 
   @Get(':id/matched-buyers')
-  async getMatchedBuyers(@Param('id') id: string) {
-    return this.propertyService.getMatchedBuyers(id);
+  @UseGuards(JwtAuthGuard)
+  async getMatchedBuyers(@Param('id') id: string, @Request() req: any) {
+    return this.propertyService.getMatchedBuyers(id, req.user.id);
   }
 
   @Get(':id')

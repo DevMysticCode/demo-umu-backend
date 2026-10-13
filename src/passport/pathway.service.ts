@@ -201,6 +201,11 @@ export class PathwayService {
     triggerQuestionTemplateId: string | null,
     actorId: string,
   ) {
+    // Every sibling method here (getJourney, advanceJourney, etc.) checks
+    // this first - this one didn't, so any authenticated user could start
+    // a pathway journey on an arbitrary victim passport (security review,
+    // 13 Oct 2026).
+    await this.assertAccess(passportId, actorId);
     const existing = await this.prisma.pathwayJourney.findFirst({
       where: { passportId, pathwayId, status: 'IN_PROGRESS' },
     });

@@ -70,6 +70,7 @@ describe('createBuyerAccess - paywall gate', () => {
     prismaStub.passport.findUnique.mockResolvedValue({
       id: 'p1',
       ownerId: 'owner-x',
+      status: 'PUBLISHED',
     });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue({
       passportId: 'p1',
@@ -87,6 +88,7 @@ describe('createBuyerAccess - paywall gate', () => {
     prismaStub.passport.findUnique.mockResolvedValue({
       id: 'p1',
       ownerId: 'owner-x',
+      status: 'PUBLISHED',
     });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
 
@@ -100,11 +102,28 @@ describe('createBuyerAccess - paywall gate', () => {
     expect(paymentsStub.hasSuccessfulPayment).toHaveBeenCalledWith('user-1', 'p1');
   });
 
+  it('REJECTS a buyer on a not-yet-published passport, even with payment/KYC - security review 13 Oct 2026', async () => {
+    const { svc, prismaStub, paymentsStub } = makeService({ paid: true });
+    prismaStub.passport.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerId: 'owner-x',
+      status: 'IN_PROGRESS',
+    });
+    prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
+
+    await expect(svc.createBuyerAccess('p1', 'user-1')).rejects.toThrow(
+      ForbiddenException,
+    );
+    expect(paymentsStub.hasSuccessfulPayment).not.toHaveBeenCalled();
+    expect(prismaStub.buyerPassportAccess.create).not.toHaveBeenCalled();
+  });
+
   it('paid users get access granted', async () => {
     const { svc, prismaStub, paymentsStub } = makeService({ paid: true });
     prismaStub.passport.findUnique.mockResolvedValue({
       id: 'p1',
       ownerId: 'owner-x',
+      status: 'PUBLISHED',
     });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.buyerPassportAccess.create.mockResolvedValue({});
@@ -128,7 +147,11 @@ describe('createBuyerAccess - KYC gate', () => {
       kycApproved: false,
       paid: true, // even with payment present, KYC failure short-circuits
     });
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerId: 'owner-x',
+      status: 'PUBLISHED',
+    });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
 
     await expect(svc.createBuyerAccess('p1', 'user-1')).rejects.toThrow(
@@ -154,7 +177,11 @@ describe('createBuyerAccess - KYC gate', () => {
 
   it('idempotent existing-access path also skips KYC', async () => {
     const { svc, prismaStub } = makeService({ kycApproved: false });
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerId: 'owner-x',
+      status: 'PUBLISHED',
+    });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue({
       passportId: 'p1',
       userId: 'user-1',
@@ -174,7 +201,11 @@ describe('createBuyerAccess - KYC gate', () => {
     [null],
   ])('rejects kycStatus = %j', async (status) => {
     const { svc, prismaStub } = makeService({ paid: true });
-    prismaStub.passport.findUnique.mockResolvedValue({ id: 'p1', ownerId: 'owner-x' });
+    prismaStub.passport.findUnique.mockResolvedValue({
+      id: 'p1',
+      ownerId: 'owner-x',
+      status: 'PUBLISHED',
+    });
     prismaStub.buyerPassportAccess.findUnique.mockResolvedValue(null);
     prismaStub.user.findUnique.mockResolvedValue({
       id: 'user-1',
