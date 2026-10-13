@@ -84,6 +84,7 @@ the same JSON in a text box if you prefer clicking through it instead.)
 | `ADMIN_SECRET` | | ✓ | string ≥ 16 chars, not "123" | Used by verifier-api admin endpoints |
 | `CORS_ORIGINS` | | ✓ | comma-separated origins | Current prod value: `https://demo-umu-frontend.vercel.app`, `capacitor://localhost` (iOS bundled-mode default scheme), `https://localhost` (**Android** bundled-mode default scheme — easy to forget, missing this silently breaks login/every API call from the Android app with no obvious error beyond a failed fetch), `http://localhost:3000`, `http://localhost:3002` — add real production domains here when they exist |
 | `S3_UPLOADS_BUCKET` | | ✓ | bucket name | When set, uploads go to S3 instead of container disk (see below) |
+| `COOKIE_SECURE` | | | `"false"` to opt out | The `umu_refresh` httpOnly cookie defaults to `Secure` everywhere. Leave unset in every real deployment (they're all HTTPS); only set to `"false"` for local plain-HTTP dev |
 
 The validator ([src/common/env.validation.ts](src/common/env.validation.ts))
 exits the process with a clear error if any required var is missing or
