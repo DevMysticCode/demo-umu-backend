@@ -261,11 +261,19 @@ model UserSolicitor {
 }
 
 model OtpCode {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   email     String
   code      String
+  // What this code was issued for - SIGNUP codes (requestOtp, used by
+  // verify-otp) and RESET codes (forgotPassword, used by verify-reset-otp)
+  // used to share one lookup with no purpose check, so a password-reset
+  // code could be redeemed via /auth/verify-otp for a full login (and
+  // vice versa) - an OTP-relay phishing vector (security review, 13 Oct
+  // 2026). Defaults to SIGNUP for pre-migration rows, which are expired
+  // within minutes anyway.
+  purpose   OtpPurpose @default(SIGNUP)
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   // Failed-guess counter for THIS OTP row, incremented on every wrong-code
   // verify attempt. Previously the only defence was the 5 req/min/IP
   // throttle on the verify routes — a distributed attacker rotating
@@ -273,9 +281,29 @@ model OtpCode {
   // 2026-09-22, L1). Reset implicitly every time a fresh OTP is issued
   // (requestOtp/forgotPassword delete the old row and create a new one
   // with attempts=0).
-  attempts  Int      @default(0)
+  attempts  Int       @default(0)
 
   @@index([email])
+}
+
+enum OtpPurpose {
+  SIGNUP
+  RESET
+}
+
+// Tracks resetPassword's one-time use of a resetToken JWT. The JWT itself
+// is stateless (verified by signature/expiry/purpose alone), so without
+// this row a leaked resetToken (browser history, a logging proxy) could
+// be replayed repeatedly for its full 15-minute lifetime instead of being
+// consumed on first use (security review, 13 Oct 2026). Keyed by the
+// token's own jti, not its full value - a DB read/leak doesn't hand out
+// a usable credential.
+model UsedResetToken {
+  jti       String   @id
+  usedAt    DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
 
 // Session tokens for the access/refresh split (security review follow-up,

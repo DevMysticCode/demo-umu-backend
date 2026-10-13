@@ -77,6 +77,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.refreshToken;
   }
 
+  get usedResetToken() {
+    return this.prisma.usedResetToken;
+  }
+
   get passport() {
     return this.prisma.passport;
   }

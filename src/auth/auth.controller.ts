@@ -172,6 +172,7 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  @Throttle(AUTH_THROTTLE)
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)

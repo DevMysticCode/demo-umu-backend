@@ -2,6 +2,7 @@ import {
   IsEmail,
   IsString,
   MinLength,
+  MaxLength,
   IsOptional,
   IsDateString,
   IsIn,
@@ -14,6 +15,7 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(8)
+  @MaxLength(128)
   password: string;
 
   @IsString()
