@@ -50,7 +50,9 @@ export class AuthService {
   }
 
   private generateOtp(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    // crypto.randomInt, not Math.random() - V8's Math.random() (xorshift128+)
+    // isn't cryptographically secure (security review, 13 Oct 2026).
+    return crypto.randomInt(100000, 1000000).toString();
   }
 
   private hashToken(raw: string): string {
@@ -244,8 +246,31 @@ export class AuthService {
     return { exists: !!(user && user.isVerified) };
   }
 
+  // The 5 req/min/IP AUTH_THROTTLE only limits one attacker IP - it does
+  // nothing against a botnet/proxy-rotating attacker spreading requests
+  // across many IPs to email-bomb one victim. This is the per-EMAIL
+  // backstop: refuse a new code while the last one is still fresh
+  // (security review, 13 Oct 2026).
+  private readonly OTP_RESEND_COOLDOWN_SECONDS = 60;
+
+  private async assertOtpNotRecentlyRequested(email: string): Promise<void> {
+    const recent = await this.prisma.otpCode.findFirst({
+      where: {
+        email,
+        createdAt: { gt: new Date(Date.now() - this.OTP_RESEND_COOLDOWN_SECONDS * 1000) },
+      },
+      select: { id: true },
+    });
+    if (recent) {
+      throw new BadRequestException(
+        'A code was already sent - check your email, or wait a moment before requesting another.',
+      );
+    }
+  }
+
   async requestOtp(dto: RequestOtpDto) {
     const { email } = dto;
+    await this.assertOtpNotRecentlyRequested(email);
 
     // Ensure user placeholder exists
     const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -262,7 +287,7 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
 
     await this.prisma.otpCode.create({
-      data: { email, code: otp, expiresAt },
+      data: { email, code: otp, expiresAt, purpose: 'SIGNUP' },
     });
 
     try {
@@ -294,9 +319,17 @@ export class AuthService {
   private async checkAndConsumeOtpAttempt(
     email: string,
     code: string,
+    purpose: 'SIGNUP' | 'RESET',
   ): Promise<{ id: string }> {
+    // Scoped to `purpose` so a SIGNUP code (from requestOtp) can't be
+    // redeemed via verify-reset-otp for a password reset, or a RESET code
+    // (from forgotPassword) redeemed via verify-otp for a full login -
+    // the two previously shared one lookup with no purpose check, which
+    // is an OTP-relay phishing vector: a "password reset" email forwarded
+    // to an attacker who then posts it to the LOGIN endpoint instead
+    // (security review, 13 Oct 2026).
     const current = await this.prisma.otpCode.findFirst({
-      where: { email, expiresAt: { gt: new Date() } },
+      where: { email, purpose, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
     if (!current) {
@@ -320,7 +353,7 @@ export class AuthService {
   async verifyOtp(dto: VerifyOtpDto) {
     const { email, code } = dto;
 
-    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code);
+    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code, 'SIGNUP');
 
     // Mark user as verified
     const user = await this.prisma.user.update({
@@ -490,8 +523,16 @@ export class AuthService {
       select: { id: true, isVerified: true },
     });
 
-    // Always return a generic message to avoid user enumeration
+    // Always return the same generic message in every branch below (incl.
+    // the cooldown one) to avoid user enumeration - a distinguishable
+    // "already sent, wait" response would leak account existence exactly
+    // as much as the thing this generic message already guards against.
     if (!user || !user.isVerified) {
+      return { message: this.RESET_RESPONSE };
+    }
+    try {
+      await this.assertOtpNotRecentlyRequested(email);
+    } catch {
       return { message: this.RESET_RESPONSE };
     }
 
@@ -504,7 +545,7 @@ export class AuthService {
     );
 
     await this.prisma.otpCode.create({
-      data: { email, code: otp, expiresAt },
+      data: { email, code: otp, expiresAt, purpose: 'RESET' },
     });
 
     const year = new Date().getFullYear();
@@ -551,7 +592,7 @@ export class AuthService {
   async verifyResetOtp(dto: VerifyResetOtpDto) {
     const { email, code } = dto;
 
-    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code);
+    const otpRecord = await this.checkAndConsumeOtpAttempt(email, code, 'RESET');
 
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -565,9 +606,10 @@ export class AuthService {
     // Delete the OTP — consumed
     await this.prisma.otpCode.delete({ where: { id: otpRecord.id } });
 
-    // Short-lived reset token (15 min), purpose-locked to password reset
+    // Short-lived reset token (15 min), purpose-locked to password reset.
+    // jti lets resetPassword enforce single-use (see UsedResetToken).
     const resetToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, purpose: 'password_reset' },
+      { sub: user.id, email: user.email, purpose: 'password_reset', jti: crypto.randomUUID() },
       { expiresIn: '15m' },
     );
 
@@ -620,7 +662,7 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto) {
     const { resetToken, newPassword } = dto;
 
-    type ResetPayload = { sub: string; email: string; purpose: string };
+    type ResetPayload = { sub: string; email: string; purpose: string; jti?: string; exp: number };
     let payload: ResetPayload;
     try {
       payload = this.jwtService.verify<ResetPayload>(resetToken);
@@ -630,6 +672,22 @@ export class AuthService {
 
     if (payload.purpose !== 'password_reset') {
       throw new UnauthorizedException('Invalid reset token');
+    }
+
+    // Single-use: record this token's jti before acting on it, so a
+    // leaked resetToken can't be replayed for the rest of its 15-minute
+    // window. Pre-this-change tokens have no jti - treat as already
+    // "used up" rather than granting them unlimited single-use passes.
+    if (!payload.jti) {
+      throw new UnauthorizedException('Reset token is invalid or has expired');
+    }
+    try {
+      await this.prisma.usedResetToken.create({
+        data: { jti: payload.jti, expiresAt: new Date(payload.exp * 1000) },
+      });
+    } catch {
+      // Unique constraint violation = this jti was already consumed.
+      throw new UnauthorizedException('This reset link has already been used');
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);

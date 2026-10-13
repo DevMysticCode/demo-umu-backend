@@ -50,6 +50,9 @@ function makeService() {
       updateMany: jest.fn().mockResolvedValue(null),
       findFirst: jest.fn(),
     },
+    usedResetToken: {
+      create: jest.fn().mockResolvedValue(null),
+    },
   };
   const jwtStub: any = {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
@@ -91,6 +94,18 @@ describe('verifyOtp', () => {
       UnauthorizedException,
     );
     expect(prismaStub.user.update).not.toHaveBeenCalled();
+  });
+
+  it('only looks up a SIGNUP-purpose code, never a RESET one', async () => {
+    const { svc, prismaStub } = makeService();
+    prismaStub.otpCode.findFirst.mockResolvedValue(null);
+
+    await expect(svc.verifyOtp({ email: 'x@y.com', code: '123456' })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(prismaStub.otpCode.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ purpose: 'SIGNUP' }) }),
+    );
   });
 
   it('flips isVerified, deletes OTP, issues JWT on success', async () => {
@@ -268,6 +283,21 @@ describe('forgotPassword', () => {
     expect(prismaStub.otpCode.create).toHaveBeenCalled();
   });
 
+  it('does NOT send a second code within the per-email cooldown (same generic message, no new OTP)', async () => {
+    const { svc, prismaStub } = makeService();
+    prismaStub.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      isVerified: true,
+    });
+    // A code was already created seconds ago - the cooldown check finds it.
+    prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-recent' });
+
+    const res = await svc.forgotPassword({ email: 'x@y.com' });
+
+    expect(prismaStub.otpCode.create).not.toHaveBeenCalled();
+    expect(res.message).toBe('If an account exists for this email, a reset code has been sent.');
+  });
+
   it('does NOT create an OTP for an unverified existing user (avoids confirming the account exists)', async () => {
     const { svc, prismaStub } = makeService();
     prismaStub.user.findUnique.mockResolvedValue({
@@ -298,6 +328,18 @@ describe('verifyResetOtp', () => {
     );
   });
 
+  it('only looks up a RESET-purpose code, never a SIGNUP one', async () => {
+    const { svc, prismaStub } = makeService();
+    prismaStub.otpCode.findFirst.mockResolvedValue(null);
+
+    await expect(svc.verifyResetOtp({ email: 'x@y.com', code: '123456' })).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(prismaStub.otpCode.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ purpose: 'RESET' }) }),
+    );
+  });
+
   it('issues a purpose-locked 15-min JWT on success and consumes the OTP', async () => {
     const { svc, prismaStub, jwtStub } = makeService();
     prismaStub.otpCode.findFirst.mockResolvedValue({ id: 'otp-1', code: '123456', attempts: 0 });
@@ -306,7 +348,7 @@ describe('verifyResetOtp', () => {
     const res = await svc.verifyResetOtp({ email: 'x@y.com', code: '123456' });
 
     expect(jwtStub.sign).toHaveBeenCalledWith(
-      { sub: 'user-1', email: 'x@y.com', purpose: 'password_reset' },
+      { sub: 'user-1', email: 'x@y.com', purpose: 'password_reset', jti: expect.any(String) },
       { expiresIn: '15m' },
     );
     expect(prismaStub.otpCode.delete).toHaveBeenCalledWith({ where: { id: 'otp-1' } });
@@ -350,6 +392,8 @@ describe('resetPassword', () => {
       sub: 'user-1',
       email: 'x@y.com',
       purpose: 'password_reset',
+      jti: 'jti-1',
+      exp: Math.floor(Date.now() / 1000) + 900,
     });
     prismaStub.user.update.mockResolvedValue({ id: 'user-1', email: 'x@y.com' });
 
@@ -366,5 +410,23 @@ describe('resetPassword', () => {
       // 2026-09-22, M1).
       data: { password: '$2b$10$mockedhash', passwordChangedAt: expect.any(Date) },
     });
+  });
+
+  it('REJECTS a replayed reset token (same jti used twice)', async () => {
+    const { svc, prismaStub, jwtStub } = makeService();
+    jwtStub.verify.mockReturnValue({
+      sub: 'user-1',
+      email: 'x@y.com',
+      purpose: 'password_reset',
+      jti: 'already-used-jti',
+      exp: Math.floor(Date.now() / 1000) + 900,
+    });
+    // Unique-constraint violation - this jti row already exists.
+    prismaStub.usedResetToken.create.mockRejectedValue(new Error('Unique constraint failed'));
+
+    await expect(
+      svc.resetPassword({ resetToken: 'replayed-jwt', newPassword: 'new-strong-password' }),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(prismaStub.user.update).not.toHaveBeenCalled();
   });
 });
