@@ -33,6 +33,18 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  // Production runs behind exactly one reverse-proxy hop (AWS App
+  // Runner). Without this, Express's req.ip is either the proxy's own
+  // address (if it forwards a raw socket) or undefined behaviour reading
+  // X-Forwarded-For - either way, ThrottlerGuard's per-IP rate limits
+  // (AUTH_THROTTLE etc.) could silently collapse every real client onto
+  // one bucket instead of actually discriminating between them. `1` means
+  // trust exactly one hop in front of this app, not an open-ended chain -
+  // this does NOT make req.ip spoofable by a client's own X-Forwarded-For,
+  // since only the proxy-adjacent hop is trusted (security review, 13 Oct
+  // 2026).
+  app.set('trust proxy', 1);
+
   // Raise the JSON/urlencoded body limit above express's 100kb default.
   // Some legitimate payloads are large: a signed inventory answer carries
   // the whole room-by-room record PLUS base64 signature-canvas PNGs for

@@ -609,7 +609,12 @@ export class QuestionService {
     if (!dto.signerName?.trim() || !dto.signatureDataUrl) {
       throw new BadRequestException('A name and signature are required.');
     }
-    if (!dto.signatureDataUrl.startsWith('data:image/')) {
+    // Anchored allow-list, not just startsWith('data:image/') - an
+    // unescaped version of this string later gets interpolated into an
+    // <img src="..."> in the generated inventory PDF HTML, so anything
+    // containing a quote could break out of the attribute (security
+    // review, 13 Oct 2026).
+    if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(dto.signatureDataUrl)) {
       throw new BadRequestException('Invalid signature image.');
     }
 

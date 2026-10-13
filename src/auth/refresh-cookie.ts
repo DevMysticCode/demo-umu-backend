@@ -25,7 +25,15 @@ export function refreshCookiePath(app: UmuApp): string {
 export function refreshCookieOptions(app: UmuApp) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    // Secure by default everywhere, not just when NODE_ENV === 'production'
+    // exactly - this app has more than one production-flagged environment
+    // (see env.validation.ts's warnIfHmlrLooksLikeTestStub comment for the
+    // same point made elsewhere), so an exact string match risked shipping
+    // this 30-day cookie without Secure on a host that isn't literally
+    // NODE_ENV=production but is still live over HTTPS. Opt OUT explicitly
+    // (COOKIE_SECURE=false) for local HTTP dev instead (security review,
+    // 13 Oct 2026).
+    secure: process.env.COOKIE_SECURE !== 'false',
     sameSite: 'lax' as const,
     path: refreshCookiePath(app),
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days, matching REFRESH_TOKEN_TTL_DAYS

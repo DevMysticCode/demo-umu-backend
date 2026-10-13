@@ -26,11 +26,14 @@ export interface BuildStreetViewOptions {
   radius?: number;
 }
 
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
+
 /**
- * Build a Google Street View Static image URL for a lat/lon. Returns
- * null if we don't have coordinates or a Google key at all — callers
- * treat null as "no image available" (the frontend renders a fallback
- * placeholder in that case).
+ * Build the REAL Google Street View Static image URL, key included.
+ * Server-side use only — the property/street-view-image proxy route is
+ * the sole caller that actually fetches this URL; nothing returns it to
+ * a client directly. Returns null if we don't have coordinates or a
+ * Google key at all.
  */
 export function buildStreetViewUrl(
   lat: number | null | undefined,
@@ -55,6 +58,31 @@ export function buildStreetViewUrl(
 }
 
 /**
+ * The URL any CLIENT-facing response should actually use — points at our
+ * own /property/street-view-image proxy instead of Google's endpoint, so
+ * GOOGLE_API_KEY (a server-only credential) never reaches the browser.
+ * The proxy route rebuilds the real Google URL (via buildStreetViewUrl
+ * above) and streams the image bytes back itself (security review, 13 Oct
+ * 2026 - this used to ship the key directly in every property's imageUrl).
+ * Same null-if-no-coords/no-key semantics as buildStreetViewUrl, so
+ * callers that already treat null as "no image available" need no change.
+ */
+export function proxiedStreetViewUrl(
+  lat: number | null | undefined,
+  lon: number | null | undefined,
+  opts: BuildStreetViewOptions = {},
+): string | null {
+  if (!process.env.GOOGLE_API_KEY) return null;
+  if (lat == null || lon == null) return null;
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  if (opts.size) params.set('size', opts.size);
+  if (opts.fov != null) params.set('fov', String(opts.fov));
+  if (opts.pitch != null) params.set('pitch', String(opts.pitch));
+  if (opts.radius != null) params.set('radius', String(opts.radius));
+  return `${BASE_URL}/property/street-view-image?${params.toString()}`;
+}
+
+/**
  * Given a property row (or partial), return the imageUrl the response
  * should use. If we have lat/lon, ALWAYS rebuild from the current env
  * key — this makes the DB's stored imageUrl a cache, not a source of
@@ -67,7 +95,7 @@ export function resolveStreetViewUrl(property: {
   longitude?: number | null;
   imageUrl?: string | null;
 }): string | null {
-  const rebuilt = buildStreetViewUrl(property.latitude, property.longitude);
+  const rebuilt = proxiedStreetViewUrl(property.latitude, property.longitude);
   if (rebuilt) return rebuilt;
   return property.imageUrl ?? null;
 }
