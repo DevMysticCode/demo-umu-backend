@@ -16,6 +16,7 @@ import { FilesService } from '../files/files.service';
 import { PUBLIC_BUCKETS, uploadsPathFrom } from '../common/storage';
 import { assertKycVerified } from '../common/kyc';
 import { resolveFrontendBaseUrl } from '../common/frontend-url';
+import { escapeForEmail } from '../common/escape-html';
 import {
   Passport,
   PassportSection,
@@ -105,14 +106,15 @@ export class PassportService {
   }) {
     if (!process.env.RESEND_API_KEY) return; // no-op if email isn't configured
     const link = `${this.frontendBaseUrl(params.requestOrigin)}/passportview/${params.passportId}`;
-    const ownerName =
+    const ownerName = escapeForEmail(
       [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
-      'The property owner';
+        'The property owner',
+    );
     const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
       .filter(Boolean)
       .join(', ');
     const greeting = params.inviteeFirstName
-      ? `Hi ${params.inviteeFirstName},`
+      ? `Hi ${escapeForEmail(params.inviteeFirstName)},`
       : 'Hi,';
     try {
       await this.resend.emails.send({
@@ -152,14 +154,15 @@ export class PassportService {
     propertyPostcode: string | null;
   }) {
     if (!process.env.RESEND_API_KEY) return;
-    const ownerName =
+    const ownerName = escapeForEmail(
       [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
-      'The property owner';
+        'The property owner',
+    );
     const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
       .filter(Boolean)
       .join(', ');
     const greeting = params.inviteeFirstName
-      ? `Hi ${params.inviteeFirstName},`
+      ? `Hi ${escapeForEmail(params.inviteeFirstName)},`
       : 'Hi,';
     try {
       await this.resend.emails.send({
@@ -1582,9 +1585,10 @@ export class PassportService {
   }) {
     if (!process.env.RESEND_API_KEY) return;
     const signupLink = `${this.frontendBaseUrl(params.requestOrigin)}/onboarding/signup?email=${encodeURIComponent(params.to)}&ref=collaborator-invite`;
-    const ownerName =
+    const ownerName = escapeForEmail(
       [params.ownerFirstName, params.ownerLastName].filter(Boolean).join(' ') ||
-      'A property owner on Umovingu';
+        'A property owner on Umovingu',
+    );
     const propertyLine = [params.propertyAddressLine1, params.propertyPostcode]
       .filter(Boolean)
       .join(', ');
@@ -2120,10 +2124,11 @@ export class PassportService {
       where: { id: fromUserId },
       select: { firstName: true, lastName: true },
     });
-    const senderName =
+    const senderName = escapeForEmail(
       [senderNameRow?.firstName, senderNameRow?.lastName]
         .filter(Boolean)
-        .join(' ') || 'The owner';
+        .join(' ') || 'The owner',
+    );
 
     const address = passport.property?.addressLine1 ?? passport.addressLine1;
 
