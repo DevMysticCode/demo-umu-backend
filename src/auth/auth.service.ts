@@ -253,10 +253,24 @@ export class AuthService {
   // (security review, 13 Oct 2026).
   private readonly OTP_RESEND_COOLDOWN_SECONDS = 60;
 
+  // OtpCode rows are always keyed by this normalized form, on both the
+  // write side (requestOtp/forgotPassword) and read side
+  // (checkAndConsumeOtpAttempt/assertOtpNotRecentlyRequested) - without
+  // it, `User@Example.com`/`user@example.com`/`USER@EXAMPLE.COM` were
+  // each their own row, so the per-email cooldown (added specifically to
+  // stop a botnet email-bombing one victim) was trivially bypassed by
+  // just varying case per request (security review, 14 Oct 2026). Scoped
+  // to OtpCode only in this pass - the User table's own email matching
+  // is a separate, pre-existing case-sensitivity question that needs its
+  // own migration decision, not bundled in here.
+  private normalizeOtpEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
   private async assertOtpNotRecentlyRequested(email: string): Promise<void> {
     const recent = await this.prisma.otpCode.findFirst({
       where: {
-        email,
+        email: this.normalizeOtpEmail(email),
         createdAt: { gt: new Date(Date.now() - this.OTP_RESEND_COOLDOWN_SECONDS * 1000) },
       },
       select: { id: true },
@@ -271,6 +285,7 @@ export class AuthService {
   async requestOtp(dto: RequestOtpDto) {
     const { email } = dto;
     await this.assertOtpNotRecentlyRequested(email);
+    const otpEmail = this.normalizeOtpEmail(email);
 
     // Ensure user placeholder exists
     const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -281,13 +296,13 @@ export class AuthService {
     }
 
     // Invalidate any previous unused OTPs for this email
-    await this.prisma.otpCode.deleteMany({ where: { email } });
+    await this.prisma.otpCode.deleteMany({ where: { email: otpEmail } });
 
     const otp = this.generateOtp();
     const expiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
 
     await this.prisma.otpCode.create({
-      data: { email, code: otp, expiresAt, purpose: 'SIGNUP' },
+      data: { email: otpEmail, code: otp, expiresAt, purpose: 'SIGNUP' },
     });
 
     try {
@@ -329,7 +344,7 @@ export class AuthService {
     // to an attacker who then posts it to the LOGIN endpoint instead
     // (security review, 13 Oct 2026).
     const current = await this.prisma.otpCode.findFirst({
-      where: { email, purpose, expiresAt: { gt: new Date() } },
+      where: { email: this.normalizeOtpEmail(email), purpose, expiresAt: { gt: new Date() } },
       orderBy: { createdAt: 'desc' },
     });
     if (!current) {
@@ -536,8 +551,9 @@ export class AuthService {
       return { message: this.RESET_RESPONSE };
     }
 
+    const otpEmail = this.normalizeOtpEmail(email);
     // Invalidate any existing OTPs for this email
-    await this.prisma.otpCode.deleteMany({ where: { email } });
+    await this.prisma.otpCode.deleteMany({ where: { email: otpEmail } });
 
     const otp = this.generateOtp();
     const expiresAt = new Date(
@@ -545,7 +561,7 @@ export class AuthService {
     );
 
     await this.prisma.otpCode.create({
-      data: { email, code: otp, expiresAt, purpose: 'RESET' },
+      data: { email: otpEmail, code: otp, expiresAt, purpose: 'RESET' },
     });
 
     const year = new Date().getFullYear();

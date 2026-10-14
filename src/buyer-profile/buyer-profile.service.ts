@@ -20,6 +20,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { publicUrlFor, storedFilename } from '../common/storage';
 import { resolveFrontendBaseUrl } from '../common/frontend-url';
 import { isKycVerified } from '../common/kyc';
+import { escapeForEmail } from '../common/escape-html';
 
 // All fields decorated so that the global ValidationPipe (whitelist: true)
 // keeps them in the request body instead of stripping them.
@@ -560,7 +561,9 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
       where: { id: profile.userId },
       select: { firstName: true, lastName: true, email: true },
     });
-    const buyerName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A UMovingU buyer';
+    const buyerName = escapeForEmail(
+      [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A UMovingU buyer',
+    );
     const link = `${this.frontendBaseUrl(requestOrigin)}/shared-buyer/${share.token}`;
     const expiryDate = share.expiresAt.toLocaleDateString('en-GB', {
       day: 'numeric', month: 'long', year: 'numeric',
