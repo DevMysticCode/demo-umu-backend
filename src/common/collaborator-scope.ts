@@ -13,7 +13,17 @@ export function isWithinCollaboratorScope(
   sectionKey: string | null | undefined,
   taskKey: string | null | undefined,
 ): boolean {
-  if (sectionKeys && sectionKeys.length > 0) {
+  // != null (not the `&& sectionKeys.length > 0` this originally had) -
+  // an EMPTY array must deny every section, matching
+  // PassportService.getPassportSections' `new Set(collaboratorRow.
+  // sectionKeys)` → `key: { in: [...set] }` reference behavior, where
+  // `key: { in: [] }` matches nothing. The `.length > 0` guard instead
+  // treated `sectionKeys: []` the same as `null` ("every section
+  // allowed") - a collaborator an owner restricted to zero sections
+  // could still read/download every file/document via the Vault
+  // endpoints that call this function (security review, 14 Oct 2026 -
+  // this inverted the exact bug the 13 Oct fix was meant to close).
+  if (sectionKeys != null) {
     if (!sectionKey || !sectionKeys.includes(sectionKey)) return false;
   }
   if (taskKeys && sectionKey && taskKeys[sectionKey]) {
