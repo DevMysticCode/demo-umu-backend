@@ -15,6 +15,7 @@ import type { VerifyOwnershipResult } from '../land-registry/land-registry.types
 import { Property, Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { buildStreetViewUrl, resolveStreetViewUrl, proxiedStreetViewUrl } from './street-view';
+import { escapeForEmail } from '../common/escape-html';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
 //
@@ -5668,17 +5669,55 @@ export class PropertyService {
   // already public on the property page - so this proxy route needs no
   // auth, just the same reasoning as the other public property-image
   // endpoints.
+  // Rate limiting alone (STREET_VIEW_THROTTLE, property.controller.ts)
+  // only caps one IP's request rate - it does nothing to stop a botnet
+  // spread across many IPs from each requesting a handful of distinct
+  // lat/lon pairs, still racking up real per-call Google billing. This
+  // in-memory cache deduplicates identical requests (same rounded
+  // coordinates + render options) so repeated hits on the same
+  // property's hero image cost Google exactly once per TTL window,
+  // regardless of how many different clients/IPs ask for it (security
+  // review, 14 Oct 2026). Bounded size with oldest-first eviction so it
+  // can't grow unbounded under a scraping attempt with many distinct
+  // coordinates.
+  private readonly streetViewCache = new Map<
+    string,
+    { buffer: Buffer; contentType: string; expiresAt: number }
+  >();
+  private static readonly STREET_VIEW_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+  private static readonly STREET_VIEW_CACHE_MAX_ENTRIES = 1000;
+
   async fetchStreetViewImage(
     lat: number,
     lon: number,
     opts: { size?: string; fov?: number; pitch?: number; radius?: number },
   ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    // Rounded to ~11m precision (4dp) - plenty for a hero image, and
+    // collapses the many near-identical lat/lon values a scraper could
+    // use to try to defeat an exact-match cache into the same entry.
+    const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${opts.size ?? ''},${opts.fov ?? ''},${opts.pitch ?? ''},${opts.radius ?? ''}`;
+    const cached = this.streetViewCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return { buffer: cached.buffer, contentType: cached.contentType };
+    }
+
     const googleUrl = buildStreetViewUrl(lat, lon, opts);
     if (!googleUrl) return null;
     const res = await fetch(googleUrl);
     if (!res.ok) return null;
     const contentType = res.headers.get('content-type') ?? 'image/jpeg';
     const buffer = Buffer.from(await res.arrayBuffer());
+
+    if (this.streetViewCache.size >= PropertyService.STREET_VIEW_CACHE_MAX_ENTRIES) {
+      const oldestKey = this.streetViewCache.keys().next().value;
+      if (oldestKey) this.streetViewCache.delete(oldestKey);
+    }
+    this.streetViewCache.set(cacheKey, {
+      buffer,
+      contentType,
+      expiresAt: Date.now() + PropertyService.STREET_VIEW_CACHE_TTL_MS,
+    });
+
     return { buffer, contentType };
   }
 
@@ -6804,13 +6843,13 @@ export class PropertyService {
   <h2 style="color:#00a19a;margin:0 0 4px;">Message via UMovingU</h2>
   <p style="color:#8f9094;font-size:14px;margin:0 0 24px;">Someone wants to connect about your property</p>
   <div style="background:#f6f6f7;border-radius:12px;padding:20px;margin-bottom:16px;">
-    <p style="margin:0 0 8px;color:#1f2024;"><strong>Property:</strong> ${propertyAddress}</p>
-    <p style="margin:0 0 8px;color:#1f2024;"><strong>From:</strong> ${userName}</p>
-    ${user?.email ? `<p style="margin:0 0 8px;color:#1f2024;"><strong>Email:</strong> ${user.email}</p>` : ''}
-    ${userPhone ? `<p style="margin:0;color:#1f2024;"><strong>Phone:</strong> ${userPhone}</p>` : ''}
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>Property:</strong> ${escapeForEmail(propertyAddress)}</p>
+    <p style="margin:0 0 8px;color:#1f2024;"><strong>From:</strong> ${escapeForEmail(userName)}</p>
+    ${user?.email ? `<p style="margin:0 0 8px;color:#1f2024;"><strong>Email:</strong> ${escapeForEmail(user.email)}</p>` : ''}
+    ${userPhone ? `<p style="margin:0;color:#1f2024;"><strong>Phone:</strong> ${escapeForEmail(userPhone)}</p>` : ''}
   </div>
   <div style="border:1.5px solid #e5e5ea;border-radius:12px;padding:20px;margin-bottom:16px;">
-    <p style="margin:0;color:#1f2024;white-space:pre-wrap;">${body.message}</p>
+    <p style="margin:0;color:#1f2024;white-space:pre-wrap;">${escapeForEmail(body.message)}</p>
   </div>
   <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
   <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">UMovingU · hello@umovingu.io</p>
