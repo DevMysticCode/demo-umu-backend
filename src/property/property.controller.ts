@@ -38,6 +38,11 @@ const SEARCH_THROTTLE = { default: { limit: 30, ttl: 60_000 } };
 // enrichment) — same cost concern as search, tighter cap since it's a
 // heavier per-request fan-out.
 const FOR_YOU_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
+// Same paid-upstream-API cost concern as SEARCH_THROTTLE/FOR_YOU_THROTTLE
+// above - every request is a billed Google Street View Static API call.
+// No auth guard (lat/lon aren't secret), so this is the only backstop
+// besides the service-level cache (security review, 14 Oct 2026).
+const STREET_VIEW_THROTTLE = { default: { limit: 30, ttl: 60_000 } };
 
 // Bill photo/scan formats — PDF is accepted too since bills often arrive
 // that way; parseBill degrades gracefully (empty result, not a crash) if
@@ -233,6 +238,7 @@ export class PropertyController {
   // imageUrl used to embed the raw key). lat/lon aren't secret - already
   // public on the property page - so no auth guard, matching the other
   // public property-data endpoints (epc-*, sold-history, etc.).
+  @Throttle(STREET_VIEW_THROTTLE)
   @Get('street-view-image')
   async getStreetViewImage(
     @Query('lat') lat: string,
@@ -245,7 +251,14 @@ export class PropertyController {
   ) {
     const parsedLat = Number(lat);
     const parsedLon = Number(lon);
-    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLon)) {
+    if (
+      !Number.isFinite(parsedLat) ||
+      !Number.isFinite(parsedLon) ||
+      parsedLat < -90 ||
+      parsedLat > 90 ||
+      parsedLon < -180 ||
+      parsedLon > 180
+    ) {
       throw new NotFoundException('Invalid coordinates');
     }
     const image = await this.propertyService.fetchStreetViewImage(parsedLat, parsedLon, {

@@ -28,6 +28,14 @@ export interface BuildStreetViewOptions {
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
+// Anchored allow-list for the one option that reaches buildStreetViewUrl
+// as a raw string rather than a Number()-coerced value. Without this, a
+// client-supplied `size` flowed straight into a hand-built query-string
+// template literal - e.g. size=1x1%26location=0,0%26key=... injects a
+// second `location`/`key` pair into the request this server makes to
+// Google with its own GOOGLE_API_KEY (security review, 14 Oct 2026).
+const SIZE_PATTERN = /^\d{1,4}x\d{1,4}$/;
+
 /**
  * Build the REAL Google Street View Static image URL, key included.
  * Server-side use only — the property/street-view-image proxy route is
@@ -43,18 +51,26 @@ export function buildStreetViewUrl(
   const key = process.env.GOOGLE_API_KEY;
   if (!key) return null;
   if (lat == null || lon == null) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
 
-  const size = opts.size ?? '800x500';
-  const fov = opts.fov ?? 90;
-  const pitch = opts.pitch ?? 5;
-  const radius = opts.radius ?? 200;
+  const size = opts.size && SIZE_PATTERN.test(opts.size) ? opts.size : '800x500';
+  const fov = Number.isFinite(opts.fov) ? opts.fov : 90;
+  const pitch = Number.isFinite(opts.pitch) ? opts.pitch : 5;
+  const radius = Number.isFinite(opts.radius) ? opts.radius : 200;
 
-  return (
-    `https://maps.googleapis.com/maps/api/streetview` +
-    `?size=${size}&location=${lat},${lon}&key=${key}` +
-    `&fov=${fov}&pitch=${pitch}&radius=${radius}` +
-    `&source=outdoor&return_error_codes=true`
-  );
+  // URLSearchParams encodes every value - no raw string can break out
+  // into a second query param the way the old template literal allowed.
+  const params = new URLSearchParams({
+    size,
+    location: `${lat},${lon}`,
+    key,
+    fov: String(fov),
+    pitch: String(pitch),
+    radius: String(radius),
+    source: 'outdoor',
+    return_error_codes: 'true',
+  });
+  return `https://maps.googleapis.com/maps/api/streetview?${params.toString()}`;
 }
 
 /**
@@ -74,6 +90,7 @@ export function proxiedStreetViewUrl(
 ): string | null {
   if (!process.env.GOOGLE_API_KEY) return null;
   if (lat == null || lon == null) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
   const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
   if (opts.size) params.set('size', opts.size);
   if (opts.fov != null) params.set('fov', String(opts.fov));
