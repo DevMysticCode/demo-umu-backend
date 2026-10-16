@@ -7856,11 +7856,50 @@ export class PropertyService {
       try {
         const cssRes = await fetch(abs(href));
         const css = cssRes.ok ? await cssRes.text() : '';
-        const fixed = css.replace(
+        // Absolutise every url() first (relative paths need a real origin
+        // to fetch from below).
+        const absolutised = css.replace(
           /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi,
           (_m, q, u) =>
             /^(data:|https?:)/i.test(u) ? `url(${q}${u}${q})` : `url(${q}${abs(u)}${q})`,
         );
+        // Then actually inline each one as a data URI — an absolute URL
+        // still points at find-energy-certificate.service.gov.uk, which
+        // html2canvas has to fetch cross-origin at render time. Without
+        // CORS headers from gov.uk that fetch never resolves OR rejects on
+        // some browsers, so the PDF generation hangs forever with no
+        // error (confirmed: web button stuck on "Downloading…" with an
+        // empty console). Only two assets are actually referenced this
+        // way (the webfonts and the govuk-crest.svg background image),
+        // so fetching them here is cheap.
+        const cssUrls = new Set<string>();
+        const cssUrlRe = /url\(\s*(['"]?)(https?:\/\/[^'")]+)\1\s*\)/gi;
+        let cm: RegExpExecArray | null;
+        while ((cm = cssUrlRe.exec(absolutised))) cssUrls.add(cm[2]);
+        let fixed = absolutised;
+        for (const assetUrl of cssUrls) {
+          try {
+            const r = await fetch(assetUrl);
+            // Confirmed live: gov.uk's own font/crest paths in this CSS
+            // 404 at the source — stale cache-busted filenames, nothing
+            // to do with this app. Leaving a dead cross-origin URL in
+            // place is worse than fetching it: html2canvas then tries to
+            // load it at render time and hangs indefinitely with no
+            // error (confirmed via the actual browser button sticking on
+            // "Downloading…" forever). Strip the reference entirely on
+            // any failure so nothing ever attempts to fetch it again.
+            if (!r.ok) {
+              fixed = fixed.split(assetUrl).join('');
+              continue;
+            }
+            const ct = r.headers.get('content-type') || 'application/octet-stream';
+            const buf = Buffer.from(await r.arrayBuffer());
+            const dataUri = `data:${ct};base64,${buf.toString('base64')}`;
+            fixed = fixed.split(assetUrl).join(dataUri);
+          } catch {
+            fixed = fixed.split(assetUrl).join('')
+          }
+        }
         html = html.replace(tag, `<style>${fixed}</style>`);
       } catch {
         html = html.replace(tag, '');
