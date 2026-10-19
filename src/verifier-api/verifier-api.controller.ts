@@ -31,8 +31,18 @@ import {
   CreateAccessRequestDto,
   ApproveAccessDto,
 } from './verifier-api.service';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
+
+// Relied solely on the 300 req/min/IP global default — clientId/clientSecret
+// here is a long-lived B2B credential (not a per-request JWT), so an
+// unthrottled create/poll pair is both a brute-force surface against that
+// secret and, for createRequest specifically, an email-bombing vector
+// against the buyer being asked to consent (same class of gap as the
+// OTP/email endpoints already throttled elsewhere — data-leakage audit
+// 2026-10-19).
+const VERIFIER_API_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
 // ── Buyer-facing routes (JWT) ───────────────────────────────────────────────
 
@@ -87,6 +97,7 @@ export class BuyerProfileGrantController {
 //     after the buyer's approval.
 
 @Controller('api/v1')
+@Throttle(VERIFIER_API_THROTTLE)
 export class VerifierPublicController {
   constructor(private svc: VerifierApiService) {}
 

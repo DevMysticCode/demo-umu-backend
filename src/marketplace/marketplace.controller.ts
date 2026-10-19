@@ -13,7 +13,16 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+
+// Same tighter throttle as payment.controller.ts's createIntent — this
+// mints a Stripe PaymentIntent too, and sat on the generous global
+// default with no endpoint-specific limit of its own (data-leakage
+// audit 2026-10-19). The idempotency key on the Stripe call caps
+// duplicate intents per single offer, but not a script cycling through
+// many distinct offer/job IDs.
+const ESCROW_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 import { createUploadStorage, publicUrlFor, IMAGE_MIME_TYPES } from '../common/storage';
 import { MarketplaceService } from './marketplace.service';
 import { MarketplaceMessagesService } from './messages.service';
@@ -196,6 +205,7 @@ export class MarketplaceController {
   }
 
   // ── Escrow / payments (Step 5) ───────────────────────────────────
+  @Throttle(ESCROW_THROTTLE)
   @Post('offers/:id/authorize')
   @UseGuards(JwtAuthGuard)
   authorizeOffer(@Param('id') offerId: string, @Req() req: any) {

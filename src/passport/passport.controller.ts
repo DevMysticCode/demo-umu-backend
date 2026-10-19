@@ -30,6 +30,13 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 // M8), mirroring the same fix on ChatController.
 const AI_SUMMARY_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 
+// JWT-gated but otherwise relied on the generous global default — each call
+// reveals whether an arbitrary email has an UMU account (+ first name),
+// which is deliberate product UX for the add-collaborator flow but is also
+// an email-enumeration oracle without a tighter per-user limit (data-leakage
+// audit 2026-10-19).
+const COLLABORATOR_EMAIL_CHECK_THROTTLE = { default: { limit: 15, ttl: 60_000 } };
+
 /**
  * Build an absolute upload URL. Prefers a request-derived scheme+host
  * over the BASE_URL env var — this keeps images loadable on Railway
@@ -211,6 +218,7 @@ export class PassportController {
 
   // Step 1 of the interactive add-collaborator modal: check whether the
   // typed email has an account before asking for role/access.
+  @Throttle(COLLABORATOR_EMAIL_CHECK_THROTTLE)
   @Post(':id/collaborators/check-email')
   @UseGuards(JwtAuthGuard)
   async checkCollaboratorEmail(
