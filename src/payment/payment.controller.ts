@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
@@ -37,6 +38,15 @@ export class PaymentController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('create-intent')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['passportId'],
+      properties: {
+        passportId: { type: 'string' },
+      },
+    },
+  })
   createIntent(
     @Req() req: any,
     @Body('passportId') passportId?: string,
@@ -60,6 +70,15 @@ export class PaymentController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('create-claim-intent')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['passportId'],
+      properties: {
+        passportId: { type: 'string' },
+      },
+    },
+  })
   createClaimIntent(
     @Req() req: any,
     @Body('passportId') passportId?: string,

@@ -19,6 +19,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync, unlink } from 'fs';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import {
   PropertyService,
   PropertySearchFilterInput,
@@ -26,6 +27,16 @@ import {
 import { RunningCostsService } from './running-costs.service';
 import { BillParserService } from './bill-parser.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import {
+  LandRegistryCheckDto,
+  LogSearchDto,
+  RegisterInterestDto,
+  SaveHomeScoreDto,
+  SelfDeclarePropertyDto,
+  SubmitKycDto,
+  TapOwnerDto,
+  UpsertPropertyWatchDto,
+} from './dto/property.dto';
 
 // search/search-areas fan out to OS Places + EPC — paid, quota-capped
 // external APIs (DEPLOYMENT.md documents a real "Free Trial allowance
@@ -195,7 +206,7 @@ export class PropertyController {
   async selfDeclarePropertyDetails(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { tenure?: string; propertyType?: string },
+    @Body() body: SelfDeclarePropertyDto,
   ) {
     return this.propertyService.selfDeclarePropertyDetails(id, req.user.id, body);
   }
@@ -222,7 +233,12 @@ export class PropertyController {
   async verifyOwnershipWithLandRegistry(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { messageId?: string } | undefined,
+    // `| undefined` dropped: TS's emitDecoratorMetadata erases a union
+    // type to generic Object, which is why this never showed a body in
+    // Swagger despite LandRegistryCheckDto being fully decorated — its
+    // only field is @IsOptional(), and the handler only ever reads
+    // `body?.messageId`, so an absent/empty body behaves identically.
+    @Body() body: LandRegistryCheckDto,
   ) {
     return this.propertyService.verifyOwnershipWithLandRegistry(
       id,
@@ -407,13 +423,7 @@ export class PropertyController {
     @Param('id') id: string,
     @Request() req: any,
     @Body()
-    body: {
-      claimed?: boolean;
-      progress?: boolean;
-      published?: boolean;
-      comparables?: boolean;
-      homescore?: boolean;
-    },
+    body: UpsertPropertyWatchDto,
   ) {
     return this.propertyService.upsertPropertyWatch(req.user.id, id, body);
   }
@@ -463,7 +473,11 @@ export class PropertyController {
 
   @Post(':id/homescore')
   @UseGuards(JwtAuthGuard)
-  async saveHomeScore(@Param('id') id: string, @Request() req: any, @Body() body: any) {
+  async saveHomeScore(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() body: SaveHomeScoreDto,
+  ) {
     return this.propertyService.saveHomeScore(id, req.user.id, body);
   }
 
@@ -521,6 +535,15 @@ export class PropertyController {
   // afterwards.
   @Post(':id/bill-parse')
   @UseGuards(JwtAuthGuard)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -562,7 +585,7 @@ export class PropertyController {
   async submitKyc(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { method: 'photo-id' | 'mortgage' | 'open-banking' },
+    @Body() body: SubmitKycDto,
   ) {
     return this.propertyService.submitKyc(id, req.user.id, body?.method);
   }
@@ -600,7 +623,7 @@ export class PropertyController {
   async logSearch(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { sessionId?: string },
+    @Body() body: LogSearchDto,
   ) {
     // Try to detect an authenticated user from the JWT, but don't require one
     let userId: string | null = null;
@@ -655,7 +678,7 @@ export class PropertyController {
   async registerInterest(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { interestLevel: string; name?: string; userEmail?: string },
+    @Body() body: RegisterInterestDto,
   ) {
     return this.propertyService.registerInterest(id, req.user.id, body);
   }
@@ -665,7 +688,7 @@ export class PropertyController {
   async tapOwner(
     @Param('id') id: string,
     @Request() req: any,
-    @Body() body: { message: string; sharePhone?: boolean },
+    @Body() body: TapOwnerDto,
   ) {
     return this.propertyService.tapOwner(id, req.user.id, body);
   }

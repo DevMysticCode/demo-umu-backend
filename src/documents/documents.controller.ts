@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
@@ -30,6 +31,21 @@ export class DocumentsController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'name'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        name: { type: 'string' },
+        tags: { type: 'string', description: 'Comma-separated list of tags' },
+        expiresAt: { type: 'string', format: 'date-time', nullable: true },
+        category: { type: 'string', nullable: true },
+        passportId: { type: 'string', nullable: true },
+      },
+    },
+  })
   uploadDocument(
     @Req() req: any,
     @UploadedFile() file: any,
@@ -64,6 +80,16 @@ export class DocumentsController {
   }
 
   @Post(':id/meta')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', nullable: true },
+        category: { type: 'string', nullable: true },
+        passportId: { type: 'string', nullable: true },
+      },
+    },
+  })
   updateDocumentMeta(
     @Req() req: any,
     @Param('id') id: string,
@@ -106,6 +132,15 @@ export class DocumentsController {
   }
 
   @Post(':kind/:id/access')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['accessLevel'],
+      properties: {
+        accessLevel: { type: 'string' },
+      },
+    },
+  })
   setDocumentAccess(
     @Req() req: any,
     @Param('kind') kind: 'answer' | 'user',
@@ -116,6 +151,15 @@ export class DocumentsController {
   }
 
   @Post(':kind/:id/grants')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['collaboratorUserId'],
+      properties: {
+        collaboratorUserId: { type: 'string' },
+      },
+    },
+  })
   addDocumentGrant(
     @Req() req: any,
     @Param('kind') kind: 'answer' | 'user',

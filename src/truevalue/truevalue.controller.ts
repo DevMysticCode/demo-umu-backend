@@ -12,12 +12,16 @@ import {
   UploadedFile,
   ForbiddenException,
 } from '@nestjs/common';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import { TrueValueService } from './truevalue.service';
 import type { SaveValuationDto } from './truevalue.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { PreviewValuationDto } from './dto/preview-valuation.dto';
+import { DeclareWorkDto } from './dto/declare-work.dto';
+import { ReviewWorkEvidenceDto } from './dto/review-work-evidence.dto';
 
 @Controller()
 export class TrueValueController {
@@ -38,6 +42,7 @@ export class TrueValueController {
 
   // POST /property/:id/truevalue/preview — no guard. body: { works: [{workTypeCode, verificationState?}], epcStatus }
   // Stateless live estimate for the quiz's pre-sign-in steps — nothing is persisted.
+  @ApiBody({ type: PreviewValuationDto })
   @Post('property/:id/truevalue/preview')
   async previewValuation(
     @Param('id') propertyId: string,
@@ -53,6 +58,7 @@ export class TrueValueController {
 
   // POST /property/:id/truevalue/works  body: { workTypeCode, installDate? }
   @UseGuards(JwtAuthGuard)
+  @ApiBody({ type: DeclareWorkDto })
   @Post('property/:id/truevalue/works')
   async declareWork(
     @Param('id') propertyId: string,
@@ -76,6 +82,15 @@ export class TrueValueController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'truevalue-evidence', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   async uploadEvidence(
     @Param('workId') workId: string,
     @Request() req: any,
@@ -117,6 +132,7 @@ export class TrueValueController {
   }
 
   // POST /truevalue/admin/review/:workId  body: { decision: "approve"|"reject" }
+  @ApiBody({ type: ReviewWorkEvidenceDto })
   @Post('truevalue/admin/review/:workId')
   async reviewWorkEvidence(
     @Headers('x-admin-secret') secret: string,

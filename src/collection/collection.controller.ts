@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { CollectionService } from './collection.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
@@ -23,6 +24,15 @@ export class CollectionController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: { type: 'string' },
+      },
+    },
+  })
   async createCollection(
     @Body('name') name: string,
     @Request() req: any,
@@ -32,6 +42,15 @@ export class CollectionController {
 
   @Post(':id/add')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['passportId'],
+      properties: {
+        passportId: { type: 'string' },
+      },
+    },
+  })
   async addToCollection(
     @Param('id') collectionId: string,
     @Body('passportId') passportId: string,
@@ -46,6 +65,15 @@ export class CollectionController {
 
   @Post(':id/remove')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['passportId'],
+      properties: {
+        passportId: { type: 'string' },
+      },
+    },
+  })
   async removeFromCollection(
     @Param('id') collectionId: string,
     @Body('passportId') passportId: string,

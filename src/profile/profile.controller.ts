@@ -15,6 +15,7 @@ import {
   HttpStatus,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
@@ -42,6 +43,16 @@ export class ProfileController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'avatars', maxMb: 5, mimeAllowList: IMAGE_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   uploadAvatar(@Req() req: any, @UploadedFile() file: any) {
     return this.profileService.uploadAvatar(req.user.id, file, req.hostname);
   }
@@ -140,6 +151,14 @@ export class ProfileController {
   // owns "look up the address, send it via Resend."
   @Post('founder-number/email')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        imageBase64: { type: 'string', description: 'Base64-encoded certificate JPEG rendered client/server-side' },
+      },
+    },
+  })
   emailFounderCertificate(@Req() req: any, @Body() body: { imageBase64?: string }) {
     return this.profileService.emailFounderCertificate(req.user.id, body?.imageBase64 ?? '');
   }

@@ -8,14 +8,9 @@ import {
   EpcStatus,
   ValuationResult,
 } from './truevalue-engine';
+import { SaveValuationDto } from './dto/save-valuation.dto';
 
-export interface SaveValuationDto {
-  epcStatus?: EpcStatus;
-  isHomeowner?: boolean;
-  isLandlord?: boolean;
-  purpose?: string;
-  foundNextHome?: string;
-}
+export type { SaveValuationDto };
 
 export interface PreviewWorkInput {
   workTypeCode: string;

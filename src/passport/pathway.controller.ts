@@ -1,8 +1,31 @@
 import { Body, Controller, Get, Param, Post, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import { PathwayService } from './pathway.service';
+
+class AdvanceJourneyDto {
+  @ApiProperty()
+  @IsString()
+  stepId: string;
+
+  @ApiProperty()
+  @IsString()
+  answerLabel: string;
+
+  @ApiProperty({ type: [String], required: false })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  evidenceFileUrls?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
 
 // Resolution-pathways endpoints (client handoff, 2026-09-29). Nested under
 // /passport/:passportId/pathways since a journey only ever exists in the
@@ -53,7 +76,7 @@ export class PathwayController {
   advanceJourney(
     @Param('passportId') passportId: string,
     @Param('journeyId') journeyId: string,
-    @Body() dto: { stepId: string; answerLabel: string; evidenceFileUrls?: string[]; notes?: string },
+    @Body() dto: AdvanceJourneyDto,
     @Request() req: any,
   ) {
     return this.pathways.advanceJourney(
@@ -71,6 +94,16 @@ export class PathwayController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'pathway-evidence', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
   uploadEvidence(
     @Param('passportId') passportId: string,
     @UploadedFile() file: any,

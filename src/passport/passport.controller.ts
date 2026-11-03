@@ -17,11 +17,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { PassportService } from './passport.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportActionsService } from './passport-actions.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode, IMAGE_MIME_TYPES } from '../common/storage';
+import { CreatePassportDto } from './dto/create-passport.dto';
+import { ConvertToSellerDto } from './dto/convert-to-seller.dto';
+import { SetPassportTypeDto } from './dto/set-passport-type.dto';
+import { CreateShareLinkDto, SharePassportWithBuyerDto } from './dto/share.dto';
+import { SetLastVisitedDto, SetSectionVisibilityDto } from './dto/misc.dto';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
@@ -63,20 +69,6 @@ function absoluteUploadUrl(req: any, relativeOrAbsolute: string): string {
   return `${proto}://${host}${relativeOrAbsolute}`;
 }
 
-interface CreatePassportDto {
-  addressLine1: string;
-  postcode: string;
-  propertyId?: string;
-  type?: 'seller' | 'landlord';
-  isHmo?: boolean;
-}
-
-interface ConvertToSellerDto {
-  // No body fields needed — all info comes from the source passport
-  // referenced in the URL.
-  acknowledged?: boolean;
-}
-
 @Controller('passport')
 export class PassportController {
   constructor(
@@ -113,7 +105,7 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async setPassportType(
     @Param('id') id: string,
-    @Body() dto: { type: 'seller' | 'landlord'; isHmo?: boolean },
+    @Body() dto: SetPassportTypeDto,
     @Request() req: any,
   ) {
     const type = dto.type === 'landlord' ? 'LANDLORD' : 'SELLER';
@@ -221,6 +213,15 @@ export class PassportController {
   @Throttle(COLLABORATOR_EMAIL_CHECK_THROTTLE)
   @Post(':id/collaborators/check-email')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string' },
+      },
+      required: ['email'],
+    },
+  })
   async checkCollaboratorEmail(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -233,6 +234,25 @@ export class PassportController {
   // Umovingu; they're added as a collaborator automatically once they sign up.
   @Post(':id/collaborators/invite')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string' },
+        role: { type: 'string' },
+        sectionKeys: { type: 'array', items: { type: 'string' } },
+        taskKeys: {
+          type: 'object',
+          additionalProperties: { type: 'array', items: { type: 'string' } },
+        },
+        historyAccess: { type: 'boolean' },
+        permission: { type: 'string' },
+        accessDuration: { type: 'string' },
+        expiresAt: { type: 'string' },
+      },
+      required: ['email'],
+    },
+  })
   async inviteCollaborator(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -257,6 +277,25 @@ export class PassportController {
 
   @Post(':id/collaborators')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string' },
+        role: { type: 'string' },
+        sectionKeys: { type: 'array', items: { type: 'string' } },
+        taskKeys: {
+          type: 'object',
+          additionalProperties: { type: 'array', items: { type: 'string' } },
+        },
+        historyAccess: { type: 'boolean' },
+        permission: { type: 'string' },
+        accessDuration: { type: 'string' },
+        expiresAt: { type: 'string' },
+      },
+      required: ['email'],
+    },
+  })
   async addCollaborator(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -282,6 +321,23 @@ export class PassportController {
 
   @Patch(':id/collaborators/:collaboratorId')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        role: { type: 'string' },
+        sectionKeys: { type: 'array', items: { type: 'string' } },
+        taskKeys: {
+          type: 'object',
+          additionalProperties: { type: 'array', items: { type: 'string' } },
+        },
+        historyAccess: { type: 'boolean' },
+        permission: { type: 'string' },
+        accessDuration: { type: 'string' },
+        expiresAt: { type: 'string' },
+      },
+    },
+  })
   async updateCollaboratorScope(
     @Param('id') passportId: string,
     @Param('collaboratorId') collaboratorId: string,
@@ -338,7 +394,7 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async sharePassportWithBuyer(
     @Param('id') passportId: string,
-    @Body() body: { buyerUserId: string; note?: string },
+    @Body() body: SharePassportWithBuyerDto,
     @Request() req: any,
   ) {
     return this.passportService.sharePassportWithBuyer(
@@ -388,6 +444,15 @@ export class PassportController {
 
   @Patch(':id/visibility')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        isPublic: { type: 'boolean' },
+      },
+      required: ['isPublic'],
+    },
+  })
   async setPublicVisibility(
     @Param('id') passportId: string,
     @Body('isPublic') isPublic: boolean,
@@ -490,7 +555,7 @@ export class PassportController {
   async setSectionVisibility(
     @Param('sectionId') sectionId: string,
     @Request() req: any,
-    @Body() body: { visibility: 'PUBLIC' | 'PRIVATE' },
+    @Body() body: SetSectionVisibilityDto,
   ) {
     return this.passportService.setSectionVisibility(
       sectionId,
@@ -512,7 +577,7 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async setLastVisited(
     @Param('id') passportId: string,
-    @Body() body: { taskId: string },
+    @Body() body: SetLastVisitedDto,
     @Request() req: any,
   ) {
     return this.passportService.setLastVisited(
@@ -535,6 +600,16 @@ export class PassportController {
 
   @Post(':id/upload-image')
   @UseGuards(JwtAuthGuard)
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
   @UseInterceptors(
     FileInterceptor(
       'file',
@@ -581,6 +656,15 @@ export class PassportController {
 
   @Put(':id/property-images')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        images: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['images'],
+    },
+  })
   async updatePropertyImages(
     @Param('id') passportId: string,
     @Body('images') images: string[],
@@ -607,7 +691,14 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   async createShareLink(
     @Param('id') passportId: string,
-    @Body() body: { scope?: 'buyer' | 'tenant'; documentIds?: string[] } | undefined,
+    // `| undefined` dropped: TS's emitDecoratorMetadata erases a union
+    // type to generic Object, which is why this never showed a body in
+    // Swagger despite CreateShareLinkDto being fully decorated — every
+    // field in it is already @IsOptional(), and the handler only ever
+    // reads `body?.x`, so an absent/empty body still behaves exactly
+    // the same (ValidationPipe validates {} against an all-optional DTO
+    // without complaint either way).
+    @Body() body: CreateShareLinkDto,
     @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
@@ -643,6 +734,16 @@ export class PassportController {
 
   @Post(':id/notes')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        sectionKey: { type: 'string' },
+      },
+      required: ['text'],
+    },
+  })
   async createBuyerNote(
     @Param('id') passportId: string,
     @Body('text') text: string,
