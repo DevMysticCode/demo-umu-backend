@@ -16,7 +16,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import {
   BuyerProfileService,
@@ -34,6 +34,7 @@ export class BuyerProfileController {
   constructor(private buyerProfileService: BuyerProfileService) {}
 
   // GET /buyer-profile — current user's buyer profile (may be null)
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Get()
   async getMine(@Request() req) {
@@ -41,6 +42,7 @@ export class BuyerProfileController {
   }
 
   // POST /buyer-profile/ai-story  body: { existingDraft?: string }
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('ai-story')
   @ApiBody({
@@ -56,6 +58,7 @@ export class BuyerProfileController {
   }
 
   // PATCH /buyer-profile — upsert partial fields as the user progresses through the build
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Patch()
   async update(@Request() req, @Body() dto: UpdateBuyerProfileDto) {
@@ -67,6 +70,7 @@ export class BuyerProfileController {
   // vault uses, and marks the profile's review status "pending" — the
   // "✓ VERIFIED" badge only flips on once an admin approves it via the
   // review queue below, never just from uploading.
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('documents/:kind')
   @UseInterceptors(
@@ -109,6 +113,7 @@ export class BuyerProfileController {
 
   // GET /buyer-profile/admin/review-queue
   @Get('admin/review-queue')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async listReviewQueue(
     @Headers('x-admin-secret') secret: string,
@@ -120,6 +125,7 @@ export class BuyerProfileController {
 
   // POST /buyer-profile/admin/review/:profileId  body: { kind, decision: "approve"|"reject" }
   @Post('admin/review/:profileId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -146,6 +152,7 @@ export class BuyerProfileController {
   }
 
   // POST /buyer-profile/publish — marks the profile as published.
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('publish')
   async publish(@Request() req, @Body() dto: UpdateBuyerProfileDto) {
@@ -156,6 +163,7 @@ export class BuyerProfileController {
   }
 
   // DELETE /buyer-profile
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Delete()
   async remove(@Request() req) {
@@ -163,12 +171,14 @@ export class BuyerProfileController {
   }
 
   // ── Digital signature ────────────────────────────────────────────────────
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('sign')
   async sign(@Request() req, @Body() dto: SignProfileDto) {
     return this.buyerProfileService.signProfile(req.user.id, dto);
   }
 
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('sign/clear')
   async clearSign(@Request() req) {
@@ -177,6 +187,7 @@ export class BuyerProfileController {
 
   // ── Tier upgrade (Stripe) ─────────────────────────────────────────────────
   // POST /buyer-profile/tier/checkout  body: { tier: "VERIFIED" }
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('tier/checkout')
   @ApiBody({
@@ -200,6 +211,7 @@ export class BuyerProfileController {
   }
 
   // POST /buyer-profile/tier/confirm  body: { paymentIntentId }
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('tier/confirm')
   @ApiBody({
@@ -231,12 +243,14 @@ export class BuyerProfileController {
   }
 
   // ── Sharing ───────────────────────────────────────────────────────────────
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Get('shares')
   async listShares(@Request() req) {
     return this.buyerProfileService.listShares(req.user.id);
   }
 
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('shares')
   async createShare(
@@ -247,6 +261,7 @@ export class BuyerProfileController {
     return this.buyerProfileService.createShare(req.user.id, dto, origin);
   }
 
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('shares/:id/revoke')
   async revokeShare(@Request() req, @Param('id') id: string) {

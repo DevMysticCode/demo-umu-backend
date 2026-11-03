@@ -9,6 +9,7 @@ import {
 import { SkipThrottle } from '@nestjs/throttler';
 import { TaskService } from './task.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('tasks')
 export class TaskController {
@@ -23,6 +24,7 @@ export class TaskController {
   // and the LLC endpoints.
   @SkipThrottle()
   @Get(':taskId/questions')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getTaskQuestions(@Param('taskId') taskId: string, @Request() req: any) {
     const userId = req.user.id;
@@ -30,6 +32,7 @@ export class TaskController {
   }
 
   @Post(':taskId/complete')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async completeTask(@Param('taskId') taskId: string, @Request() req: any) {
     const userId = req.user.id;

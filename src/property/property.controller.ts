@@ -19,7 +19,7 @@ import { join } from 'path';
 import { existsSync, mkdirSync, unlink } from 'fs';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import {
   PropertyService,
   PropertySearchFilterInput,
@@ -184,6 +184,7 @@ export class PropertyController {
   }
 
   @Get(':id/passport-status')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPassportStatus(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.id;
@@ -191,6 +192,7 @@ export class PropertyController {
   }
 
   @Post(':id/start-verification')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async startVerification(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.startVerification(id, req.user.id);
@@ -202,6 +204,7 @@ export class PropertyController {
   // that's currently null — never overwrites a value sourced from EPC/OS,
   // so a claimant can't clobber verified data by mistake.
   @Post(':id/self-declare')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async selfDeclarePropertyDetails(
     @Param('id') id: string,
@@ -212,12 +215,14 @@ export class PropertyController {
   }
 
   @Get(':id/verification-status')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getVerificationStatus(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getVerificationStatus(id, req.user.id);
   }
 
   @Post(':id/complete-verification')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async completeVerification(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.completeVerification(id, req.user.id);
@@ -229,6 +234,7 @@ export class PropertyController {
   // `messageId` lets the caller pin a specific test stub scenario
   // (eoov-fm-1 etc.) when running against the BG test environment.
   @Post(':id/land-registry-check')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async verifyOwnershipWithLandRegistry(
     @Param('id') id: string,
@@ -290,12 +296,14 @@ export class PropertyController {
   }
 
   @Get('wishlist')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getWishlist(@Request() req: any) {
     return this.propertyService.getWishlist(req.user.id);
   }
 
   @Get('saved')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getSaved(@Request() req: any) {
     return this.propertyService.getSavedProperties(req.user.id);
@@ -305,6 +313,7 @@ export class PropertyController {
   // for via "Watch this property" (distinct from the plain Save heart).
   // Backs pages/profile/watched-properties.vue.
   @Get('watches')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getWatches(@Request() req: any) {
     return this.propertyService.getWatchedProperties(req.user.id);
@@ -312,6 +321,7 @@ export class PropertyController {
 
   // "Recently viewed" strip — every property opened, not just saved ones.
   @Get('recently-viewed')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getRecentlyViewed(@Request() req: any) {
     return this.propertyService.getRecentlyViewed(req.user.id);
@@ -321,6 +331,7 @@ export class PropertyController {
   // throttling alongside the heavier enrichment endpoints.
   @SkipThrottle()
   @Post(':id/record-view')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async recordView(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.recordRecentlyViewed(req.user.id, id);
@@ -340,6 +351,7 @@ export class PropertyController {
   // is well above any legitimate mount/refresh cadence.
   @Throttle(FOR_YOU_THROTTLE)
   @Get('for-you')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getForYou(
     @Request() req: any,
@@ -396,18 +408,21 @@ export class PropertyController {
   }
 
   @Get(':id/actions')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPropertyActions(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getPropertyActions(req.user.id, id);
   }
 
   @Post(':id/wishlist')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async toggleWishlist(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.toggleWishlist(req.user.id, id);
   }
 
   @Post(':id/save')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async toggleSave(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.toggleSave(req.user.id, id);
@@ -418,6 +433,7 @@ export class PropertyController {
   // drawer's toggle keys 1:1: claimed/progress/published/comparables/
   // homescore.
   @Post(':id/watch')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async upsertPropertyWatch(
     @Param('id') id: string,
@@ -429,12 +445,14 @@ export class PropertyController {
   }
 
   @Get(':id/watch')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPropertyWatch(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getPropertyWatch(req.user.id, id);
   }
 
   @Delete(':id/watch')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deletePropertyWatch(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.deletePropertyWatch(req.user.id, id);
@@ -472,6 +490,7 @@ export class PropertyController {
   }
 
   @Post(':id/homescore')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async saveHomeScore(
     @Param('id') id: string,
@@ -487,6 +506,7 @@ export class PropertyController {
   }
 
   @Get(':id/homescore')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getHomeScore(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getHomeScore(id, req.user.id);
@@ -494,12 +514,14 @@ export class PropertyController {
 
   // ── HomeScore publishing (to the street pool) ──────────────────────────
   @Post(':id/homescore/publish')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async publishHomeScore(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.publishHomeScore(id, req.user.id);
   }
 
   @Post(':id/homescore/unpublish')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async unpublishHomeScore(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.unpublishHomeScore(id, req.user.id);
@@ -534,6 +556,7 @@ export class PropertyController {
   // the temp file is now deleted once OCR is done since nothing needs it
   // afterwards.
   @Post(':id/bill-parse')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -581,6 +604,7 @@ export class PropertyController {
 
   // ── KYC / ownership verification ───────────────────────────────────────
   @Post(':id/kyc/submit')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async submitKyc(
     @Param('id') id: string,
@@ -591,6 +615,7 @@ export class PropertyController {
   }
 
   @Get(':id/kyc/status')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getKycStatus(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getKycStatus(id, req.user.id);
@@ -661,6 +686,7 @@ export class PropertyController {
   }
 
   @Get(':id/matched-buyers')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMatchedBuyers(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getMatchedBuyers(id, req.user.id);
@@ -674,6 +700,7 @@ export class PropertyController {
   }
 
   @Post(':id/register-interest')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async registerInterest(
     @Param('id') id: string,
@@ -684,6 +711,7 @@ export class PropertyController {
   }
 
   @Post(':id/tap-owner')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async tapOwner(
     @Param('id') id: string,

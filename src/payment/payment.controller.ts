@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
@@ -37,6 +37,7 @@ export class PaymentController {
    */
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('create-intent')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -69,6 +70,7 @@ export class PaymentController {
    */
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('create-claim-intent')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {

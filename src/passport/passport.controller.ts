@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { PassportService } from './passport.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportActionsService } from './passport-actions.service';
@@ -78,6 +78,7 @@ export class PassportController {
   ) {}
 
   @Post('create')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
     const userId = req.user.id;
@@ -102,6 +103,7 @@ export class PassportController {
   // and HM Land Registry verification, then this sets the seller/landlord
   // choice once ownership is confirmed — call it right before :id/activate.
   @Post(':id/set-type')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async setPassportType(
     @Param('id') id: string,
@@ -116,12 +118,14 @@ export class PassportController {
   // approved, HMLR ownership VERIFIED, and a type already set via
   // :id/set-type — before it seeds the passport's sections.
   @Post(':id/activate')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async activatePassport(@Param('id') id: string, @Request() req: any) {
     return this.passportService.activatePassport(id, req.user.id);
   }
 
   @Post(':id/convert-to-seller')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async convertToSeller(
     @Param('id') passportId: string,
@@ -132,6 +136,7 @@ export class PassportController {
   }
 
   @Get('my')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMyPassports(@Request() req: any) {
     return this.passportService.getUserPassports(req.user.id);
@@ -140,12 +145,14 @@ export class PassportController {
   // Buyer's purchased "watching" list — published passports they've unlocked.
   // Returns array of records the Passport tab uses to render the Watching section.
   @Get('buyer-access')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMyBuyerAccess(@Request() req: any) {
     return this.passportService.getBuyerAccessList(req.user.id);
   }
 
   @Get(':id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
@@ -164,12 +171,14 @@ export class PassportController {
   // show a one-time notice when this property is in Scotland or Northern
   // Ireland, where the pack's guidance/pathways don't apply.
   @Get(':id/jurisdiction')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getJurisdiction(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getJurisdiction(passportId, req.user.id);
   }
 
   @Get(':id/sections')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPassportSections(
     @Param('id') passportId: string,
@@ -188,6 +197,7 @@ export class PassportController {
   // correct 403 as a bug. The frontend uses this to hide/disable those
   // actions instead of letting a collaborator hit a guaranteed rejection.
   @Get(':id/access')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPassportAccess(
     @Param('id') passportId: string,
@@ -200,6 +210,7 @@ export class PassportController {
   // property — used to pre-fill the "address of the property" question
   // instead of asking the owner to re-type known facts.
   @Get(':id/property-facts')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPassportPropertyFacts(
     @Param('id') passportId: string,
@@ -212,6 +223,7 @@ export class PassportController {
   // typed email has an account before asking for role/access.
   @Throttle(COLLABORATOR_EMAIL_CHECK_THROTTLE)
   @Post(':id/collaborators/check-email')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -233,6 +245,7 @@ export class PassportController {
   // Step 2b: the typed email has no account yet - invite them to join
   // Umovingu; they're added as a collaborator automatically once they sign up.
   @Post(':id/collaborators/invite')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -276,6 +289,7 @@ export class PassportController {
   }
 
   @Post(':id/collaborators')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -320,6 +334,7 @@ export class PassportController {
   }
 
   @Patch(':id/collaborators/:collaboratorId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -359,6 +374,7 @@ export class PassportController {
   }
 
   @Get(':id/collaborators')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getCollaborators(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
@@ -366,6 +382,7 @@ export class PassportController {
   }
 
   @Post(':id/collaborators/:collaboratorId/remove')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async removeCollaborator(
     @Param('id') passportId: string,
@@ -381,6 +398,7 @@ export class PassportController {
   }
 
   @Post(':id/buyer-unlock')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async buyerUnlock(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.createBuyerAccess(passportId, req.user.id);
@@ -391,6 +409,7 @@ export class PassportController {
   // share_passport card. Does NOT grant BuyerPassportAccess; the buyer
   // still has to pay via /buyer-unlock. See sharePassportWithBuyer.
   @Post(':id/share-with-buyer')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async sharePassportWithBuyer(
     @Param('id') passportId: string,
@@ -406,24 +425,28 @@ export class PassportController {
   }
 
   @Get(':id/buyer-view')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getBuyerView(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerView(passportId, req.user.id);
   }
 
   @Get(':id/readiness')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getReadiness(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getReadiness(passportId, req.user.id);
   }
 
   @Put(':id/publish')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async publishPassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.publishPassport(passportId, req.user.id);
   }
 
   @Put(':id/unpublish')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async unpublishPassport(
     @Param('id') passportId: string,
@@ -437,12 +460,14 @@ export class PassportController {
   // service methods' comment for why apps with no buyer-marketplace concept
   // (umu-website-integration) need this separately.
   @Get(':id/visibility')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPublicVisibility(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getPublicVisibility(passportId, req.user.id);
   }
 
   @Patch(':id/visibility')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -466,6 +491,7 @@ export class PassportController {
   // keep working during the History rollout — see getHistory() below for
   // the replacement.
   @Get(':id/timeline')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getTimeline(
     @Param('id') passportId: string,
@@ -478,6 +504,7 @@ export class PassportController {
   // (2026-09-25): paginated, filterable, permission-scoped event feed.
   // `category`: all | information | documents | actions | access.
   @Get(':id/history')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getHistory(
     @Param('id') passportId: string,
@@ -500,6 +527,7 @@ export class PassportController {
   }
 
   @Get(':id/history/:eventId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getHistoryEventDetail(
     @Param('id') passportId: string,
@@ -513,12 +541,14 @@ export class PassportController {
   // engine (see PassportActionsService). Owner/collaborator can list;
   // only the owner can mark addressed/reopen.
   @Get(':id/actions')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async listActions(@Param('id') passportId: string, @Request() req: any) {
     return this.actionsService.listActions(passportId, req.user.id);
   }
 
   @Patch(':id/actions/:actionId/addressed')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async markActionAddressed(
     @Param('id') passportId: string,
@@ -529,6 +559,7 @@ export class PassportController {
   }
 
   @Patch(':id/actions/:actionId/reopen')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async reopenAction(
     @Param('id') passportId: string,
@@ -540,6 +571,7 @@ export class PassportController {
 
   // Vault — read sections with their visibility (PUBLIC | PRIVATE).
   @Get(':id/vault')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getVault(
     @Param('id') passportId: string,
@@ -551,6 +583,7 @@ export class PassportController {
   // Toggle a section's visibility (drives whether it's included when the
   // Passport is published).
   @Patch('section/:sectionId/visibility')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async setSectionVisibility(
     @Param('sectionId') sectionId: string,
@@ -565,6 +598,7 @@ export class PassportController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deletePassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.deletePassport(passportId, req.user.id);
@@ -574,6 +608,7 @@ export class PassportController {
   // Frontend pings this whenever the user opens or answers a task, so we
   // know where to drop them on next visit.
   @Put(':id/last-visited')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async setLastVisited(
     @Param('id') passportId: string,
@@ -590,6 +625,7 @@ export class PassportController {
   // Resolves to the smartest "pick up where you left off" target. Returns
   // null when nothing remains incomplete.
   @Get(':id/resume')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getResumeTarget(
     @Param('id') passportId: string,
@@ -599,6 +635,7 @@ export class PassportController {
   }
 
   @Post(':id/upload-image')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -646,6 +683,7 @@ export class PassportController {
   }
 
   @Get(':id/property-images')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getPropertyImages(
     @Param('id') passportId: string,
@@ -655,6 +693,7 @@ export class PassportController {
   }
 
   @Put(':id/property-images')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -680,6 +719,7 @@ export class PassportController {
   // ── Comparables ─────────────────────────────────────────────────────────
 
   @Get(':id/comparables')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getComparables(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getComparables(passportId, req.user.id);
@@ -688,6 +728,7 @@ export class PassportController {
   // ── Share Link ───────────────────────────────────────────────────────────
 
   @Post(':id/share')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async createShareLink(
     @Param('id') passportId: string,
@@ -721,6 +762,7 @@ export class PassportController {
 
   @Throttle(AI_SUMMARY_THROTTLE)
   @Post(':id/ai-summary/:sectionKey')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getSectionAiSummary(
     @Param('id') passportId: string,
@@ -733,6 +775,7 @@ export class PassportController {
   // ── Buyer Notes ───────────────────────────────────────────────────────────
 
   @Post(':id/notes')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -754,12 +797,14 @@ export class PassportController {
   }
 
   @Get(':id/notes')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getBuyerNotes(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerNotes(passportId, req.user.id);
   }
 
   @Delete('notes/:noteId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deleteBuyerNote(@Param('noteId') noteId: string, @Request() req: any) {
     return this.passportService.deleteBuyerNote(noteId, req.user.id);

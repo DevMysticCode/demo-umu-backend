@@ -12,6 +12,9 @@ import { validateEnv, warnIfHmlrLooksLikeTestStub } from './common/env.validatio
 import { initSentry } from './common/sentry';
 import { isSafeToRenderInline } from './common/storage';
 import { ALLOWED_ORIGINS } from './common/cors-origins';
+import { swaggerBasicAuth } from './common/swagger-basic-auth';
+import { buildFilteredDocument } from './common/swagger-filter-document';
+import { WEBSITE_INTEGRATION_API_ALLOWLIST } from './common/website-integration-api-allowlist';
 
 // Fail fast if the runtime env is misconfigured — better to crash on
 // boot than to discover at first request that DATABASE_URL or
@@ -152,12 +155,22 @@ async function bootstrap() {
   // deploy — the default is closed.
   const swaggerEnabled =
     process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true';
-  if (swaggerEnabled) {
+  // A second, narrower doc at /pentest-docs — only the endpoints
+  // umu-website-integration actually calls (common/website-integration-
+  // api-allowlist.ts), for handing to an external pen-testing vendor
+  // without also exposing the other two frontends' surface or
+  // internal/admin-only routes. Independent on/off switch and its own
+  // creds (never shared with SWAGGER_USER/PASSWORD) so revoking the
+  // vendor's access after the engagement can't accidentally lock out
+  // internal /docs use, or vice versa.
+  const pentestDocsEnabled = process.env.PENTEST_DOCS_ENABLED === 'true';
+  if (swaggerEnabled || pentestDocsEnabled) {
     const config = new DocumentBuilder()
       .setTitle('UmovingU API')
       .setDescription(
         'umu-backend — NestJS/Prisma API behind the UmovingU frontends (mobile app, website-integration, website-new). ' +
-          'Most endpoints require a Bearer access token obtained from /auth/login or /auth/verify-otp.',
+          'Most endpoints require a Bearer access token obtained from /auth/login or /auth/verify-otp — click ' +
+          '"Authorize" above and paste the token (no "Bearer " prefix needed) to enable "Try it out" on them.',
       )
       .setVersion(process.env.npm_package_version ?? '0.0.1')
       .addBearerAuth(
@@ -166,9 +179,79 @@ async function bootstrap() {
       )
       .build();
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document, {
-      swaggerOptions: { persistAuthorization: true },
-    });
+
+    if (swaggerEnabled) {
+      // Enabling the docs (even deliberately, for a one-off prod review)
+      // must not also leave them unauthenticated — that was the gap: the
+      // SWAGGER_ENABLED flag controlled whether the full route/DTO map
+      // was exposed at all, but nothing gated who could read it once it
+      // was. validateEnv() (common/env.validation.ts) makes
+      // SWAGGER_USER/SWAGGER_PASSWORD mandatory whenever SWAGGER_ENABLED
+      // is set in production, so this can't boot in a half-closed state.
+      // Left optional in dev for local convenience — set both locally
+      // too if you want to test the gate itself.
+      const swaggerUser = process.env.SWAGGER_USER;
+      const swaggerPassword = process.env.SWAGGER_PASSWORD;
+      if (swaggerUser && swaggerPassword) {
+        app.use(['/docs', '/docs-json'], swaggerBasicAuth(swaggerUser, swaggerPassword));
+      }
+      // Must be registered before SwaggerModule.setup() below — its
+      // handlers write the response directly without calling next(), so
+      // middleware registered after it never runs for a real /docs hit.
+      // Search engines have no business indexing an internal API's
+      // route map, gated or not.
+      app.use(['/docs', '/docs-json'], (_req: any, res: any, next: any) => {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        next();
+      });
+      SwaggerModule.setup('docs', app, document, {
+        swaggerOptions: {
+          persistAuthorization: true,
+          // Alphabetical tag/operation order and a search box — with 34
+          // tags and 293 operations, the unsorted default (declaration
+          // order across ~25 controller files) made finding a given
+          // endpoint mostly a matter of knowing which file it lived in.
+          tagsSorter: 'alpha',
+          operationsSorter: 'alpha',
+          filter: true,
+        },
+      });
+    }
+
+    if (pentestDocsEnabled) {
+      // Always gated, in every environment — unlike /docs there is no
+      // dev-convenience "open if creds are unset" fallback, because this
+      // path's entire purpose is handing a scoped API surface to an
+      // external vendor. validateEnv() refuses to boot if
+      // PENTEST_DOCS_ENABLED=true without both creds set.
+      const pentestUser = process.env.PENTEST_DOCS_USER as string;
+      const pentestPassword = process.env.PENTEST_DOCS_PASSWORD as string;
+      app.use(
+        ['/pentest-docs', '/pentest-docs-json'],
+        swaggerBasicAuth(pentestUser, pentestPassword),
+      );
+      app.use(['/pentest-docs', '/pentest-docs-json'], (_req: any, res: any, next: any) => {
+        res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+        next();
+      });
+      const filtered = buildFilteredDocument(
+        document,
+        WEBSITE_INTEGRATION_API_ALLOWLIST,
+        'UmovingU API — website-integration surface',
+        'Scoped subset of the UmovingU API: only the endpoints the website-integration frontend ' +
+          'actually calls (see src/common/website-integration-api-allowlist.ts). Published for ' +
+          'third-party penetration testing — the other two frontends and all internal/admin-only ' +
+          'routes are deliberately absent from this document.',
+      );
+      SwaggerModule.setup('pentest-docs', app, filtered, {
+        swaggerOptions: {
+          persistAuthorization: true,
+          tagsSorter: 'alpha',
+          operationsSorter: 'alpha',
+          filter: true,
+        },
+      });
+    }
   }
 
   // Bind explicitly to 0.0.0.0 so Railway's edge proxy (IPv4) can

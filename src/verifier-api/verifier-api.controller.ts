@@ -34,6 +34,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 // Relied solely on the 300 req/min/IP global default — clientId/clientSecret
 // here is a long-lived B2B credential (not a per-request JWT), so an
@@ -47,6 +48,7 @@ const VERIFIER_API_THROTTLE = { default: { limit: 20, ttl: 60_000 } };
 // ── Buyer-facing routes (JWT) ───────────────────────────────────────────────
 
 @Controller('buyer-profile/access-requests')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class BuyerProfileAccessController {
   constructor(private svc: VerifierApiService) {}
@@ -78,6 +80,7 @@ export class BuyerProfileAccessController {
 
 // Separate controller — JWT-guarded — for buyer-revokes-grant.
 @Controller('buyer-profile/access-grants')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class BuyerProfileGrantController {
   constructor(private svc: VerifierApiService) {}

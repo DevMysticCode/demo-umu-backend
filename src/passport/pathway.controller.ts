@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiProperty } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
@@ -31,6 +31,7 @@ class AdvanceJourneyDto {
 // /passport/:passportId/pathways since a journey only ever exists in the
 // context of one passport - see PathwayService for the engine itself.
 @Controller('passport/:passportId/pathways')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class PathwayController {
   constructor(private pathways: PathwayService) {}

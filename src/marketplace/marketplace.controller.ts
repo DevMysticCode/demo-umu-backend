@@ -11,7 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
@@ -83,18 +83,21 @@ export class MarketplaceController {
   // /me/* must come BEFORE /:id so Nest's path matcher doesn't try to
   // treat "me" as a job id.
   @Get('me/jobs')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   listMyJobs(@Req() req: any) {
     return this.service.listMyJobs(req.user.id);
   }
 
   @Get('me/stats')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getStats(@Req() req: any) {
     return this.service.getStats(req.user.id);
   }
 
   @Post('jobs')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   createJob(@Req() req: any, @Body() dto: CreateJobDto) {
     return this.service.createJob(req.user.id, dto);
@@ -103,6 +106,7 @@ export class MarketplaceController {
   // Photo upload — multipart, one file at a time. The wizard calls
   // this per photo as the user picks them so we can show real previews.
   @Post('upload-photo')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor(
@@ -142,30 +146,35 @@ export class MarketplaceController {
 
   // ── Offers ───────────────────────────────────────────────────────
   @Post('jobs/:id/offers')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   createOffer(@Param('id') jobId: string, @Req() req: any, @Body() dto: CreateOfferDto) {
     return this.service.createOffer(req.user.id, jobId, dto);
   }
 
   @Get('jobs/:id/offers')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   listOffers(@Param('id') jobId: string, @Req() req: any) {
     return this.service.listOffersForJob(req.user.id, jobId);
   }
 
   @Get('offers/:id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getOffer(@Param('id') id: string, @Req() req: any) {
     return this.service.getOfferDto(req.user.id, id);
   }
 
   @Post('offers/:id/accept')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   acceptOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.service.acceptOffer(req.user.id, offerId);
   }
 
   @Post('offers/:id/decline')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   declineOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.service.declineOffer(req.user.id, offerId);
@@ -173,24 +182,28 @@ export class MarketplaceController {
 
   // ── Threads / messages (Step 4) ──────────────────────────────────
   @Get('threads')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   listThreads(@Req() req: any) {
     return this.messages.listThreads(req.user.id);
   }
 
   @Get('threads/:id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getThread(@Param('id') id: string, @Req() req: any) {
     return this.messages.getThread(req.user.id, id);
   }
 
   @Post('threads/:id/messages')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   sendMessage(@Param('id') id: string, @Req() req: any, @Body() dto: SendMessageDto) {
     return this.messages.sendMessage(req.user.id, id, dto);
   }
 
   @Post('threads/:id/read')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   markRead(@Param('id') id: string, @Req() req: any) {
     return this.messages.markRead(req.user.id, id);
@@ -200,6 +213,7 @@ export class MarketplaceController {
   // current user is the supplier; the job's customer is derived from
   // the job record.
   @Post('jobs/:jobId/thread')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   openThreadForJob(@Param('jobId') jobId: string, @Req() req: any) {
     return this.messages.getOrCreateThread(req.user.id, jobId, req.user.id);
@@ -209,6 +223,7 @@ export class MarketplaceController {
   // up the offer to derive (jobId, supplierId); the customer is
   // implicit (the job's owner).
   @Post('offers/:offerId/thread')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async openThreadForOffer(@Param('offerId') offerId: string, @Req() req: any) {
     const offer = await this.service.getOfferOrThrow(offerId);
@@ -218,12 +233,14 @@ export class MarketplaceController {
   // ── Escrow / payments (Step 5) ───────────────────────────────────
   @Throttle(ESCROW_THROTTLE)
   @Post('offers/:id/authorize')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   authorizeOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.escrow.authorizeOffer(req.user.id, offerId);
   }
 
   @Post('payments/:id/confirm')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async confirmPayment(@Param('id') paymentId: string, @Req() req: any) {
     const payment = await this.escrow.confirmPayment(req.user.id, paymentId);
@@ -240,6 +257,7 @@ export class MarketplaceController {
   }
 
   @Post('payments/:id/release')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async releasePayment(@Param('id') paymentId: string, @Req() req: any) {
     const payment = await this.escrow.releasePayment(req.user.id, paymentId);
@@ -253,6 +271,7 @@ export class MarketplaceController {
   }
 
   @Get('payments/:id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getPayment(@Param('id') paymentId: string, @Req() req: any) {
     return this.escrow.getPayment(req.user.id, paymentId);
@@ -264,6 +283,7 @@ export class MarketplaceController {
   // before/after shots). Validated against /uploads/ prefix to keep
   // arbitrary external URLs out of the column.
   @Post('payments/:id/evidence')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   addEvidence(
     @Param('id') paymentId: string,
@@ -275,6 +295,7 @@ export class MarketplaceController {
 
   // Contract page bundle — job + payment + offer + parties + thread.
   @Get('jobs/:id/contract')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getContract(@Param('id') jobId: string, @Req() req: any) {
     return this.service.getContract(req.user.id, jobId);
@@ -283,6 +304,7 @@ export class MarketplaceController {
   // Used by the offers page to know whether to show the receipt link
   // instead of the accept/decline buttons.
   @Get('jobs/:id/payment')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getPaymentForJob(@Param('id') jobId: string, @Req() req: any) {
     return this.escrow.getPaymentForJob(req.user.id, jobId);
@@ -290,6 +312,7 @@ export class MarketplaceController {
 
   // ── Reviews + earnings (Step 6) ──────────────────────────────────
   @Post('jobs/:id/review')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   createReview(@Param('id') jobId: string, @Req() req: any, @Body() dto: CreateReviewDto) {
     return this.reviews.createReview(req.user.id, jobId, dto);
@@ -307,12 +330,14 @@ export class MarketplaceController {
   }
 
   @Get('me/earnings')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   getEarnings(@Req() req: any) {
     return this.reviews.getEarnings(req.user.id);
   }
 
   @Get('me/payouts')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   listPayouts(@Req() req: any) {
     return this.reviews.listMyPayouts(req.user.id);
