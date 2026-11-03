@@ -12,6 +12,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { KycService } from './kyc.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import type { Request as ExpressRequest } from 'express';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('kyc')
 export class KycController {
@@ -23,6 +24,7 @@ export class KycController {
    * If the user is already approved, returns { alreadyVerified: true }.
    */
   @Post('start')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async start(@Request() req: any) {
     return this.kycService.startInquiry(req.user.id);
@@ -33,6 +35,7 @@ export class KycController {
    * { status: 'approved' | 'declined' | 'pending' | 'needs_review' | 'not_started' }.
    */
   @Get('status')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async status(@Request() req: any) {
     return this.kycService.getStatus(req.user.id);

@@ -12,7 +12,7 @@ import {
   UploadedFile,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import { TrueValueService } from './truevalue.service';
@@ -57,6 +57,7 @@ export class TrueValueController {
   }
 
   // POST /property/:id/truevalue/works  body: { workTypeCode, installDate? }
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({ type: DeclareWorkDto })
   @Post('property/:id/truevalue/works')
@@ -70,6 +71,7 @@ export class TrueValueController {
   }
 
   // DELETE /truevalue/works/:workId
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Delete('truevalue/works/:workId')
   async removeWork(@Param('workId') workId: string, @Request() req: any) {
@@ -77,6 +79,7 @@ export class TrueValueController {
   }
 
   // POST /truevalue/works/:workId/evidence — multipart 'file'
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('truevalue/works/:workId/evidence')
   @UseInterceptors(
@@ -100,6 +103,7 @@ export class TrueValueController {
   }
 
   // POST /property/:id/truevalue — final save (persists a ValuationSnapshot)
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('property/:id/truevalue')
   async saveValuation(
@@ -111,6 +115,7 @@ export class TrueValueController {
   }
 
   // GET /property/:id/truevalue — caller's own snapshot + works
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Get('property/:id/truevalue')
   async getValuation(@Param('id') propertyId: string, @Request() req: any) {

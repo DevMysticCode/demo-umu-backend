@@ -134,6 +134,40 @@ export function validateEnv(env: NodeJS.ProcessEnv): void {
   const isProd = env.NODE_ENV === 'production';
   const errors: string[] = [];
 
+  // Not in the declarative `checks` list above because its condition
+  // isn't "required in production", it's "required when someone has
+  // deliberately turned Swagger on in production" (see main.ts) —
+  // SWAGGER_ENABLED defaults to off, so most prod deploys never hit
+  // this. When it IS turned on, the docs must not also be left
+  // unauthenticated, so both creds are mandatory together.
+  if (isProd && env.SWAGGER_ENABLED === 'true') {
+    if (!env.SWAGGER_USER?.trim()) {
+      errors.push('  - SWAGGER_USER is missing (Basic Auth username gating /docs in production)');
+    }
+    if (!env.SWAGGER_PASSWORD?.trim() || env.SWAGGER_PASSWORD.length < 16) {
+      errors.push(
+        '  - SWAGGER_PASSWORD is missing or too short (Basic Auth password gating /docs - must be at least 16 characters)',
+      );
+    }
+  }
+
+  // /pentest-docs is built specifically to hand to an external, third-
+  // party pen-testing vendor — unlike /docs, there's no "dev convenience"
+  // mode for it, so its creds are mandatory in EVERY environment the
+  // instant it's turned on, not just production.
+  if (env.PENTEST_DOCS_ENABLED === 'true') {
+    if (!env.PENTEST_DOCS_USER?.trim()) {
+      errors.push(
+        '  - PENTEST_DOCS_USER is missing (Basic Auth username gating /pentest-docs)',
+      );
+    }
+    if (!env.PENTEST_DOCS_PASSWORD?.trim() || env.PENTEST_DOCS_PASSWORD.length < 16) {
+      errors.push(
+        '  - PENTEST_DOCS_PASSWORD is missing or too short (Basic Auth password gating /pentest-docs - must be at least 16 characters)',
+      );
+    }
+  }
+
   for (const check of checks) {
     if (check.prodOnly && !isProd) continue;
 

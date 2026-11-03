@@ -1,8 +1,10 @@
 import { Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { RewardsService } from './rewards.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('rewards')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class RewardsController {
   constructor(private rewardsService: RewardsService) {}

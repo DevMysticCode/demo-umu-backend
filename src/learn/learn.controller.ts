@@ -1,6 +1,7 @@
 import { Controller, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { LearnService, UpdateProgressDto } from './learn.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('learn')
 export class LearnController {
@@ -12,12 +13,14 @@ export class LearnController {
   }
 
   @Get('continue-watching')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getContinueWatching(@Request() req) {
     return this.learnService.getContinueWatching(req.user.id);
   }
 
   @Put('progress/:videoId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async updateProgress(
     @Request() req,
@@ -28,6 +31,7 @@ export class LearnController {
   }
 
   @Get('progress/:videoId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getProgress(@Request() req, @Param('videoId') videoId: string) {
     return this.learnService.getProgress(req.user.id, videoId);

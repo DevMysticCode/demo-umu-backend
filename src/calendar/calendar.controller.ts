@@ -4,8 +4,10 @@ import {
 } from '@nestjs/common';
 import { CalendarService, CreateReminderDto, UpdateReminderDto } from './calendar.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('calendar')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class CalendarController {
   constructor(private calendarService: CalendarService) {}

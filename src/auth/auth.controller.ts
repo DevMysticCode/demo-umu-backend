@@ -25,6 +25,7 @@ import {
   CheckEmailDto,
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   UmuApp,
   isUmuApp,
@@ -176,6 +177,7 @@ export class AuthController {
 
   @Throttle(AUTH_THROTTLE)
   @Post('change-password')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @HttpCode(200)
   async changePassword(

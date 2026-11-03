@@ -14,7 +14,7 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { QuestionService } from './question.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
@@ -28,6 +28,7 @@ export class QuestionController {
   constructor(private questionService: QuestionService) {}
 
   @Post(':questionId/answer')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async answerQuestion(
     @Param('questionId') questionId: string,
@@ -43,6 +44,7 @@ export class QuestionController {
   // question screen can show both the inline explanation and any guided
   // pathway that answer just opened in a single round trip.
   @Get(':questionId/guidance')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getGuidance(
     @Param('questionId') questionId: string,
@@ -53,6 +55,7 @@ export class QuestionController {
   }
 
   @Post(':questionId/upload')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor(
@@ -86,6 +89,7 @@ export class QuestionController {
   // See QuestionService.uploadPartFile — for a file that belongs to one
   // part of a MULTIPART question, not a whole question's answer.
   @Post(':questionId/upload-part')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor(
@@ -121,6 +125,7 @@ export class QuestionController {
   // :questionId/upload (the single-slot answer flow every other section
   // still uses) rather than changing that endpoint's behaviour.
   @Get(':questionId/copies')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async listCopies(
     @Param('questionId') questionId: string,
@@ -131,6 +136,7 @@ export class QuestionController {
   }
 
   @Post(':questionId/copies')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
@@ -158,6 +164,7 @@ export class QuestionController {
   }
 
   @Delete('copies/:docId')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deleteCopy(@Param('docId') docId: string, @Request() req: any) {
     return this.questionService.deleteQuestionCopy(req.user.id, docId);
@@ -169,6 +176,7 @@ export class QuestionController {
   // JWT guard on either. One shared link mechanism (kind distinguishes
   // which document is being signed), see question.service.ts.
   @Post(':questionId/tenancy-sign-link')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {

@@ -13,11 +13,15 @@
 // exports this codebase imports (see `grep -rhoE "from
 // '@nestjs/swagger'"` across src/) are enough to let those controller
 // files load under Jest without pulling in swagger-ui-dist at all.
+// Keep this list in sync — a new @nestjs/swagger import anywhere in
+// src/ needs a matching no-op here or its spec fails with "X is not a
+// function" (as ApiBearerAuth did until this line was added).
 const noopDecorator = () => () => undefined;
 
 export const ApiBody = noopDecorator;
 export const ApiConsumes = noopDecorator;
 export const ApiProperty = noopDecorator;
+export const ApiBearerAuth = noopDecorator;
 
 export class DocumentBuilder {
   setTitle() { return this; }

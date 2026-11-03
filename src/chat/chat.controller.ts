@@ -12,6 +12,7 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { ChatService, ChatMessage } from './chat.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 class ChatDto {
   @IsString()
@@ -36,6 +37,7 @@ export class ChatController {
 
   @Throttle(LLM_THROTTLE)
   @Post()
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async chat(@Request() req, @Body() dto: ChatDto) {
     try {

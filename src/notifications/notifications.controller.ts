@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { NotificationsService } from './notifications.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * HTTP surface for the shared in-app notifications tray.
@@ -25,6 +26,7 @@ import { NotificationsService } from './notifications.service';
  * (getEffectivePreferences / updatePreferences) already exist.
  */
 @Controller('notifications')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}

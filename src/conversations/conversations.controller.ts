@@ -7,7 +7,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import {
   IsIn,
   IsOptional,
@@ -138,6 +138,7 @@ class RespondToViewingDto {
  * id can't be tailed by a non-participant.
  */
 @Controller()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class ConversationsController {
   constructor(

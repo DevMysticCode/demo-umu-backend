@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { LlcService } from './llc.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * GET  /property/:id/llc          — cached read-through (30-day TTL)
@@ -21,6 +22,7 @@ export class LlcController {
   // pages fan out to a dozen endpoints on mount and would trip the
   // 300/min bucket in prod on a shared IP.
   @SkipThrottle()
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Get()
   async get(@Param('id') id: string) {
@@ -31,6 +33,7 @@ export class LlcController {
   // "Refresh" a couple of times; a script would trip the bucket long
   // before it burned through our HMLR quota.
   @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('refresh')
   async refresh(@Param('id') id: string) {

@@ -8,7 +8,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { CollectionService } from './collection.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
@@ -17,12 +17,14 @@ export class CollectionController {
   constructor(private collectionService: CollectionService) {}
 
   @Get('my')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMyCollections(@Request() req: any) {
     return this.collectionService.getMyCollections(req.user.id);
   }
 
   @Post()
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -41,6 +43,7 @@ export class CollectionController {
   }
 
   @Post(':id/add')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -64,6 +67,7 @@ export class CollectionController {
   }
 
   @Post(':id/remove')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
     schema: {
@@ -87,6 +91,7 @@ export class CollectionController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deleteCollection(
     @Param('id') collectionId: string,

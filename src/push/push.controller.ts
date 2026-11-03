@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { PushService } from './push.service';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 class RegisterPushTokenDto {
   token!: string;
@@ -13,6 +14,7 @@ class UnregisterPushTokenDto {
 }
 
 @Controller('me/push-token')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class PushController {
   constructor(private readonly push: PushService) {}
