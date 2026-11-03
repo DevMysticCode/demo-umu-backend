@@ -14,15 +14,14 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { QuestionService } from './question.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
+import { AnswerQuestionDto } from './dto/answer-question.dto';
+import { SubmitTenantSignatureDto } from './dto/submit-tenant-signature.dto';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
-
-interface AnswerQuestionDto {
-  value: any;
-}
 
 @Controller('questions')
 export class QuestionController {
@@ -65,6 +64,16 @@ export class QuestionController {
       }),
     ),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
   async uploadFile(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -88,6 +97,16 @@ export class QuestionController {
       }),
     ),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+      required: ['file'],
+    },
+  })
   async uploadPartFile(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -116,6 +135,18 @@ export class QuestionController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        name: { type: 'string' },
+        kind: { type: 'string' },
+      },
+      required: ['file'],
+    },
+  })
   async uploadCopy(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -139,6 +170,14 @@ export class QuestionController {
   // which document is being signed), see question.service.ts.
   @Post(':questionId/tenancy-sign-link')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string', enum: ['tenancy', 'inventory'] },
+      },
+    },
+  })
   async createTenancySignLink(
     @Param('questionId') questionId: string,
     @Body('kind') kind: 'tenancy' | 'inventory',
@@ -161,7 +200,7 @@ export class QuestionController {
   @Post('tenancy-sign/:token')
   async submitTenantSignature(
     @Param('token') token: string,
-    @Body() dto: { signerName: string; signatureDataUrl: string },
+    @Body() dto: SubmitTenantSignatureDto,
     @Ip() ip: string,
   ) {
     return this.questionService.submitTenantSignature(token, dto, ip);

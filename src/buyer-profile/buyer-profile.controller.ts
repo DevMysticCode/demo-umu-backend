@@ -16,6 +16,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import {
   BuyerProfileService,
@@ -42,6 +43,14 @@ export class BuyerProfileController {
   // POST /buyer-profile/ai-story  body: { existingDraft?: string }
   @UseGuards(JwtAuthGuard)
   @Post('ai-story')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        existingDraft: { type: 'string', nullable: true },
+      },
+    },
+  })
   async aiStory(@Request() req, @Body('existingDraft') existingDraft?: string) {
     return this.buyerProfileService.generateStory(req.user.id, existingDraft);
   }
@@ -63,6 +72,15 @@ export class BuyerProfileController {
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   async uploadReviewDocument(
     @Request() req,
     @Param('kind') kind: string,
@@ -103,6 +121,16 @@ export class BuyerProfileController {
   // POST /buyer-profile/admin/review/:profileId  body: { kind, decision: "approve"|"reject" }
   @Post('admin/review/:profileId')
   @UseGuards(JwtAuthGuard)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        kind: { type: 'string' },
+        decision: { type: 'string', enum: ['approve', 'reject'] },
+      },
+      required: ['kind', 'decision'],
+    },
+  })
   async reviewDocument(
     @Headers('x-admin-secret') secret: string,
     @Param('profileId') profileId: string,
@@ -151,6 +179,15 @@ export class BuyerProfileController {
   // POST /buyer-profile/tier/checkout  body: { tier: "VERIFIED" }
   @UseGuards(JwtAuthGuard)
   @Post('tier/checkout')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        tier: { type: 'string', example: 'VERIFIED' },
+      },
+      required: ['tier'],
+    },
+  })
   async createTierCheckout(
     @Request() req,
     @Body() body: { tier?: string },
@@ -165,6 +202,15 @@ export class BuyerProfileController {
   // POST /buyer-profile/tier/confirm  body: { paymentIntentId }
   @UseGuards(JwtAuthGuard)
   @Post('tier/confirm')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        paymentIntentId: { type: 'string' },
+      },
+      required: ['paymentIntentId'],
+    },
+  })
   async confirmTier(
     @Request() req,
     @Body() body: { paymentIntentId?: string },

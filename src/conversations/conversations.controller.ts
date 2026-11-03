@@ -7,12 +7,116 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  ConversationsService,
-  ConversationContext,
-} from './conversations.service';
+  IsIn,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { ConversationsService } from './conversations.service';
+import type { ConversationContext } from './conversations.service';
 import { ViewingRequestsService } from './viewing-requests.service';
+
+const CONVERSATION_CONTEXTS: ConversationContext[] = [
+  'passport_match',
+  'property_enquiry',
+  'marketplace_job',
+];
+
+class SendMessageDto {
+  @ApiProperty()
+  @IsString()
+  body: string;
+}
+
+class StartConversationDto {
+  @ApiProperty({ enum: CONVERSATION_CONTEXTS })
+  @IsIn(CONVERSATION_CONTEXTS)
+  context: ConversationContext;
+
+  @ApiProperty()
+  @IsString()
+  contextId: string;
+
+  @ApiProperty()
+  @IsString()
+  peerUserId: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  selfRole?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  peerRole?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  initialMessage?: string;
+}
+
+// Shared shape for a single proposed/chosen viewing slot — see
+// ViewingRequestsService's Slot interface.
+class ViewingSlotDto {
+  @ApiProperty()
+  @IsString()
+  startISO: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  endISO?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  label?: string;
+}
+
+class CreateViewingRequestDto {
+  @ApiProperty()
+  @IsString()
+  invitedUserId: string;
+
+  @ApiProperty({ type: [ViewingSlotDto] })
+  @ValidateNested({ each: true })
+  @Type(() => ViewingSlotDto)
+  slots: ViewingSlotDto[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
+
+class RespondToViewingDto {
+  @ApiProperty({ enum: ['accept', 'decline', 'reschedule'] })
+  @IsIn(['accept', 'decline', 'reschedule'])
+  action: 'accept' | 'decline' | 'reschedule';
+
+  @ApiProperty({ type: ViewingSlotDto, required: false })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ViewingSlotDto)
+  chosenSlot?: ViewingSlotDto;
+
+  @ApiProperty({ type: [ViewingSlotDto], required: false })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ViewingSlotDto)
+  proposedSlots?: ViewingSlotDto[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  message?: string;
+}
 
 /**
  * HTTP surface for the shared messaging layer.
@@ -54,7 +158,7 @@ export class ConversationsController {
   @Post('conversations/:id/messages')
   async sendMessage(
     @Param('id') id: string,
-    @Body() body: { body: string },
+    @Body() body: SendMessageDto,
     @Request() req: any,
   ) {
     return this.conversations.sendMessage({
@@ -78,14 +182,7 @@ export class ConversationsController {
   @Post('conversations/start')
   async start(
     @Body()
-    body: {
-      context: ConversationContext;
-      contextId: string;
-      peerUserId: string;
-      selfRole?: string;
-      peerRole?: string;
-      initialMessage?: string;
-    },
+    body: StartConversationDto,
     @Request() req: any,
   ) {
     const conversation = await this.conversations.findOrCreate({
@@ -110,11 +207,7 @@ export class ConversationsController {
   async createViewingRequest(
     @Param('id') propertyId: string,
     @Body()
-    body: {
-      invitedUserId: string;
-      slots: Array<{ startISO: string; endISO?: string; label?: string }>;
-      message?: string;
-    },
+    body: CreateViewingRequestDto,
     @Request() req: any,
   ) {
     return this.viewingRequests.create({
@@ -130,16 +223,7 @@ export class ConversationsController {
   async respondToViewing(
     @Param('id') viewingRequestId: string,
     @Body()
-    body: {
-      action: 'accept' | 'decline' | 'reschedule';
-      chosenSlot?: { startISO: string; endISO?: string; label?: string };
-      proposedSlots?: Array<{
-        startISO: string;
-        endISO?: string;
-        label?: string;
-      }>;
-      message?: string;
-    },
+    body: RespondToViewingDto,
     @Request() req: any,
   ) {
     return this.viewingRequests.respond({

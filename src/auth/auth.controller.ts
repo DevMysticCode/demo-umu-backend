@@ -21,6 +21,8 @@ import {
   ForgotPasswordDto,
   VerifyResetOtpDto,
   ResetPasswordDto,
+  ChangePasswordDto,
+  CheckEmailDto,
 } from './dto';
 import { JwtAuthGuard } from './jwt.guard';
 import {
@@ -50,8 +52,8 @@ export class AuthController {
   // H7).
   @Throttle(AUTH_THROTTLE)
   @Post('check-email')
-  async checkEmail(@Body('email') email: string) {
-    return this.authService.checkEmail(email);
+  async checkEmail(@Body() dto: CheckEmailDto) {
+    return this.authService.checkEmail(dto.email);
   }
 
   @Throttle(AUTH_THROTTLE)
@@ -178,7 +180,7 @@ export class AuthController {
   @HttpCode(200)
   async changePassword(
     @Request() req: any,
-    @Body() body: { currentPassword: string; newPassword: string },
+    @Body() body: ChangePasswordDto,
   ) {
     return this.authService.changePassword(
       req.user.id,

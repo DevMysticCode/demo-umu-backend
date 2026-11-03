@@ -11,6 +11,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtService } from '@nestjs/jwt';
 import { Throttle } from '@nestjs/throttler';
@@ -32,6 +33,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { AddEvidenceDto } from './dto/add-evidence.dto';
 
 // Read endpoints are public; write endpoints (post job, upload photo,
 // own-job aggregates) are gated by JwtAuthGuard. Auth is applied per
@@ -112,6 +114,15 @@ export class MarketplaceController {
       }),
     ),
   )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
   uploadPhoto(@UploadedFile() file: any) {
     if (!file) {
       // null from fileFilter (rejected MIME) lands here too — give the
@@ -257,7 +268,7 @@ export class MarketplaceController {
   addEvidence(
     @Param('id') paymentId: string,
     @Req() req: any,
-    @Body() body: { photos: string[] },
+    @Body() body: AddEvidenceDto,
   ) {
     return this.escrow.addEvidencePhotos(req.user.id, paymentId, body?.photos ?? []);
   }

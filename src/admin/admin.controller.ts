@@ -12,6 +12,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
@@ -102,6 +103,15 @@ export class AdminController {
    * queue. */
   @Post('users/:email/admin-role')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['isAdmin'],
+      properties: {
+        isAdmin: { type: 'boolean' },
+      },
+    },
+  })
   async setAdminRole(
     @Headers('x-admin-secret') secret: string,
     @Param('email') email: string,
