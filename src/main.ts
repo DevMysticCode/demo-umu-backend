@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -138,6 +139,37 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Swagger/OpenAPI docs at /docs. This lists every route, param and
+  // DTO shape — for a property-tech API handling passports, documents
+  // and buyer financial data, that's itself a real information-
+  // disclosure surface if left open on a public deploy (same class of
+  // concern as the debug-endpoint/test-credential findings from the
+  // 2026-09-22/2026-10-19 security reviews). On by default in dev;
+  // off by default everywhere else unless SWAGGER_ENABLED=true is set
+  // explicitly, so a one-off production/staging review doesn't need a
+  // code change, but nobody has to remember to turn it off again next
+  // deploy — the default is closed.
+  const swaggerEnabled =
+    process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true';
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle('UmovingU API')
+      .setDescription(
+        'umu-backend — NestJS/Prisma API behind the UmovingU frontends (mobile app, website-integration, website-new). ' +
+          'Most endpoints require a Bearer access token obtained from /auth/login or /auth/verify-otp.',
+      )
+      .setVersion(process.env.npm_package_version ?? '0.0.1')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'access-token',
+      )
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   // Bind explicitly to 0.0.0.0 so Railway's edge proxy (IPv4) can
   // reach us. Without the host arg, Express on Node 17+ can end up
