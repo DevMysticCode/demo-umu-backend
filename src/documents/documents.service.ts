@@ -410,9 +410,9 @@ export class DocumentsService {
   // documents / My private documents / Shared with me split, each with
   // per-category file counts for the grid on the next screen.
   async getVaultOverview(passportId: string, userId: string) {
-    await this.assertPassportAccess(passportId, userId);
+    const scope = await this.assertPassportAccess(passportId, userId);
 
-    const [propertyDocs, privateDocs, sharedGrants] = await Promise.all([
+    const [propertyDocs, privateDocs, sharedGrants, answerDocs] = await Promise.all([
       this.prisma.userDocument.findMany({
         where: { passportId, userId, deletedAt: null },
         select: { category: true },
@@ -425,6 +425,13 @@ export class DocumentsService {
         where: { collaboratorUserId: userId },
         select: { id: true },
       }),
+      // Files attached as the answer to a passport question (e.g. a
+      // certificate uploaded inside a task) - these never go through the
+      // "+ Add document" flow, so they don't carry a category and were
+      // never counted here. Surfaced as their own card ("From your
+      // answers") rather than folded into Property documents, since they
+      // weren't deliberately filed the way an added document is.
+      this.mapAnswerDocs(passportId, userId, scope),
     ]);
 
     const countByCategory = (docs: { category: string | null }[]) =>
@@ -437,6 +444,7 @@ export class DocumentsService {
       propertyDocuments: { count: propertyDocs.length, categories: countByCategory(propertyDocs) },
       privateDocuments: { count: privateDocs.length, categories: countByCategory(privateDocs) },
       sharedWithMeCount: sharedGrants.length,
+      answerDocumentsCount: answerDocs.length,
     };
   }
 
