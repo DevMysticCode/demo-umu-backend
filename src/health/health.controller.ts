@@ -6,6 +6,7 @@ import {
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 /**
  * Liveness + readiness probes for Railway / future orchestrators.
@@ -31,12 +32,41 @@ export class HealthController {
     private prisma: PrismaService,
   ) {}
 
+  @ApiOperation({ summary: 'Composite readiness check', description: 'No auth required, returns no sensitive data. Checks process-up and database reachability; 200 if all indicators pass, 503 if any fail. Use for uptime monitors/load-balancer health probes.' })
+  @ApiResponse({
+    status: 200,
+    description: 'All indicators healthy (standard Terminus HealthCheckResult shape).',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'ok' },
+        info: { type: 'object', additionalProperties: true, example: { database: { status: 'up', responseTimeMs: 12 } } },
+        error: { type: 'object', additionalProperties: true },
+        details: { type: 'object', additionalProperties: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'At least one indicator unhealthy - same shape as the 200 response, with the failing indicator under `error` as well as `details`.',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        info: { type: 'object', additionalProperties: true },
+        error: { type: 'object', additionalProperties: true, example: { database: { status: 'down', message: 'timeout' } } },
+        details: { type: 'object', additionalProperties: true },
+      },
+    },
+  })
   @Get()
   @HealthCheck()
   check() {
     return this.health.check([() => this.pingDatabase()]);
   }
 
+  @ApiOperation({ summary: 'Liveness probe', description: 'No auth required. Returns 200 immediately if the process is responding at all, independent of database health - a Kubernetes-style livenessProbe distinct from the composite readiness check above.' })
+  @ApiResponse({ status: 200, description: 'Process is alive.', schema: { type: 'object', properties: { status: { type: 'string' }, uptime: { type: 'number' } } } })
   @Get('live')
   live() {
     return { status: 'ok', uptime: process.uptime() };

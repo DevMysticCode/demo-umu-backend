@@ -12,7 +12,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
@@ -38,6 +38,10 @@ export class AdminController {
    * comma-separated substrings — for reviewing a bulk delete before running
    * it (query: ?contains=foo,bar) */
   @Get('users/search')
+  @ApiOperation({ summary: 'Search accounts by email substring (admin)', description: 'Read-only: finds accounts whose email contains any of the given comma-separated substrings, for reviewing before a bulk delete.' })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiQuery({ name: 'contains', description: 'Comma-separated substrings to match against email addresses' })
+  @ApiResponse({ status: 200, description: 'Matching accounts.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true }, isVerified: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' } } } } })
   @HttpCode(HttpStatus.OK)
   async searchUsers(
     @Headers('x-admin-secret') secret: string,
@@ -56,6 +60,10 @@ export class AdminController {
 
   /** Delete one or more user accounts by email (body: { emails: string[] }) */
   @Delete('users')
+  @ApiOperation({ summary: 'Delete accounts by email (admin)', description: 'Permanently deletes one or more user accounts by email address, cascading to all data they own.' })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiBody({ schema: { type: 'object', required: ['emails'], properties: { emails: { type: 'array', items: { type: 'string' } } } } })
+  @ApiResponse({ status: 200, description: 'Which emails were deleted vs. not found.', schema: { type: 'object', properties: { deleted: { type: 'array', items: { type: 'string' } }, notFound: { type: 'array', items: { type: 'string' } } } } })
   @HttpCode(HttpStatus.OK)
   async deleteUsers(
     @Headers('x-admin-secret') secret: string,
@@ -71,6 +79,9 @@ export class AdminController {
   /** Read-only: every FounderNumber row, for reviewing before a one-off
    * sequence reset. */
   @Get('founder-numbers')
+  @ApiOperation({ summary: 'List Founder Numbers (admin)', description: 'Read-only: every FounderNumber row (certificate number, owning user email, passport id, assigned-at), for reviewing before a one-off sequence reset.' })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiResponse({ status: 200, description: 'All Founder Number rows.', schema: { type: 'array', items: { type: 'object', properties: { number: { type: 'integer' }, userEmail: { type: 'string' }, passportId: { type: 'string' }, assignedAt: { type: 'string', format: 'date-time' } } } } })
   @HttpCode(HttpStatus.OK)
   async listFounderNumbers(@Headers('x-admin-secret') secret: string) {
     this.guard(secret);
@@ -82,6 +93,10 @@ export class AdminController {
    * called once, right after the founder-number model moved to one-per-
    * claimed-property, to line the launch sequence up on both databases. */
   @Delete('founder-numbers')
+  @ApiOperation({ summary: 'Reset the Founder Number sequence (admin, one-off)', description: "Wipes every FounderNumber row and restarts the database-native sequence at restartAt. Meant to be called once, to line up the launch sequence across databases. Requires confirm === 'RESET-FOUNDER-SEQ'." })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiBody({ schema: { type: 'object', required: ['restartAt', 'confirm'], properties: { restartAt: { type: 'integer', description: 'Value the sequence should restart at' }, confirm: { type: 'string', example: 'RESET-FOUNDER-SEQ' } } } })
+  @ApiResponse({ status: 200, description: 'How many rows were wiped and the new sequence start.', schema: { type: 'object', properties: { deletedRows: { type: 'integer' }, sequenceRestartedAt: { type: 'integer' } } } })
   @HttpCode(HttpStatus.OK)
   async resetFounderNumbers(
     @Headers('x-admin-secret') secret: string,
@@ -102,6 +117,10 @@ export class AdminController {
    * (security review 2026-09-22, M6), e.g. buyer-profile's KYC review
    * queue. */
   @Post('users/:email/admin-role')
+  @ApiOperation({ summary: 'Grant or revoke admin role (admin)', description: 'Sets the isAdmin flag on one account by email. The only way any account ever becomes an admin — there is no self-service path.' })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiParam({ name: 'email', description: 'Email address of the account to update' })
+  @ApiResponse({ status: 200, description: 'The updated admin flag.', schema: { type: 'object', properties: { email: { type: 'string' }, isAdmin: { type: 'boolean' } } } })
   @HttpCode(HttpStatus.OK)
   @ApiBody({
     schema: {

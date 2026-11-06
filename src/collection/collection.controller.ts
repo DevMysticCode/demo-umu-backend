@@ -8,7 +8,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CollectionService } from './collection.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 
@@ -17,6 +17,8 @@ export class CollectionController {
   constructor(private collectionService: CollectionService) {}
 
   @Get('my')
+  @ApiOperation({ summary: "List the caller's collections", description: "Returns the authenticated user's named passport collections (each with its member passports) plus a separate list of owned/collaborated passports not yet filed into any collection. Excludes abandoned PENDING_PAYMENT claims." })
+  @ApiResponse({ status: 200, description: 'Collections and any uncollected passports.', schema: { type: 'object', properties: { collections: { type: 'array', items: { type: 'object' } }, uncollectedPassports: { type: 'array', items: { type: 'object' } } } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMyCollections(@Request() req: any) {
@@ -24,6 +26,8 @@ export class CollectionController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a collection', description: 'Creates a new, empty named passport collection owned by the authenticated user.' })
+  @ApiResponse({ status: 201, description: 'The created collection.', schema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, userId: { type: 'string' } } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
@@ -43,6 +47,13 @@ export class CollectionController {
   }
 
   @Post(':id/add')
+  @ApiOperation({ summary: 'Add a passport to a collection', description: "Files a passport into a collection the caller owns. The caller must also have access to the passport itself (owner or collaborator) — a passport id alone (e.g. leaked from a link or screenshot) is not enough." })
+  @ApiParam({ name: 'id', description: 'PassportCollection id' })
+  @ApiResponse({
+    status: 201,
+    description: 'The created (or already-existing, upserted) collection-item link.',
+    schema: { type: 'object', properties: { id: { type: 'string' }, collectionId: { type: 'string' }, passportId: { type: 'string' } } },
+  })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
@@ -67,6 +78,9 @@ export class CollectionController {
   }
 
   @Post(':id/remove')
+  @ApiOperation({ summary: 'Remove a passport from a collection', description: 'Removes a passport from a collection the caller owns. Does not delete the passport itself.' })
+  @ApiParam({ name: 'id', description: 'PassportCollection id' })
+  @ApiResponse({ status: 201, description: 'Success confirmation.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
@@ -91,6 +105,9 @@ export class CollectionController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a collection', description: 'Deletes a collection the caller owns. The passports that were in it are not deleted.' })
+  @ApiParam({ name: 'id', description: 'PassportCollection id' })
+  @ApiResponse({ status: 200, description: 'Success confirmation.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deleteCollection(

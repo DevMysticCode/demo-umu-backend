@@ -12,7 +12,7 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
 import { ChatService, ChatMessage } from './chat.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 class ChatDto {
   @IsString()
@@ -35,6 +35,9 @@ export class ChatController {
 
   constructor(private chatService: ChatService) {}
 
+  @ApiOperation({ summary: 'Send a message to the AI assistant', description: "Sends a message (with optional prior chat history) to the Groq Llama 3.3 70B assistant, which has tool access to the caller's own passport status, missing documents and HomeScore. Throttled to 20/min since each call is a paid LLM invocation." })
+  @ApiBody({ type: ChatDto })
+  @ApiResponse({ status: 201, description: "The assistant's reply.", schema: { type: 'object', properties: { reply: { type: 'string' } } } })
   @Throttle(LLM_THROTTLE)
   @Post()
   @ApiBearerAuth('access-token')
