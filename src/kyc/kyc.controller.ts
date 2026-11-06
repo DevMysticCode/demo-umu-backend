@@ -12,9 +12,10 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { KycService } from './kyc.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import type { Request as ExpressRequest } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiHeader, ApiTags } from '@nestjs/swagger';
 
 @Controller('kyc')
+@ApiTags('KYC')
 export class KycController {
   constructor(private kycService: KycService) {}
 
