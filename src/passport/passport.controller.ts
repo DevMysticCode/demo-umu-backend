@@ -17,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { PassportService } from './passport.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportActionsService } from './passport-actions.service';
@@ -80,6 +80,16 @@ export class PassportController {
   @Post('create')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Create or resume a passport',
+    description:
+      'Starts a new Passport. For a manual passport or a landlord→seller convert, the type is applied immediately. For a property claim (propertyId set), the row comes back in PENDING_PAYMENT with no type yet — payment, KYC and HM Land Registry verification happen before set-type/activate below seed the sections.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'The created (or resumed, if an untyped pending claim already existed) passport.',
+    schema: { type: 'object', properties: { passportId: { type: 'string' }, status: { type: 'string' } } },
+  })
   async createPassport(@Body() dto: CreatePassportDto, @Request() req: any) {
     const userId = req.user.id;
     // Manual passports / landlord→seller converts send a real type and get
@@ -105,6 +115,17 @@ export class PassportController {
   @Post(':id/set-type')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Choose seller or landlord once ownership is verified',
+    description:
+      'Sets the passport type (and, for landlords, HMO flag) after HM Land Registry ownership verification has succeeded for a property-claim passport. Must be called before :id/activate.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The passport id and its current status (already-typed/activated calls are idempotent no-ops).',
+    schema: { type: 'object', properties: { passportId: { type: 'string' }, status: { type: 'string' } } },
+  })
   async setPassportType(
     @Param('id') id: string,
     @Body() dto: SetPassportTypeDto,
@@ -120,6 +141,17 @@ export class PassportController {
   @Post(':id/activate')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Activate a verified passport claim',
+    description:
+      'Final step of the claim flow — requires payment succeeded, KYC approved, HM Land Registry ownership verified, and a type already set. Seeds the passport\'s sections/tasks/questions.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The passport id (idempotent - calling again on an already-active passport just returns the id).',
+    schema: { type: 'object', properties: { passportId: { type: 'string' } } },
+  })
   async activatePassport(@Param('id') id: string, @Request() req: any) {
     return this.passportService.activatePassport(id, req.user.id);
   }
@@ -127,6 +159,16 @@ export class PassportController {
   @Post(':id/convert-to-seller')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Convert a landlord passport to a seller passport',
+    description: 'Creates a linked SELLER passport for the same property, leaving the original LANDLORD passport unchanged (owner is moving from renting to selling).',
+  })
+  @ApiParam({ name: 'id', description: 'Landlord passport ID to convert from' })
+  @ApiResponse({
+    status: 201,
+    description: 'The new (or already-existing) seller passport id, and which section keys were carried over.',
+    schema: { type: 'object', properties: { passportId: { type: 'string' }, transferredSectionKeys: { type: 'array', items: { type: 'string' } } } },
+  })
   async convertToSeller(
     @Param('id') passportId: string,
     @Body() _dto: ConvertToSellerDto,
@@ -138,6 +180,15 @@ export class PassportController {
   @Get('my')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "List the signed-in user's own and collaborated passports",
+    description: 'Returns every passport this user owns, plus every passport they collaborate on. Draft claims never completed (status PENDING_PAYMENT) are excluded.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of passport summaries (owned and collaborated).',
+    schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string' }, type: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } },
+  })
   async getMyPassports(@Request() req: any) {
     return this.passportService.getUserPassports(req.user.id);
   }
@@ -147,6 +198,15 @@ export class PassportController {
   @Get('buyer-access')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'List passports this buyer has unlocked',
+    description: 'Published passports the signed-in user has paid to unlock (BuyerPassportAccess) — powers the "Watching" section of the Passport tab.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of unlocked passports with their linked property summary.',
+    schema: { type: 'array', items: { type: 'object', properties: { passport: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string' }, property: { type: 'object' } } } } } },
+  })
   async getMyBuyerAccess(@Request() req: any) {
     return this.passportService.getBuyerAccessList(req.user.id);
   }
@@ -154,6 +214,66 @@ export class PassportController {
   @Get(':id')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get full passport detail',
+    description: 'Returns the passport with its sections/tasks/questions/answers, linked property EPC summary, and any sibling passport created via convert-to-seller. Requires the caller to be the owner or a scoped collaborator.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Full passport record with nested sections/tasks/questions/answers, linked property EPC fields, and any sibling convert-to-seller passports. Answer file URLs are resolved to signed, viewer-scoped /files links and filtered to what this viewer is entitled to see.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        addressLine1: { type: 'string' },
+        postcode: { type: 'string' },
+        ownerId: { type: 'string' },
+        propertyId: { type: 'string', nullable: true },
+        type: { type: 'string', nullable: true, example: 'SELLER' },
+        isHmo: { type: 'boolean' },
+        status: { type: 'string' },
+        publicVisibility: { type: 'boolean' },
+        createdAt: { type: 'string', format: 'date-time' },
+        convertedTo: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' } } } },
+        property: { type: 'object', nullable: true, properties: { epcRating: { type: 'string', nullable: true }, epcScore: { type: 'number', nullable: true }, lodgementDate: { type: 'string', format: 'date-time', nullable: true }, epcLmkKey: { type: 'string', nullable: true } } },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              key: { type: 'string' },
+              title: { type: 'string' },
+              order: { type: 'number' },
+              tasks: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    key: { type: 'string' },
+                    title: { type: 'string' },
+                    passportQuestions: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          questionTemplate: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true } } },
+                          answer: { type: 'object', nullable: true, description: 'QuestionAnswer row, with fileUrl set to null when this viewer is not entitled to see it' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
     // getPassport() now enforces access itself (see its own comment) -
@@ -173,6 +293,12 @@ export class PassportController {
   @Get(':id/jurisdiction')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get the property's UK jurisdiction",
+    description: 'Resolves the nation (England/Wales/Scotland/Northern Ireland) for this passport\'s property, so the frontend can warn when the pack\'s guidance/pathways do not apply (Scotland/NI).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'The resolved jurisdiction.', schema: { type: 'object', properties: { nation: { type: 'string', nullable: true } } } })
   async getJurisdiction(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getJurisdiction(passportId, req.user.id);
   }
@@ -180,6 +306,12 @@ export class PassportController {
   @Get(':id/sections')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'List a passport\'s sections with task progress',
+    description: 'Returns every section and its tasks for this passport, scoped to the caller\'s access (full for owner, section/task-scoped for a restricted collaborator).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Array of sections, each with its tasks and completion state.', schema: { type: 'array', items: { type: 'object' } } })
   async getPassportSections(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -199,6 +331,16 @@ export class PassportController {
   @Get(':id/access')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Check whether the caller owns or collaborates on this passport',
+    description: 'Lightweight "am I the owner?" check so the frontend can hide/disable owner-only actions (add/remove collaborator, publish) for a collaborator instead of letting them hit a guaranteed 403.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The caller\'s relationship to this passport.',
+    schema: { type: 'object', properties: { isOwner: { type: 'boolean' }, isCollaborator: { type: 'boolean' }, permission: { type: 'string', nullable: true } } },
+  })
   async getPassportAccess(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -212,6 +354,26 @@ export class PassportController {
   @Get(':id/property-facts')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get already-known property facts for pre-fill',
+    description: 'Returns the address/UPRN/title number already held for this passport\'s property, so question forms can pre-fill known facts instead of asking the owner to re-type them.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Known property facts, falling back to the passport\'s own address columns when there is no linked Property.',
+    schema: {
+      type: 'object',
+      properties: {
+        addressLine1: { type: 'string', nullable: true },
+        city: { type: 'string', nullable: true },
+        postcode: { type: 'string', nullable: true },
+        uprn: { type: 'string', nullable: true },
+        titleNumber: { type: 'string', nullable: true },
+        propertyType: { type: 'string', nullable: true },
+      },
+    },
+  })
   async getPassportPropertyFacts(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -225,6 +387,11 @@ export class PassportController {
   @Post(':id/collaborators/check-email')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Check an email before adding a collaborator',
+    description: 'Step 1 of the add-collaborator flow: reports whether the typed email belongs to the owner, an existing collaborator, or a known/unknown UMU account, before the modal asks for role/scope. Rate-limited separately — this is an email-enumeration-sensitive endpoint.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -233,6 +400,11 @@ export class PassportController {
       },
       required: ['email'],
     },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Status of the email: is-owner, already-collaborator, known-user, or unknown-user (plus first name where applicable).',
+    schema: { type: 'object', properties: { status: { type: 'string' } } },
   })
   async checkCollaboratorEmail(
     @Param('id') passportId: string,
@@ -247,6 +419,11 @@ export class PassportController {
   @Post(':id/collaborators/invite')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Invite a non-user to join and collaborate',
+    description: 'For an email with no UMU account yet: sends a join invite. The scope/permission supplied here is applied automatically as a PassportCollaborator once they sign up.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -265,6 +442,11 @@ export class PassportController {
       },
       required: ['email'],
     },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Confirmation that the join-invite email was sent.',
+    schema: { type: 'object', properties: { message: { type: 'string', example: 'Invitation sent' }, invite: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' } } } } },
   })
   async inviteCollaborator(
     @Param('id') passportId: string,
@@ -291,6 +473,11 @@ export class PassportController {
   @Post(':id/collaborators')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Add an existing user as a collaborator',
+    description: 'Adds a PassportCollaborator row for an email that already has a UMU account, with the given role, section/task scope and permission level (view / view+add / view+add+update-own).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -308,6 +495,31 @@ export class PassportController {
         expiresAt: { type: 'string' },
       },
       required: ['email'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'The created collaborator record.',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Collaborator added successfully' },
+        collaborator: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            userId: { type: 'string' },
+            email: { type: 'string' },
+            firstName: { type: 'string', nullable: true },
+            lastName: { type: 'string', nullable: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            role: { type: 'string', nullable: true },
+            permission: { type: 'string', nullable: true },
+            accessDuration: { type: 'string', nullable: true },
+            expiresAt: { type: 'string', format: 'date-time', nullable: true },
+          },
+        },
+      },
     },
   })
   async addCollaborator(
@@ -336,6 +548,12 @@ export class PassportController {
   @Patch(':id/collaborators/:collaboratorId')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Update a collaborator's scope or permission",
+    description: 'Changes an existing collaborator\'s role, section/task scope, permission level, or access duration/expiry. Owner only.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'PassportCollaborator row ID to update' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -350,6 +568,23 @@ export class PassportController {
         permission: { type: 'string' },
         accessDuration: { type: 'string' },
         expiresAt: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated collaborator record.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        role: { type: 'string', nullable: true },
+        sectionKeys: { type: 'array', items: { type: 'string' }, nullable: true, description: 'null/empty means unrestricted (every section)' },
+        taskKeys: { type: 'object', nullable: true, additionalProperties: { type: 'array', items: { type: 'string' } } },
+        historyAccess: { type: 'boolean' },
+        permission: { type: 'string', example: 'view', description: 'view | view_add | view_add_update_own' },
+        accessDuration: { type: 'string', nullable: true },
+        expiresAt: { type: 'string', format: 'date-time', nullable: true },
       },
     },
   })
@@ -376,6 +611,12 @@ export class PassportController {
   @Get(':id/collaborators')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'List this passport\'s collaborators',
+    description: 'Returns every PassportCollaborator on this passport with their basic user info (name/email), scope and permission.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Array of collaborators.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, email: { type: 'string' } } } } })
   async getCollaborators(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
     return this.passportService.getCollaborators(passportId, userId);
@@ -384,6 +625,13 @@ export class PassportController {
   @Post(':id/collaborators/:collaboratorId/remove')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Remove a collaborator',
+    description: 'Deletes the PassportCollaborator row outright (not a soft flag) — the removed user loses access on their very next request, since access is re-checked live on every call. Owner only.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'collaboratorId', description: 'PassportCollaborator row ID to remove' })
+  @ApiResponse({ status: 201, description: 'Confirmation of removal.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Collaborator removed successfully' } } } })
   async removeCollaborator(
     @Param('id') passportId: string,
     @Param('collaboratorId') collaboratorId: string,
@@ -400,6 +648,12 @@ export class PassportController {
   @Post(':id/buyer-unlock')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Unlock a published passport as a buyer',
+    description: 'Grants the caller BuyerPassportAccess to a PUBLISHED passport, after verifying a successful payment and passed KYC. The owner gets pass-through access with no payment check.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID to unlock' })
+  @ApiResponse({ status: 201, description: 'Confirmation of access.', schema: { type: 'object', properties: { passportId: { type: 'string' } } } })
   async buyerUnlock(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.createBuyerAccess(passportId, req.user.id);
   }
@@ -411,6 +665,16 @@ export class PassportController {
   @Post(':id/share-with-buyer')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Nudge a specific buyer toward this passport',
+    description: 'Opens (or reuses) a conversation with the given buyer and posts a share-passport message card. Does NOT grant access — the buyer still has to pay via buyer-unlock.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'The conversation this nudge was posted into, and whether the buyer already has paid access.',
+    schema: { type: 'object', properties: { conversationId: { type: 'string' }, hasAccess: { type: 'boolean' } } },
+  })
   async sharePassportWithBuyer(
     @Param('id') passportId: string,
     @Body() body: SharePassportWithBuyerDto,
@@ -427,6 +691,61 @@ export class PassportController {
   @Get(':id/buyer-view')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get the passport as a buyer would see it',
+    description: 'Returns the passport with property, owner summary, and sections/questions/answers filtered to what this buyer is entitled to see (requires published + unlocked, or owner/collaborator).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Buyer-facing passport view: PRIVATE (Vault) sections and leasehold-irrelevant sections are filtered out, and answer files are limited to what this viewer is entitled to see.',
+    schema: {
+      type: 'object',
+      properties: {
+        passport: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, ownerName: { type: 'string' }, isOwner: { type: 'boolean', description: 'True if the caller is actually this passport\'s own owner, viewing their own buyer-facing page' } } },
+        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag' },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              key: { type: 'string' },
+              title: { type: 'string' },
+              subtitle: { type: 'string', nullable: true },
+              description: { type: 'string', nullable: true },
+              order: { type: 'number' },
+              helpContent: { type: 'string', nullable: true },
+              helpVideoUrl: { type: 'string', nullable: true },
+              tasks: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    key: { type: 'string' },
+                    title: { type: 'string' },
+                    questions: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          type: { type: 'string' },
+                          question: { type: 'string' },
+                          answer: { type: 'object', nullable: true, properties: { answerText: { type: 'string', nullable: true }, answerJson: { type: 'object', nullable: true }, fileUrl: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
   async getBuyerView(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerView(passportId, req.user.id);
   }
@@ -434,6 +753,16 @@ export class PassportController {
   @Get(':id/readiness')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get publish-readiness for a seller passport',
+    description: 'Computes whether every question marked as a hard or currently-triggered publication blocker has been answered, plus the milestone percentage and a tappable checklist of what remains.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Readiness result.',
+    schema: { type: 'object', properties: { canPublish: { type: 'boolean' }, milestonePct: { type: 'number' }, readinessPct: { type: 'number' }, requiredTotal: { type: 'number' }, requiredDone: { type: 'number' }, missingBlockers: { type: 'array', items: { type: 'object' } }, checklist: { type: 'array', items: { type: 'object' } } } },
+  })
   async getReadiness(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getReadiness(passportId, req.user.id);
   }
@@ -441,6 +770,13 @@ export class PassportController {
   @Put(':id/publish')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Publish the passport',
+    description: 'Marks the passport PUBLISHED, making eligible sections/documents visible to buyers. Fails if publish-readiness has unmet blockers.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'The passport id and its new status (idempotent if already published).', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'PUBLISHED' } } } })
+  @ApiResponse({ status: 403, description: 'Not yet activated, or publish-readiness still has unmet required disclosures (response includes the readiness detail).' })
   async publishPassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.publishPassport(passportId, req.user.id);
   }
@@ -448,6 +784,12 @@ export class PassportController {
   @Put(':id/unpublish')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Unpublish the passport',
+    description: 'Returns a published passport to a non-public state. Owner only.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'The passport id and its new status.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'IN_PROGRESS' } } } })
   async unpublishPassport(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -462,6 +804,12 @@ export class PassportController {
   @Get(':id/visibility')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get the standalone public-visibility flag',
+    description: 'A separate Private/Public switch from publish/unpublish, used by frontends with no buyer-marketplace concept.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Current visibility flag.', schema: { type: 'object', properties: { id: { type: 'string' }, publicVisibility: { type: 'boolean' }, publicVisibilitySetAt: { type: 'string', format: 'date-time', nullable: true } } } })
   async getPublicVisibility(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getPublicVisibility(passportId, req.user.id);
   }
@@ -469,6 +817,11 @@ export class PassportController {
   @Patch(':id/visibility')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Set the standalone public-visibility flag',
+    description: 'Owner-only toggle of the separate Private/Public visibility flag (distinct from publish/unpublish).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -477,6 +830,11 @@ export class PassportController {
       },
       required: ['isPublic'],
     },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated visibility flag (idempotent no-op if already in the requested state).',
+    schema: { type: 'object', properties: { id: { type: 'string' }, publicVisibility: { type: 'boolean' }, publicVisibilitySetAt: { type: 'string', format: 'date-time', nullable: true } } },
   })
   async setPublicVisibility(
     @Param('id') passportId: string,
@@ -493,6 +851,12 @@ export class PassportController {
   @Get(':id/timeline')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get the sale-stage timeline (legacy)',
+    description: 'Feeds the Timeline tab\'s sale-stage tracker. Being replaced by getHistory below, kept live for now so existing frontends keep working.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Timeline entries.', schema: { type: 'array', items: { type: 'object' } } })
   async getTimeline(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -506,6 +870,47 @@ export class PassportController {
   @Get(':id/history')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get the paginated, filterable activity history',
+    description: 'Replaces the Timeline tab: a permission-scoped, cursor-paginated feed of PassportEvent rows, filterable by category/section/date range.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Pagination cursor from a previous page' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Page size' })
+  @ApiQuery({ name: 'category', required: false, description: "One of: all | information | documents | actions | access" })
+  @ApiQuery({ name: 'sectionId', required: false, description: 'Filter to one section' })
+  @ApiQuery({ name: 'dateFrom', required: false, description: 'ISO date lower bound' })
+  @ApiQuery({ name: 'dateTo', required: false, description: 'ISO date upper bound' })
+  @ApiResponse({
+    status: 200,
+    description: 'A page of history events (safe-summary shape - no before/after detail, see the event-detail endpoint for that) plus a cursor for the next page.',
+    schema: {
+      type: 'object',
+      properties: {
+        events: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              eventType: { type: 'string' },
+              category: { type: 'string', example: 'documents', description: 'all | information | documents | actions | access' },
+              actorType: { type: 'string' },
+              actorId: { type: 'string', nullable: true },
+              entityType: { type: 'string' },
+              entityId: { type: 'string', nullable: true },
+              sectionId: { type: 'string', nullable: true },
+              sourceType: { type: 'string' },
+              occurredAt: { type: 'string', format: 'date-time' },
+              ruleId: { type: 'string', nullable: true },
+              correlationId: { type: 'string', nullable: true },
+            },
+          },
+        },
+        nextCursor: { type: 'string', nullable: true },
+      },
+    },
+  })
   async getHistory(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -529,6 +934,40 @@ export class PassportController {
   @Get(':id/history/:eventId')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get one history event\'s full detail',
+    description: 'Returns the full before/after detail of a single PassportEvent row from the history feed.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'eventId', description: 'PassportEvent ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The full event detail, re-checking permissions independently of the list endpoint.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        eventType: { type: 'string' },
+        category: { type: 'string' },
+        actorType: { type: 'string' },
+        actorId: { type: 'string', nullable: true },
+        actingOnBehalfOf: { type: 'string', nullable: true },
+        entityType: { type: 'string' },
+        entityId: { type: 'string', nullable: true },
+        sectionId: { type: 'string', nullable: true },
+        sourceType: { type: 'string' },
+        occurredAt: { type: 'string', format: 'date-time' },
+        recordedAt: { type: 'string', format: 'date-time' },
+        visibilityClass: { type: 'string' },
+        beforeRef: { type: 'object', nullable: true, description: 'State before the change, where applicable' },
+        afterRef: { type: 'object', nullable: true, description: 'State after the change' },
+        ruleId: { type: 'string', nullable: true },
+        ruleVersion: { type: 'number', nullable: true },
+        metadata: { type: 'object', nullable: true },
+        linkedAction: { type: 'object', nullable: true, description: 'The PassportAction this event correlates to, if any' },
+      },
+    },
+  })
   async getHistoryEventDetail(
     @Param('id') passportId: string,
     @Param('eventId') eventId: string,
@@ -543,6 +982,33 @@ export class PassportController {
   @Get(':id/actions')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'List "needs your attention" actions',
+    description: 'Rule-engine-generated list of outstanding items for this passport. Owner and collaborators can list; only the owner can mark items addressed/reopen (see below).',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Array of actions, most recent first.',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          passportId: { type: 'string' },
+          ruleId: { type: 'string' },
+          subjectEntityId: { type: 'string' },
+          status: { type: 'string', example: 'OPEN', description: 'OPEN | ADDRESSED | REOPENED | SUPERSEDED' },
+          title: { type: 'string' },
+          explanation: { type: 'string' },
+          suggestedSteps: { type: 'array', items: { type: 'string' }, nullable: true },
+          severity: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  })
   async listActions(@Param('id') passportId: string, @Request() req: any) {
     return this.actionsService.listActions(passportId, req.user.id);
   }
@@ -550,6 +1016,25 @@ export class PassportController {
   @Patch(':id/actions/:actionId/addressed')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Mark an action addressed', description: 'Owner-only: marks one "needs your attention" item as resolved.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'actionId', description: 'Action ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated action, status set to ADDRESSED.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        passportId: { type: 'string' },
+        status: { type: 'string', example: 'ADDRESSED' },
+        title: { type: 'string' },
+        explanation: { type: 'string' },
+        addressedAt: { type: 'string', format: 'date-time', nullable: true },
+        addressedBy: { type: 'string', nullable: true },
+      },
+    },
+  })
   async markActionAddressed(
     @Param('id') passportId: string,
     @Param('actionId') actionId: string,
@@ -561,6 +1046,23 @@ export class PassportController {
   @Patch(':id/actions/:actionId/reopen')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Reopen an action', description: 'Owner-only: reopens a previously addressed action item.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'actionId', description: 'Action ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated action, status set to REOPENED.',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        passportId: { type: 'string' },
+        status: { type: 'string', example: 'REOPENED' },
+        title: { type: 'string' },
+        explanation: { type: 'string' },
+      },
+    },
+  })
   async reopenAction(
     @Param('id') passportId: string,
     @Param('actionId') actionId: string,
@@ -573,6 +1075,12 @@ export class PassportController {
   @Get(':id/vault')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Get the passport's sections with their visibility",
+    description: 'Returns each section with its PUBLIC/PRIVATE visibility flag, scoped to a restricted collaborator\'s allowed sections where applicable.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Sections with visibility.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, status: { type: 'string' }, visibility: { type: 'string' } } } } })
   async getVault(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -585,6 +1093,16 @@ export class PassportController {
   @Patch('section/:sectionId/visibility')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: "Toggle a section's visibility",
+    description: 'Sets a single section to PUBLIC or PRIVATE — determines whether it\'s included when the passport is published.',
+  })
+  @ApiParam({ name: 'sectionId', description: 'PassportSection ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'The updated section.',
+    schema: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, visibility: { type: 'string', example: 'PUBLIC', description: 'PUBLIC | PRIVATE' } } },
+  })
   async setSectionVisibility(
     @Param('sectionId') sectionId: string,
     @Request() req: any,
@@ -600,6 +1118,9 @@ export class PassportController {
   @Delete(':id')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete a passport', description: 'Owner-only, permanent deletion of the passport and its content.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Confirmation of deletion.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Passport deleted successfully' } } } })
   async deletePassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.deletePassport(passportId, req.user.id);
   }
@@ -610,6 +1131,12 @@ export class PassportController {
   @Put(':id/last-visited')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Record the last task visited',
+    description: 'Pinged by the frontend whenever the user opens or answers a task, so getResumeTarget below knows where to drop them next time.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean', example: true } } } })
   async setLastVisited(
     @Param('id') passportId: string,
     @Body() body: SetLastVisitedDto,
@@ -627,6 +1154,12 @@ export class PassportController {
   @Get(':id/resume')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get the "pick up where you left off" target',
+    description: 'Resolves the smartest next task to resume into, based on the last-visited task and overall completion state. Returns a null target when nothing remains incomplete.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'The resume target, or null.', schema: { type: 'object', properties: { target: { type: 'object', nullable: true } } } })
   async getResumeTarget(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -638,6 +1171,11 @@ export class PassportController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Upload a property image',
+    description: 'Uploads one image file to this passport\'s property-images bucket and returns its URL. Requires owner/collaborator access.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -646,6 +1184,11 @@ export class PassportController {
       },
       required: ['file'],
     },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'The uploaded image\'s URL and file metadata.',
+    schema: { type: 'object', properties: { url: { type: 'string' }, name: { type: 'string' }, mimeType: { type: 'string' }, size: { type: 'number' } } },
   })
   @UseInterceptors(
     FileInterceptor(
@@ -685,6 +1228,9 @@ export class PassportController {
   @Get(':id/property-images')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'List this passport\'s property images', description: 'Returns the ordered list of property image URLs attached to this passport.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Array of image URLs.', schema: { type: 'object', properties: { images: { type: 'array', items: { type: 'string' } } } } })
   async getPropertyImages(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -695,6 +1241,8 @@ export class PassportController {
   @Put(':id/property-images')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Replace the property image list/order', description: 'Replaces the full ordered list of property image URLs for this passport (e.g. after reordering or removing one in the gallery editor).' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -704,6 +1252,7 @@ export class PassportController {
       required: ['images'],
     },
   })
+  @ApiResponse({ status: 200, description: 'The updated image list.', schema: { type: 'object', properties: { images: { type: 'array', items: { type: 'string' } } } } })
   async updatePropertyImages(
     @Param('id') passportId: string,
     @Body('images') images: string[],
@@ -721,6 +1270,12 @@ export class PassportController {
   @Get(':id/comparables')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get nearby comparable sold prices',
+    description: 'Returns up to 6 recent Land Registry price-paid transactions in the same postcode sector, for owner, collaborator, or an unlocked buyer.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Array of comparable transactions.', schema: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, transactionDate: { type: 'string', format: 'date-time' }, postcode: { type: 'string' }, propertyType: { type: 'string' } } } } })
   async getComparables(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getComparables(passportId, req.user.id);
   }
@@ -730,6 +1285,21 @@ export class PassportController {
   @Post(':id/share')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Create a time-limited shared link',
+    description: 'Generates a token-based share link (buyer or tenant scope) covering the given document IDs, expiring after a fixed window — usable by someone with no UMU account.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        scope: { type: 'string', enum: ['buyer', 'tenant'] },
+        documentIds: { type: 'array', items: { type: 'string' } },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'The created share link.', schema: { type: 'object', properties: { token: { type: 'string' }, url: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } } })
   async createShareLink(
     @Param('id') passportId: string,
     // `| undefined` dropped: TS's emitDecoratorMetadata erases a union
@@ -754,6 +1324,59 @@ export class PassportController {
   }
 
   @Get('shared/:token')
+  @ApiOperation({
+    summary: 'Resolve a shared passport link (public)',
+    description: 'No authentication required — resolves a share token to the passport\'s shared content. Expired tokens are deleted and rejected with 403.',
+  })
+  @ApiParam({ name: 'token', description: 'Share link token' })
+  @ApiResponse({
+    status: 200,
+    description: 'The shared passport content, filtered to this link\'s scope (buyer/tenant), visible sections, and the document manifest snapshotted when the link was created.',
+    schema: {
+      type: 'object',
+      properties: {
+        passport: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' } } },
+        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag' },
+        expiresAt: { type: 'string', format: 'date-time' },
+        sections: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              key: { type: 'string' },
+              title: { type: 'string' },
+              tasks: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    key: { type: 'string' },
+                    title: { type: 'string' },
+                    questions: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          type: { type: 'string' },
+                          question: { type: 'string' },
+                          answer: { type: 'object', nullable: true, properties: { answerText: { type: 'string', nullable: true }, fileUrl: { type: 'string', nullable: true } } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Link has expired (and is deleted on this attempt).' })
+  @ApiResponse({ status: 404, description: 'Unknown token.' })
   async getSharedPassport(@Param('token') token: string) {
     return this.passportService.getSharedPassport(token);
   }
@@ -764,6 +1387,13 @@ export class PassportController {
   @Post(':id/ai-summary/:sectionKey')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Generate an AI summary of a section',
+    description: 'Calls the LLM (Groq) to summarise the answers in one section for a quick read. Rate-limited — each call is a paid model invocation.',
+  })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiParam({ name: 'sectionKey', description: 'Section key to summarise' })
+  @ApiResponse({ status: 201, description: 'The generated summary text.', schema: { type: 'object', properties: { summary: { type: 'string' } } } })
   async getSectionAiSummary(
     @Param('id') passportId: string,
     @Param('sectionKey') sectionKey: string,
@@ -777,6 +1407,8 @@ export class PassportController {
   @Post(':id/notes')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Add a private buyer note', description: 'Lets a buyer with access leave a private note against this passport (optionally scoped to a section) — visible only to that buyer.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -786,6 +1418,11 @@ export class PassportController {
       },
       required: ['text'],
     },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'The created note.',
+    schema: { type: 'object', properties: { id: { type: 'string' }, passportId: { type: 'string' }, sectionKey: { type: 'string', nullable: true }, text: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } },
   })
   async createBuyerNote(
     @Param('id') passportId: string,
@@ -799,6 +1436,9 @@ export class PassportController {
   @Get(':id/notes')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "List the caller's private notes", description: 'Returns this buyer\'s own private notes on this passport.' })
+  @ApiParam({ name: 'id', description: 'Passport ID' })
+  @ApiResponse({ status: 200, description: 'Array of notes.', schema: { type: 'array', items: { type: 'object' } } })
   async getBuyerNotes(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerNotes(passportId, req.user.id);
   }
@@ -806,6 +1446,9 @@ export class PassportController {
   @Delete('notes/:noteId')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Delete a private note', description: 'Deletes one of the caller\'s own buyer notes.' })
+  @ApiParam({ name: 'noteId', description: 'Note ID' })
+  @ApiResponse({ status: 200, description: 'Confirmation of deletion.', schema: { type: 'object', properties: { deleted: { type: 'boolean', example: true } } } })
   async deleteBuyerNote(@Param('noteId') noteId: string, @Request() req: any) {
     return this.passportService.deleteBuyerNote(noteId, req.user.id);
   }

@@ -22,6 +22,11 @@ export const ApiBody = noopDecorator;
 export const ApiConsumes = noopDecorator;
 export const ApiProperty = noopDecorator;
 export const ApiBearerAuth = noopDecorator;
+export const ApiOperation = noopDecorator;
+export const ApiResponse = noopDecorator;
+export const ApiParam = noopDecorator;
+export const ApiQuery = noopDecorator;
+export const ApiHeader = noopDecorator;
 
 export class DocumentBuilder {
   setTitle() { return this; }

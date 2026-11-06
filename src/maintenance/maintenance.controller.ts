@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { ApiOperation, ApiResponse, ApiHeader, ApiBody } from '@nestjs/swagger';
 
 // Total-data-loss endpoints (deleteMany({}) with no filter). The only
 // thing keeping this module out of production is `PROD_BUILD` in
@@ -44,6 +45,9 @@ export class MaintenanceController {
   }
 
   /** Set imageUrl = NULL for all properties with Pexels image URLs */
+  @ApiOperation({ summary: 'Clear placeholder Pexels property images', description: "Admin-secret-gated. Sets imageUrl to NULL for every property whose image is a Pexels placeholder URL. This module is excluded entirely from production builds (PROD_BUILD)." })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiResponse({ status: 200, description: 'Count of properties updated.', schema: { type: 'object', properties: { updated: { type: 'number' } } } })
   @Post('fix-images')
   @HttpCode(HttpStatus.OK)
   async fixImages(@Headers('x-admin-secret') secret: string) {
@@ -52,6 +56,10 @@ export class MaintenanceController {
   }
 
   /** Delete all Passport records (cascades sections, tasks, collaborators, etc.) */
+  @ApiOperation({ summary: 'Delete every Passport record', description: "DESTRUCTIVE. Admin-secret-gated and requires body.confirm === 'DELETE-EVERYTHING' as a second gate independent of environment. Cascades sections, tasks, collaborators, etc. Excluded from production builds." })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiBody({ schema: { type: 'object', required: ['confirm'], properties: { confirm: { type: 'string', description: "Must equal the literal string 'DELETE-EVERYTHING'" } } } })
+  @ApiResponse({ status: 200, description: 'Count of passports deleted.', schema: { type: 'object', properties: { deleted: { type: 'number' } } } })
   @Delete('passports')
   @HttpCode(HttpStatus.OK)
   async deletePassports(
@@ -63,6 +71,10 @@ export class MaintenanceController {
   }
 
   /** Delete all Property records (passports must be cleared first) */
+  @ApiOperation({ summary: 'Delete every Property record', description: "DESTRUCTIVE. Admin-secret-gated plus the same 'DELETE-EVERYTHING' confirm literal. Passports must already be cleared first (FK constraint). Excluded from production builds." })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiBody({ schema: { type: 'object', required: ['confirm'], properties: { confirm: { type: 'string', description: "Must equal the literal string 'DELETE-EVERYTHING'" } } } })
+  @ApiResponse({ status: 200, description: 'Count of properties deleted.', schema: { type: 'object', properties: { deleted: { type: 'number' } } } })
   @Delete('properties')
   @HttpCode(HttpStatus.OK)
   async deleteProperties(
@@ -74,6 +86,10 @@ export class MaintenanceController {
   }
 
   /** One-shot: clear Pexels images + delete all passports + delete all properties */
+  @ApiOperation({ summary: 'Wipe passports, properties and placeholder images in one call', description: "DESTRUCTIVE, one-shot combination of all three operations above. Admin-secret-gated plus the 'DELETE-EVERYTHING' confirm literal. Excluded from production builds." })
+  @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
+  @ApiBody({ schema: { type: 'object', required: ['confirm'], properties: { confirm: { type: 'string', description: "Must equal the literal string 'DELETE-EVERYTHING'" } } } })
+  @ApiResponse({ status: 200, description: 'Summary of what was wiped.', schema: { type: 'object', properties: { passportsDeleted: { type: 'number' }, propertiesDeleted: { type: 'number' } } } })
   @Delete('all')
   @HttpCode(HttpStatus.OK)
   async deleteAll(

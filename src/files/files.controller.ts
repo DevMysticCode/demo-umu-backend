@@ -11,6 +11,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { FilesService } from './files.service';
 import { isS3Mode, getS3Object, isSafeToRenderInline } from '../common/storage';
@@ -40,6 +41,20 @@ export class FilesController {
 
   constructor(private files: FilesService) {}
 
+  @ApiOperation({
+    summary: 'Stream a private file via a signed URL',
+    description:
+      'Not browsable directly - the query string (u/exp/sig) IS the authentication, generated server-side when a document link is built. On every request: (1) the HMAC signature is verified, (2) the expiry must be in the future, (3) a fresh database lookup confirms the user the link was issued to still has a right to this exact file right now - so revoking access or deleting the document invalidates a not-yet-expired link immediately. No JWT guard; this endpoint is deliberately exempt from rate limiting since a single passport page can fire many of these in a burst.',
+  })
+  @ApiParam({ name: 'bucket', description: 'The storage bucket, e.g. documents, passport-docs.' })
+  @ApiParam({ name: 'filename', description: 'The stored filename within that bucket.' })
+  @ApiQuery({ name: 'u', description: 'The user id the link was signed for.' })
+  @ApiQuery({ name: 'exp', description: 'Unix expiry timestamp.' })
+  @ApiQuery({ name: 'sig', description: 'HMAC-SHA256 signature over the path, user id and expiry.' })
+  @ApiResponse({ status: 200, description: 'The file content, streamed directly (not JSON).' })
+  @ApiResponse({ status: 400, description: 'Malformed bucket/filename (e.g. path traversal attempt).' })
+  @ApiResponse({ status: 403, description: 'Signature invalid/expired, or the user no longer has a right to this file - deliberately generic so a failed attempt reveals nothing about which check failed.' })
+  @ApiResponse({ status: 404, description: 'File not found on disk/storage.' })
   @Get(':bucket/:filename')
   async serve(
     @Param('bucket') bucket: string,

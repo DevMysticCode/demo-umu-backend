@@ -20,6 +20,7 @@ import {
 import { Type } from 'class-transformer';
 import { CaptureService } from './capture.service';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt.guard';
+import { ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 class CaptureContactDto {
   @IsOptional() @IsString() name?: string;
@@ -63,6 +64,9 @@ class CaptureEventDto {
 export class CaptureController {
   constructor(private capture: CaptureService) {}
 
+  @ApiOperation({ summary: 'Record an analytics capture event', description: "Public — JWT is optional (OptionalJwtAuthGuard). Records a grant-eligibility-check, match-request or early-access event from the installer/marketplace intake flow. If a valid token is present the event is linked to that user, otherwise it's recorded anonymously since grant checks happen before contact details are collected." })
+  @ApiBody({ type: CaptureEventDto })
+  @ApiResponse({ status: 201, description: 'The created event (narrow projection - just the new id and timestamp).', schema: { type: 'object', properties: { id: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } })
   @SkipThrottle()
   @UseGuards(OptionalJwtAuthGuard)
   @Post('event')

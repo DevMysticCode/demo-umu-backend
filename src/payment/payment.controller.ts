@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { PaymentService } from './payment.service';
@@ -48,6 +48,8 @@ export class PaymentController {
       },
     },
   })
+  @ApiOperation({ summary: 'Create a payment intent to unlock a passport', description: 'Creates (or reuses a still-valid pending) Stripe PaymentIntent for a buyer unlocking a published passport. Throttled to 10/min/IP. The frontend confirms payment client-side with the returned clientSecret.' })
+  @ApiResponse({ status: 201, description: 'Stripe client secret and payment ID.', schema: { type: 'object', properties: { clientSecret: { type: 'string' }, paymentId: { type: 'string' } } } })
   createIntent(
     @Req() req: any,
     @Body('passportId') passportId?: string,
@@ -81,6 +83,8 @@ export class PaymentController {
       },
     },
   })
+  @ApiOperation({ summary: 'Create a payment intent for an owner-claim charge', description: 'Creates a Stripe PaymentIntent for claiming property ownership (covers HM Land Registry verification, plus KYC if not already approved) against a PENDING_PAYMENT passport. Throttled to 10/min/IP.' })
+  @ApiResponse({ status: 201, description: 'Stripe client secret, payment ID and charged amount.', schema: { type: 'object', properties: { clientSecret: { type: 'string' }, paymentId: { type: 'string' }, amount: { type: 'number' } } } })
   createClaimIntent(
     @Req() req: any,
     @Body('passportId') passportId?: string,
@@ -103,6 +107,9 @@ export class PaymentController {
    * payment_intent.payment_failed, payment_intent.canceled,
    * charge.refunded.
    */
+  @ApiOperation({ summary: 'Stripe webhook receiver', description: "Public endpoint (no JWT) — Stripe calls this directly. Authenticity is verified by checking the stripe-signature header's HMAC against STRIPE_WEBHOOK_SECRET on the raw request body. Handles payment_intent.succeeded/payment_failed/canceled and charge.refunded." })
+  @ApiHeader({ name: 'stripe-signature', description: "Stripe's webhook HMAC signature" })
+  @ApiResponse({ status: 200, description: 'Acknowledgement (always 200 so Stripe does not retry handled events).', schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
   @SkipThrottle()
   @Post('webhook')
   @HttpCode(200)

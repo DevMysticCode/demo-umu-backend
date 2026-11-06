@@ -7,7 +7,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiProperty, ApiResponse } from '@nestjs/swagger';
 import {
   IsIn,
   IsOptional,
@@ -118,6 +118,9 @@ class RespondToViewingDto {
   message?: string;
 }
 
+const MESSAGE_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, conversationId: { type: 'string' }, senderId: { type: 'string' }, body: { type: 'string' }, kind: { type: 'string' }, payload: { type: 'object', nullable: true }, createdAt: { type: 'string' } } };
+const CONVERSATION_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, context: { type: 'string', enum: CONVERSATION_CONTEXTS }, contextId: { type: 'string' }, lastMessageAt: { type: 'string', nullable: true }, createdAt: { type: 'string' }, participants: { type: 'array', items: { type: 'object' } }, messages: { type: 'array', items: MESSAGE_SCHEMA, description: "most recent message only" } } };
+
 /**
  * HTTP surface for the shared messaging layer.
  *
@@ -131,7 +134,7 @@ class RespondToViewingDto {
  *                                                      the buyer-drawer's
  *                                                      "Message" button)
  *   POST /property/:id/viewing-request               — seller invites buyer
- *   POST /viewing-requests/:id/respond               — buyer accepts/declines
+ *   POST /viewing-requests/:id/respond                — buyer accepts/declines
  *
  * All routes require auth; participant-level authorisation is enforced
  * inside the service (see assertParticipant) so a leaked conversation
@@ -147,16 +150,24 @@ export class ConversationsController {
   ) {}
 
   @Get('conversations')
+  @ApiOperation({ summary: "List the caller's conversations", description: 'Inbox view: every conversation the authenticated user is a participant in (passport-match, property-enquiry or marketplace-job context), most recently active first, each with its most recent message.' })
+  @ApiResponse({ status: 200, description: 'Array of conversations.', schema: { type: 'array', items: CONVERSATION_SCHEMA } })
   async listMine(@Request() req: any) {
     return this.conversations.listForUser(req.user.id);
   }
 
   @Get('conversations/:id/messages')
+  @ApiOperation({ summary: 'Get a conversation and its full message history', description: 'Caller must be a participant. Also marks the conversation read for the caller as a side effect of opening it, and returns participants so the client can compute WhatsApp-style read receipts.' })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  @ApiResponse({ status: 200, description: 'Full message list plus participants.', schema: { type: 'object', properties: { messages: { type: 'array', items: MESSAGE_SCHEMA }, participants: { type: 'array', items: { type: 'object', properties: { userId: { type: 'string' }, lastReadAt: { type: 'string', nullable: true }, role: { type: 'string', nullable: true } } } } } } })
   async listMessages(@Param('id') id: string, @Request() req: any) {
     return this.conversations.listMessages(id, req.user.id);
   }
 
   @Post('conversations/:id/messages')
+  @ApiOperation({ summary: 'Send a conversation message', description: 'Posts a text message as the authenticated user and notifies every other participant. Caller must be a participant.' })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  @ApiResponse({ status: 201, description: 'The created message.', schema: MESSAGE_SCHEMA })
   async sendMessage(
     @Param('id') id: string,
     @Body() body: SendMessageDto,
@@ -170,6 +181,9 @@ export class ConversationsController {
   }
 
   @Post('conversations/:id/read')
+  @ApiOperation({ summary: 'Mark a conversation read', description: 'Marks every message in the conversation as read for the authenticated user.' })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  @ApiResponse({ status: 201, description: 'Acknowledgement.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   async markRead(@Param('id') id: string, @Request() req: any) {
     await this.conversations.markRead(id, req.user.id);
     return { ok: true };
@@ -181,6 +195,8 @@ export class ConversationsController {
    * exists, returns that instead of creating a duplicate.
    */
   @Post('conversations/start')
+  @ApiOperation({ summary: 'Start (or resume) a conversation', description: 'Opens a conversation between the caller and a peer user in the given context (passport_match / property_enquiry / marketplace_job), or returns the existing matching one. Optionally sends an initial message.' })
+  @ApiResponse({ status: 201, description: 'The conversation ID to open.', schema: { type: 'object', properties: { conversationId: { type: 'string' } } } })
   async start(
     @Body()
     body: StartConversationDto,
@@ -205,6 +221,9 @@ export class ConversationsController {
   }
 
   @Post('property/:id/viewing-request')
+  @ApiOperation({ summary: 'Invite a buyer to view a property', description: 'The caller (an owner/collaborator who manages the property via a Passport) proposes 1-5 viewing slots to an invited buyer, opens a conversation for it, and posts a system "viewing_request" message carrying the slots.' })
+  @ApiParam({ name: 'id', description: 'Property ID' })
+  @ApiResponse({ status: 201, description: 'The created viewing request.', schema: { type: 'object', properties: { id: { type: 'string' }, propertyId: { type: 'string' }, status: { type: 'string' }, conversationId: { type: 'string' } } } })
   async createViewingRequest(
     @Param('id') propertyId: string,
     @Body()
@@ -221,6 +240,9 @@ export class ConversationsController {
   }
 
   @Post('viewing-requests/:id/respond')
+  @ApiOperation({ summary: 'Respond to a viewing invite', description: 'The invited buyer accepts a slot, declines, or proposes new slots (reschedule). Posts a system "viewing_response" message and notifies the proposer.' })
+  @ApiParam({ name: 'id', description: 'Viewing request ID' })
+  @ApiResponse({ status: 201, description: 'The updated viewing request.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string' } } } })
   async respondToViewing(
     @Param('id') viewingRequestId: string,
     @Body()

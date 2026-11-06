@@ -11,7 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
@@ -23,11 +23,15 @@ import { DocumentsService } from './documents.service';
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
+  @ApiOperation({ summary: "List my documents", description: 'Returns every document the caller can see across both storage paths: files uploaded directly to their vault, and files attached as answers to their own passport questions. Also includes a combined "recently uploaded" slice of the 5 most recent across both.' })
+  @ApiResponse({ status: 200, description: 'The combined document lists.', schema: { type: 'object', properties: { passportDocuments: { type: 'array', items: { type: 'object' } }, userDocuments: { type: 'array', items: { type: 'object' } }, recentUploads: { type: 'array', items: { type: 'object' } } } } })
   @Get()
   getDocuments(@Req() req: any) {
     return this.documentsService.getDocuments(req.user.id);
   }
 
+  @ApiOperation({ summary: 'Upload a document to my vault', description: 'Stores a new document in the private documents bucket. Optionally links it to a specific passport (passportId) - the caller must own or be a collaborator on that passport - and/or files it under a vault category.' })
+  @ApiResponse({ status: 201, description: 'The created document.', schema: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } }, category: { type: 'string', nullable: true }, passportId: { type: 'string', nullable: true }, accessLevel: { type: 'string' }, uploadedAt: { type: 'string' } } } })
   @Post()
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
@@ -70,16 +74,26 @@ export class DocumentsController {
     );
   }
 
+  @ApiOperation({ summary: 'Delete a document', description: 'Owner-only. Writes a metadata-only history entry (REMOVED action, capturing name/size/type/who/when) before deleting the underlying file from storage - the record of removal survives even though the file itself is gone.' })
+  @ApiParam({ name: 'id', description: 'The UserDocument id.' })
+  @ApiResponse({ status: 200, description: 'Deletion result.', schema: { type: 'object', properties: { message: { type: 'string' } } } })
   @Delete(':id')
   deleteDocument(@Req() req: any, @Param('id') id: string) {
     return this.documentsService.deleteDocument(req.user.id, id);
   }
 
+  @ApiOperation({ summary: 'Get full document detail', description: "Owner-only (a collaborator's individually-granted access to the same document comes through GET /documents/shared-with-me instead, with a narrower shape). Powers the Details/Sharing/History tabs: who it's shared with, and its version history." })
+  @ApiParam({ name: 'id', description: 'The UserDocument id.' })
+  @ApiResponse({ status: 200, description: 'Full document detail.', schema: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' }, category: { type: 'string', nullable: true }, accessLevel: { type: 'string' }, sharedWith: { type: 'array', items: { type: 'object' } }, history: { type: 'array', items: { type: 'object', properties: { version: { type: 'integer' }, action: { type: 'string' }, name: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } } } } })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
   @Get(':id/detail')
   getDocumentDetail(@Req() req: any, @Param('id') id: string) {
     return this.documentsService.getDocumentDetail(req.user.id, id);
   }
 
+  @ApiOperation({ summary: "Update a document's name, category or property link", description: "Owner-only. Any of name/category/passportId may be supplied; passing passportId re-checks the caller's access to that passport before linking." })
+  @ApiParam({ name: 'id', description: 'The UserDocument id.' })
+  @ApiResponse({ status: 201, description: 'The updated fields.', schema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, category: { type: 'string', nullable: true }, passportId: { type: 'string', nullable: true } } } })
   @Post(':id/meta')
   @ApiBody({
     schema: {
@@ -101,22 +115,35 @@ export class DocumentsController {
     return this.documentsService.updateDocumentMeta(req.user.id, id, { name, category, passportId });
   }
 
+  @ApiOperation({ summary: 'List documents shared with me', description: 'Every document (vault document or passport-answer file) another owner has individually granted the caller SELECTED-tier access to.' })
+  @ApiResponse({ status: 200, description: 'Shared documents.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, kind: { type: 'string', enum: ['user', 'answer'] }, title: { type: 'string' }, fileUrl: { type: 'string' }, uploadedAt: { type: 'string' } } } } })
   @Get('shared-with-me')
   getSharedWithMe(@Req() req: any) {
     return this.documentsService.getSharedWithMe(req.user.id);
   }
 
   // ── Passport Vault: per-document access ──────────────────────────────
+  @ApiOperation({ summary: "List a passport's vault documents", description: "Returns two lists: \"home records\" (files attached as answers to this passport's questions, scoped to the caller's collaborator access if not the owner) and the caller's own private documents (not tied to any one property)." })
+  @ApiParam({ name: 'passportId', description: 'The Passport id.' })
+  @ApiResponse({ status: 200, description: 'Vault contents.', schema: { type: 'object', properties: { homeRecords: { type: 'array', items: { type: 'object' } }, personalDocuments: { type: 'array', items: { type: 'object' } } } } })
   @Get('passport/:passportId/vault')
   getPassportVault(@Req() req: any, @Param('passportId') passportId: string) {
     return this.documentsService.getPassportVaultDocuments(passportId, req.user.id);
   }
 
+  @ApiOperation({ summary: 'Get vault category counts', description: "Per-category file counts for the vault's category grid: documents linked to this property, the caller's private documents, how many have been shared with them, and how many home-record files exist (see vault above) for this passport." })
+  @ApiParam({ name: 'passportId', description: 'The Passport id.' })
+  @ApiResponse({ status: 200, description: 'Category counts.', schema: { type: 'object', properties: { propertyDocuments: { type: 'object', properties: { count: { type: 'integer' }, categories: { type: 'array', items: { type: 'object' } } } }, privateDocuments: { type: 'object', properties: { count: { type: 'integer' }, categories: { type: 'array', items: { type: 'object' } } } }, sharedWithMeCount: { type: 'integer' }, answerDocumentsCount: { type: 'integer' } } } })
   @Get('passport/:passportId/vault-overview')
   getVaultOverview(@Req() req: any, @Param('passportId') passportId: string) {
     return this.documentsService.getVaultOverview(passportId, req.user.id);
   }
 
+  @ApiOperation({ summary: 'List documents in one vault category', description: 'The category-detail screen: every document in the given category, either scoped to this property or to the caller\'s private library depending on the scope query param.' })
+  @ApiParam({ name: 'passportId', description: 'The Passport id.' })
+  @ApiParam({ name: 'category', description: 'Vault category key, e.g. manuals, warranties, compliance.' })
+  @ApiQuery({ name: 'scope', required: false, description: "'property' (default) for documents linked to this passport, or 'private' for the caller's own library." })
+  @ApiResponse({ status: 200, description: 'Documents in the category.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' }, category: { type: 'string' }, accessLevel: { type: 'string' }, uploadedAt: { type: 'string' } } } } })
   @Get('passport/:passportId/vault-category/:category')
   getCategoryDocuments(
     @Req() req: any,
@@ -127,11 +154,19 @@ export class DocumentsController {
     return this.documentsService.getCategoryDocuments(passportId, req.user.id, category, scope);
   }
 
+  @ApiOperation({ summary: 'Preview what would be included in a share/publish', description: "For the \"Review your Passport\" screen: the current home-record and personal documents already marked ELIGIBLE or PUBLISHED - i.e. the candidates that would actually go out if the owner shares or publishes right now, before they confirm." })
+  @ApiParam({ name: 'passportId', description: 'The Passport id.' })
+  @ApiResponse({ status: 200, description: 'Eligible/published documents by list.', schema: { type: 'object', properties: { homeRecords: { type: 'array', items: { type: 'object' } }, personalDocuments: { type: 'array', items: { type: 'object' } } } } })
   @Get('passport/:passportId/share-preview')
   getSharePreview(@Req() req: any, @Param('passportId') passportId: string) {
     return this.documentsService.getSharePreview(passportId, req.user.id);
   }
 
+  @ApiOperation({ summary: "Set a document's visibility level", description: "Owner-only. Sets PRIVATE/SELECTED/ELIGIBLE/PUBLISHED on either a vault document ('user') or a passport-answer file ('answer')." })
+  @ApiParam({ name: 'kind', description: "Which kind of document this is.", enum: ['answer', 'user'] })
+  @ApiParam({ name: 'id', description: 'The UserDocument id (kind=user) or QuestionAnswer id (kind=answer).' })
+  @ApiResponse({ status: 201, description: 'The updated access level.', schema: { type: 'object', properties: { id: { type: 'string' }, accessLevel: { type: 'string' } } } })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
   @Post(':kind/:id/access')
   @ApiBody({
     schema: {
@@ -151,6 +186,11 @@ export class DocumentsController {
     return this.documentsService.setDocumentAccess(kind, id, req.user.id, accessLevel);
   }
 
+  @ApiOperation({ summary: 'Grant a collaborator access to one document', description: "Owner-only. For a passport-linked document, the target must already be an invited collaborator on that passport - this only narrows what an already-invited person can see, it doesn't invite someone new." })
+  @ApiParam({ name: 'kind', description: 'Which kind of document this is.', enum: ['answer', 'user'] })
+  @ApiParam({ name: 'id', description: 'The UserDocument id (kind=user) or QuestionAnswer id (kind=answer).' })
+  @ApiResponse({ status: 201, description: 'Grant created.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'Target user is not already a collaborator on the linked passport.' })
   @Post(':kind/:id/grants')
   @ApiBody({
     schema: {
@@ -170,6 +210,11 @@ export class DocumentsController {
     return this.documentsService.addDocumentGrant(kind, id, req.user.id, collaboratorUserId);
   }
 
+  @ApiOperation({ summary: "Revoke a collaborator's grant on one document", description: 'Owner-only. Removes the specific access grant - the collaborator may still see the document via their general scope if applicable, but loses this document-specific grant.' })
+  @ApiParam({ name: 'kind', description: 'Which kind of document this is.', enum: ['answer', 'user'] })
+  @ApiParam({ name: 'id', description: 'The UserDocument id (kind=user) or QuestionAnswer id (kind=answer).' })
+  @ApiParam({ name: 'collaboratorUserId', description: 'The collaborator whose grant is being removed.' })
+  @ApiResponse({ status: 200, description: 'Grant removed.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   @Delete(':kind/:id/grants/:collaboratorUserId')
   removeDocumentGrant(
     @Req() req: any,
