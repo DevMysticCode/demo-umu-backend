@@ -173,7 +173,10 @@ export class QuestionController {
   })
   @ApiParam({ name: 'questionId', description: 'The PassportQuestion id' })
   @ApiQuery({ name: 'kind', required: false, description: 'Narrows to one sub-kind for a question that tracks more than one type of certificate' })
-  @ApiResponse({ status: 200, description: 'Matching documents.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Matching documents.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, name: { type: 'string' }, fileUrl: { type: 'string', description: 'Signed URL (see FilesService)' },
+    size: { type: 'string', description: 'Human-readable file size, e.g. "2.4 MB"' }, uploadedAt: { type: 'string' },
+  } } } })
   @Get(':questionId/copies')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)

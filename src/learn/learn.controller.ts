@@ -8,14 +8,24 @@ export class LearnController {
   constructor(private readonly learnService: LearnService) {}
 
   @ApiOperation({ summary: 'List educational videos', description: 'No auth required. Returns the catalogue of Learn-section educational videos.' })
-  @ApiResponse({ status: 200, description: 'Video catalogue.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Video catalogue.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true }, url: { type: 'string' },
+    thumbnail: { type: 'string', nullable: true }, durationSec: { type: 'number' }, points: { type: 'number' },
+    category: { type: 'string', nullable: true }, tags: { type: 'array', items: { type: 'string' } },
+    order: { type: 'number' }, featured: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' },
+  } } } })
   @Get('videos')
   async getVideos() {
     return this.learnService.getVideos();
   }
 
   @ApiOperation({ summary: "List the caller's in-progress videos", description: "Returns the signed-in user's \"continue watching\" shelf - videos they've started but not finished." })
-  @ApiResponse({ status: 200, description: 'In-progress video rows.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'In-progress video rows - the Video record spread with the caller\'s own progress fields.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true }, url: { type: 'string' },
+    thumbnail: { type: 'string', nullable: true }, durationSec: { type: 'number' }, points: { type: 'number' },
+    category: { type: 'string', nullable: true }, tags: { type: 'array', items: { type: 'string' } },
+    positionSecs: { type: 'number' }, progressPercent: { type: 'number' }, remainingSecs: { type: 'number' },
+  } } } })
   @Get('continue-watching')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)

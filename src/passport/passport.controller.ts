@@ -311,7 +311,16 @@ export class PassportController {
     description: 'Returns every section and its tasks for this passport, scoped to the caller\'s access (full for owner, section/task-scoped for a restricted collaborator).',
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
-  @ApiResponse({ status: 200, description: 'Array of sections, each with its tasks and completion state.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of sections, each with its tasks and completion state.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, subtitle: { type: 'string', nullable: true }, description: { type: 'string', nullable: true },
+    imageKey: { type: 'string', nullable: true }, status: { type: 'string' }, order: { type: 'number' },
+    helpContent: { type: 'string', nullable: true }, helpVideoUrl: { type: 'string', nullable: true },
+    tasks: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true }, order: { type: 'number' },
+      totalQuestions: { type: 'number' }, answeredQuestions: { type: 'number' }, totalPoints: { type: 'number' }, earnedPoints: { type: 'number' },
+      hasPublishRequired: { type: 'boolean', description: 'True if this task has at least one hard publication-blocking question' },
+    } } },
+  } } } })
   async getPassportSections(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -761,7 +770,24 @@ export class PassportController {
   @ApiResponse({
     status: 200,
     description: 'Readiness result.',
-    schema: { type: 'object', properties: { canPublish: { type: 'boolean' }, milestonePct: { type: 'number' }, readinessPct: { type: 'number' }, requiredTotal: { type: 'number' }, requiredDone: { type: 'number' }, missingBlockers: { type: 'array', items: { type: 'object' } }, checklist: { type: 'array', items: { type: 'object' } } } },
+    schema: { type: 'object', properties: {
+      canPublish: { type: 'boolean', description: 'True once every applicable blocker is satisfied' },
+      milestonePct: { type: 'number', description: 'Highest tier (20/40/60/80/100) fully satisfied' },
+      readinessPct: { type: 'number', description: '% of currently-applicable blockers satisfied - drives the UI progress bar' },
+      requiredTotal: { type: 'number' },
+      requiredDone: { type: 'number' },
+      missingBlockers: { type: 'array', description: 'One row per unanswered blocker', items: { type: 'object', properties: {
+        section: { type: 'string' }, question: { type: 'string' }, questionId: { type: 'string', nullable: true, description: 'null for the two system checks (title number, EPC rating)' }, milestone: { type: 'number' },
+      } } },
+      checklist: { type: 'array', description: 'Every required item (satisfied and outstanding), one row per question, in passport order', items: { type: 'object', properties: {
+        section: { type: 'string' }, sectionId: { type: 'string', nullable: true }, task: { type: 'string' }, taskId: { type: 'string', nullable: true },
+        question: { type: 'string' }, questionId: { type: 'string', nullable: true }, milestone: { type: 'number' }, satisfied: { type: 'boolean' },
+      } } },
+      systemChecks: { type: 'array', items: { type: 'object', properties: {
+        key: { type: 'string', enum: ['titleNumber', 'epcRating'] }, label: { type: 'string' }, satisfied: { type: 'boolean' }, blocksPublication: { type: 'boolean' },
+      } } },
+      requiredQuestionIds: { type: 'array', items: { type: 'string' }, description: 'Every question carrying at least one hard publication-blocker, for badging the question UI' },
+    } },
   })
   async getReadiness(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getReadiness(passportId, req.user.id);
@@ -856,7 +882,13 @@ export class PassportController {
     description: 'Feeds the Timeline tab\'s sale-stage tracker. Being replaced by getHistory below, kept live for now so existing frontends keep working.',
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
-  @ApiResponse({ status: 200, description: 'Timeline entries.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'The stage tracker plus the activity ledger it is computed from.', schema: { type: 'object', properties: {
+    stages: { type: 'array', items: { type: 'string' }, example: ['Issued', 'Matched', 'Published', 'Offer', 'Exchange', 'Complete'] },
+    stageIdx: { type: 'number', description: 'Index into stages - the furthest stage reached so far' },
+    events: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, type: { type: 'string' }, title: { type: 'string' }, actor: { type: 'string' }, icon: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
+    } } },
+  } } })
   async getTimeline(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -1438,7 +1470,9 @@ export class PassportController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "List the caller's private notes", description: 'Returns this buyer\'s own private notes on this passport.' })
   @ApiParam({ name: 'id', description: 'Passport ID' })
-  @ApiResponse({ status: 200, description: 'Array of notes.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of notes.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, passportId: { type: 'string' }, sectionKey: { type: 'string', nullable: true }, text: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
+  } } } })
   async getBuyerNotes(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerNotes(passportId, req.user.id);
   }
