@@ -40,9 +40,9 @@ export class HealthController {
       type: 'object',
       properties: {
         status: { type: 'string', example: 'ok' },
-        info: { type: 'object', additionalProperties: true, example: { database: { status: 'up', responseTimeMs: 12 } } },
-        error: { type: 'object', additionalProperties: true },
-        details: { type: 'object', additionalProperties: true },
+        info: { type: 'object', description: 'Keyed by indicator name (currently just "database") - each is only present here when healthy.', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, responseTimeMs: { type: 'number' } } }, example: { database: { status: 'up', responseTimeMs: 12 } } },
+        error: { type: 'object', description: 'Keyed by indicator name - only present when that indicator is unhealthy.', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, message: { type: 'string' } } } },
+        details: { type: 'object', description: 'Every indicator keyed by name, healthy or not - the union of info and error.', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, responseTimeMs: { type: 'number' }, message: { type: 'string' } } } },
       },
     },
   })
@@ -53,9 +53,9 @@ export class HealthController {
       type: 'object',
       properties: {
         status: { type: 'string', example: 'error' },
-        info: { type: 'object', additionalProperties: true },
-        error: { type: 'object', additionalProperties: true, example: { database: { status: 'down', message: 'timeout' } } },
-        details: { type: 'object', additionalProperties: true },
+        info: { type: 'object', description: 'Keyed by indicator name - only present here when healthy.', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, responseTimeMs: { type: 'number' } } } },
+        error: { type: 'object', description: 'Keyed by indicator name - the failing indicator(s).', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, message: { type: 'string' } } }, example: { database: { status: 'down', message: 'timeout' } } },
+        details: { type: 'object', description: 'Every indicator keyed by name, healthy or not.', additionalProperties: { type: 'object', properties: { status: { type: 'string' }, responseTimeMs: { type: 'number' }, message: { type: 'string' } } } },
       },
     },
   })

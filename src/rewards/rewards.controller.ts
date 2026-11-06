@@ -19,7 +19,11 @@ export class RewardsController {
   // GET /rewards/progress — balance + level + streak, for the
   // section-screen summary card.
   @ApiOperation({ summary: 'Get balance, level and daily streak', description: 'Combined summary for the section-screen progress card: points balance, computed level progress, and the user\'s current/longest daily-activity streak.' })
-  @ApiResponse({ status: 200, description: 'Progress summary.', schema: { type: 'object', properties: { balance: { type: 'number' }, level: { type: 'object' }, streak: { type: 'object', properties: { current: { type: 'number' }, longest: { type: 'number' } } } } } })
+  @ApiResponse({ status: 200, description: 'Progress summary.', schema: { type: 'object', properties: { balance: { type: 'number' }, level: { type: 'object', description: 'Display-only level derived from balance, not stored', properties: {
+    level: { type: 'integer' }, name: { type: 'string', example: 'Property Planner' }, min: { type: 'integer' },
+    next: { type: 'object', nullable: true, properties: { level: { type: 'integer' }, name: { type: 'string' }, min: { type: 'integer' } } },
+    progressPercent: { type: 'number', description: '0-100 toward next level; 100 when maxed' }, pointsToNext: { type: 'integer' },
+  } }, streak: { type: 'object', properties: { current: { type: 'number' }, longest: { type: 'number' } } } } } })
   @Get('progress')
   async getProgress(@Request() req: any) {
     return this.rewardsService.getProgress(req.user.id);
@@ -29,7 +33,11 @@ export class RewardsController {
   @ApiOperation({ summary: 'Get a page of the points ledger', description: 'Cursor-paginated history of every points award, newest first. limit is clamped to 1-100 (default 20).' })
   @ApiQuery({ name: 'limit', required: false, description: 'Page size, 1-100 (default 20)' })
   @ApiQuery({ name: 'cursor', required: false, description: 'Entry id to continue after, from a previous page\'s nextCursor' })
-  @ApiResponse({ status: 200, description: 'One page of ledger entries.', schema: { type: 'object', properties: { entries: { type: 'array', items: { type: 'object' } }, nextCursor: { type: 'string', nullable: true } } } })
+  @ApiResponse({ status: 200, description: 'One page of ledger entries.', schema: { type: 'object', properties: { entries: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, userId: { type: 'string' }, type: { type: 'string', description: "QUESTION_ANSWERED | REDEEMED | ADJUSTED | a RewardAction.actionKey" },
+    amount: { type: 'integer', description: 'Signed: positive = credit, negative = debit' }, balanceAfter: { type: 'integer' }, description: { type: 'string' },
+    passportQuestionId: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' },
+  } } }, nextCursor: { type: 'string', nullable: true } } } })
   @Get('history')
   async getHistory(
     @Request() req: any,

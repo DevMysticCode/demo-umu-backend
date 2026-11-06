@@ -81,14 +81,22 @@ export class PathwayController {
         startStep: { type: 'string' },
         steps: {
           type: 'array',
-          description: 'Step[]: {id, kind, title, body, time, cost, warning, options:[{label,next,requiresUpload}]}',
-          items: { type: 'object' },
+          description: 'The pathway\'s step sequence',
+          items: { type: 'object', properties: {
+            id: { type: 'string' }, kind: { type: 'string' }, title: { type: 'string' }, body: { type: 'string' },
+            time: { type: 'string', nullable: true }, cost: { type: 'string', nullable: true }, warning: { type: 'string', nullable: true },
+            options: { type: 'array', items: { type: 'object', properties: {
+              label: { type: 'string' }, next: { type: 'string', nullable: true }, requiresUpload: { type: 'boolean', nullable: true },
+            } } },
+          } },
         },
         handover: {
           type: 'array',
           nullable: true,
-          description: 'Option[]: {name, what, time, notes}',
-          items: { type: 'object' },
+          description: 'Professional handover options, where applicable',
+          items: { type: 'object', properties: {
+            name: { type: 'string' }, what: { type: 'string' }, time: { type: 'string', nullable: true }, notes: { type: 'string', nullable: true },
+          } },
         },
         stopPoint: { type: 'string', nullable: true },
         toValidate: { type: 'string', nullable: true },
@@ -124,7 +132,10 @@ export class PathwayController {
         triggerQuestionTemplateId: { type: 'string', nullable: true },
         contentVersion: { type: 'number' },
         currentStepId: { type: 'string' },
-        stepAnswers: { type: 'array', items: { type: 'object' }, description: '[{stepId, answerLabel, evidenceFileUrls, notes, timestamp}]' },
+        stepAnswers: { type: 'array', items: { type: 'object', properties: {
+          stepId: { type: 'string' }, answerLabel: { type: 'string' }, evidenceFileUrls: { type: 'array', items: { type: 'string' } },
+          notes: { type: 'string', nullable: true }, timestamp: { type: 'string', format: 'date-time' },
+        } } },
         status: { type: 'string', example: 'IN_PROGRESS', description: 'IN_PROGRESS | RESOLVED | CHECK | FLAG | ESCALATE' },
         startedAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
@@ -143,7 +154,29 @@ export class PathwayController {
 
   @ApiOperation({ summary: 'Get one journey\'s current progress', description: 'Returns the journey\'s state (current step, prior answers) plus the pathway content it\'s following.' })
   @ApiParam({ name: 'journeyId', description: 'The PathwayJourney id' })
-  @ApiResponse({ status: 200, description: 'Journey and its pathway content.', schema: { type: 'object', properties: { journey: { type: 'object' }, pathway: { type: 'object' } } } })
+  @ApiResponse({ status: 200, description: 'Journey and its pathway content.', schema: { type: 'object', properties: {
+    journey: { type: 'object', properties: {
+      id: { type: 'string' }, passportId: { type: 'string' }, pathwayId: { type: 'string', example: 'P09' },
+      triggerQuestionTemplateId: { type: 'string', nullable: true }, contentVersion: { type: 'number' }, currentStepId: { type: 'string' },
+      stepAnswers: { type: 'array', items: { type: 'object', properties: {
+        stepId: { type: 'string' }, answerLabel: { type: 'string' }, evidenceFileUrls: { type: 'array', items: { type: 'string' } },
+        notes: { type: 'string', nullable: true }, timestamp: { type: 'string', format: 'date-time' },
+      } } },
+      status: { type: 'string', enum: ['IN_PROGRESS', 'RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'] },
+      severity: { type: 'string', nullable: true, enum: ['RESOLVED', 'CHECK', 'FLAG', 'ESCALATE', null] },
+      startedAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, completedAt: { type: 'string', format: 'date-time', nullable: true },
+    } },
+    pathway: { type: 'object', description: 'The pathway definition - same shape as GET /:pathwayId/content', properties: {
+      id: { type: 'string', example: 'P09' }, name: { type: 'string' }, issue: { type: 'string' }, startStep: { type: 'string' },
+      steps: { type: 'array', description: "The pathway's step sequence - same shape as GET .../pathways/:pathwayId/content", items: { type: 'object', properties: {
+        id: { type: 'string' }, kind: { type: 'string' }, title: { type: 'string' }, body: { type: 'string' },
+        time: { type: 'string', nullable: true }, cost: { type: 'string', nullable: true }, warning: { type: 'string', nullable: true },
+        options: { type: 'array', items: { type: 'object', properties: {
+          label: { type: 'string' }, next: { type: 'string', nullable: true }, requiresUpload: { type: 'boolean', nullable: true },
+        } } },
+      } } }, status: { type: 'string', example: 'live' }, contentVersion: { type: 'number' },
+    } },
+  } } })
   @ApiResponse({ status: 404, description: 'Journey not found on this passport.' })
   @Get('journeys/:journeyId')
   getJourney(
@@ -172,7 +205,10 @@ export class PathwayController {
         triggerQuestionTemplateId: { type: 'string', nullable: true },
         contentVersion: { type: 'number' },
         currentStepId: { type: 'string' },
-        stepAnswers: { type: 'array', items: { type: 'object' }, description: '[{stepId, answerLabel, evidenceFileUrls, notes, timestamp}]' },
+        stepAnswers: { type: 'array', items: { type: 'object', properties: {
+          stepId: { type: 'string' }, answerLabel: { type: 'string' }, evidenceFileUrls: { type: 'array', items: { type: 'string' } },
+          notes: { type: 'string', nullable: true }, timestamp: { type: 'string', format: 'date-time' },
+        } } },
         status: { type: 'string', example: 'IN_PROGRESS', description: 'IN_PROGRESS | RESOLVED | CHECK | FLAG | ESCALATE' },
         startedAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },
@@ -244,7 +280,10 @@ export class PathwayController {
         triggerQuestionTemplateId: { type: 'string', nullable: true },
         contentVersion: { type: 'number' },
         currentStepId: { type: 'string' },
-        stepAnswers: { type: 'array', items: { type: 'object' } },
+        stepAnswers: { type: 'array', items: { type: 'object', properties: {
+          stepId: { type: 'string' }, answerLabel: { type: 'string' }, evidenceFileUrls: { type: 'array', items: { type: 'string' } },
+          notes: { type: 'string', nullable: true }, timestamp: { type: 'string', format: 'date-time' },
+        } } },
         status: { type: 'string', example: 'CHECK', description: 'IN_PROGRESS | RESOLVED | CHECK | FLAG | ESCALATE' },
         startedAt: { type: 'string', format: 'date-time' },
         updatedAt: { type: 'string', format: 'date-time' },

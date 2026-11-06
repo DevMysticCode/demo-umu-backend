@@ -32,7 +32,13 @@ export class LlcController {
     extentGeoJson: { type: 'object', nullable: true, description: 'GeoJSON GeometryCollection in BNG (EPSG:27700)' },
     extentAreaSqm: { type: 'number', nullable: true },
     warnings: { type: 'array', items: { type: 'string' } },
-    charges: { type: 'array', items: { type: 'object' } },
+    charges: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, boundary: { type: 'boolean', description: 'false = direct charge on this property, true = on a neighbouring parcel touching the boundary' },
+      category: { type: 'string' }, subCategory: { type: 'string', nullable: true }, law: { type: 'string', nullable: true },
+      legalDocument: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, location: { type: 'string', nullable: true },
+      reference: { type: 'string' }, authorityReference: { type: 'string', nullable: true },
+      creationDate: { type: 'string', format: 'date-time', nullable: true }, registrationDate: { type: 'string', format: 'date-time', nullable: true },
+    } } },
     searchedAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
   } } })
   @SkipThrottle()
@@ -53,7 +59,11 @@ export class LlcController {
     status: { type: 'string', enum: ['OK_WITH_CHARGES', 'OK_EMPTY', 'NOT_MIGRATED', 'MULTI_GEOMETRY', 'ERROR'] },
     errorCode: { type: 'string', nullable: true }, errorMessage: { type: 'string', nullable: true },
     searchAddress: { type: 'string', nullable: true }, extentAreaSqm: { type: 'number', nullable: true },
-    warnings: { type: 'array', items: { type: 'string' } }, charges: { type: 'array', items: { type: 'object' } },
+    warnings: { type: 'array', items: { type: 'string' } },
+    charges: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, boundary: { type: 'boolean' }, category: { type: 'string' }, subCategory: { type: 'string', nullable: true },
+      reference: { type: 'string' }, registrationDate: { type: 'string', format: 'date-time', nullable: true },
+    } } },
     searchedAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' },
   } } })
   @Throttle({ default: { ttl: 60_000, limit: 3 } })

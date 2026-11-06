@@ -70,7 +70,19 @@ export class ProfileController {
 
   @Get('me')
   @ApiOperation({ summary: "Get the caller's profile", description: 'Returns the full profile of the authenticated user (password hash excluded), including their addresses, companies and solicitors.' })
-  @ApiResponse({ status: 200, description: 'The user profile.', schema: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, firstName: { type: 'string' }, lastName: { type: 'string' }, addresses: { type: 'array', items: { type: 'object' } }, companies: { type: 'array', items: { type: 'object' } }, solicitors: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'The user profile.', schema: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, firstName: { type: 'string' }, lastName: { type: 'string' },
+    addresses: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, label: { type: 'string' }, line1: { type: 'string' }, line2: { type: 'string', nullable: true }, city: { type: 'string', nullable: true }, county: { type: 'string', nullable: true }, postcode: { type: 'string' }, isCurrent: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' },
+    } } },
+    companies: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, name: { type: 'string' }, address: { type: 'string', nullable: true }, companyNumber: { type: 'string', nullable: true }, director: { type: 'string', nullable: true },
+      chStatus: { type: 'string', nullable: true, description: 'Mirrors the Companies House API\'s own company_status (e.g. "active", "dissolved")' }, chCompanyName: { type: 'string', nullable: true }, chVerifiedAt: { type: 'string', format: 'date-time', nullable: true }, chVerifyError: { type: 'string', nullable: true },
+      createdAt: { type: 'string', format: 'date-time' },
+    } } },
+    solicitors: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, name: { type: 'string' }, address: { type: 'string', nullable: true }, contactName: { type: 'string', nullable: true }, email: { type: 'string', nullable: true }, phone: { type: 'string', nullable: true }, reference: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' },
+    } } },
+  } } })
   getProfile(@Req() req: any) {
     return this.profileService.getProfile(req.user.id);
   }
@@ -277,14 +289,26 @@ export class ProfileController {
 
   @Get('preferences')
   @ApiOperation({ summary: "Get the caller's preferences", description: 'Returns the authenticated user\'s saved UserPreference row, or null if never set.' })
-  @ApiResponse({ status: 200, description: 'The preferences row, or null.', schema: { type: 'object', nullable: true, properties: { id: { type: 'string' }, purpose: { type: 'object', nullable: true }, buyingTimeline: { type: 'string', nullable: true }, budgetMin: { type: 'number', nullable: true }, budgetMax: { type: 'number', nullable: true }, propertyTypes: { type: 'object', nullable: true }, propertyStyles: { type: 'object', nullable: true }, importantFeatures: { type: 'object', nullable: true }, sellingTimeline: { type: 'string', nullable: true }, propertyValue: { type: 'number', nullable: true } } } })
+  @ApiResponse({ status: 200, description: 'The preferences row, or null.', schema: { type: 'object', nullable: true, properties: { id: { type: 'string' },
+    purpose: { type: 'array', nullable: true, items: { type: 'string' }, description: 'Selected role(s), e.g. ["buyer"] or ["seller"]' },
+    buyingTimeline: { type: 'string', nullable: true }, budgetMin: { type: 'number', nullable: true }, budgetMax: { type: 'number', nullable: true },
+    propertyTypes: { type: 'array', nullable: true, items: { type: 'string' } },
+    propertyStyles: { type: 'array', nullable: true, items: { type: 'string' } },
+    importantFeatures: { type: 'array', nullable: true, items: { type: 'string' } },
+    sellingTimeline: { type: 'string', nullable: true }, propertyValue: { type: 'number', nullable: true } } } })
   getPreferences(@Req() req: any) {
     return this.profileService.getPreferences(req.user.id);
   }
 
   @Post('preferences')
   @ApiOperation({ summary: 'Save or update preferences', description: "Upserts the authenticated user's preferences row." })
-  @ApiResponse({ status: 201, description: 'The saved preferences row.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, purpose: { type: 'object', nullable: true }, buyingTimeline: { type: 'string', nullable: true }, budgetMin: { type: 'number', nullable: true }, budgetMax: { type: 'number', nullable: true }, propertyTypes: { type: 'object', nullable: true }, propertyStyles: { type: 'object', nullable: true }, importantFeatures: { type: 'object', nullable: true }, sellingTimeline: { type: 'string', nullable: true }, propertyValue: { type: 'number', nullable: true }, updatedAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 201, description: 'The saved preferences row.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' },
+    purpose: { type: 'array', nullable: true, items: { type: 'string' }, description: 'Selected role(s), e.g. ["buyer"] or ["seller"]' },
+    buyingTimeline: { type: 'string', nullable: true }, budgetMin: { type: 'number', nullable: true }, budgetMax: { type: 'number', nullable: true },
+    propertyTypes: { type: 'array', nullable: true, items: { type: 'string' } },
+    propertyStyles: { type: 'array', nullable: true, items: { type: 'string' } },
+    importantFeatures: { type: 'array', nullable: true, items: { type: 'string' } },
+    sellingTimeline: { type: 'string', nullable: true }, propertyValue: { type: 'number', nullable: true }, updatedAt: { type: 'string', format: 'date-time' } } } })
   upsertPreferences(@Req() req: any, @Body() dto: UpsertPreferencesDto) {
     return this.profileService.upsertPreferences(req.user.id, dto);
   }
@@ -299,7 +323,17 @@ export class ProfileController {
 
   @Get('export')
   @ApiOperation({ summary: "Export the caller's data", description: "Returns a single JSON export of everything the authenticated user directly owns — profile, addresses, companies, solicitors, passports with full section/task/question/answer content, documents, reminders, buyer notes, buyer-passport accesses, buyer profile, and HomeScore results. Excludes the password hash and any other user's data." })
-  @ApiResponse({ status: 200, description: 'The full data export.', schema: { type: 'object', properties: { exportedAt: { type: 'string', format: 'date-time' }, user: { type: 'object' }, buyerProfile: { type: 'object', nullable: true }, homeScores: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'The full data export.', schema: { type: 'object', properties: {
+    exportedAt: { type: 'string', format: 'date-time' },
+    user: { type: 'object', description: 'The full User row (password excluded) with addresses, companies, solicitors, preference, every passport (with its full section/task/question/answer tree), documents, reminders and buyer notes nested inside - deliberately not re-enumerated field-by-field here since each of those is already documented on its own endpoint elsewhere in this spec.' },
+    buyerProfile: { type: 'object', nullable: true, description: 'The full BuyerProfile row (identity/funds/AML/affordability fields) - see the buyer-profile endpoints for the field list.' },
+    homeScores: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, propertyId: { type: 'string' }, total: { type: 'integer' }, rating: { type: 'string' },
+      tier: { type: 'string', nullable: true, enum: ['estimated', 'verified', 'certified'] },
+      baseBill: { type: 'number', nullable: true }, adjustedBill: { type: 'number', nullable: true }, actualBill: { type: 'number', nullable: true },
+      costPerSqm: { type: 'number', nullable: true }, neighbourMedian: { type: 'number', nullable: true }, billDifference: { type: 'number', nullable: true },
+    } } },
+  } } })
   exportData(@Req() req: any) {
     return this.profileService.exportData(req.user.id);
   }

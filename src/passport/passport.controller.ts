@@ -205,7 +205,15 @@ export class PassportController {
   @ApiResponse({
     status: 200,
     description: 'Array of unlocked passports with their linked property summary.',
-    schema: { type: 'array', items: { type: 'object', properties: { passport: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string' }, property: { type: 'object' } } } } } },
+    schema: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, passportId: { type: 'string' }, type: { type: 'string', nullable: true, enum: ['SELLER', 'LANDLORD'] },
+      propertyId: { type: 'string', nullable: true }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string', nullable: true },
+      property: { type: 'object', nullable: true, properties: {
+        id: { type: 'string' }, imageUrl: { type: 'string', nullable: true }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+        bedrooms: { type: 'number', nullable: true }, propertyType: { type: 'string', nullable: true }, epcRating: { type: 'string', nullable: true },
+      } },
+      purchasedAt: { type: 'string', format: 'date-time' },
+    } } },
   })
   async getMyBuyerAccess(@Request() req: any) {
     return this.passportService.getBuyerAccessList(req.user.id);
@@ -261,7 +269,10 @@ export class PassportController {
                         properties: {
                           id: { type: 'string' },
                           questionTemplate: { type: 'object', properties: { id: { type: 'string' }, type: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true } } },
-                          answer: { type: 'object', nullable: true, description: 'QuestionAnswer row, with fileUrl set to null when this viewer is not entitled to see it' },
+                          answer: { type: 'object', nullable: true, description: 'QuestionAnswer row, with fileUrl set to null when this viewer is not entitled to see it', properties: {
+                            answerText: { type: 'string', nullable: true }, answerJson: { type: 'object', nullable: true, description: 'Free-form JSON, shape depends on the question type (multipart/scale/chips/etc.) - not enumerated' },
+                            fileUrl: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' },
+                          } },
                         },
                       },
                     },
@@ -712,7 +723,11 @@ export class PassportController {
       type: 'object',
       properties: {
         passport: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, ownerName: { type: 'string' }, isOwner: { type: 'boolean', description: 'True if the caller is actually this passport\'s own owner, viewing their own buyer-facing page' } } },
-        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag' },
+        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag - representative fields shown, not exhaustive', properties: {
+          id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, propertyType: { type: 'string', nullable: true },
+          bedrooms: { type: 'number', nullable: true }, bathrooms: { type: 'number', nullable: true }, sqft: { type: 'number', nullable: true },
+          tenure: { type: 'string', nullable: true }, epcRating: { type: 'string', nullable: true }, isLeasehold: { type: 'boolean' },
+        } },
         sections: {
           type: 'array',
           items: {
@@ -742,7 +757,7 @@ export class PassportController {
                           id: { type: 'string' },
                           type: { type: 'string' },
                           question: { type: 'string' },
-                          answer: { type: 'object', nullable: true, properties: { answerText: { type: 'string', nullable: true }, answerJson: { type: 'object', nullable: true }, fileUrl: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } },
+                          answer: { type: 'object', nullable: true, properties: { answerText: { type: 'string', nullable: true }, answerJson: { type: 'object', nullable: true, description: 'Free-form JSON, shape depends on the question type - not enumerated' }, fileUrl: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } },
                         },
                       },
                     },
@@ -991,12 +1006,17 @@ export class PassportController {
         occurredAt: { type: 'string', format: 'date-time' },
         recordedAt: { type: 'string', format: 'date-time' },
         visibilityClass: { type: 'string' },
-        beforeRef: { type: 'object', nullable: true, description: 'State before the change, where applicable' },
-        afterRef: { type: 'object', nullable: true, description: 'State after the change' },
+        beforeRef: { type: 'object', nullable: true, description: 'Free-form JSON snapshot of the relevant state before the change - shape depends on eventType (e.g. {fileUrl, fileName} for a document replace, {addressLine1, postcode, status} for a claim), not enumerated' },
+        afterRef: { type: 'object', nullable: true, description: 'Free-form JSON snapshot after the change, same eventType-dependent shape as beforeRef' },
         ruleId: { type: 'string', nullable: true },
         ruleVersion: { type: 'number', nullable: true },
-        metadata: { type: 'object', nullable: true },
-        linkedAction: { type: 'object', nullable: true, description: 'The PassportAction this event correlates to, if any' },
+        metadata: { type: 'object', nullable: true, description: 'Free-form JSON, additional eventType-specific context - not enumerated' },
+        linkedAction: { type: 'object', nullable: true, description: 'The PassportAction this event correlates to, if any', properties: {
+          id: { type: 'string' }, ruleId: { type: 'string' }, ruleVersion: { type: 'number' }, subjectEntityId: { type: 'string' },
+          status: { type: 'string', enum: ['OPEN', 'ADDRESSED', 'REOPENED', 'SUPERSEDED'] }, title: { type: 'string' }, explanation: { type: 'string' },
+          suggestedSteps: { type: 'object', nullable: true, description: 'Free-form JSON' }, severity: { type: 'string', nullable: true },
+          linkedQuestionId: { type: 'string', nullable: true },
+        } },
       },
     },
   })
@@ -1191,7 +1211,10 @@ export class PassportController {
     description: 'Resolves the smartest next task to resume into, based on the last-visited task and overall completion state. Returns a null target when nothing remains incomplete.',
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
-  @ApiResponse({ status: 200, description: 'The resume target, or null.', schema: { type: 'object', properties: { target: { type: 'object', nullable: true } } } })
+  @ApiResponse({ status: 200, description: 'The resume target, or null.', schema: { type: 'object', properties: { target: { type: 'object', nullable: true, properties: {
+    sectionId: { type: 'string' }, taskId: { type: 'string' },
+    reason: { type: 'string', enum: ['last-visited', 'next-in-section', 'next-section', 'first-task'] },
+  } } } } })
   async getResumeTarget(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -1368,7 +1391,11 @@ export class PassportController {
       type: 'object',
       properties: {
         passport: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' } } },
-        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag' },
+        property: { type: 'object', description: 'The linked Property row, plus a derived isLeasehold flag - representative fields shown, not exhaustive', properties: {
+          id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, propertyType: { type: 'string', nullable: true },
+          bedrooms: { type: 'number', nullable: true }, bathrooms: { type: 'number', nullable: true }, sqft: { type: 'number', nullable: true },
+          tenure: { type: 'string', nullable: true }, epcRating: { type: 'string', nullable: true }, isLeasehold: { type: 'boolean' },
+        } },
         expiresAt: { type: 'string', format: 'date-time' },
         sections: {
           type: 'array',
