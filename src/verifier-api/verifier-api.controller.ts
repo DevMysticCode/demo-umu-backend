@@ -88,7 +88,7 @@ export class BuyerProfileAccessController {
 
   @ApiOperation({ summary: 'Decline an access request', description: 'Buyer declines a pending external-organisation access request. Only valid while the request is still PENDING.' })
   @ApiParam({ name: 'id', description: 'AccessRequest ID' })
-  @ApiResponse({ status: 201, description: 'The updated (declined) request.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'DECLINED' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } }, grant: { type: 'object', nullable: true } } } })
+  @ApiResponse({ status: 201, description: 'The updated (declined) request.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'DECLINED' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } }, grant: { type: 'object', nullable: true, description: 'Always null for a decline - no grant is ever created on this path', properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } } } } })
   @Post(':id/decline')
   async decline(@Request() req: any, @Param('id') id: string) {
     return this.svc.decline(req.user.id, id);
@@ -218,7 +218,7 @@ export class VerifierPublicController {
         },
         source_of_funds: {
           type: 'object', nullable: true,
-          properties: { breakdown: { type: 'object', nullable: true }, aml_status: { type: 'string' }, verified_by: { type: 'string' } },
+          properties: { breakdown: { type: 'object', nullable: true, description: 'Raw sourceOfFundsJson as the buyer entered it - free-form, no fixed schema (user-authored key/value breakdown of where their funds come from)' }, aml_status: { type: 'string' }, verified_by: { type: 'string' } },
         },
         affordability: {
           type: 'object', nullable: true,
@@ -227,7 +227,11 @@ export class VerifierPublicController {
         credit_file: {
           type: 'object', nullable: true,
           description: 'Not yet connected to a real bureau - always returns nulls/false today.',
-          properties: { experian: { type: 'object', nullable: true }, equifax: { type: 'object', nullable: true }, verified: { type: 'boolean' } },
+          properties: {
+            experian: { type: 'object', nullable: true, description: 'Reserved for a future Experian integration - always null today, not yet wired to a real bureau' },
+            equifax: { type: 'object', nullable: true, description: 'Reserved for a future Equifax integration - always null today, not yet wired to a real bureau' },
+            verified: { type: 'boolean' },
+          },
         },
       },
     },

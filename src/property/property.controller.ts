@@ -93,7 +93,11 @@ export class PropertyController {
   @ApiQuery({ name: 'minPrice', description: 'Minimum price', required: false })
   @ApiQuery({ name: 'maxPrice', description: 'Maximum price', required: false })
   @ApiQuery({ name: 'passportStatus', description: "Comma-separated passport status filter: 'unclaimed' | 'in_progress' | 'claimed'", required: false })
-  @ApiResponse({ status: 200, description: 'Matching properties for the current page, plus the total count across all pages', schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object' } }, total: { type: 'number' } } } })
+  @ApiResponse({ status: 200, description: 'Matching properties for the current page, plus the total count across all pages', schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object', description: 'Property record - same shape as GET /property/:id', properties: {
+    id: { type: 'string' }, udprn: { type: 'string', nullable: true }, uprn: { type: 'string', nullable: true },
+    addressLine1: { type: 'string' }, postcode: { type: 'string' }, propertyType: { type: 'string', nullable: true },
+    bedrooms: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true }, estimatedPrice: { type: 'number', nullable: true },
+  } } }, total: { type: 'number' } } } })
   async searchProperties(
     @Query('q') query: string,
     @Query('offset') offset?: string,
@@ -286,10 +290,10 @@ export class PropertyController {
     typeCode: { type: 'number', description: 'HMLR OOV TypeCode (30 = result, 20 = rejection, 10 = acknowledgement/queued)' },
     matchResult: { type: 'string', nullable: true, enum: ['SINGLE_MATCH', 'MULTIPLE_MATCHES', 'NO_MATCHES'] },
     titleNumber: { type: 'string', nullable: true },
-    ownership: { type: 'object', nullable: true, description: 'Raw HMLR ownership info for the top match' },
+    ownership: { type: 'object', nullable: true, description: 'Raw HMLR ownership info for the top match - a direct passthrough of HM Land Registry\'s SOAP response, not independently typed anywhere in this codebase' },
     historical: { type: 'boolean' },
-    rejection: { type: 'object', nullable: true, description: 'Present only on a TypeCode 20 rejection' },
-    acknowledgement: { type: 'object', nullable: true, description: 'Present only on a TypeCode 10 queued acknowledgement' },
+    rejection: { type: 'object', nullable: true, description: 'Present only on a TypeCode 20 rejection - raw HMLR passthrough, not independently typed' },
+    acknowledgement: { type: 'object', nullable: true, description: 'Present only on a TypeCode 10 queued acknowledgement - raw HMLR passthrough, not independently typed' },
     messageId: { type: 'string', description: 'HMLR message id, for pinning a specific test-stub scenario or audit trace' },
   } } })
   async verifyOwnershipWithLandRegistry(
@@ -517,7 +521,9 @@ export class PropertyController {
   @ApiOperation({ summary: 'Get publicly published passport properties', description: 'Paginated list of properties with a published seller passport. No authentication required.' })
   @ApiQuery({ name: 'limit', description: 'Page size, default 12, max 50', required: false })
   @ApiQuery({ name: 'offset', description: 'Pagination offset', required: false })
-  @ApiResponse({ status: 200, description: 'Published properties and total count', schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object' } }, total: { type: 'number' } } } })
+  @ApiResponse({ status: 200, description: 'Published properties and total count', schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object', description: 'Property record - same shape as GET /property/:id', properties: {
+    id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, propertyType: { type: 'string', nullable: true }, epcRating: { type: 'string', nullable: true },
+  } } }, total: { type: 'number' } } } })
   async getVerifiedPassports(
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
@@ -600,7 +606,10 @@ export class PropertyController {
   @Get(':id/sold-history')
   @ApiOperation({ summary: 'Get sold-price history for a property and its area', description: "Live HM Land Registry price-paid history for this property and nearby sales." })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'This property\'s own sales plus nearby sales', schema: { type: 'object', properties: { thisProperty: { type: 'array', items: { type: 'object' } }, nearbySales: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'This property\'s own sales plus nearby sales', schema: { type: 'object', properties: {
+    thisProperty: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, date: { type: 'string' }, address: { type: 'string' }, town: { type: 'string', nullable: true }, propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true }, newBuild: { type: 'boolean' }, isThisProperty: { type: 'boolean' } } } },
+    nearbySales: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, date: { type: 'string' }, address: { type: 'string' }, town: { type: 'string', nullable: true }, propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true }, newBuild: { type: 'boolean' }, isThisProperty: { type: 'boolean' } } } },
+  } } })
   async getSoldHistory(@Param('id') id: string) {
     return this.propertyService.getLiveSoldHistory(id);
   }
@@ -609,18 +618,53 @@ export class PropertyController {
   @ApiOperation({ summary: 'Get property enrichment data', description: "Returns the property's enrichment fields (sqft, bedrooms, year built, heating type, council tax band, EPC) sourced from EPC/OS/other upstream APIs." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Enrichment data', schema: { type: 'object', properties: {
-    nearby: { type: 'object', description: 'schools, trains, busStops, parks, airports, listedBuildings, amenities - each an array' },
-    floodRisk: { type: 'object', nullable: true },
-    salesHistory: { type: 'array', items: { type: 'object' } },
-    broadband: { type: 'object', nullable: true },
-    mobileSignal: { type: 'object', nullable: true },
-    osPlaces: { type: 'object', nullable: true },
-    epcData: { type: 'object', nullable: true },
-    planningData: { type: 'object', properties: { constraints: { type: 'array', items: { type: 'object' } }, applications: { type: 'array', items: { type: 'object' } } } },
-    nearbyCouncilTax: { type: 'object', nullable: true },
-    titleBoundary: { type: 'object', nullable: true },
-    crimeStats: { type: 'object', nullable: true },
-    radonData: { type: 'object', nullable: true },
+    nearby: { type: 'object', description: 'OS NGD (schools) + Overpass (everything else) results, each field sorted by distanceKm ascending', properties: {
+      schools: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, phase: { type: 'string', description: "'Primary' | 'Secondary' | 'Further Education' | …" }, category: { type: 'string' }, description: { type: 'string', nullable: true }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' } } } },
+      trains: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' }, operator: { type: 'string', nullable: true } } } },
+      busStops: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, ref: { type: 'string', nullable: true }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' } } } },
+      parks: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' } } } },
+      airports: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, iata: { type: 'string', nullable: true }, icao: { type: 'string', nullable: true }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' }, isMajor: { type: 'boolean', description: 'A recognised UK major hub, or OSM-flagged international' } } } },
+      listedBuildings: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, grade: { type: 'string', description: "e.g. 'Grade I', 'Grade II*', or 'Heritage Site' when no formal grade is tagged" }, location: { type: 'string', nullable: true }, link: { type: 'string', nullable: true }, historic: { type: 'string', nullable: true } } } },
+      amenities: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, category: { type: 'string' }, icon: { type: 'string', description: 'Emoji icon' }, key: { type: 'string', description: 'Raw OSM tag value, e.g. supermarket/cafe/pharmacy' }, lat: { type: 'number' }, lon: { type: 'number' }, distanceKm: { type: 'number' } } } },
+    } },
+    floodRisk: { type: 'object', nullable: true, properties: {
+      rating: { type: 'string', enum: ['Very Low', 'Low', 'Medium', 'High', 'Severe'] },
+      zones: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, severity: { type: 'string' }, riverSea: { type: 'string', nullable: true }, polygon: { type: 'object', nullable: true, description: 'GeoJSON polygon' } } } },
+    } },
+    salesHistory: { type: 'object', description: 'Same shape as GET /property/:id/sold-history', properties: {
+      thisProperty: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, date: { type: 'string' }, address: { type: 'string' }, town: { type: 'string', nullable: true }, propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true }, newBuild: { type: 'boolean' }, isThisProperty: { type: 'boolean' } } } },
+      nearbySales: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, date: { type: 'string' }, address: { type: 'string' }, town: { type: 'string', nullable: true }, propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true }, newBuild: { type: 'boolean' }, isThisProperty: { type: 'boolean' } } } },
+    } },
+    broadband: { type: 'object', nullable: true, description: 'Ofcom coverage lookup', properties: {
+      available: { type: 'boolean' }, reason: { type: 'string', nullable: true, enum: ['no_key', 'rate_limited', 'unauthorized', 'not_found', 'network', 'no_premises', 'timeout'] },
+      fttp: { type: 'boolean' }, fttc: { type: 'boolean' }, cable: { type: 'boolean' }, maxDownload: { type: 'number', nullable: true }, maxUpload: { type: 'number', nullable: true },
+      superfast: { type: 'boolean' }, ultrafast: { type: 'boolean' },
+    } },
+    mobileSignal: { type: 'object', nullable: true, description: 'Ofcom per-operator coverage (EE/O2/Three/Vodafone)', properties: {
+      available: { type: 'boolean' }, reason: { type: 'string', nullable: true },
+      EE: { type: 'object', nullable: true, properties: { voice4g: { type: 'string', nullable: true }, data4g: { type: 'string', nullable: true }, data5g: { type: 'string', nullable: true }, indoor4g: { type: 'string', nullable: true } } },
+    } },
+    osPlaces: { type: 'object', nullable: true, description: 'Ordnance Survey Places API lookup', properties: {
+      totalAddresses: { type: 'number' }, ward: { type: 'string', nullable: true }, localAuthority: { type: 'string', nullable: true }, country: { type: 'string' },
+      addresses: { type: 'array', items: { type: 'object', properties: { uprn: { type: 'string' }, address: { type: 'string' }, classification: { type: 'string', nullable: true } } } },
+    } },
+    epcData: { type: 'object', nullable: true, description: 'EPC certificate', properties: {
+      certUrl: { type: 'string', nullable: true }, lmkKey: { type: 'string', nullable: true }, epcRating: { type: 'string', nullable: true }, epcScore: { type: 'number', nullable: true },
+      potentialRating: { type: 'string', nullable: true }, potentialScore: { type: 'number', nullable: true }, councilTaxBand: { type: 'string', nullable: true },
+      floorAreaSqm: { type: 'number', nullable: true }, bedrooms: { type: 'number', nullable: true }, tenure: { type: 'string', nullable: true }, yearBuilt: { type: 'number', nullable: true }, heatingType: { type: 'string', nullable: true },
+    } },
+    planningData: { type: 'object', properties: {
+      constraints: { type: 'array', items: { type: 'object', properties: { type: { type: 'string' }, name: { type: 'string' }, reference: { type: 'string', nullable: true }, category: { type: 'string' } } } },
+      applications: { type: 'array', items: { type: 'object', properties: { reference: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, status: { type: 'string', nullable: true }, decision: { type: 'string', nullable: true }, decisionDate: { type: 'string', nullable: true }, applicationType: { type: 'string', nullable: true }, docUrl: { type: 'string', nullable: true } } } },
+    } },
+    nearbyCouncilTax: { type: 'array', items: { type: 'object', properties: { address: { type: 'string' }, band: { type: 'string' }, annualEstimate: { type: 'number', nullable: true } } } },
+    titleBoundary: { type: 'object', nullable: true, properties: { geoJson: { type: 'object', description: 'GeoJSON Feature' }, geometry: { type: 'object', description: 'GeoJSON Polygon/MultiPolygon geometry (type + coordinates) - not enumerated further, standard GeoJSON' }, areaM2: { type: 'number', nullable: true }, uprns: { type: 'array', items: { type: 'string' } } } },
+    crimeStats: { type: 'object', nullable: true, properties: {
+      totalLast12m: { type: 'number' }, byCategory: { type: 'array', items: { type: 'object', properties: { category: { type: 'string' }, label: { type: 'string' }, count: { type: 'number' } } } },
+      monthlyTrend: { type: 'array', items: { type: 'object', properties: { month: { type: 'string' }, count: { type: 'number' } } } },
+      trendDirection: { type: 'string', enum: ['up', 'down', 'flat'] }, yoyChangePct: { type: 'number', nullable: true },
+    } },
+    radonData: { type: 'object', nullable: true, description: 'BGS/UKHSA indicative radon potential', properties: { classMax: { type: 'number' }, band: { type: 'string', enum: ['Low', 'Moderate', 'Higher'] }, description: { type: 'string', description: "BGS's own plain-English text, surfaced verbatim" } } },
     streetViewUrl: { type: 'string', nullable: true, description: 'Proxied URL - never the raw Google API key' },
   } } })
   async getEnrichment(@Param('id') id: string): Promise<any> {
@@ -637,8 +681,13 @@ export class PropertyController {
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Per-source diagnostic report', schema: { type: 'object', properties: {
     property: { type: 'object', properties: { id: { type: 'string' }, postcode: { type: 'string', nullable: true }, lat: { type: 'number', nullable: true }, lon: { type: 'number', nullable: true }, uprn: { type: 'string', nullable: true } } },
-    env: { type: 'object', description: 'Boolean presence flags for each upstream API key (OS_API_KEY, OFCOM_API_KEY, GOOGLE_API_KEY, EPC_API_KEY, MAPBOX_TOKEN) - never the actual values' },
-    overpassBreakdown: { type: 'object', nullable: true },
+    env: { type: 'object', description: 'Boolean presence flags for each upstream API key - never the actual values', properties: {
+      OS_API_KEY: { type: 'boolean' }, OFCOM_API_KEY: { type: 'boolean' }, GOOGLE_API_KEY: { type: 'boolean' }, EPC_API_KEY: { type: 'boolean' }, MAPBOX_TOKEN: { type: 'boolean' },
+    } },
+    overpassBreakdown: { type: 'object', nullable: true, description: 'Per-category result counts from the combined OS NGD + Overpass nearby-features fetch', properties: {
+      schools: { type: 'number', nullable: true }, trains: { type: 'number', nullable: true }, busStops: { type: 'number', nullable: true }, parks: { type: 'number', nullable: true },
+      airports: { type: 'number', nullable: true }, listedBuildings: { type: 'number', nullable: true }, amenities: { type: 'number', nullable: true },
+    } },
     sources: { type: 'array', items: { type: 'object', properties: {
       source: { type: 'string' }, status: { type: 'string', enum: ['ok', 'empty', 'null', 'error'] }, count: { type: 'number', nullable: true }, ms: { type: 'number' }, error: { type: 'string', nullable: true },
     } } },
@@ -657,7 +706,10 @@ export class PropertyController {
   @ApiResponse({ status: 200, description: 'The updated Property record (or null if the property was not found)', schema: { type: 'object', nullable: true, description: 'Full Property record with refreshed EPC fields - representative fields shown, not exhaustive', properties: {
     id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
     epcRating: { type: 'string', nullable: true }, epcScore: { type: 'number', nullable: true },
-    epcLmkKey: { type: 'string', nullable: true }, epcRecommendations: { type: 'array', nullable: true, items: { type: 'object' } },
+    epcLmkKey: { type: 'string', nullable: true }, epcRecommendations: { type: 'array', nullable: true, items: { type: 'object', properties: {
+      id: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true }, costRange: { type: 'string', nullable: true },
+      typicalSaving: { type: 'number', nullable: true }, resultingSap: { type: 'number', nullable: true }, resultingEnvRating: { type: 'number', nullable: true }, improvementType: { type: 'string', nullable: true },
+    } } },
   } } })
   async refreshEpc(@Param('id') id: string): Promise<any> {
     const data = await this.propertyService.refreshEpc(id);
@@ -672,7 +724,7 @@ export class PropertyController {
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'The saved HomeScore record', schema: { type: 'object', properties: {
     id: { type: 'string' }, propertyId: { type: 'string' }, userId: { type: 'string' },
-    total: { type: 'number' }, rating: { type: 'string' }, answers: { type: 'object' },
+    total: { type: 'number' }, rating: { type: 'string' }, answers: { type: 'object', description: 'Record<questionId, answer> - the quiz question set varies, so keys are not fixed', additionalProperties: { type: 'string' } },
     tier: { type: 'string', nullable: true, enum: ['estimated', 'verified', 'certified'] },
     baseBill: { type: 'number', nullable: true }, adjustedBill: { type: 'number', nullable: true }, actualBill: { type: 'number', nullable: true },
     costPerSqm: { type: 'number', nullable: true }, neighbourMedian: { type: 'number', nullable: true }, billDifference: { type: 'number', nullable: true },
@@ -748,7 +800,12 @@ export class PropertyController {
   @Get(':id/street-energy-rank')
   @ApiOperation({ summary: 'Get energy-cost rank among neighbouring properties', description: 'Ranks this property by energy cost among properties sharing its postcode outcode, powering the "Nth of M on street" comparison.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'Street energy ranking and neighbour comparison', schema: { type: 'object', properties: { rank: { type: 'number', nullable: true }, total: { type: 'number' }, bestCost: { type: 'number', nullable: true }, averageCost: { type: 'number', nullable: true }, yourCost: { type: 'number', nullable: true }, yourEpcRating: { type: 'string', nullable: true }, epcDistribution: { type: 'array', items: { type: 'object' } }, avgEpcScore: { type: 'number', nullable: true }, neighbours: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'Street energy ranking and neighbour comparison', schema: { type: 'object', properties: {
+    rank: { type: 'number', nullable: true }, total: { type: 'number' }, bestCost: { type: 'number', nullable: true }, averageCost: { type: 'number', nullable: true }, yourCost: { type: 'number', nullable: true }, yourEpcRating: { type: 'string', nullable: true },
+    epcDistribution: { type: 'array', items: { type: 'object', properties: { letter: { type: 'string' }, count: { type: 'number' } } } },
+    avgEpcScore: { type: 'number', nullable: true },
+    neighbours: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, cost: { type: 'number' }, epcRating: { type: 'string', nullable: true }, isYou: { type: 'boolean' } } } },
+  } } })
   async getStreetEnergyRank(@Param('id') id: string) {
     return this.propertyService.getStreetEnergyRank(id);
   }
@@ -879,11 +936,31 @@ export class PropertyController {
   @ApiOperation({ summary: 'Get estimated running costs for a property', description: 'Returns estimated ongoing running costs (energy, council tax, etc.) computed for this property. No authentication required.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Running cost breakdown', schema: { type: 'object', properties: {
-    energy: { type: 'object', description: 'heating/hotWater/electricity cost+kWh+tariff breakdown, plus total/potentialTotal/potentialSaving' },
-    energyDetail: { type: 'object', description: 'gasKwh, electricityKwh, SAP current/target, EPC rating current/target, primary energy use, floor area' },
-    risks: { type: 'object', description: 'flood/mining/planning risk levels (low/medium/high/clear) with labels' },
-    environmentalImpact: { type: 'object', description: 'CO2 now/potential/UK-average figures (both raw and kg/yr) and EPC-style rating labels' },
-    savings: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, sub: { type: 'string' }, amount: { type: 'number' } } }, description: 'Top-3 EPC-driven money-saving improvements, ranked by annual £ saving' },
+    energy: { type: 'object', properties: {
+      heating: { type: 'object', properties: { cost: { type: 'number' }, kwh: { type: 'number', nullable: true }, tariff: { type: 'number' }, label: { type: 'string' } } },
+      hotWater: { type: 'object', properties: { cost: { type: 'number' }, kwh: { type: 'number', nullable: true }, tariff: { type: 'number' }, label: { type: 'string' } } },
+      electricity: { type: 'object', properties: { cost: { type: 'number' }, kwh: { type: 'number', nullable: true }, tariff: { type: 'number' }, label: { type: 'string' } } },
+      total: { type: 'number' }, potentialTotal: { type: 'number' }, potentialSaving: { type: 'number' },
+    } },
+    energyDetail: { type: 'object', properties: {
+      gasKwh: { type: 'number', nullable: true }, electricityKwh: { type: 'number', nullable: true }, sapCurrent: { type: 'number' }, sapTarget: { type: 'number' },
+      epcRating: { type: 'string' }, epcTarget: { type: 'string' }, primaryEnergyUse: { type: 'number', nullable: true }, primaryEnergyTarget: { type: 'number' }, floorAreaSqm: { type: 'number', nullable: true },
+    } },
+    risks: { type: 'object', description: 'flood/mining/planning risk levels', properties: {
+      flood: { type: 'object', properties: { level: { type: 'string', enum: ['low', 'medium', 'high', 'clear'] }, label: { type: 'string' }, pill: { type: 'string' } } },
+      mining: { type: 'object', properties: { level: { type: 'string', enum: ['low', 'medium', 'high', 'clear'] }, label: { type: 'string' }, pill: { type: 'string' } } },
+      planning: { type: 'object', properties: { level: { type: 'string', enum: ['low', 'medium', 'high', 'clear'] }, label: { type: 'string' }, pill: { type: 'string' } } },
+    } },
+    environmentalImpact: { type: 'object', properties: {
+      co2Now: { type: 'number' }, co2Potential: { type: 'number' }, reductionPct: { type: 'number' }, ukAverage: { type: 'number' },
+      co2NowKg: { type: 'number' }, co2PotentialKg: { type: 'number' }, ukAverageKg: { type: 'number' }, savingKg: { type: 'number' },
+      ratingCurrent: { type: 'string' }, ratingPotential: { type: 'string' }, ratingLabel: { type: 'string', description: 'EPC-style rating label (Very low -> Very high)' },
+    } },
+    savings: { type: 'array', items: { type: 'object', properties: { title: { type: 'string' }, sub: { type: 'string' }, amount: { type: 'number' }, points: { type: 'number' } } }, description: 'Top-3 EPC-driven money-saving improvements, ranked by annual £ saving' },
+    water: { type: 'object', properties: { cost: { type: 'number' }, label: { type: 'string' } } },
+    councilTax: { type: 'object', properties: { band: { type: 'string' }, cost: { type: 'number' }, council: { type: 'string' } } },
+    totalAnnual: { type: 'number' }, totalMonthly: { type: 'number' }, streetAverageEnergy: { type: 'number' },
+    epcYear: { type: 'number', nullable: true }, confidence: { type: 'string', enum: ['epc', 'estimated'], description: 'Source of the underlying figures - drives the confidence banner copy' },
   } } })
   async getRunningCosts(@Param('id') id: string) {
     return this.runningCostsService.getRunningCosts(id);
@@ -941,7 +1018,14 @@ export class PropertyController {
   @Get(':id/street')
   @ApiOperation({ summary: 'Get other properties on the same street', description: "Up to 10 nearby properties sharing this property's postcode, for the Street comparison tab." })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'Nearby properties and stats', schema: { type: 'object', properties: { properties: { type: 'array', items: { type: 'object' } }, postcode: { type: 'string', nullable: true }, stats: { type: 'object', nullable: true } } } })
+  @ApiResponse({ status: 200, description: 'Nearby properties and stats', schema: { type: 'object', properties: {
+    properties: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, addressLine1: { type: 'string' }, propertyType: { type: 'string', nullable: true }, bedrooms: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true }, price: { type: 'number', nullable: true },
+      hasPassport: { type: 'boolean' }, isPublished: { type: 'boolean' }, passportStatus: { type: 'string', nullable: true },
+    } } },
+    postcode: { type: 'string', nullable: true },
+    stats: { type: 'object', nullable: true, properties: { published: { type: 'number' }, started: { type: 'number' }, notStarted: { type: 'number' }, avgEpc: { type: 'string', nullable: true }, avgPrice: { type: 'number', nullable: true } } },
+  } } })
   async getStreetProperties(@Param('id') id: string) {
     return this.propertyService.getStreetProperties(id);
   }

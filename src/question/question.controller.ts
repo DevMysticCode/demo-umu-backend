@@ -61,7 +61,22 @@ export class QuestionController {
   @ApiResponse({
     status: 200,
     description: 'Guidance text plus any triggered journey/pathway.',
-    schema: { type: 'object', properties: { guidance: { type: 'object', nullable: true }, journey: { type: 'object', nullable: true }, pathway: { type: 'object', nullable: true } } },
+    schema: { type: 'object', properties: {
+      guidance: { type: 'object', nullable: true, description: 'The matching QuestionAnswerGuidance row for this answer, or null if none applies', properties: {
+        id: { type: 'string' }, section: { type: 'string' }, sourceQuestionText: { type: 'string' }, answerValue: { type: 'string' },
+        ownerExplanation: { type: 'string' }, ownerNextStep: { type: 'string', nullable: true }, evidenceToAdd: { type: 'string', nullable: true }, timeIfUnresolved: { type: 'string', nullable: true },
+      } },
+      journey: { type: 'object', nullable: true, description: 'The most recent PathwayJourney this answer triggered on this passport, or null', properties: {
+        id: { type: 'string' }, passportId: { type: 'string' }, pathwayId: { type: 'string' }, currentStepId: { type: 'string' },
+        status: { type: 'string', enum: ['IN_PROGRESS', 'RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'] },
+        severity: { type: 'string', nullable: true, description: 'Derived from status; null while IN_PROGRESS' },
+        startedAt: { type: 'string', format: 'date-time' }, completedAt: { type: 'string', format: 'date-time', nullable: true },
+      } },
+      pathway: { type: 'object', nullable: true, description: 'The ResolutionPathway the journey (if any) is following', properties: {
+        id: { type: 'string', example: 'P01' }, name: { type: 'string' }, issue: { type: 'string' }, whyItMatters: { type: 'string' },
+        timeNow: { type: 'string' }, timeAtSale: { type: 'string' }, status: { type: 'string', enum: ['draft', 'conveyancer_reviewed', 'live'] },
+      } },
+    } },
   })
   @Get(':questionId/guidance')
   @ApiBearerAuth('access-token')

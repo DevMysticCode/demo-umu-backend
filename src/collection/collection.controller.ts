@@ -18,7 +18,19 @@ export class CollectionController {
 
   @Get('my')
   @ApiOperation({ summary: "List the caller's collections", description: "Returns the authenticated user's named passport collections (each with its member passports) plus a separate list of owned/collaborated passports not yet filed into any collection. Excludes abandoned PENDING_PAYMENT claims." })
-  @ApiResponse({ status: 200, description: 'Collections and any uncollected passports.', schema: { type: 'object', properties: { collections: { type: 'array', items: { type: 'object' } }, uncollectedPassports: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'Collections and any uncollected passports.', schema: { type: 'object', properties: {
+    collections: { type: 'array', items: { type: 'object', properties: {
+      id: { type: 'string' }, name: { type: 'string' }, userId: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
+      items: { type: 'array', items: { type: 'object', properties: { passportId: { type: 'string' }, passport: { type: 'object', properties: {
+        id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string' }, type: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
+        property: { type: 'object', nullable: true, properties: { imageUrl: { type: 'string', nullable: true } } },
+      } } } } },
+    } } },
+    uncollectedPassports: { type: 'array', description: 'Owned/collaborated passports not yet filed into any collection', items: { type: 'object', properties: {
+      id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, status: { type: 'string' }, type: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
+      property: { type: 'object', nullable: true, properties: { imageUrl: { type: 'string', nullable: true } } },
+    } } },
+  } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async getMyCollections(@Request() req: any) {

@@ -416,7 +416,21 @@ export class MarketplaceController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get the contract bundle for a job', description: 'Single round-trip payload for the contract screen: job, payment, accepted offer, both parties (with reputation) and the viewer\'s role.' })
   @ApiParam({ name: 'id', description: 'Job ID' })
-  @ApiResponse({ status: 200, description: 'Bundled contract data.', schema: { type: 'object', properties: { job: { type: 'object' }, payment: PAYMENT_SCHEMA, offer: { type: 'object' }, parties: { type: 'object' }, viewerRole: { type: 'string', enum: ['customer', 'supplier'] } } } })
+  @ApiResponse({ status: 200, description: 'Bundled contract data.', schema: { type: 'object', properties: {
+    job: { type: 'object', properties: {
+      id: { type: 'string' }, title: { type: 'string' }, locationLabel: { type: 'string' }, categoryLabel: { type: 'string' },
+      startedAt: { type: 'string', format: 'date-time', description: 'payment.heldAt, or createdAt if not yet held' }, status: { type: 'string' },
+    } },
+    payment: PAYMENT_SCHEMA,
+    offer: { type: 'object', properties: {
+      id: { type: 'string' }, message: { type: 'string' }, availableDate: { type: 'string', format: 'date-time', nullable: true }, acceptedAt: { type: 'string', format: 'date-time' },
+    } },
+    parties: { type: 'object', properties: {
+      customer: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, initials: { type: 'string' }, rating: { type: 'number', nullable: true }, reviewCount: { type: 'number' }, jobsPosted: { type: 'number' } } },
+      supplier: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, initials: { type: 'string' }, rating: { type: 'number', nullable: true }, reviewCount: { type: 'number' }, jobsCompleted: { type: 'number' } } },
+    } },
+    viewerRole: { type: 'string', enum: ['customer', 'supplier'] },
+  } } })
   getContract(@Param('id') jobId: string, @Req() req: any) {
     return this.service.getContract(req.user.id, jobId);
   }

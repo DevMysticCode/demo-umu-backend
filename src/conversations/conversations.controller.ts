@@ -118,8 +118,8 @@ class RespondToViewingDto {
   message?: string;
 }
 
-const MESSAGE_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, conversationId: { type: 'string' }, senderId: { type: 'string' }, body: { type: 'string' }, kind: { type: 'string' }, payload: { type: 'object', nullable: true }, createdAt: { type: 'string' } } };
-const CONVERSATION_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, context: { type: 'string', enum: CONVERSATION_CONTEXTS }, contextId: { type: 'string' }, lastMessageAt: { type: 'string', nullable: true }, createdAt: { type: 'string' }, participants: { type: 'array', items: { type: 'object' } }, messages: { type: 'array', items: MESSAGE_SCHEMA, description: "most recent message only" } } };
+const MESSAGE_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, conversationId: { type: 'string' }, senderId: { type: 'string' }, body: { type: 'string' }, kind: { type: 'string' }, payload: { type: 'object', nullable: true, description: "Genuinely dynamic - shape depends on kind (plain text messages have no payload; structured cards like viewing_request, share_passport, payment_prompt each carry their own data shape here)" }, createdAt: { type: 'string' } } };
+const CONVERSATION_SCHEMA = { type: 'object' as const, properties: { id: { type: 'string' }, context: { type: 'string', enum: CONVERSATION_CONTEXTS }, contextId: { type: 'string' }, lastMessageAt: { type: 'string', nullable: true }, createdAt: { type: 'string' }, participants: { type: 'array', items: { type: 'object', properties: { userId: { type: 'string' }, role: { type: 'string', nullable: true }, user: { type: 'object', properties: { id: { type: 'string' }, firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true }, avatarUrl: { type: 'string', nullable: true } } } } } }, messages: { type: 'array', items: MESSAGE_SCHEMA, description: "most recent message only" } } };
 
 /**
  * HTTP surface for the shared messaging layer.

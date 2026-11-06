@@ -78,7 +78,13 @@ export class BuyerProfileController {
   // review queue below, never just from uploading.
   @ApiOperation({ summary: 'Upload a proof-of-funds or mortgage AIP document', description: "Stores the file in the private documents bucket and sets that document's review status to \"pending\" - the verified badge only flips on once an admin approves it via the review queue, never just from uploading." })
   @ApiParam({ name: 'kind', description: 'Which document is being uploaded.', enum: ['funds', 'mortgage'] })
-  @ApiResponse({ status: 201, description: 'Upload accepted, pending admin review.', schema: { type: 'object', properties: { fileUrl: { type: 'string' }, reviewStatus: { type: 'string', example: 'pending' }, profile: { type: 'object' } } } })
+  @ApiResponse({ status: 201, description: 'Upload accepted, pending admin review.', schema: { type: 'object', properties: { fileUrl: { type: 'string' }, reviewStatus: { type: 'string', example: 'pending' },
+    profile: { type: 'object', description: 'The full BuyerProfile row after the upsert - the fields this call actually changes are shown below; the rest of the ~60-column row (identity, deposit, chain, affordability, etc.) is unchanged and documented on PATCH /buyer-profile above.', properties: {
+      id: { type: 'string' }, userId: { type: 'string' }, publicRef: { type: 'string' }, strengthScore: { type: 'integer' },
+      fundsDocumentUrl: { type: 'string', nullable: true }, fundsReviewStatus: { type: 'string', nullable: true, example: 'pending' }, fundsVerified: { type: 'boolean' }, fundsVerifiedAt: { type: 'string', format: 'date-time', nullable: true },
+      mortgageAipUrl: { type: 'string', nullable: true }, mortgageAipReviewStatus: { type: 'string', nullable: true, example: 'pending' }, mortgageAipVerified: { type: 'boolean' }, mortgageAipVerifiedAt: { type: 'string', format: 'date-time', nullable: true },
+    } },
+  } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @Post('documents/:kind')

@@ -79,8 +79,12 @@ export class TrueValueController {
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiBody({ type: DeclareWorkDto })
   @ApiResponse({ status: 201, description: 'Recomputed works list after the upsert (not just the single upserted row).', schema: { type: 'object', properties: {
-    works: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, workTypeCode: { type: 'string' }, installDate: { type: 'string', format: 'date-time', nullable: true }, verificationState: { type: 'string' }, evidenceUrl: { type: 'string', nullable: true }, workType: { type: 'object' } } } },
-    live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview' },
+    works: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, workTypeCode: { type: 'string' }, installDate: { type: 'string', format: 'date-time', nullable: true }, verificationState: { type: 'string' }, evidenceUrl: { type: 'string', nullable: true }, workType: { type: 'object', description: 'The WorkType catalogue row', properties: {
+      code: { type: 'string' }, label: { type: 'string' }, category: { type: 'string' }, tier: { type: 'number' },
+      upliftLow: { type: 'number', nullable: true }, upliftHigh: { type: 'number', nullable: true },
+      isMinor: { type: 'boolean' }, epcAssessed: { type: 'boolean' }, docRequired: { type: 'string', nullable: true }, warningText: { type: 'string', nullable: true },
+    } } } } },
+    live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
     epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
   @Post('property/:id/truevalue/works')
@@ -99,7 +103,13 @@ export class TrueValueController {
   @ApiOperation({ summary: 'Remove a declared work item', description: "Deletes the caller's own declared work item (rejects if it belongs to someone else) and returns the recomputed live work list for that property." })
   @ApiParam({ name: 'workId', description: 'PropertyWork row ID' })
   @ApiResponse({ status: 200, description: 'Recomputed works list after removal - same shape as POST .../truevalue/works.', schema: { type: 'object', properties: {
-    works: { type: 'array', items: { type: 'object' } }, live: { type: 'object' }, epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
+    works: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, workTypeCode: { type: 'string' }, installDate: { type: 'string', format: 'date-time', nullable: true }, verificationState: { type: 'string' }, evidenceUrl: { type: 'string', nullable: true }, workType: { type: 'object', description: 'The WorkType catalogue row', properties: {
+      code: { type: 'string' }, label: { type: 'string' }, category: { type: 'string' }, tier: { type: 'number' },
+      upliftLow: { type: 'number', nullable: true }, upliftHigh: { type: 'number', nullable: true },
+      isMinor: { type: 'boolean' }, epcAssessed: { type: 'boolean' }, docRequired: { type: 'string', nullable: true }, warningText: { type: 'string', nullable: true },
+    } } } } },
+    live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
+    epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
   @Delete('truevalue/works/:workId')
   async removeWork(@Param('workId') workId: string, @Request() req: any) {
@@ -125,7 +135,13 @@ export class TrueValueController {
   @ApiOperation({ summary: 'Upload evidence for a declared work item', description: "Uploads a supporting file for the caller's own declared work and sets its verificationState to 'pending' for admin review; returns the recomputed live work list." })
   @ApiParam({ name: 'workId', description: 'PropertyWork row ID' })
   @ApiResponse({ status: 201, description: 'Recomputed works list including the pending evidence - same shape as POST .../truevalue/works.', schema: { type: 'object', properties: {
-    works: { type: 'array', items: { type: 'object' } }, live: { type: 'object' }, epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
+    works: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, workTypeCode: { type: 'string' }, installDate: { type: 'string', format: 'date-time', nullable: true }, verificationState: { type: 'string' }, evidenceUrl: { type: 'string', nullable: true }, workType: { type: 'object', description: 'The WorkType catalogue row', properties: {
+      code: { type: 'string' }, label: { type: 'string' }, category: { type: 'string' }, tier: { type: 'number' },
+      upliftLow: { type: 'number', nullable: true }, upliftHigh: { type: 'number', nullable: true },
+      isMinor: { type: 'boolean' }, epcAssessed: { type: 'boolean' }, docRequired: { type: 'string', nullable: true }, warningText: { type: 'string', nullable: true },
+    } } } } },
+    live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
+    epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
   async uploadEvidence(
     @Param('workId') workId: string,
@@ -145,7 +161,14 @@ export class TrueValueController {
     id: { type: 'string' }, propertyId: { type: 'string' }, userId: { type: 'string' }, baseline: { type: 'number' },
     estimateLow: { type: 'number' }, estimateHigh: { type: 'number' }, estimatePoint: { type: 'number' },
     provedCount: { type: 'number' }, scoringCount: { type: 'number' }, derisked: { type: 'number' }, recorded: { type: 'number' }, flagged: { type: 'number' },
-    epcSuppressed: { type: 'boolean' }, contributions: { type: 'object' }, engineVersion: { type: 'string' }, inputsHash: { type: 'string' },
+    epcSuppressed: { type: 'boolean' },
+    contributions: { type: 'object', properties: {
+      capital: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+      condition: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+      consent: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+      epc: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+    } },
+    engineVersion: { type: 'string' }, inputsHash: { type: 'string' },
     isHomeowner: { type: 'boolean', nullable: true }, isLandlord: { type: 'boolean', nullable: true }, purpose: { type: 'string', nullable: true }, foundNextHome: { type: 'boolean', nullable: true },
   } } })
   @Post('property/:id/truevalue')
@@ -162,7 +185,12 @@ export class TrueValueController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the caller's own TrueValue snapshot", description: "Returns the signed-in user's saved valuation snapshot for this property plus their full declared-works list (each with its work type), or a null snapshot if none has been saved yet." })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'The snapshot and works list.', schema: { type: 'object', properties: { snapshot: { type: 'object', nullable: true }, works: { type: 'array', items: { type: 'object' } } } } })
+  @ApiResponse({ status: 200, description: 'The snapshot and works list.', schema: { type: 'object', properties: {
+    snapshot: { type: 'object', nullable: true, description: 'Same ValuationSnapshot shape as POST property/:id/truevalue, or null if none saved yet' },
+    works: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, workTypeCode: { type: 'string' }, installDate: { type: 'string', format: 'date-time', nullable: true }, verificationState: { type: 'string' }, evidenceUrl: { type: 'string', nullable: true }, workType: { type: 'object', properties: {
+      code: { type: 'string' }, label: { type: 'string' }, category: { type: 'string' }, tier: { type: 'number' },
+    } } } } },
+  } } })
   @Get('property/:id/truevalue')
   async getValuation(@Param('id') propertyId: string, @Request() req: any) {
     return this.trueValueService.getValuation(propertyId, req.user.id);
