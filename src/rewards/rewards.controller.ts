@@ -86,7 +86,7 @@ export class RewardsController {
     active: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' },
     applicable: { type: 'boolean', description: 'True unless passportId was given and this stamp is gated out for that property (e.g. a leasehold-only stamp on a freehold passport)' },
   } } } })
-  @ApiResponse({ status: 403, description: 'passportId given but the caller has no access to it.' })
+  @ApiResponse({ status: 403, description: 'A passportId was given but the caller has no access to it.' })
   @Get('stamps/catalogue')
   async getStampsCatalogue(
     @Request() req: any,

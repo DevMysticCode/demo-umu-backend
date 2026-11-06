@@ -107,7 +107,7 @@ export class PaymentController {
    * payment_intent.payment_failed, payment_intent.canceled,
    * charge.refunded.
    */
-  @ApiOperation({ summary: 'Stripe webhook receiver', description: "Public endpoint (no JWT) — Stripe calls this directly. Authenticity is verified by checking the stripe-signature header's HMAC against STRIPE_WEBHOOK_SECRET on the raw request body. Handles payment_intent.succeeded/payment_failed/canceled and charge.refunded." })
+  @ApiOperation({ summary: 'Stripe webhook receiver', description: "Public endpoint (no JWT) — Stripe calls this directly. Authenticity is verified by checking the Stripe-Signature header's HMAC against STRIPE_WEBHOOK_SECRET on the raw request body. Handles payment_intent.succeeded/payment_failed/canceled and charge.refunded." })
   @ApiHeader({ name: 'stripe-signature', description: "Stripe's webhook HMAC signature" })
   @ApiResponse({ status: 200, description: 'Acknowledgement (always 200 so Stripe does not retry handled events).', schema: { type: 'object', properties: { received: { type: 'boolean' } } } })
   @SkipThrottle()

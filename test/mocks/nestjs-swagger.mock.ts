@@ -27,6 +27,7 @@ export const ApiResponse = noopDecorator;
 export const ApiParam = noopDecorator;
 export const ApiQuery = noopDecorator;
 export const ApiHeader = noopDecorator;
+export const ApiTags = noopDecorator;
 
 export class DocumentBuilder {
   setTitle() { return this; }
