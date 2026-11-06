@@ -54,7 +54,13 @@ export class BuyerProfileAccessController {
   constructor(private svc: VerifierApiService) {}
 
   @ApiOperation({ summary: "List the buyer's own access requests", description: "Standard user JWT auth. Returns up to the 50 most recent external-organisation access requests made against this buyer's profile, each with the requesting org and any resulting grant." })
-  @ApiResponse({ status: 200, description: 'Access-request rows for this buyer.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Access-request rows for this buyer.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, status: { type: 'string', example: 'PENDING' }, requestedScopes: { type: 'array', items: { type: 'string' } },
+    approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true },
+    expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true },
+    org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, legalName: { type: 'string', nullable: true }, logoEmoji: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, fcaNumber: { type: 'string', nullable: true }, websiteUrl: { type: 'string', nullable: true } } },
+    grant: { type: 'object', nullable: true, properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } },
+  } } } })
   @Get()
   async list(@Request() req: any) {
     return this.svc.listForBuyer(req.user.id);

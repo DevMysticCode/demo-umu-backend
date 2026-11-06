@@ -43,7 +43,20 @@ export class RewardsController {
   }
 
   @ApiOperation({ summary: 'List stamps earned but not yet celebrated', description: 'Stamps minted but whose celebration animation hasn\'t been acknowledged yet - the frontend polls this since award() is always fire-and-forget from the triggering request\'s own response. Oldest first, so queued achievements celebrate in order.' })
-  @ApiResponse({ status: 200, description: 'Uncelebrated stamps, oldest first.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Uncelebrated stamps, oldest first.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, userId: { type: 'string' }, stampDefinitionId: { type: 'string' },
+    passportId: { type: 'string', nullable: true }, propertyId: { type: 'string', nullable: true },
+    awardedAt: { type: 'string', format: 'date-time' }, pointsAwarded: { type: 'number', nullable: true },
+    celebratedAt: { type: 'string', format: 'date-time', nullable: true, description: 'Always null in this response - that is the filter' },
+    verificationStatus: { type: 'string', enum: ['EARNED', 'VERIFIED'] },
+    triggerEvent: { type: 'string', nullable: true },
+    stampDefinition: { type: 'object', properties: {
+      id: { type: 'string' }, key: { type: 'string' }, journeyType: { type: 'string' }, title: { type: 'string' },
+      subtitle: { type: 'string', nullable: true }, description: { type: 'string', nullable: true },
+      checklistItems: { type: 'array', nullable: true, items: { type: 'string' } },
+      iconAsset: { type: 'string', nullable: true }, tier: { type: 'number', nullable: true }, category: { type: 'string', nullable: true },
+    } },
+  } } } })
   @Get('stamps/uncelebrated')
   async getUncelebratedStamps(@Request() req: any) {
     return this.rewardsService.getUncelebratedStamps(req.user.id);
@@ -57,7 +70,14 @@ export class RewardsController {
       'Full catalogue (earned + locked) for the Passport Stamps collection view. If passportId is given, each stamp is annotated with applicable based on that property\'s actual section/question answers (e.g. a leasehold-only stamp is marked not applicable for a freehold property) - the caller must have access to that passport.',
   })
   @ApiQuery({ name: 'passportId', required: false, description: 'Annotate stamps with per-property applicability for this passport' })
-  @ApiResponse({ status: 200, description: 'Full stamp catalogue with an applicable flag on each.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Full stamp catalogue with an applicable flag on each.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, key: { type: 'string' }, journeyType: { type: 'string' }, title: { type: 'string' },
+    subtitle: { type: 'string', nullable: true }, description: { type: 'string', nullable: true },
+    checklistItems: { type: 'array', nullable: true, items: { type: 'string' } },
+    iconAsset: { type: 'string', nullable: true }, tier: { type: 'number', nullable: true }, category: { type: 'string', nullable: true },
+    active: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' },
+    applicable: { type: 'boolean', description: 'True unless passportId was given and this stamp is gated out for that property (e.g. a leasehold-only stamp on a freehold passport)' },
+  } } } })
   @ApiResponse({ status: 403, description: 'passportId given but the caller has no access to it.' })
   @Get('stamps/catalogue')
   async getStampsCatalogue(
@@ -69,7 +89,18 @@ export class RewardsController {
 
   // GET /rewards/stamps — this user's earned Passport Stamps.
   @ApiOperation({ summary: 'List this user\'s earned Passport Stamps', description: 'Every stamp actually awarded to the signed-in user, most recently awarded first.' })
-  @ApiResponse({ status: 200, description: 'Earned stamps.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Earned stamps.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, userId: { type: 'string' }, stampDefinitionId: { type: 'string' },
+    passportId: { type: 'string', nullable: true }, propertyId: { type: 'string', nullable: true },
+    awardedAt: { type: 'string', format: 'date-time' }, pointsAwarded: { type: 'number', nullable: true },
+    celebratedAt: { type: 'string', format: 'date-time', nullable: true },
+    verificationStatus: { type: 'string', enum: ['EARNED', 'VERIFIED'] },
+    triggerEvent: { type: 'string', nullable: true },
+    stampDefinition: { type: 'object', properties: {
+      id: { type: 'string' }, key: { type: 'string' }, journeyType: { type: 'string' }, title: { type: 'string' },
+      subtitle: { type: 'string', nullable: true }, iconAsset: { type: 'string', nullable: true }, category: { type: 'string', nullable: true },
+    } },
+  } } } })
   @Get('stamps')
   async getStamps(@Request() req: any) {
     return this.rewardsService.getStamps(req.user.id);
@@ -90,7 +121,11 @@ export class RewardsController {
   // next reward" from this list against the balance it already fetches
   // separately, rather than duplicating that logic server-side.
   @ApiOperation({ summary: 'List display-only reward tiles', description: 'Active reward catalogue items, in display order. Nothing here is redeemable yet - the frontend derives things like "points to next reward" by comparing this list against the balance fetched separately.' })
-  @ApiResponse({ status: 200, description: 'Active reward tiles.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Active reward tiles.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, partner: { type: 'string' }, title: { type: 'string' }, description: { type: 'string', nullable: true },
+    pointsRequired: { type: 'number' }, iconAsset: { type: 'string', nullable: true }, active: { type: 'boolean' },
+    sortOrder: { type: 'number' }, createdAt: { type: 'string', format: 'date-time' },
+  } } } })
   @Get('catalogue')
   async getCatalogue() {
     return this.rewardsService.getCatalogue();

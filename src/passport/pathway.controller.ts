@@ -38,14 +38,26 @@ export class PathwayController {
   constructor(private pathways: PathwayService) {}
 
   @ApiOperation({ summary: 'List every pathway journey on a passport', description: 'Returns every journey (in-progress and resolved), each annotated with a severity derived from its outcome status (null while still in progress).' })
-  @ApiResponse({ status: 200, description: 'Journeys, most recently started first.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Journeys, most recently started first.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, passportId: { type: 'string' }, pathwayId: { type: 'string', example: 'P09' },
+    triggerQuestionTemplateId: { type: 'string', nullable: true }, contentVersion: { type: 'number' }, currentStepId: { type: 'string' },
+    stepAnswers: { type: 'array', items: { type: 'object', properties: { stepId: { type: 'string' }, answerLabel: { type: 'string' }, evidenceFileUrls: { type: 'array', items: { type: 'string' } }, timestamp: { type: 'string', format: 'date-time' } } } },
+    status: { type: 'string', enum: ['IN_PROGRESS', 'RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'] },
+    severity: { type: 'string', nullable: true, enum: ['RESOLVED', 'CHECK', 'FLAG', 'ESCALATE', null], description: 'null while status is IN_PROGRESS' },
+    startedAt: { type: 'string', format: 'date-time' }, updatedAt: { type: 'string', format: 'date-time' }, completedAt: { type: 'string', format: 'date-time', nullable: true },
+  } } } })
   @Get()
   listJourneys(@Param('passportId') passportId: string, @Request() req: any) {
     return this.pathways.listJourneys(passportId, req.user.id);
   }
 
   @ApiOperation({ summary: 'List unresolved flags across all pathway journeys', description: 'Every journey whose outcome hasn\'t reached a fully-resolved tier (CHECK/FLAG/ESCALATE severity, or one of the fine-grained outcome codes) - in-progress journeys are excluded since they have no outcome yet. Sorted by severity, most recently updated first.' })
-  @ApiResponse({ status: 200, description: 'Flagged journeys.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Flagged journeys.', schema: { type: 'array', items: { type: 'object', properties: {
+    journeyId: { type: 'string' }, pathwayId: { type: 'string', example: 'P09' },
+    status: { type: 'string', enum: ['RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'] }, severity: { type: 'string', enum: ['RESOLVED', 'CHECK', 'FLAG', 'ESCALATE'] },
+    issue: { type: 'string', nullable: true }, section: { type: 'string', nullable: true, description: 'Always null today - reserved for future use' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  } } } })
   @Get('flags')
   listFlags(@Param('passportId') passportId: string, @Request() req: any) {
     return this.pathways.listFlags(passportId, req.user.id);

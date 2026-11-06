@@ -363,7 +363,11 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's wishlisted properties", description: 'Returns every property the signed-in user has wishlisted. Entirely private - never visible to the property owner.' })
-  @ApiResponse({ status: 200, description: 'Array of wishlisted properties', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of wishlisted properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus wishlistedAt - representative fields shown, not exhaustive', properties: {
+    id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+    estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
+    wishlistedAt: { type: 'string', format: 'date-time' },
+  } } } })
   async getWishlist(@Request() req: any) {
     return this.propertyService.getWishlist(req.user.id);
   }
@@ -372,7 +376,12 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's saved properties", description: 'Returns every property the signed-in user has saved, each with its HomeScore if one exists. Entirely private - never visible to the property owner.' })
-  @ApiResponse({ status: 200, description: 'Array of saved properties with HomeScore', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of saved properties with HomeScore', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus savedAt/homeScore - representative fields shown, not exhaustive', properties: {
+    id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+    estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
+    savedAt: { type: 'string', format: 'date-time' },
+    homeScore: { type: 'number', nullable: true, description: "Caller's own HomeScore if run, else the most recent score anyone produced, else the property's EPC score" },
+  } } } })
   async getSaved(@Request() req: any) {
     return this.propertyService.getSavedProperties(req.user.id);
   }
@@ -384,7 +393,14 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's watched properties", description: "Every property the user has opted into notifications for via \"Watch this property\", distinct from the plain Save heart." })
-  @ApiResponse({ status: 200, description: 'Array of watched properties', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of watched properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus watch metadata - representative fields shown, not exhaustive', properties: {
+    id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+    estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
+    watchedAt: { type: 'string', format: 'date-time' },
+    watchPrefs: { type: 'object', properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } },
+    hasPassport: { type: 'boolean' }, passportPublished: { type: 'boolean' },
+    homeScore: { type: 'number', nullable: true },
+  } } } })
   async getWatches(@Request() req: any) {
     return this.propertyService.getWatchedProperties(req.user.id);
   }
@@ -394,7 +410,11 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get recently viewed properties", description: "Every property the user has opened recently, not just saved ones - private browsing history." })
-  @ApiResponse({ status: 200, description: 'Array of recently viewed properties', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Array of recently viewed properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus viewedAt - representative fields shown, not exhaustive', properties: {
+    id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+    estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
+    viewedAt: { type: 'string', format: 'date-time' },
+  } } } })
   async getRecentlyViewed(@Request() req: any) {
     return this.propertyService.getRecentlyViewed(req.user.id);
   }
@@ -440,7 +460,15 @@ export class PropertyController {
   @ApiQuery({ name: 'maxPrice', description: 'Maximum price', required: false })
   @ApiQuery({ name: 'passportOnly', description: 'Only properties with a passport', required: false })
   @ApiQuery({ name: 'passportStatus', description: 'Comma-separated passport status filter', required: false })
-  @ApiResponse({ status: 200, description: 'Personalised property feed', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Personalised property feed, ranked by match score', schema: { type: 'object', properties: {
+    items: { type: 'array', items: { type: 'object', description: 'Full Property record plus a computed matchScore - representative fields shown, not exhaustive', properties: {
+      id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
+      estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
+      matchScore: { type: 'number', description: 'Weighted match score: budget 40%, property type 30%, energy efficiency 30%' },
+    } } },
+    total: { type: 'number' },
+    needsPostcode: { type: 'boolean', nullable: true, description: 'True (with an empty items array) if the user has no postcode set yet' },
+  } } })
   async getForYou(
     @Request() req: any,
     @Query('propertyType') propertyType?: string,
@@ -923,7 +951,15 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Get buyers matched to this property', description: "Returns verified buyer profiles whose criteria match this property, excluding the property's own passport team (owner and collaborators). Requires the caller to manage this property." })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiResponse({ status: 200, description: 'Array of matched buyer summaries', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Up to 8 matched buyers, ranked by match score, plus the total candidate pool size.', schema: { type: 'object', properties: {
+    buyers: { type: 'array', items: { type: 'object', properties: {
+      userId: { type: 'string' }, name: { type: 'string', example: 'Jordan K.' }, area: { type: 'string', example: 'SW11' },
+      budget: { type: 'string', example: 'Up to £450k' }, timeline: { type: 'string', example: 'Ready to buy now' },
+      matchScore: { type: 'number', description: 'Weighted score: 60% budget fit, 40% property-type match' },
+      tags: { type: 'array', items: { type: 'string' }, example: ['Strong match', 'Active buyer'] },
+    } } },
+    total: { type: 'number', description: 'Size of the candidate pool before ranking/truncating to 8' },
+  } } })
   async getMatchedBuyers(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getMatchedBuyers(id, req.user.id);
   }

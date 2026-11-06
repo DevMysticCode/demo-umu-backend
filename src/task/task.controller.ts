@@ -28,7 +28,21 @@ export class TaskController {
       'Returns every question in the task, flattened with its template display fields (label, type, options, scale config, etc.) plus the current answer value (text/JSON/file URL) and whether it\'s completed. Not rate-limited (SkipThrottle) since a passport view can fan out 100+ of these calls in a few seconds navigating between sections - JWT auth is the real gate here.',
   })
   @ApiParam({ name: 'taskId', description: 'The PassportSectionTask id' })
-  @ApiResponse({ status: 200, description: 'Questions for this task.', schema: { type: 'array', items: { type: 'object' } } })
+  @ApiResponse({ status: 200, description: 'Questions for this task.', schema: { type: 'array', items: { type: 'object', properties: {
+    id: { type: 'string' }, templateId: { type: 'string' }, question: { type: 'string', description: 'The template title, used as the question label' },
+    description: { type: 'string', nullable: true }, instructionText: { type: 'string', nullable: true },
+    type: { type: 'string', description: 'e.g. TEXT, RADIO, CHECKBOX, UPLOAD, MULTIPART, NOTE, DATE, ADDRESS, SCALE, CHIPS...' },
+    help: { type: 'string', nullable: true }, helpContent: { type: 'object', nullable: true }, helpVideoUrl: { type: 'string', nullable: true },
+    options: { type: 'object', nullable: true }, placeholder: { type: 'string', nullable: true }, display: { type: 'string', nullable: true },
+    uploadInstruction: { type: 'string', nullable: true }, prewritten: { type: 'object', nullable: true }, dateFields: { type: 'object', nullable: true },
+    parts: { type: 'object', nullable: true, description: 'MULTIPART question sub-fields' }, fields: { type: 'object', nullable: true },
+    autoSaveOn: { type: 'boolean', nullable: true }, repeatable: { type: 'boolean', nullable: true }, buttonText: { type: 'string', nullable: true },
+    scaleType: { type: 'string', nullable: true }, scaleMin: { type: 'number', nullable: true }, scaleMax: { type: 'number', nullable: true },
+    scaleStep: { type: 'number', nullable: true }, scaleFormat: { type: 'string', nullable: true }, scaleMaxLabel: { type: 'string', nullable: true },
+    externalLink: { type: 'string', nullable: true }, otherPlaceholder: { type: 'string', nullable: true }, points: { type: 'number', nullable: true },
+    answer: { nullable: true, description: 'The current answer value - answerText, answerJson, or fileUrl (whichever is set), or null if unanswered' },
+    completed: { type: 'boolean' },
+  } } } })
   @SkipThrottle()
   @Get(':taskId/questions')
   @ApiBearerAuth('access-token')
