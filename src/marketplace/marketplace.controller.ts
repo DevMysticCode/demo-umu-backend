@@ -129,7 +129,7 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Browse marketplace jobs', description: 'Public. Lists open jobs, optionally filtered by category and capped to a limit, newest first.' })
   @ApiQuery({ name: 'category', required: false, description: 'Category slug to filter by (e.g. "bathroom"). Omit to list all categories.' })
   @ApiQuery({ name: 'limit', required: false, description: 'Maximum number of jobs to return.' })
-  @ApiResponse({ status: 200, description: 'Array of job summaries.', schema: { type: 'array', items: JOB_LIST_ITEM_SCHEMA } })
+  @ApiResponse({ status: 200, description: 'Array of job summaries. Not paginated - capped only by the limit query param (no offset/cursor support).', schema: { type: 'array', items: JOB_LIST_ITEM_SCHEMA } })
   listJobs(@Query('category') category?: string, @Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     return this.service.listJobs({
@@ -145,7 +145,7 @@ export class MarketplaceController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "List the caller's posted jobs", description: 'Returns every job the authenticated user has posted as a customer.' })
-  @ApiResponse({ status: 200, description: 'Array of job summaries.', schema: { type: 'array', items: JOB_LIST_ITEM_SCHEMA } })
+  @ApiResponse({ status: 200, description: 'Array of job summaries. Not paginated - returns every job the caller has posted.', schema: { type: 'array', items: JOB_LIST_ITEM_SCHEMA } })
   listMyJobs(@Req() req: any) {
     return this.service.listMyJobs(req.user.id);
   }
@@ -164,6 +164,7 @@ export class MarketplaceController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Post a new job', description: 'Creates a job listing as the authenticated user (the customer). Requires at least 3 and at most 12 photo URLs, each previously uploaded via POST /marketplace/upload-photo.' })
   @ApiResponse({ status: 201, description: 'The created job.', schema: JOB_DETAIL_SCHEMA })
+  @ApiResponse({ status: 400, description: 'Unknown category slug, or budgetMax is less than budgetMin.' })
   createJob(@Req() req: any, @Body() dto: CreateJobDto) {
     return this.service.createJob(req.user.id, dto);
   }
@@ -194,6 +195,7 @@ export class MarketplaceController {
   })
   @ApiOperation({ summary: 'Upload a job photo', description: 'Uploads a single image (jpg/png/webp/heic, max 8MB) to the job-photos bucket and returns its public URL, for use in the "post a job" wizard or marketplace evidence photos.' })
   @ApiResponse({ status: 201, description: 'The uploaded photo URL.', schema: { type: 'object', properties: { url: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'File missing, or an unsupported MIME type.' })
   uploadPhoto(@UploadedFile() file: any) {
     if (!file) {
       // null from fileFilter (rejected MIME) lands here too — give the
@@ -210,6 +212,7 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Get job detail', description: 'Public. Returns full job detail including description, photos and status. If a valid bearer token is present, `isMine` reflects whether the caller posted it; anonymous callers always get isMine: false.' })
   @ApiParam({ name: 'id', description: 'Job ID' })
   @ApiResponse({ status: 200, description: 'The job.', schema: JOB_DETAIL_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
   getJob(@Param('id') id: string, @Req() req: any) {
     return this.service.getJob(id, this.peekUserId(req));
   }
@@ -221,6 +224,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Submit an offer on a job', description: 'The authenticated user (a supplier) quotes a price and optional availability on the given job.' })
   @ApiParam({ name: 'id', description: 'Job ID' })
   @ApiResponse({ status: 201, description: 'The created offer.', schema: OFFER_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  @ApiResponse({ status: 400, description: 'The job is no longer open, the caller is trying to offer on their own job, or already has an offer on this job.' })
   createOffer(@Param('id') jobId: string, @Req() req: any, @Body() dto: CreateOfferDto) {
     return this.service.createOffer(req.user.id, jobId, dto);
   }
@@ -230,7 +235,9 @@ export class MarketplaceController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'List offers on a job', description: "Only the job's customer can call this. Returns every offer with the supplier's reputation (rating, review count, jobs completed) so quotes can be compared." })
   @ApiParam({ name: 'id', description: 'Job ID' })
-  @ApiResponse({ status: 200, description: 'Array of offers.', schema: { type: 'array', items: OFFER_SCHEMA } })
+  @ApiResponse({ status: 200, description: 'Array of offers. Not paginated.', schema: { type: 'array', items: OFFER_SCHEMA } })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is not the job poster.' })
   listOffers(@Param('id') jobId: string, @Req() req: any) {
     return this.service.listOffersForJob(req.user.id, jobId);
   }
@@ -241,6 +248,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Get a single offer', description: 'Returns one offer. Caller must be either the job customer or the offering supplier.' })
   @ApiParam({ name: 'id', description: 'Offer ID' })
   @ApiResponse({ status: 200, description: 'The offer.', schema: OFFER_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Offer not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is neither the job customer nor the offering supplier.' })
   getOffer(@Param('id') id: string, @Req() req: any) {
     return this.service.getOfferDto(req.user.id, id);
   }
@@ -251,6 +260,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Accept an offer', description: "The job's customer accepts a supplier's offer. Does not move money — see POST /marketplace/offers/:id/authorize for that." })
   @ApiParam({ name: 'id', description: 'Offer ID' })
   @ApiResponse({ status: 200, description: 'The updated offer.', schema: OFFER_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Offer not found.' })
+  @ApiResponse({ status: 403, description: 'Only the job poster can accept offers.' })
+  @ApiResponse({ status: 400, description: 'The offer is no longer pending, or the job is no longer open.' })
   acceptOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.service.acceptOffer(req.user.id, offerId);
   }
@@ -261,6 +273,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Decline an offer', description: "The job's customer declines a supplier's offer." })
   @ApiParam({ name: 'id', description: 'Offer ID' })
   @ApiResponse({ status: 200, description: 'The updated offer.', schema: OFFER_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Offer not found.' })
+  @ApiResponse({ status: 403, description: 'Only the job poster can decline offers.' })
+  @ApiResponse({ status: 400, description: 'The offer is no longer pending.' })
   declineOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.service.declineOffer(req.user.id, offerId);
   }
@@ -270,7 +285,7 @@ export class MarketplaceController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "List the caller's marketplace message threads", description: 'One row per conversation the authenticated user is part of (as customer or supplier), with the other party, last message preview and unread count.' })
-  @ApiResponse({ status: 200, description: 'Array of threads.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, jobId: { type: 'string' }, jobTitle: { type: 'string' }, jobCategoryLabel: { type: 'string' }, role: { type: 'string', enum: ['customer', 'supplier'] }, otherPartyName: { type: 'string' }, otherPartyInitials: { type: 'string' }, lastMessageBody: { type: 'string', nullable: true }, lastMessageAt: { type: 'string', nullable: true }, unreadCount: { type: 'number' } } } } })
+  @ApiResponse({ status: 200, description: 'Array of threads. Not paginated - returns every thread the caller is part of.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, jobId: { type: 'string' }, jobTitle: { type: 'string' }, jobCategoryLabel: { type: 'string' }, role: { type: 'string', enum: ['customer', 'supplier'] }, otherPartyName: { type: 'string' }, otherPartyInitials: { type: 'string' }, lastMessageBody: { type: 'string', nullable: true }, lastMessageAt: { type: 'string', nullable: true }, unreadCount: { type: 'number' } } } } })
   listThreads(@Req() req: any) {
     return this.messages.listThreads(req.user.id);
   }
@@ -281,6 +296,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Get a marketplace thread with its messages', description: 'Caller must be a participant. Returns full message history for the thread.' })
   @ApiParam({ name: 'id', description: 'Thread ID' })
   @ApiResponse({ status: 200, description: 'The thread with its messages.', schema: { type: 'object', properties: { id: { type: 'string' }, jobId: { type: 'string' }, jobTitle: { type: 'string' }, jobCategoryLabel: { type: 'string' }, role: { type: 'string', enum: ['customer', 'supplier'] }, otherPartyName: { type: 'string' }, otherPartyInitials: { type: 'string' }, messages: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, senderId: { type: 'string' }, body: { type: 'string' }, createdAt: { type: 'string' }, isMine: { type: 'boolean' } } } } } } })
+  @ApiResponse({ status: 404, description: 'Thread not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is not a participant in this thread.' })
   getThread(@Param('id') id: string, @Req() req: any) {
     return this.messages.getThread(req.user.id, id);
   }
@@ -291,6 +308,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Send a marketplace message', description: 'Posts a text message into the thread as the authenticated user. Caller must be a participant.' })
   @ApiParam({ name: 'id', description: 'Thread ID' })
   @ApiResponse({ status: 201, description: 'The created message.', schema: { type: 'object', properties: { id: { type: 'string' }, senderId: { type: 'string' }, body: { type: 'string' }, createdAt: { type: 'string' }, isMine: { type: 'boolean' } } } })
+  @ApiResponse({ status: 404, description: 'Thread not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is not a participant in this thread.' })
   sendMessage(@Param('id') id: string, @Req() req: any, @Body() dto: SendMessageDto) {
     return this.messages.sendMessage(req.user.id, id, dto);
   }
@@ -301,6 +320,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Mark a marketplace thread read', description: 'Marks every unread message in the thread as read for the authenticated user.' })
   @ApiParam({ name: 'id', description: 'Thread ID' })
   @ApiResponse({ status: 200, description: 'Number of messages marked read.', schema: { type: 'object', properties: { marked: { type: 'number' } } } })
+  @ApiResponse({ status: 404, description: 'Thread not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is not a participant in this thread.' })
   markRead(@Param('id') id: string, @Req() req: any) {
     return this.messages.markRead(req.user.id, id);
   }
@@ -314,6 +335,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Open (or reuse) a thread about a job', description: "Supplier flow: opens a message thread with the job's customer, or returns the existing one if already open." })
   @ApiParam({ name: 'jobId', description: 'Job ID' })
   @ApiResponse({ status: 200, description: 'The thread with its messages.', schema: { type: 'object', properties: { id: { type: 'string' }, jobId: { type: 'string' } } } })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  @ApiResponse({ status: 400, description: 'The job has no customer, or the caller is the job customer trying to message themselves.' })
   openThreadForJob(@Param('jobId') jobId: string, @Req() req: any) {
     return this.messages.getOrCreateThread(req.user.id, jobId, req.user.id);
   }
@@ -327,6 +350,7 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Open (or reuse) a thread about an offer', description: "Customer flow: opens a message thread with the offer's supplier, or returns the existing one if already open." })
   @ApiParam({ name: 'offerId', description: 'Offer ID' })
   @ApiResponse({ status: 200, description: 'The thread with its messages.', schema: { type: 'object', properties: { id: { type: 'string' }, jobId: { type: 'string' } } } })
+  @ApiResponse({ status: 404, description: 'Offer not found.' })
   async openThreadForOffer(@Param('offerId') offerId: string, @Req() req: any) {
     const offer = await this.service.getOfferOrThrow(offerId);
     return this.messages.getOrCreateThread(req.user.id, offer.jobId, offer.supplierId);
@@ -340,6 +364,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Authorise escrow payment for an accepted offer', description: "The customer commits to the offer: creates a Stripe PaymentIntent for the offer price plus platform fee (10%) and a pending payment row, in one transaction. Throttled to 10 requests/minute per IP." })
   @ApiParam({ name: 'id', description: 'Offer ID' })
   @ApiResponse({ status: 200, description: 'The pending payment and a Stripe client secret to confirm it with.', schema: { type: 'object', properties: { payment: PAYMENT_SCHEMA, clientSecret: { type: 'string' } } } })
+  @ApiResponse({ status: 404, description: 'Offer not found.' })
+  @ApiResponse({ status: 403, description: 'Only the job poster can authorise payment.' })
+  @ApiResponse({ status: 400, description: 'The offer is not accepted, the job is no longer open, or a payment already exists for this job.' })
   authorizeOffer(@Param('id') offerId: string, @Req() req: any) {
     return this.escrow.authorizeOffer(req.user.id, offerId);
   }
@@ -350,6 +377,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Confirm escrow payment held', description: 'Marks the payment as held in escrow once the Stripe PaymentIntent has succeeded, and drops a system message into the job thread confirming funds are held.' })
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiResponse({ status: 200, description: 'The updated payment.', schema: PAYMENT_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({ status: 403, description: 'Only the paying customer can confirm this payment.' })
+  @ApiResponse({ status: 400, description: "The payment isn't pending, is missing its Stripe intent, the intent hasn't succeeded yet, or was charged in a currency other than GBP." })
   async confirmPayment(@Param('id') paymentId: string, @Req() req: any) {
     const payment = await this.escrow.confirmPayment(req.user.id, paymentId);
     // Drop a system message into the thread so the supplier sees the
@@ -370,6 +400,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Release escrowed payment to the supplier', description: 'The customer confirms the job is complete and releases the held funds to the supplier; marks the job complete and posts a system message to the thread.' })
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiResponse({ status: 200, description: 'The updated payment.', schema: PAYMENT_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({ status: 403, description: 'Only the paying customer can release funds.' })
+  @ApiResponse({ status: 400, description: 'The payment is not in a releasable (held) state.' })
   async releasePayment(@Param('id') paymentId: string, @Req() req: any) {
     const payment = await this.escrow.releasePayment(req.user.id, paymentId);
     try {
@@ -387,6 +420,8 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Get an escrow payment', description: 'Returns one payment. Caller must be the customer or supplier on it.' })
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiResponse({ status: 200, description: 'The payment.', schema: PAYMENT_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is neither the customer nor the supplier on this payment.' })
   getPayment(@Param('id') paymentId: string, @Req() req: any) {
     return this.escrow.getPayment(req.user.id, paymentId);
   }
@@ -402,6 +437,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Add evidence photos to a payment', description: "Appends before/after photo URLs (each must already be in the job-photos upload bucket) to the payment's evidence trail. Either the customer or supplier may add their own." })
   @ApiParam({ name: 'id', description: 'Payment ID' })
   @ApiResponse({ status: 200, description: 'The updated payment.', schema: PAYMENT_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Payment not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is neither the customer nor the supplier on this payment.' })
+  @ApiResponse({ status: 400, description: 'No valid photo URLs were provided (each must already be in the job-photos bucket).' })
   addEvidence(
     @Param('id') paymentId: string,
     @Req() req: any,
@@ -431,6 +469,9 @@ export class MarketplaceController {
     } },
     viewerRole: { type: 'string', enum: ['customer', 'supplier'] },
   } } })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  @ApiResponse({ status: 400, description: 'This job has no contract yet - authorise an offer first.' })
+  @ApiResponse({ status: 403, description: 'Caller is not a party to this contract.' })
   getContract(@Param('id') jobId: string, @Req() req: any) {
     return this.service.getContract(req.user.id, jobId);
   }
@@ -454,6 +495,9 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Leave a review on a completed job', description: 'One review per direction (customer→supplier or supplier→customer) per job; direction is derived from the job record so the reviewer cannot misrepresent their side.' })
   @ApiParam({ name: 'id', description: 'Job ID' })
   @ApiResponse({ status: 201, description: 'The created review.', schema: REVIEW_SCHEMA })
+  @ApiResponse({ status: 404, description: 'Job not found.' })
+  @ApiResponse({ status: 403, description: 'Caller is not a party to this job, or is trying to review themselves.' })
+  @ApiResponse({ status: 400, description: 'Escrow has not been authorised yet, funds have not been released yet, or this job has already been reviewed by the caller.' })
   createReview(@Param('id') jobId: string, @Req() req: any, @Body() dto: CreateReviewDto) {
     return this.reviews.createReview(req.user.id, jobId, dto);
   }
@@ -461,7 +505,7 @@ export class MarketplaceController {
   @Get('users/:id/reviews')
   @ApiOperation({ summary: "List a user's marketplace reviews", description: "Public. Every review left for the given user, as either customer or supplier." })
   @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Array of reviews.', schema: { type: 'array', items: REVIEW_SCHEMA } })
+  @ApiResponse({ status: 200, description: 'Array of reviews. Not paginated.', schema: { type: 'array', items: REVIEW_SCHEMA } })
   listUserReviews(@Param('id') userId: string) {
     // Public — anyone can see reviews of a given user.
     return this.reviews.listForUser(userId);

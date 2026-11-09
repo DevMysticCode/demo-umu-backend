@@ -51,6 +51,9 @@ export class DocumentsController {
 
   @ApiOperation({ summary: 'Upload a document to my vault', description: 'Stores a new document in the private documents bucket. Optionally links it to a specific passport (passportId) - the caller must own or be a collaborator on that passport - and/or files it under a vault category.' })
   @ApiResponse({ status: 201, description: 'The created document.', schema: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' }, tags: { type: 'array', items: { type: 'string' } }, category: { type: 'string', nullable: true }, passportId: { type: 'string', nullable: true }, accessLevel: { type: 'string' }, uploadedAt: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'No file provided, or category is not a valid vault category.' })
+  @ApiResponse({ status: 403, description: 'passportId was given but the caller is not its owner/a collaborator.' })
+  @ApiResponse({ status: 404, description: 'passportId was given but no such passport exists.' })
   @Post()
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'documents', maxMb: 20, mimeAllowList: DOCUMENT_MIME_TYPES })),
@@ -96,6 +99,8 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Delete a document', description: 'Owner-only. Writes a metadata-only history entry (REMOVED action, capturing name/size/type/who/when) before deleting the underlying file from storage - the record of removal survives even though the file itself is gone.' })
   @ApiParam({ name: 'id', description: 'The UserDocument id.' })
   @ApiResponse({ status: 200, description: 'Deletion result.', schema: { type: 'object', properties: { message: { type: 'string' } } } })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
+  @ApiResponse({ status: 404, description: 'No such document.' })
   @Delete(':id')
   deleteDocument(@Req() req: any, @Param('id') id: string) {
     return this.documentsService.deleteDocument(req.user.id, id);
@@ -105,6 +110,7 @@ export class DocumentsController {
   @ApiParam({ name: 'id', description: 'The UserDocument id.' })
   @ApiResponse({ status: 200, description: 'Full document detail.', schema: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' }, category: { type: 'string', nullable: true }, accessLevel: { type: 'string' }, sharedWith: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' } } } }, history: { type: 'array', items: { type: 'object', properties: { version: { type: 'integer' }, action: { type: 'string' }, name: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } } } } })
   @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
+  @ApiResponse({ status: 404, description: 'No such document.' })
   @Get(':id/detail')
   getDocumentDetail(@Req() req: any, @Param('id') id: string) {
     return this.documentsService.getDocumentDetail(req.user.id, id);
@@ -113,6 +119,9 @@ export class DocumentsController {
   @ApiOperation({ summary: "Update a document's name, category or property link", description: "Owner-only. Any of name/category/passportId may be supplied; passing passportId re-checks the caller's access to that passport before linking." })
   @ApiParam({ name: 'id', description: 'The UserDocument id.' })
   @ApiResponse({ status: 201, description: 'The updated fields.', schema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, category: { type: 'string', nullable: true }, passportId: { type: 'string', nullable: true } } } })
+  @ApiResponse({ status: 400, description: 'category is not a valid vault category.' })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
+  @ApiResponse({ status: 404, description: 'No such document.' })
   @Post(':id/meta')
   @ApiBody({
     schema: {

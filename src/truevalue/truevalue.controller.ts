@@ -59,6 +59,7 @@ export class TrueValueController {
     } },
     engineVersion: { type: 'string' }, inputsHash: { type: 'string' },
   } } })
+  @ApiResponse({ status: 404, description: 'Property not found.' })
   @Post('property/:id/truevalue/preview')
   async previewValuation(
     @Param('id') propertyId: string,
@@ -87,6 +88,8 @@ export class TrueValueController {
     live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
     epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
+  @ApiResponse({ status: 400, description: 'Unknown or inactive work type code.' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Post('property/:id/truevalue/works')
   async declareWork(
     @Param('id') propertyId: string,
@@ -111,6 +114,8 @@ export class TrueValueController {
     live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
     epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
+  @ApiResponse({ status: 404, description: 'Work item not found.' })
+  @ApiResponse({ status: 403, description: 'The work item belongs to a different user.' })
   @Delete('truevalue/works/:workId')
   async removeWork(@Param('workId') workId: string, @Request() req: any) {
     return this.trueValueService.removeWork(workId, req.user.id);
@@ -143,6 +148,8 @@ export class TrueValueController {
     live: { type: 'object', description: 'Same ValuationResult shape as POST .../truevalue/preview (estimateLow/estimateHigh/estimatePoint/confidence/contributions/etc.)' },
     epcStatus: { type: 'string', nullable: true, enum: ['current', 'stale', 'none'] },
   } } })
+  @ApiResponse({ status: 404, description: 'Work item not found.' })
+  @ApiResponse({ status: 403, description: 'The work item belongs to a different user.' })
   async uploadEvidence(
     @Param('workId') workId: string,
     @Request() req: any,
@@ -171,6 +178,7 @@ export class TrueValueController {
     engineVersion: { type: 'string' }, inputsHash: { type: 'string' },
     isHomeowner: { type: 'boolean', nullable: true }, isLandlord: { type: 'boolean', nullable: true }, purpose: { type: 'string', nullable: true }, foundNextHome: { type: 'boolean', nullable: true },
   } } })
+  @ApiResponse({ status: 404, description: 'Property not found.' })
   @Post('property/:id/truevalue')
   async saveValuation(
     @Param('id') propertyId: string,
@@ -191,6 +199,7 @@ export class TrueValueController {
       code: { type: 'string' }, label: { type: 'string' }, category: { type: 'string' }, tier: { type: 'number' },
     } } } } },
   } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Get('property/:id/truevalue')
   async getValuation(@Param('id') propertyId: string, @Request() req: any) {
     return this.trueValueService.getValuation(propertyId, req.user.id);
@@ -217,6 +226,7 @@ export class TrueValueController {
     declaredBy: { type: 'object', nullable: true, properties: { id: { type: 'string' }, firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true }, email: { type: 'string' } } },
     createdAt: { type: 'string', format: 'date-time' },
   } } } })
+  @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret required to access this endpoint.' })
   @Get('truevalue/admin/review-queue')
   async listReviewQueue(@Headers('x-admin-secret') secret: string) {
@@ -233,6 +243,9 @@ export class TrueValueController {
     verificationState: { type: 'string', enum: ['self', 'pending', 'verified', 'rejected'] },
     evidenceUrl: { type: 'string', nullable: true }, installDate: { type: 'string', format: 'date-time', nullable: true },
   } } })
+  @ApiResponse({ status: 400, description: 'decision must be "approve" or "reject".' })
+  @ApiResponse({ status: 404, description: 'Work item not found.' })
+  @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret required to access this endpoint.' })
   @Post('truevalue/admin/review/:workId')
   async reviewWorkEvidence(

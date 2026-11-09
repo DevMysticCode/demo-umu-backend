@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 import { CalendarService, CreateReminderDto, UpdateReminderDto } from './calendar.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 
 @Controller('calendar')
 @ApiBearerAuth('access-token')
@@ -70,6 +70,15 @@ export class CalendarController {
       },
     },
   })
+  @ApiBody({ schema: { type: 'object', required: ['title', 'date'], properties: {
+    title: { type: 'string' },
+    date: { type: 'string', description: 'ISO date, e.g. 2026-09-14' },
+    time: { type: 'string', nullable: true, example: '14:00' },
+    repeats: { type: 'string', nullable: true },
+    notes: { type: 'string', nullable: true },
+    type: { type: 'string', nullable: true },
+    sourceRef: { type: 'string', nullable: true },
+  } } })
   @Post()
   async createReminder(@Request() req, @Body() dto: CreateReminderDto) {
     return this.calendarService.createReminder(req.user.id, dto);
@@ -96,6 +105,13 @@ export class CalendarController {
       },
     },
   })
+  @ApiBody({ schema: { type: 'object', properties: {
+    title: { type: 'string', nullable: true },
+    date: { type: 'string', nullable: true },
+    time: { type: 'string', nullable: true },
+    repeats: { type: 'string', nullable: true },
+    notes: { type: 'string', nullable: true },
+  } } })
   @Put(':id')
   async updateReminder(
     @Request() req,

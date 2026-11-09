@@ -34,7 +34,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiHeader } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiHeader, ApiBody } from '@nestjs/swagger';
 
 // Relied solely on the 300 req/min/IP global default — clientId/clientSecret
 // here is a long-lived B2B credential (not a per-request JWT), so an
@@ -61,6 +61,7 @@ export class BuyerProfileAccessController {
     org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, legalName: { type: 'string', nullable: true }, logoEmoji: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, fcaNumber: { type: 'string', nullable: true }, websiteUrl: { type: 'string', nullable: true } } },
     grant: { type: 'object', nullable: true, properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } },
   } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Get()
   async list(@Request() req: any) {
     return this.svc.listForBuyer(req.user.id);
@@ -69,6 +70,7 @@ export class BuyerProfileAccessController {
   @ApiOperation({ summary: 'Get one access request', description: "Returns a single access request belonging to the signed-in buyer; 404s if it doesn't exist or belongs to someone else." })
   @ApiParam({ name: 'id', description: 'AccessRequest ID' })
   @ApiResponse({ status: 200, description: 'The access request, with its org and any grant.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'PENDING' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, legalName: { type: 'string', nullable: true }, logoEmoji: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, fcaNumber: { type: 'string', nullable: true }, websiteUrl: { type: 'string', nullable: true } } }, grant: { type: 'object', nullable: true, properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } } } } })
+  @ApiResponse({ status: 404, description: "Not found, or belongs to a different buyer." })
   @Get(':id')
   async getOne(@Request() req: any, @Param('id') id: string) {
     return this.svc.getRequestForBuyer(req.user.id, id);
@@ -76,7 +78,14 @@ export class BuyerProfileAccessController {
 
   @ApiOperation({ summary: 'Approve an access request', description: 'Buyer approves a pending external-organisation access request, scoped to the categories they choose, creating an AccessGrant. Only valid while the request is still PENDING.' })
   @ApiParam({ name: 'id', description: 'AccessRequest ID' })
+  @ApiBody({ schema: { type: 'object', required: ['scopes'], properties: {
+    scopes: { type: 'array', items: { type: 'string' }, description: 'Categories the buyer is choosing to approve - may be a subset of what was requested' },
+    expiresInDays: { type: 'integer', nullable: true },
+  } } })
   @ApiResponse({ status: 201, description: 'The created access grant.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'APPROVED' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, legalName: { type: 'string', nullable: true }, logoEmoji: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, fcaNumber: { type: 'string', nullable: true }, websiteUrl: { type: 'string', nullable: true } } }, grant: { type: 'object', properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } } } } })
+  @ApiResponse({ status: 404, description: 'Not found, or belongs to a different buyer.' })
+  @ApiResponse({ status: 400, description: 'Request is no longer PENDING, or none of the chosen scopes were actually requested.' })
+  @ApiResponse({ status: 410, description: 'Request has expired (auto-marked EXPIRED on this attempt).' })
   @Post(':id/approve')
   async approve(
     @Request() req: any,
@@ -89,6 +98,8 @@ export class BuyerProfileAccessController {
   @ApiOperation({ summary: 'Decline an access request', description: 'Buyer declines a pending external-organisation access request. Only valid while the request is still PENDING.' })
   @ApiParam({ name: 'id', description: 'AccessRequest ID' })
   @ApiResponse({ status: 201, description: 'The updated (declined) request.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'DECLINED' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' } } }, grant: { type: 'object', nullable: true, description: 'Always null for a decline - no grant is ever created on this path', properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } } } } })
+  @ApiResponse({ status: 404, description: 'Not found, or belongs to a different buyer.' })
+  @ApiResponse({ status: 400, description: 'Request is no longer PENDING.' })
   @Post(':id/decline')
   async decline(@Request() req: any, @Param('id') id: string) {
     return this.svc.decline(req.user.id, id);
@@ -105,6 +116,7 @@ export class BuyerProfileGrantController {
   @ApiOperation({ summary: 'Revoke a previously granted access', description: "Buyer revokes an AccessGrant they previously approved for an external organisation, immediately invalidating that org's access token. Idempotent if already revoked." })
   @ApiParam({ name: 'id', description: 'AccessGrant ID' })
   @ApiResponse({ status: 201, description: 'The revoked grant. Note: returned as the raw stored row, including accessTokenHash/accessTokenEncrypted — unlike the access-requests endpoints above, this response is not passed through a sanitized view.', schema: { type: 'object', properties: { id: { type: 'string' }, requestId: { type: 'string' }, accessTokenHash: { type: 'string' }, accessTokenEncrypted: { type: 'string' }, refreshToken: { type: 'string', nullable: true }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 404, description: 'Grant not found, or belongs to a different buyer.' })
   @Post(':id/revoke')
   async revoke(@Request() req: any, @Param('id') id: string) {
     return this.svc.revokeGrant(req.user.id, id);
@@ -142,6 +154,16 @@ export class VerifierPublicController {
   })
   @ApiHeader({ name: 'x-client-id', description: "The external organisation's client ID, issued via POST /admin/verifier/orgs." })
   @ApiHeader({ name: 'x-client-secret', description: "The external organisation's client secret." })
+  @ApiBody({ schema: { type: 'object', required: ['scopes'], properties: {
+    scopes: { type: 'array', items: { type: 'string' }, description: 'Requested categories' },
+    buyerRef: { type: 'string', nullable: true, description: "The buyer's public reference code - preferred lookup" },
+    buyerEmail: { type: 'string', nullable: true, format: 'email', description: 'Fallback lookup if buyerRef is not known' },
+    reason: { type: 'string', nullable: true },
+  } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid client credentials.' })
+  @ApiResponse({ status: 403, description: 'Org is suspended, or requested a scope outside its allowedScopes.' })
+  @ApiResponse({ status: 400, description: 'At least one scope is required.' })
+  @ApiResponse({ status: 404, description: 'No buyer found for the given buyerRef/buyerEmail.' })
   @Post('access-requests')
   async createRequest(
     @Headers('x-client-id') clientId: string,
@@ -183,6 +205,8 @@ export class VerifierPublicController {
   })
   @ApiHeader({ name: 'x-client-id', description: "The external organisation's client ID." })
   @ApiHeader({ name: 'x-client-secret', description: "The external organisation's client secret." })
+  @ApiResponse({ status: 401, description: 'Missing or invalid client credentials.' })
+  @ApiResponse({ status: 404, description: 'Access request not found.' })
   @Get('access-requests/:id')
   async pollRequest(
     @Headers('x-client-id') clientId: string,
@@ -238,6 +262,9 @@ export class VerifierPublicController {
   })
   @ApiHeader({ name: 'authorization', description: "Bearer <accessToken> - the scoped access token returned once the access request was approved (see access.accessToken from GET /api/v1/access-requests/:id)." })
   @ApiHeader({ name: 'user-agent', description: 'Recorded against the AccessLog entry for this fetch; not otherwise validated.' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
+  @ApiResponse({ status: 410, description: 'Access token was revoked by the buyer, or has expired.' })
+  @ApiResponse({ status: 404, description: 'Buyer profile not found.' })
   @Get('buyer-profile')
   async fetchBuyerProfile(
     @Headers('authorization') authHeader: string,
@@ -291,6 +318,18 @@ export class VerifierAdminController {
       },
     },
   })
+  @ApiBody({ schema: { type: 'object', required: ['name', 'contactEmail', 'allowedScopes'], properties: {
+    name: { type: 'string' },
+    legalName: { type: 'string', nullable: true },
+    logoEmoji: { type: 'string', nullable: true },
+    description: { type: 'string', nullable: true },
+    fcaNumber: { type: 'string', nullable: true },
+    contactEmail: { type: 'string', format: 'email' },
+    websiteUrl: { type: 'string', nullable: true },
+    allowedScopes: { type: 'array', items: { type: 'string' }, description: 'The categories this org is permitted to ever request' },
+  } } })
+  @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
+  @ApiResponse({ status: 400, description: 'name and contactEmail are required.' })
   @Post('orgs')
   async registerOrg(
     @Headers('x-admin-secret') adminSecret: string,

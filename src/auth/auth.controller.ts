@@ -57,6 +57,8 @@ export class AuthController {
       'Returns whether a verified account already exists for this email - used by sign-up/sign-in flows to route the user correctly. Throttled to 5 requests/minute/IP to prevent use as an email-enumeration oracle.',
   })
   @ApiResponse({ status: 201, description: 'Existence check result.', schema: { type: 'object', properties: { exists: { type: 'boolean', description: 'True only if an account exists AND has completed verification' } } } })
+  @ApiResponse({ status: 400, description: 'email is missing or not a valid email address.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('check-email')
   async checkEmail(@Body() dto: CheckEmailDto) {
@@ -69,6 +71,8 @@ export class AuthController {
       'Creates a placeholder user record if none exists, invalidates any previous unused code for this email, and emails a fresh 6-digit OTP. Enforces a 60-second per-email resend cooldown in addition to the 5 req/min/IP throttle.',
   })
   @ApiResponse({ status: 201, description: 'Code sent (or already covered by an in-flight cooldown).', schema: { type: 'object', properties: { message: { type: 'string' }, email: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'email is missing or not a valid email address, or a code was already requested in the last 60 seconds.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('request-otp')
   async requestOtp(@Body() dto: RequestOtpDto) {
@@ -105,6 +109,9 @@ export class AuthController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'X-Umu-App header is missing or unrecognised.' })
+  @ApiResponse({ status: 401, description: 'OTP code is invalid, expired, or too many incorrect attempts were made.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @ApiHeader({ name: 'x-umu-app', description: "Which frontend is calling ('mobile' | 'website-new' | 'integration') - determines the refresh cookie's path scope." })
   @Throttle(AUTH_THROTTLE)
   @Post('verify-otp')
@@ -136,6 +143,9 @@ export class AuthController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'X-Umu-App header is missing or unrecognised.' })
+  @ApiResponse({ status: 409, description: 'Email is already registered to a verified account.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @ApiHeader({ name: 'x-umu-app', description: "Which frontend is calling ('mobile' | 'website-new' | 'integration') - determines the refresh cookie's path scope." })
   @Throttle(AUTH_THROTTLE)
   @Post('register')
@@ -167,7 +177,9 @@ export class AuthController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'X-Umu-App header is missing or unrecognised.' })
   @ApiResponse({ status: 401, description: 'Invalid email or password.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @ApiHeader({ name: 'x-umu-app', description: "Which frontend is calling ('mobile' | 'website-new' | 'integration') - determines the refresh cookie's path scope." })
   @Throttle(AUTH_THROTTLE)
   @Post('login')
@@ -193,6 +205,8 @@ export class AuthController {
   })
   @ApiParam({ name: 'app', description: 'Which frontend is signing out: mobile, website-new, or integration' })
   @ApiResponse({ status: 200, description: 'Always succeeds client-side even if the server-side revoke fails.', schema: { type: 'object', properties: { success: { type: 'boolean' }, message: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'app path parameter is not one of mobile/website-new/integration.' })
+  @ApiResponse({ status: 403, description: "Request Origin header doesn't match the allow-list (CSRF defence)." })
   @Post('logout/:app')
   @HttpCode(200)
   async logout(
@@ -221,7 +235,10 @@ export class AuthController {
   })
   @ApiParam({ name: 'app', description: 'Which frontend is refreshing: mobile, website-new, or integration' })
   @ApiResponse({ status: 200, description: 'New access token issued; new refresh token set as the cookie.', schema: { type: 'object', properties: { token: { type: 'string', description: 'New access token (JWT, 1 hour)' } } } })
+  @ApiResponse({ status: 400, description: 'app path parameter is not one of mobile/website-new/integration.' })
   @ApiResponse({ status: 401, description: 'Refresh token missing, invalid, expired, or already used (reuse-detected).' })
+  @ApiResponse({ status: 403, description: "Request Origin header doesn't match the allow-list (CSRF defence)." })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('refresh/:app')
   @HttpCode(200)
@@ -242,6 +259,7 @@ export class AuthController {
       'Always returns the same generic message regardless of whether the email exists, is unverified, or is mid-cooldown - deliberately, to avoid leaking account existence. If a verified account is found, emails a 6-digit reset code (60-second per-email cooldown applies).',
   })
   @ApiResponse({ status: 200, description: 'Generic confirmation message, same in every case.', schema: { type: 'object', properties: { message: { type: 'string' } } } })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('forgot-password')
   @HttpCode(200)
@@ -256,6 +274,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Reset token issued.', schema: { type: 'object', properties: { resetToken: { type: 'string' } } } })
   @ApiResponse({ status: 401, description: 'Invalid or expired OTP, or too many incorrect attempts.' })
+  @ApiResponse({ status: 404, description: 'The account existed when the OTP was sent but no longer exists.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('verify-reset-otp')
   @HttpCode(200)
@@ -270,6 +290,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'Password updated.', schema: { type: 'object', properties: { message: { type: 'string' } } } })
   @ApiResponse({ status: 401, description: 'Reset token invalid, expired, wrong purpose, or already used.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('reset-password')
   @HttpCode(200)
@@ -285,6 +306,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password updated.', schema: { type: 'object', properties: { message: { type: 'string' } } } })
   @ApiResponse({ status: 400, description: 'Missing fields, password too short, or account has no password to change.' })
   @ApiResponse({ status: 401, description: 'Current password is incorrect.' })
+  @ApiResponse({ status: 429, description: 'More than 5 requests/minute from this IP.' })
   @Throttle(AUTH_THROTTLE)
   @Post('change-password')
   @ApiBearerAuth('access-token')

@@ -20,7 +20,11 @@ export class PushController {
   constructor(private readonly push: PushService) {}
 
   @ApiOperation({ summary: 'Register a push notification token', description: "Registers (or re-registers) the signed-in user's device push token for the given platform, so push notifications can be delivered to this device." })
-  @ApiBody({ type: RegisterPushTokenDto })
+  @ApiBody({ schema: { type: 'object', required: ['token', 'platform'], properties: {
+    token: { type: 'string', description: 'The device push token (FCM/APNs)' },
+    platform: { type: 'string', example: 'ios' },
+    deviceId: { type: 'string', nullable: true },
+  } } })
   @ApiResponse({ status: 201, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   @Post()
   async register(@Req() req: any, @Body() dto: RegisterPushTokenDto) {
@@ -29,7 +33,7 @@ export class PushController {
   }
 
   @ApiOperation({ summary: 'Unregister a push notification token', description: "Removes one of the signed-in user's device push tokens, stopping further push delivery to that device." })
-  @ApiBody({ type: UnregisterPushTokenDto })
+  @ApiBody({ schema: { type: 'object', required: ['token'], properties: { token: { type: 'string' } } } })
   @ApiResponse({ status: 200, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   @Delete()
   async unregister(@Req() req: any, @Body() dto: UnregisterPushTokenDto) {

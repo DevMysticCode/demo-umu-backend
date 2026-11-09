@@ -35,6 +35,7 @@ export class QuestionController {
   @ApiParam({ name: 'questionId', description: 'The PassportQuestion id being answered' })
   @ApiResponse({ status: 201, description: 'Answer saved.', schema: { type: 'object', properties: { success: { type: 'boolean' }, pointsAwarded: { type: 'number' } } } })
   @ApiResponse({ status: 403, description: 'No access to this question, or a collaborator permission level that does not allow this edit.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   @Post(':questionId/answer')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
@@ -78,6 +79,7 @@ export class QuestionController {
       } },
     } },
   })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   @Get(':questionId/guidance')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
@@ -123,6 +125,9 @@ export class QuestionController {
     description: 'File stored and linked to the question.',
     schema: { type: 'object', properties: { url: { type: 'string' }, name: { type: 'string' }, mimeType: { type: 'string' }, size: { type: 'number' } } },
   })
+  @ApiResponse({ status: 400, description: 'No file provided.' })
+  @ApiResponse({ status: 403, description: 'No access to this question.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   async uploadFile(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -168,6 +173,9 @@ export class QuestionController {
     description: 'File stored; not yet linked to any answer.',
     schema: { type: 'object', properties: { url: { type: 'string' }, name: { type: 'string' }, mimeType: { type: 'string' }, size: { type: 'number' } } },
   })
+  @ApiResponse({ status: 400, description: 'No file provided.' })
+  @ApiResponse({ status: 403, description: 'No access to this question.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   async uploadPartFile(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -188,10 +196,12 @@ export class QuestionController {
   })
   @ApiParam({ name: 'questionId', description: 'The PassportQuestion id' })
   @ApiQuery({ name: 'kind', required: false, description: 'Narrows to one sub-kind for a question that tracks more than one type of certificate' })
-  @ApiResponse({ status: 200, description: 'Matching documents.', schema: { type: 'array', items: { type: 'object', properties: {
+  @ApiResponse({ status: 200, description: 'Matching documents - not paginated, returns every tagged copy (realistically a handful per question).', schema: { type: 'array', items: { type: 'object', properties: {
     id: { type: 'string' }, name: { type: 'string' }, fileUrl: { type: 'string', description: 'Signed URL (see FilesService)' },
     size: { type: 'string', description: 'Human-readable file size, e.g. "2.4 MB"' }, uploadedAt: { type: 'string' },
   } } } })
+  @ApiResponse({ status: 403, description: 'No access to this question.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   @Get(':questionId/copies')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
@@ -247,6 +257,8 @@ export class QuestionController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: 'No access to this question.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   async uploadCopy(
     @Param('questionId') questionId: string,
     @UploadedFile() file: any,
@@ -284,6 +296,8 @@ export class QuestionController {
   })
   @ApiParam({ name: 'questionId', description: 'The PassportQuestion the signature belongs to' })
   @ApiResponse({ status: 201, description: 'Signing link created.', schema: { type: 'object', properties: { token: { type: 'string' }, url: { type: 'string', description: 'Full shareable sign link' } } } })
+  @ApiResponse({ status: 403, description: 'No access to this question.' })
+  @ApiResponse({ status: 404, description: 'Question not found.' })
   @Post(':questionId/tenancy-sign-link')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
@@ -334,6 +348,9 @@ export class QuestionController {
   })
   @ApiParam({ name: 'token', description: 'The sign-link token' })
   @ApiResponse({ status: 201, description: 'Signature recorded.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'Name/signature missing, or the signature image is invalid.' })
+  @ApiResponse({ status: 403, description: 'Link has expired, or has already been used to sign.' })
+  @ApiResponse({ status: 404, description: 'Link is invalid, or the underlying document no longer exists.' })
   @Post('tenancy-sign/:token')
   async submitTenantSignature(
     @Param('token') token: string,

@@ -1,7 +1,7 @@
 import { Controller, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { LearnService, UpdateProgressDto } from './learn.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 
 @Controller('learn')
 export class LearnController {
@@ -50,6 +50,10 @@ export class LearnController {
       },
     },
   })
+  @ApiBody({ schema: { type: 'object', required: ['positionSecs'], properties: {
+    positionSecs: { type: 'number', description: 'Current playback position, in seconds' },
+    completed: { type: 'boolean', nullable: true },
+  } } })
   @Put('progress/:videoId')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)

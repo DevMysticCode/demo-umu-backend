@@ -48,6 +48,7 @@ export class MaintenanceController {
   @ApiOperation({ summary: 'Clear placeholder Pexels property images', description: "Admin-secret-gated. Sets imageUrl to NULL for every property whose image is a Pexels placeholder URL. This module is excluded entirely from production builds (PROD_BUILD)." })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiResponse({ status: 200, description: 'Count of properties updated.', schema: { type: 'object', properties: { updated: { type: 'number' } } } })
+  @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
   @Post('fix-images')
   @HttpCode(HttpStatus.OK)
   async fixImages(@Headers('x-admin-secret') secret: string) {
@@ -60,6 +61,8 @@ export class MaintenanceController {
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiBody({ schema: { type: 'object', required: ['confirm'], properties: { confirm: { type: 'string', description: "Must equal the literal string 'DELETE-EVERYTHING'" } } } })
   @ApiResponse({ status: 200, description: 'Count of passports deleted.', schema: { type: 'object', properties: { deleted: { type: 'number' } } } })
+  @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
+  @ApiResponse({ status: 400, description: "confirm did not equal 'DELETE-EVERYTHING'." })
   @Delete('passports')
   @HttpCode(HttpStatus.OK)
   async deletePassports(

@@ -165,19 +165,83 @@ async function bootstrap() {
   // internal /docs use, or vice versa.
   const pentestDocsEnabled = process.env.PENTEST_DOCS_ENABLED === 'true';
   if (swaggerEnabled || pentestDocsEnabled) {
-    const config = new DocumentBuilder()
+    // API contract version (1.x) is tracked separately from the npm
+    // package's own internal dev version (package.json, currently 0.0.1 -
+    // that number reflects repo/build tooling, not the public API's
+    // stability, and reading it as the API version was flagged as
+    // confusing in external review. Bump this when the API surface makes
+    // a breaking change, independent of package.json.
+    const API_CONTRACT_VERSION = '1.0.0';
+
+    let configBuilder = new DocumentBuilder()
       .setTitle('UmovingU API')
       .setDescription(
         'umu-backend — NestJS/Prisma API behind the UmovingU frontends (mobile app, website-integration, website-new). ' +
           'Most endpoints require a Bearer access token obtained from /auth/login or /auth/verify-otp — click ' +
-          '"Authorize" above and paste the token (no "Bearer " prefix needed) to enable "Try it out" on them.',
+          '"Authorize" above and paste the token (no "Bearer " prefix needed) to enable "Try it out" on them. ' +
+          'Endpoints with no lock icon / no "Authorize" requirement are intentionally public - see each operation\'s ' +
+          'own description for confirmation. The route paths below are not yet versioned (no /api/v1 prefix); treat ' +
+          'this document\'s own version number as the API contract version instead.\n\n' +
+          'Error format: every error response (4xx/5xx) uses the same shape, { statusCode: number, message: string | string[] } ' +
+          '- enforced globally by AllExceptionsFilter, which also scrubs any internal/DB detail out of unexpected errors ' +
+          'before they reach the client. Individual operations document which specific error codes they can return and why; ' +
+          'the shape itself is always this one.\n\n' +
+          'Default error codes (apply to every operation below unless the operation explicitly says otherwise): ' +
+          '401 on any endpoint requiring the Authorize token above, if it is missing/invalid/expired/for a deleted or ' +
+          'password-changed account; 403 on any endpoint scoped to a specific owner/collaborator/admin, if the caller ' +
+          'does not hold the required relationship; 404 on any endpoint taking an :id/:token path parameter, if nothing ' +
+          'matches it; 400 on any endpoint taking a request body, if validation fails. Individual operations call these ' +
+          'out explicitly only where the reason is non-obvious or where a status code is deliberately NOT returned ' +
+          'despite looking like it should be (e.g. an idempotent delete that 200s instead of 404ing on a second call).',
       )
-      .setVersion(process.env.npm_package_version ?? '0.0.1')
+      .setVersion(API_CONTRACT_VERSION)
+      .addServer('http://localhost:3002', 'Local development')
+      .addServer('https://demo-umu-backend-production.up.railway.app', 'Staging / demo (Railway)')
+      .addServer('https://ijfai9mgwj.eu-west-2.awsapprunner.com', 'Production (AWS App Runner)')
       .addBearerAuth(
         { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
         'access-token',
-      )
-      .build();
+      );
+    const TAG_DESCRIPTIONS: Record<string, string> = {
+      Auth: 'Login (OTP/password/Google/Apple), access+refresh token issuance and rotation, password reset.',
+      Profile: "The signed-in user's own profile: personal details, address, company, solicitor, collaborator directory, preferences.",
+      Passport: 'The seller Property Passport: sections, tasks, collaborators, access scope, publish/unpublish, readiness, history.',
+      Pathway: "Guided decision flows ('What happens next') surfaced inside specific Passport sections.",
+      Property: 'Property search, claiming, enrichment (EPC/OS/Mapbox/council tax/broadband), wishlist/save/watch, buyer interest.',
+      Task: "A Passport section's individual tasks and their question flow.",
+      Question: 'Individual question answers, including file-upload answers and AI-generated guidance.',
+      Documents: "The document vault: categories, versions, per-document access grants and sharing, shared with me'.",
+      Files: 'Signed-URL private file delivery - the actual byte stream behind a document/answer upload.',
+      BuyerProfile: "A buyer's own verification profile (identity, funds, mortgage AIP) and its scoped sharing.",
+      BuyerProfileAccess: 'Requesting and approving/declining access to a shared buyer profile.',
+      BuyerProfileGrant: 'Revoking a previously-granted buyer-profile access.',
+      KYC: 'Identity verification via Persona - inquiry start and webhook intake.',
+      Payment: 'Stripe payment intents and webhook handling for Passport unlock and the buyer Verified tier.',
+      Marketplace: 'Tradesperson jobs, offers, escrow payments, reviews and payouts.',
+      Rewards: 'Points, stamps and milestone celebrations.',
+      Conversations: 'In-app messaging threads and viewing-request scheduling.',
+      Chat: "The AI assistant, with tool access to the caller's own passport/document/HomeScore data.",
+      Calendar: 'Viewings and personal reminders.',
+      Learn: 'Educational video content and watch progress.',
+      Support: 'Public support-request contact form.',
+      Collection: 'User-curated collections of saved properties.',
+      TrueValue: 'Declared home-improvement works and their effect on an estimated property valuation.',
+      Llc: 'Local land charge register lookups for a property.',
+      Onboarding: 'The first-run buyer/seller questionnaire.',
+      VerifierPublic: "An external organisation's own access-request and buyer-profile-fetch endpoints (X-Client-Id/X-Client-Secret auth, not user JWT).",
+      VerifierAdmin: 'Internal admin-secret-gated registration of new external organisations for the verifier-api.',
+      Admin: 'Admin-secret-gated account/role management.',
+      Maintenance: 'Admin-secret-gated destructive cleanup utilities - excluded from production.',
+      Notifications: "The caller's own notification inbox.",
+      Push: 'Device push-notification token registration.',
+      Capture: 'Lightweight analytics event capture.',
+      Health: 'Liveness/readiness checks for uptime monitoring.',
+      App: 'Root smoke-check endpoint.',
+    };
+    for (const [name, description] of Object.entries(TAG_DESCRIPTIONS)) {
+      configBuilder = configBuilder.addTag(name, description);
+    }
+    const config = configBuilder.build();
     const document = SwaggerModule.createDocument(app, config);
 
     if (swaggerEnabled) {

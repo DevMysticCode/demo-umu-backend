@@ -51,6 +51,7 @@ export class ProfileController {
   @Post('avatar')
   @ApiOperation({ summary: 'Upload profile avatar', description: 'Uploads a new avatar image (jpg/png/webp/gif, max 5MB), deletes the previous avatar file if one existed, and returns the updated user profile.' })
   @ApiResponse({ status: 201, description: 'Updated user profile including the new avatarUrl.', schema: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, avatarUrl: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'No file provided, or the file is not an allowed image type.' })
   @UseInterceptors(
     FileInterceptor('file', createUploadStorage({ bucket: 'avatars', maxMb: 5, mimeAllowList: IMAGE_MIME_TYPES })),
   )
@@ -107,6 +108,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Update an address', description: 'Updates an address the authenticated user owns. 404 if it does not exist, 403 if it belongs to someone else.' })
   @ApiParam({ name: 'id', description: 'UserAddress id' })
   @ApiResponse({ status: 200, description: 'The updated address.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, label: { type: 'string' }, line1: { type: 'string' }, line2: { type: 'string', nullable: true }, city: { type: 'string', nullable: true }, county: { type: 'string', nullable: true }, postcode: { type: 'string' }, isCurrent: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 403, description: 'The address belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No address exists with that id.' })
   updateAddress(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateAddressDto) {
     return this.profileService.updateAddress(req.user.id, id, dto);
   }
@@ -115,6 +118,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Delete an address', description: 'Deletes an address the authenticated user owns.' })
   @ApiParam({ name: 'id', description: 'UserAddress id' })
   @ApiResponse({ status: 200, description: 'Confirmation message.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Address deleted' } } } })
+  @ApiResponse({ status: 403, description: 'The address belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No address exists with that id.' })
   deleteAddress(@Req() req: any, @Param('id') id: string) {
     return this.profileService.deleteAddress(req.user.id, id);
   }
@@ -132,6 +137,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Update a company', description: 'Updates a company the authenticated user owns. Re-runs Companies House verification automatically if the company number changed.' })
   @ApiParam({ name: 'id', description: 'UserCompany id' })
   @ApiResponse({ status: 200, description: 'The updated company.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, name: { type: 'string' }, address: { type: 'string', nullable: true }, companyNumber: { type: 'string', nullable: true }, director: { type: 'string', nullable: true }, chStatus: { type: 'string', nullable: true }, chCompanyName: { type: 'string', nullable: true }, chVerifiedAt: { type: 'string', format: 'date-time', nullable: true }, chVerifyError: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 403, description: 'The company belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No company exists with that id.' })
   updateCompany(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCompanyDto) {
     return this.profileService.updateCompany(req.user.id, id, dto);
   }
@@ -140,6 +147,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Re-verify a company', description: "Re-checks a company's live status against Companies House and stores the result (status, name, verified-at, or an error message if the lookup failed)." })
   @ApiParam({ name: 'id', description: 'UserCompany id' })
   @ApiResponse({ status: 200, description: 'The company with refreshed Companies House verification fields.', schema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, companyNumber: { type: 'string', nullable: true }, chStatus: { type: 'string', nullable: true }, chCompanyName: { type: 'string', nullable: true }, chVerifiedAt: { type: 'string', format: 'date-time', nullable: true }, chVerifyError: { type: 'string', nullable: true } } } })
+  @ApiResponse({ status: 403, description: 'The company belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No company exists with that id.' })
   verifyCompany(@Req() req: any, @Param('id') id: string) {
     return this.profileService.verifyCompany(req.user.id, id);
   }
@@ -148,6 +157,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Delete a company', description: 'Deletes a company the authenticated user owns.' })
   @ApiParam({ name: 'id', description: 'UserCompany id' })
   @ApiResponse({ status: 200, description: 'Confirmation message.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Company deleted' } } } })
+  @ApiResponse({ status: 403, description: 'The company belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No company exists with that id.' })
   deleteCompany(@Req() req: any, @Param('id') id: string) {
     return this.profileService.deleteCompany(req.user.id, id);
   }
@@ -165,6 +176,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Update a solicitor', description: 'Updates a solicitor contact the authenticated user owns.' })
   @ApiParam({ name: 'id', description: 'UserSolicitor id' })
   @ApiResponse({ status: 200, description: 'The updated solicitor.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, name: { type: 'string' }, address: { type: 'string', nullable: true }, contactName: { type: 'string', nullable: true }, email: { type: 'string', nullable: true }, phone: { type: 'string', nullable: true }, reference: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 403, description: 'The solicitor belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No solicitor exists with that id.' })
   updateSolicitor(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateSolicitorDto) {
     return this.profileService.updateSolicitor(req.user.id, id, dto);
   }
@@ -173,6 +186,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Delete a solicitor', description: 'Deletes a solicitor contact the authenticated user owns.' })
   @ApiParam({ name: 'id', description: 'UserSolicitor id' })
   @ApiResponse({ status: 200, description: 'Confirmation message.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Solicitor deleted' } } } })
+  @ApiResponse({ status: 403, description: 'The solicitor belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No solicitor exists with that id.' })
   deleteSolicitor(@Req() req: any, @Param('id') id: string) {
     return this.profileService.deleteSolicitor(req.user.id, id);
   }
@@ -181,7 +196,7 @@ export class ProfileController {
 
   @Get('passports')
   @ApiOperation({ summary: "List the caller's passports", description: "Every passport the authenticated user owns (excluding abandoned PENDING_PAYMENT claims), most-recently-visited first, each with its property address, HomeScore, completion percentage and timestamps for dashboard summary cards." })
-  @ApiResponse({ status: 200, description: 'Array of passport summaries.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, propertyId: { type: 'string', nullable: true }, address: { type: 'string' }, type: { type: 'string' }, status: { type: 'string' }, homeScore: { type: 'number', nullable: true }, completionPercentage: { type: 'number' }, createdAt: { type: 'string', format: 'date-time' }, lastVisitedAt: { type: 'string', format: 'date-time', nullable: true } } } } })
+  @ApiResponse({ status: 200, description: 'Array of passport summaries. Not paginated - returns every passport the caller owns.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, propertyId: { type: 'string', nullable: true }, address: { type: 'string' }, type: { type: 'string' }, status: { type: 'string' }, homeScore: { type: 'number', nullable: true }, completionPercentage: { type: 'number' }, createdAt: { type: 'string', format: 'date-time' }, lastVisitedAt: { type: 'string', format: 'date-time', nullable: true } } } } })
   getUserPassports(@Req() req: any) {
     return this.profileService.getUserPassports(req.user.id);
   }
@@ -196,6 +211,9 @@ export class ProfileController {
   @ApiOperation({ summary: 'Get or assign a Founding Homeowner number', description: "Returns this property's Founding Homeowner certificate number, creating it on first request (one per claimed property, first 1M claims). The caller must own the given passport." })
   @ApiQuery({ name: 'passportId', description: 'The passport (claimed property) to get/assign a certificate number for' })
   @ApiResponse({ status: 200, description: 'The certificate number row, with isNew indicating whether it was just created.', schema: { type: 'object', properties: { number: { type: 'integer' }, passportId: { type: 'string' }, isNew: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'passportId query param is missing.' })
+  @ApiResponse({ status: 403, description: 'The caller does not own that passport.' })
+  @ApiResponse({ status: 404, description: 'No passport exists with that id.' })
   getFounderNumber(@Req() req: any, @Query('passportId') passportId: string) {
     if (!passportId) {
       throw new BadRequestException('passportId is required');
@@ -211,6 +229,8 @@ export class ProfileController {
   @Post('founder-number/email')
   @ApiOperation({ summary: 'Email the Founding Homeowner certificate', description: "Sends the already-rendered certificate image (rendered client-side) to the authenticated user's own registered email address via Resend." })
   @ApiResponse({ status: 200, description: 'Send confirmation.', schema: { type: 'object', properties: { sent: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'imageBase64 is missing.' })
+  @ApiResponse({ status: 404, description: 'Caller account has no registered email on file.' })
   @HttpCode(HttpStatus.OK)
   @ApiBody({
     schema: {
@@ -257,7 +277,7 @@ export class ProfileController {
 
   @Get('collaborators')
   @ApiOperation({ summary: "List the caller's trusted contacts", description: "Returns the authenticated user's own \"trusted contacts\" directory (UserCollaborator) — a profile-level contact list. This is cosmetic only and does not itself grant any data access; see PassportCollaborator for real access grants." })
-  @ApiResponse({ status: 200, description: 'Array of trusted-contact rows.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, collaboratorId: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' }, role: { type: 'string' }, permission: { type: 'string' }, propertyCount: { type: 'integer' } } } } })
+  @ApiResponse({ status: 200, description: 'Array of trusted-contact rows. Not paginated - returns every row the caller owns.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, collaboratorId: { type: 'string' }, name: { type: 'string' }, email: { type: 'string' }, role: { type: 'string' }, permission: { type: 'string' }, propertyCount: { type: 'integer' } } } } })
   getCollaborators(@Req() req: any) {
     return this.profileService.getCollaborators(req.user.id);
   }
@@ -266,6 +286,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Get one trusted contact', description: "Detail for a single trusted-contact row the caller owns, including which of the caller's passports it's associated with." })
   @ApiParam({ name: 'id', description: 'UserCollaborator row id' })
   @ApiResponse({ status: 200, description: 'The trusted-contact row with associated passports.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, collaboratorId: { type: 'string' }, role: { type: 'string', nullable: true }, permission: { type: 'string' }, collaborator: { type: 'object', properties: { id: { type: 'string' }, firstName: { type: 'string' }, lastName: { type: 'string' }, email: { type: 'string' }, avatarUrl: { type: 'string', nullable: true }, createdAt: { type: 'string', format: 'date-time' } } }, sharedPassports: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' }, address: { type: 'string' } } } } } } })
+  @ApiResponse({ status: 403, description: 'The trusted-contact row belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No trusted-contact row exists with that id.' })
   getCollaborator(@Req() req: any, @Param('id') id: string) {
     return this.profileService.getCollaborator(req.user.id, id);
   }
@@ -273,6 +295,7 @@ export class ProfileController {
   @Post('collaborators')
   @ApiOperation({ summary: 'Add a trusted contact', description: "Adds another user to the caller's trusted-contacts directory. Cosmetic only — does not itself grant that person access to any passport data." })
   @ApiResponse({ status: 201, description: 'The created trusted-contact row.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, collaboratorId: { type: 'string' }, role: { type: 'string', nullable: true }, permission: { type: 'string' }, propertyIds: { type: 'array', items: { type: 'string' }, nullable: true }, accessDuration: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time', nullable: true }, clientAccess: { type: 'string' }, allowComms: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 404, description: 'No account exists for the given collaborator email.' })
   addCollaborator(@Req() req: any, @Body() dto: AddCollaboratorDto) {
     return this.profileService.addCollaborator(req.user.id, dto);
   }
@@ -281,6 +304,8 @@ export class ProfileController {
   @ApiOperation({ summary: 'Remove a trusted contact', description: "Removes a row from the caller's trusted-contacts directory." })
   @ApiParam({ name: 'id', description: 'UserCollaborator row id' })
   @ApiResponse({ status: 200, description: 'Confirmation message.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Collaborator removed' } } } })
+  @ApiResponse({ status: 403, description: 'The trusted-contact row belongs to a different user.' })
+  @ApiResponse({ status: 404, description: 'No trusted-contact row exists with that id.' })
   removeCollaborator(@Req() req: any, @Param('id') id: string) {
     return this.profileService.removeCollaborator(req.user.id, id);
   }

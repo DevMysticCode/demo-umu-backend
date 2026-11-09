@@ -18,7 +18,7 @@ export class CollectionController {
 
   @Get('my')
   @ApiOperation({ summary: "List the caller's collections", description: "Returns the authenticated user's named passport collections (each with its member passports) plus a separate list of owned/collaborated passports not yet filed into any collection. Excludes abandoned PENDING_PAYMENT claims." })
-  @ApiResponse({ status: 200, description: 'Collections and any uncollected passports.', schema: { type: 'object', properties: {
+  @ApiResponse({ status: 200, description: 'Collections and any uncollected passports. Not paginated - returns everything the caller owns.', schema: { type: 'object', properties: {
     collections: { type: 'array', items: { type: 'object', properties: {
       id: { type: 'string' }, name: { type: 'string' }, userId: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
       items: { type: 'array', items: { type: 'object', properties: { passportId: { type: 'string' }, passport: { type: 'object', properties: {
@@ -66,6 +66,8 @@ export class CollectionController {
     description: 'The created (or already-existing, upserted) collection-item link.',
     schema: { type: 'object', properties: { id: { type: 'string' }, collectionId: { type: 'string' }, passportId: { type: 'string' } } },
   })
+  @ApiResponse({ status: 403, description: 'Either the collection is not the caller\'s, or the caller has no access to the given passport.' })
+  @ApiResponse({ status: 404, description: 'No collection exists with that id.' })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
@@ -93,6 +95,8 @@ export class CollectionController {
   @ApiOperation({ summary: 'Remove a passport from a collection', description: 'Removes a passport from a collection the caller owns. Does not delete the passport itself.' })
   @ApiParam({ name: 'id', description: 'PassportCollection id' })
   @ApiResponse({ status: 201, description: 'Success confirmation.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
+  @ApiResponse({ status: 403, description: 'The collection is not the caller\'s.' })
+  @ApiResponse({ status: 404, description: 'No collection exists with that id.' })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiBody({
@@ -120,6 +124,8 @@ export class CollectionController {
   @ApiOperation({ summary: 'Delete a collection', description: 'Deletes a collection the caller owns. The passports that were in it are not deleted.' })
   @ApiParam({ name: 'id', description: 'PassportCollection id' })
   @ApiResponse({ status: 200, description: 'Success confirmation.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
+  @ApiResponse({ status: 403, description: 'The collection is not the caller\'s.' })
+  @ApiResponse({ status: 404, description: 'No collection exists with that id.' })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   async deleteCollection(

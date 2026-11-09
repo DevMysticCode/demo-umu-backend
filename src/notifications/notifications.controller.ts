@@ -56,6 +56,7 @@ export class NotificationsController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Get()
   async list(
     @Request() req: any,
@@ -72,6 +73,7 @@ export class NotificationsController {
 
   @ApiOperation({ summary: 'Get unread notification count', description: 'Small { count } payload powering the notification bell badge; polled periodically by the frontend.' })
   @ApiResponse({ status: 200, description: 'Unread count.', schema: { type: 'object', properties: { count: { type: 'number' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Get('unread-count')
   async unread(@Request() req: any) {
     const count = await this.notifications.unreadCount(req.user.id);
@@ -81,6 +83,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Mark one notification read', description: "Marks a single notification in the caller's tray as read (tapped)." })
   @ApiParam({ name: 'id', description: 'Notification ID' })
   @ApiResponse({ status: 201, description: 'Count of rows updated (0 or 1 - idempotent, and a mismatched/foreign id is silently a no-op).', schema: { type: 'object', properties: { updated: { type: 'number' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Post(':id/read')
   async markRead(@Param('id') id: string, @Request() req: any) {
     return this.notifications.markRead(req.user.id, id);
@@ -88,6 +91,7 @@ export class NotificationsController {
 
   @ApiOperation({ summary: 'Mark all notifications read', description: "Bulk-marks every one of the caller's notifications as read, from the tray header's \"mark all\" action." })
   @ApiResponse({ status: 201, description: 'Count of rows updated.', schema: { type: 'object', properties: { updated: { type: 'number' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @Post('read-all')
   async markAllRead(@Request() req: any) {
     return this.notifications.markAllRead(req.user.id);

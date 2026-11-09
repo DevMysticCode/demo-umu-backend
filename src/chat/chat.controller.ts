@@ -36,7 +36,10 @@ export class ChatController {
   constructor(private chatService: ChatService) {}
 
   @ApiOperation({ summary: 'Send a message to the AI assistant', description: "Sends a message (with optional prior chat history) to the Groq Llama 3.3 70B assistant, which has tool access to the caller's own passport status, missing documents and HomeScore. Throttled to 20/min since each call is a paid LLM invocation." })
-  @ApiBody({ type: ChatDto })
+  @ApiBody({ schema: { type: 'object', required: ['message'], properties: {
+    message: { type: 'string' },
+    chatHistory: { type: 'array', nullable: true, description: 'Prior turns in this conversation, oldest first', items: { type: 'object', properties: { role: { type: 'string', enum: ['user', 'assistant'] }, content: { type: 'string' } } } },
+  } } })
   @ApiResponse({ status: 201, description: "The assistant's reply.", schema: { type: 'object', properties: { reply: { type: 'string' } } } })
   @Throttle(LLM_THROTTLE)
   @Post()

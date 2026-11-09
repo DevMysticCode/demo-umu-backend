@@ -126,6 +126,8 @@ export class PassportController {
     description: 'The passport id and its current status (already-typed/activated calls are idempotent no-ops).',
     schema: { type: 'object', properties: { passportId: { type: 'string' }, status: { type: 'string' } } },
   })
+  @ApiResponse({ status: 403, description: 'Caller is not this passport\'s owner.' })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async setPassportType(
     @Param('id') id: string,
     @Body() dto: SetPassportTypeDto,
@@ -152,6 +154,8 @@ export class PassportController {
     description: 'The passport id (idempotent - calling again on an already-active passport just returns the id).',
     schema: { type: 'object', properties: { passportId: { type: 'string' } } },
   })
+  @ApiResponse({ status: 403, description: 'Caller is not this passport\'s owner, or a precondition (payment/KYC/HMLR verification/type) is not yet met.' })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async activatePassport(@Param('id') id: string, @Request() req: any) {
     return this.passportService.activatePassport(id, req.user.id);
   }
@@ -169,6 +173,8 @@ export class PassportController {
     description: 'The new (or already-existing) seller passport id, and which section keys were carried over.',
     schema: { type: 'object', properties: { passportId: { type: 'string' }, transferredSectionKeys: { type: 'array', items: { type: 'string' } } } },
   })
+  @ApiResponse({ status: 403, description: 'Caller is not this landlord passport\'s owner.' })
+  @ApiResponse({ status: 404, description: 'Landlord passport not found.' })
   async convertToSeller(
     @Param('id') passportId: string,
     @Body() _dto: ConvertToSellerDto,
@@ -285,6 +291,7 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Passport not found, or caller isn't the owner/a scoped collaborator - deliberately returned as 403 rather than 404 so existence isn't leaked to an unauthorised caller." })
   async getPassport(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
     // getPassport() now enforces access itself (see its own comment) -
@@ -310,6 +317,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'The resolved jurisdiction.', schema: { type: 'object', properties: { nation: { type: 'string', nullable: true } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getJurisdiction(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getJurisdiction(passportId, req.user.id);
   }
@@ -332,6 +341,8 @@ export class PassportController {
       hasPublishRequired: { type: 'boolean', description: 'True if this task has at least one hard publication-blocking question' },
     } } },
   } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getPassportSections(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -361,6 +372,7 @@ export class PassportController {
     description: 'The caller\'s relationship to this passport.',
     schema: { type: 'object', properties: { isOwner: { type: 'boolean' }, isCollaborator: { type: 'boolean' }, permission: { type: 'string', nullable: true } } },
   })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getPassportAccess(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -394,6 +406,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getPassportPropertyFacts(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -426,6 +440,8 @@ export class PassportController {
     description: 'Status of the email: is-owner, already-collaborator, known-user, or unknown-user (plus first name where applicable).',
     schema: { type: 'object', properties: { status: { type: 'string' } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async checkCollaboratorEmail(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -468,6 +484,8 @@ export class PassportController {
     description: 'Confirmation that the join-invite email was sent.',
     schema: { type: 'object', properties: { message: { type: 'string', example: 'Invitation sent' }, invite: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' } } } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async inviteCollaborator(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -542,6 +560,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async addCollaborator(
     @Param('id') passportId: string,
     @Body('email') email: string,
@@ -608,6 +628,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport or collaborator not found.' })
   async updateCollaboratorScope(
     @Param('id') passportId: string,
     @Param('collaboratorId') collaboratorId: string,
@@ -637,6 +659,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Array of collaborators.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, email: { type: 'string' } } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getCollaborators(@Param('id') passportId: string, @Request() req: any) {
     const userId = req.user.id;
     return this.passportService.getCollaborators(passportId, userId);
@@ -652,6 +676,8 @@ export class PassportController {
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiParam({ name: 'collaboratorId', description: 'PassportCollaborator row ID to remove' })
   @ApiResponse({ status: 201, description: 'Confirmation of removal.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Collaborator removed successfully' } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport or collaborator not found.' })
   async removeCollaborator(
     @Param('id') passportId: string,
     @Param('collaboratorId') collaboratorId: string,
@@ -674,6 +700,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID to unlock' })
   @ApiResponse({ status: 201, description: 'Confirmation of access.', schema: { type: 'object', properties: { passportId: { type: 'string' } } } })
+  @ApiResponse({ status: 403, description: 'No successful payment on file, the passport is not yet PUBLISHED, or (for a non-owner) KYC has not been verified - checked in that order.' })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async buyerUnlock(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.createBuyerAccess(passportId, req.user.id);
   }
@@ -695,6 +723,8 @@ export class PassportController {
     description: 'The conversation this nudge was posted into, and whether the buyer already has paid access.',
     schema: { type: 'object', properties: { conversationId: { type: 'string' }, hasAccess: { type: 'boolean' } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport or target buyer not found.' })
   async sharePassportWithBuyer(
     @Param('id') passportId: string,
     @Body() body: SharePassportWithBuyerDto,
@@ -770,6 +800,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: 'Not published and unlocked by this buyer, and not the owner/a scoped collaborator.' })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getBuyerView(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getBuyerView(passportId, req.user.id);
   }
@@ -804,6 +836,8 @@ export class PassportController {
       requiredQuestionIds: { type: 'array', items: { type: 'string' }, description: 'Every question carrying at least one hard publication-blocker, for badging the question UI' },
     } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getReadiness(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getReadiness(passportId, req.user.id);
   }
@@ -817,7 +851,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'The passport id and its new status (idempotent if already published).', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'PUBLISHED' } } } })
-  @ApiResponse({ status: 403, description: 'Not yet activated, or publish-readiness still has unmet required disclosures (response includes the readiness detail).' })
+  @ApiResponse({ status: 403, description: 'Caller is not the owner, not yet activated, or publish-readiness still has unmet required disclosures (response includes the readiness detail).' })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async publishPassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.publishPassport(passportId, req.user.id);
   }
@@ -831,6 +866,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'The passport id and its new status.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'IN_PROGRESS' } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async unpublishPassport(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -851,6 +888,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Current visibility flag.', schema: { type: 'object', properties: { id: { type: 'string' }, publicVisibility: { type: 'boolean' }, publicVisibilitySetAt: { type: 'string', format: 'date-time', nullable: true } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getPublicVisibility(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.getPublicVisibility(passportId, req.user.id);
   }
@@ -877,6 +916,8 @@ export class PassportController {
     description: 'The updated visibility flag (idempotent no-op if already in the requested state).',
     schema: { type: 'object', properties: { id: { type: 'string' }, publicVisibility: { type: 'boolean' }, publicVisibilitySetAt: { type: 'string', format: 'date-time', nullable: true } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async setPublicVisibility(
     @Param('id') passportId: string,
     @Body('isPublic') isPublic: boolean,
@@ -904,6 +945,8 @@ export class PassportController {
       id: { type: 'string' }, type: { type: 'string' }, title: { type: 'string' }, actor: { type: 'string' }, icon: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' },
     } } },
   } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getTimeline(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -958,6 +1001,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getHistory(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -1020,6 +1065,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport or event not found.' })
   async getHistoryEventDetail(
     @Param('id') passportId: string,
     @Param('eventId') eventId: string,
@@ -1061,6 +1108,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async listActions(@Param('id') passportId: string, @Request() req: any) {
     return this.actionsService.listActions(passportId, req.user.id);
   }
@@ -1087,6 +1136,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport or action not found.' })
   async markActionAddressed(
     @Param('id') passportId: string,
     @Param('actionId') actionId: string,
@@ -1115,6 +1166,8 @@ export class PassportController {
       },
     },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport or action not found.' })
   async reopenAction(
     @Param('id') passportId: string,
     @Param('actionId') actionId: string,
@@ -1133,6 +1186,8 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Sections with visibility.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, status: { type: 'string' }, visibility: { type: 'string' } } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getVault(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -1155,6 +1210,8 @@ export class PassportController {
     description: 'The updated section.',
     schema: { type: 'object', properties: { id: { type: 'string' }, key: { type: 'string' }, title: { type: 'string' }, visibility: { type: 'string', example: 'PUBLIC', description: 'PUBLIC | PRIVATE' } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Section not found.' })
   async setSectionVisibility(
     @Param('sectionId') sectionId: string,
     @Request() req: any,
@@ -1173,6 +1230,8 @@ export class PassportController {
   @ApiOperation({ summary: 'Delete a passport', description: 'Owner-only, permanent deletion of the passport and its content.' })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Confirmation of deletion.', schema: { type: 'object', properties: { message: { type: 'string', example: 'Passport deleted successfully' } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't this passport's owner." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async deletePassport(@Param('id') passportId: string, @Request() req: any) {
     return this.passportService.deletePassport(passportId, req.user.id);
   }
@@ -1189,6 +1248,7 @@ export class PassportController {
   })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean', example: true } } } })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async setLastVisited(
     @Param('id') passportId: string,
     @Body() body: SetLastVisitedDto,
@@ -1215,6 +1275,7 @@ export class PassportController {
     sectionId: { type: 'string' }, taskId: { type: 'string' },
     reason: { type: 'string', enum: ['last-visited', 'next-in-section', 'next-section', 'first-task'] },
   } } } } })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getResumeTarget(
     @Param('id') passportId: string,
     @Request() req: any,
@@ -1245,6 +1306,7 @@ export class PassportController {
     description: 'The uploaded image\'s URL and file metadata.',
     schema: { type: 'object', properties: { url: { type: 'string' }, name: { type: 'string' }, mimeType: { type: 'string' }, size: { type: 'number' } } },
   })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator (\"Access denied\")." })
   @UseInterceptors(
     FileInterceptor(
       'file',
@@ -1286,6 +1348,8 @@ export class PassportController {
   @ApiOperation({ summary: 'List this passport\'s property images', description: 'Returns the ordered list of property image URLs attached to this passport.' })
   @ApiParam({ name: 'id', description: 'Passport ID' })
   @ApiResponse({ status: 200, description: 'Array of image URLs.', schema: { type: 'object', properties: { images: { type: 'array', items: { type: 'string' } } } } })
+  @ApiResponse({ status: 403, description: "Caller isn't the owner or a scoped collaborator." })
+  @ApiResponse({ status: 404, description: 'Passport not found.' })
   async getPropertyImages(
     @Param('id') passportId: string,
     @Request() req: any,

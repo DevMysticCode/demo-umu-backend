@@ -41,7 +41,9 @@ export class AdminController {
   @ApiOperation({ summary: 'Search accounts by email substring (admin)', description: 'Read-only: finds accounts whose email contains any of the given comma-separated substrings, for reviewing before a bulk delete.' })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiQuery({ name: 'contains', description: 'Comma-separated substrings to match against email addresses' })
-  @ApiResponse({ status: 200, description: 'Matching accounts.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true }, isVerified: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' } } } } })
+  @ApiResponse({ status: 200, description: 'Matching accounts. Not paginated - returns every match.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, email: { type: 'string' }, firstName: { type: 'string', nullable: true }, lastName: { type: 'string', nullable: true }, isVerified: { type: 'boolean' }, createdAt: { type: 'string', format: 'date-time' } } } } })
+  @ApiResponse({ status: 400, description: "contains is missing or empty after trimming/splitting." })
+  @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
   @HttpCode(HttpStatus.OK)
   async searchUsers(
     @Headers('x-admin-secret') secret: string,
@@ -64,6 +66,8 @@ export class AdminController {
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiBody({ schema: { type: 'object', required: ['emails'], properties: { emails: { type: 'array', items: { type: 'string' } } } } })
   @ApiResponse({ status: 200, description: 'Which emails were deleted vs. not found.', schema: { type: 'object', properties: { deleted: { type: 'array', items: { type: 'string' } }, notFound: { type: 'array', items: { type: 'string' } } } } })
+  @ApiResponse({ status: 400, description: 'emails is missing or not a non-empty array.' })
+  @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
   @HttpCode(HttpStatus.OK)
   async deleteUsers(
     @Headers('x-admin-secret') secret: string,
@@ -81,7 +85,8 @@ export class AdminController {
   @Get('founder-numbers')
   @ApiOperation({ summary: 'List Founder Numbers (admin)', description: 'Read-only: every FounderNumber row (certificate number, owning user email, passport id, assigned-at), for reviewing before a one-off sequence reset.' })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
-  @ApiResponse({ status: 200, description: 'All Founder Number rows.', schema: { type: 'array', items: { type: 'object', properties: { number: { type: 'integer' }, userEmail: { type: 'string' }, passportId: { type: 'string' }, assignedAt: { type: 'string', format: 'date-time' } } } } })
+  @ApiResponse({ status: 200, description: 'All Founder Number rows. Not paginated - returns every row.', schema: { type: 'array', items: { type: 'object', properties: { number: { type: 'integer' }, userEmail: { type: 'string' }, passportId: { type: 'string' }, assignedAt: { type: 'string', format: 'date-time' } } } } })
+  @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
   @HttpCode(HttpStatus.OK)
   async listFounderNumbers(@Headers('x-admin-secret') secret: string) {
     this.guard(secret);
@@ -97,6 +102,9 @@ export class AdminController {
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiBody({ schema: { type: 'object', required: ['restartAt', 'confirm'], properties: { restartAt: { type: 'integer', description: 'Value the sequence should restart at' }, confirm: { type: 'string', example: 'RESET-FOUNDER-SEQ' } } } })
   @ApiResponse({ status: 200, description: 'How many rows were wiped and the new sequence start.', schema: { type: 'object', properties: { deletedRows: { type: 'integer' }, sequenceRestartedAt: { type: 'integer' } } } })
+  @ApiResponse({ status: 400, description: 'restartAt is not a positive integer.' })
+  @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
+  @ApiResponse({ status: 500, description: "confirm did not equal 'RESET-FOUNDER-SEQ' - currently surfaces as a generic server error rather than a 400, since the service throws a plain Error here rather than a BadRequestException." })
   @HttpCode(HttpStatus.OK)
   async resetFounderNumbers(
     @Headers('x-admin-secret') secret: string,
@@ -121,6 +129,9 @@ export class AdminController {
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
   @ApiParam({ name: 'email', description: 'Email address of the account to update' })
   @ApiResponse({ status: 200, description: 'The updated admin flag.', schema: { type: 'object', properties: { email: { type: 'string' }, isAdmin: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'isAdmin is missing or not a boolean.' })
+  @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
+  @ApiResponse({ status: 404, description: 'No account exists for that email.' })
   @HttpCode(HttpStatus.OK)
   @ApiBody({
     schema: {

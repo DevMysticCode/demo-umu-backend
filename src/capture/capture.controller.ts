@@ -65,7 +65,15 @@ export class CaptureController {
   constructor(private capture: CaptureService) {}
 
   @ApiOperation({ summary: 'Record an analytics capture event', description: "Public — JWT is optional (OptionalJwtAuthGuard). Records a grant-eligibility-check, match-request or early-access event from the installer/marketplace intake flow. If a valid token is present the event is linked to that user, otherwise it's recorded anonymously since grant checks happen before contact details are collected." })
-  @ApiBody({ type: CaptureEventDto })
+  @ApiBody({ schema: { type: 'object', required: ['type', 'source'], properties: {
+    type: { type: 'string', enum: ['grant_check', 'match_request', 'early_access'] },
+    source: { type: 'string', description: 'Which UI surface fired this event' },
+    propertyId: { type: 'string', nullable: true },
+    postcode: { type: 'string', nullable: true },
+    contact: { type: 'object', nullable: true, description: 'Only present once contact details have actually been collected', properties: {
+      name: { type: 'string', nullable: true }, contact: { type: 'string', nullable: true, description: 'Email or phone' }, consentToContact: { type: 'boolean', nullable: true },
+    } },
+  } } })
   @ApiResponse({ status: 201, description: 'The created event (narrow projection - just the new id and timestamp).', schema: { type: 'object', properties: { id: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } })
   @SkipThrottle()
   @UseGuards(OptionalJwtAuthGuard)

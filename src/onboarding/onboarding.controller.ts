@@ -15,7 +15,17 @@ export class OnboardingController {
   constructor(private onboardingService: OnboardingService) {}
 
   @ApiOperation({ summary: 'Save the first-run onboarding questionnaire', description: "Saves (upserts) the signed-in user's answers from the first-run onboarding questionnaire." })
-  @ApiBody({ type: SaveQuestionnaireDto })
+  @ApiBody({ schema: { type: 'object', properties: {
+    purpose: { type: 'array', items: { type: 'string' }, nullable: true },
+    buyingTimeline: { type: 'string', nullable: true },
+    budgetMin: { type: 'number', nullable: true },
+    budgetMax: { type: 'number', nullable: true },
+    propertyTypes: { type: 'array', items: { type: 'string' }, nullable: true },
+    propertyStyles: { type: 'array', items: { type: 'string' }, nullable: true },
+    importantFeatures: { type: 'array', items: { type: 'string' }, nullable: true },
+    sellingTimeline: { type: 'string', nullable: true },
+    propertyValue: { type: 'number', nullable: true },
+  } } })
   @ApiResponse({
     status: 201,
     description: 'Confirmation plus the upserted UserPreference row.',

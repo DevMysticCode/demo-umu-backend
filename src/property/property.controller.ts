@@ -79,7 +79,7 @@ export class PropertyController {
 
   @Throttle(SEARCH_THROTTLE)
   @Get('search')
-  @ApiOperation({ summary: 'Search properties by postcode/area', description: 'Full-text property search with pagination, radius, and optional Rightmove-style filters (type, bedrooms, EPC, price, passport status). Requires at least 2 characters of query text.' })
+  @ApiOperation({ summary: 'Search properties by postcode/area', description: 'Full-text property search with pagination, radius, and optional Rightmove-style filters (type, bedrooms, EPC, price, passport status). Requires at least 2 characters of query text. No authentication required.' })
   @ApiQuery({ name: 'q', description: 'Search text (postcode or area), minimum 2 characters', required: true })
   @ApiQuery({ name: 'offset', description: 'Pagination offset, default 0', required: false })
   @ApiQuery({ name: 'limit', description: 'Page size, default 25, max 50', required: false })
@@ -196,7 +196,7 @@ export class PropertyController {
   // dropdown; see PropertyService.searchAreas for the grouping logic.
   @Throttle(SEARCH_THROTTLE)
   @Get('search-areas')
-  @ApiOperation({ summary: 'Typeahead search for areas (city/county)', description: 'Rightmove-style location typeahead returning distinct areas rather than individual properties, for the Explore search dropdown.' })
+  @ApiOperation({ summary: 'Typeahead search for areas (city/county)', description: 'Rightmove-style location typeahead returning distinct areas rather than individual properties, for the Explore search dropdown. No authentication required.' })
   @ApiQuery({ name: 'q', description: 'Search text, minimum 2 characters', required: true })
   @ApiQuery({ name: 'limit', description: 'Max results, default 8, max 15', required: false })
   @ApiResponse({ status: 200, description: 'Matching areas', schema: { type: 'object', properties: { items: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, city: { type: 'string', nullable: true }, county: { type: 'string', nullable: true }, postcode: { type: 'string', nullable: true } } } } } } })
@@ -212,6 +212,7 @@ export class PropertyController {
   @ApiOperation({ summary: "Get a property's claim/passport status", description: "Returns whether the property is unclaimed, claimed, or published, and (for the signed-in user) whether they are the owner, a collaborator, or hold buyer access. Drives the property page's Claim/Access Passport button." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Passport status for this property and the current user', schema: { type: 'object', properties: { hasPassport: { type: 'boolean' }, status: { type: 'string', nullable: true }, isOwner: { type: 'boolean' }, isCollaborator: { type: 'boolean' }, hasBuyerAccess: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getPassportStatus(@Param('id') id: string, @Request() req: any) {
     const userId = req.user.id;
     return this.propertyService.getPassportStatus(id, userId);
@@ -228,6 +229,7 @@ export class PropertyController {
     submittedAt: { type: 'string', format: 'date-time' }, verifiedAt: { type: 'string', format: 'date-time', nullable: true },
     kycAlreadyVerifiedAtStart: { type: 'boolean', nullable: true }, hmlrAlreadyVerifiedAtStart: { type: 'boolean', nullable: true },
   } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async startVerification(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.startVerification(id, req.user.id);
   }
@@ -247,6 +249,10 @@ export class PropertyController {
     addressLine1: { type: 'string' }, postcode: { type: 'string' },
     propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true },
   } } })
+  @ApiResponse({ status: 400, description: 'tenure is not one of the allowed values.' })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
+  @ApiResponse({ status: 403, description: 'Caller does not manage this property.' })
+  @ApiResponse({ status: 404, description: 'Property not found.' })
   async selfDeclarePropertyDetails(
     @Param('id') id: string,
     @Request() req: any,
@@ -261,6 +267,7 @@ export class PropertyController {
   @ApiOperation({ summary: 'Get ownership verification status', description: "Returns this user's OwnershipVerification record for the property (method, status, HM Land Registry match result), if one exists." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Ownership verification record, or null if none started', schema: { type: 'object', nullable: true, properties: { status: { type: 'string' }, verificationMethod: { type: 'string' }, landRegistryMatchResult: { type: 'string', nullable: true } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getVerificationStatus(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getVerificationStatus(id, req.user.id);
   }
@@ -271,6 +278,8 @@ export class PropertyController {
   @ApiOperation({ summary: 'Confirm ownership verification as complete', description: "Finalises a claim that HM Land Registry verification has already marked VERIFIED with a SINGLE_MATCH result - rejects if that evidence isn't present. Does not itself create a passport." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Confirmation only - this endpoint does not return the verification record itself', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
+  @ApiResponse({ status: 403, description: 'Ownership has not been verified against HM Land Registry yet (no VERIFIED/SINGLE_MATCH record).' })
   async completeVerification(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.completeVerification(id, req.user.id);
   }
@@ -296,6 +305,7 @@ export class PropertyController {
     acknowledgement: { type: 'object', nullable: true, description: 'Present only on a TypeCode 10 queued acknowledgement - raw HMLR passthrough, not independently typed' },
     messageId: { type: 'string', description: 'HMLR message id, for pinning a specific test-stub scenario or audit trace' },
   } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async verifyOwnershipWithLandRegistry(
     @Param('id') id: string,
     @Request() req: any,
@@ -322,14 +332,15 @@ export class PropertyController {
   // public property-data endpoints (epc-*, sold-history, etc.).
   @Throttle(STREET_VIEW_THROTTLE)
   @Get('street-view-image')
-  @ApiOperation({ summary: 'Proxy a Google Street View image', description: "Fetches a Street View Static image server-side (so the Google API key never reaches the browser) and streams it back. Cached to limit upstream billing." })
+  @ApiOperation({ summary: 'Proxy a Google Street View image', description: "Fetches a Street View Static image server-side (so the Google API key never reaches the browser) and streams it back. Cached to limit upstream billing. No authentication required." })
   @ApiQuery({ name: 'lat', description: 'Latitude, -90 to 90', required: true })
   @ApiQuery({ name: 'lon', description: 'Longitude, -180 to 180', required: true })
   @ApiQuery({ name: 'size', description: 'Image size, e.g. "640x400"', required: false })
   @ApiQuery({ name: 'fov', description: 'Field of view in degrees', required: false })
   @ApiQuery({ name: 'pitch', description: 'Camera pitch in degrees', required: false })
   @ApiQuery({ name: 'radius', description: 'Search radius for the nearest panorama, in metres', required: false })
-  @ApiResponse({ status: 200, description: 'Raw image bytes (binary response, not JSON)' })
+  @ApiResponse({ status: 200, description: 'The Street View image, streamed directly.', content: { 'image/jpeg': { schema: { type: 'string', format: 'binary' } } } })
+  @ApiResponse({ status: 404, description: 'Invalid lat/lon, or no Street View panorama available near this location.' })
   async getStreetViewImage(
     @Query('lat') lat: string,
     @Query('lon') lon: string,
@@ -367,11 +378,12 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's wishlisted properties", description: 'Returns every property the signed-in user has wishlisted. Entirely private - never visible to the property owner.' })
-  @ApiResponse({ status: 200, description: 'Array of wishlisted properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus wishlistedAt - representative fields shown, not exhaustive', properties: {
+  @ApiResponse({ status: 200, description: 'Array of wishlisted properties. Not paginated - every wishlisted property is returned in one call.', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus wishlistedAt - representative fields shown, not exhaustive', properties: {
     id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
     estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
     wishlistedAt: { type: 'string', format: 'date-time' },
   } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getWishlist(@Request() req: any) {
     return this.propertyService.getWishlist(req.user.id);
   }
@@ -380,12 +392,13 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's saved properties", description: 'Returns every property the signed-in user has saved, each with its HomeScore if one exists. Entirely private - never visible to the property owner.' })
-  @ApiResponse({ status: 200, description: 'Array of saved properties with HomeScore', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus savedAt/homeScore - representative fields shown, not exhaustive', properties: {
+  @ApiResponse({ status: 200, description: 'Array of saved properties with HomeScore. Not paginated - every saved property is returned in one call.', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus savedAt/homeScore - representative fields shown, not exhaustive', properties: {
     id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
     estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
     savedAt: { type: 'string', format: 'date-time' },
     homeScore: { type: 'number', nullable: true, description: "Caller's own HomeScore if run, else the most recent score anyone produced, else the property's EPC score" },
   } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getSaved(@Request() req: any) {
     return this.propertyService.getSavedProperties(req.user.id);
   }
@@ -397,7 +410,7 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get the user's watched properties", description: "Every property the user has opted into notifications for via \"Watch this property\", distinct from the plain Save heart." })
-  @ApiResponse({ status: 200, description: 'Array of watched properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus watch metadata - representative fields shown, not exhaustive', properties: {
+  @ApiResponse({ status: 200, description: 'Array of watched properties. Not paginated - every watched property is returned in one call.', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus watch metadata - representative fields shown, not exhaustive', properties: {
     id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
     estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
     watchedAt: { type: 'string', format: 'date-time' },
@@ -405,6 +418,7 @@ export class PropertyController {
     hasPassport: { type: 'boolean' }, passportPublished: { type: 'boolean' },
     homeScore: { type: 'number', nullable: true },
   } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getWatches(@Request() req: any) {
     return this.propertyService.getWatchedProperties(req.user.id);
   }
@@ -414,11 +428,12 @@ export class PropertyController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: "Get recently viewed properties", description: "Every property the user has opened recently, not just saved ones - private browsing history." })
-  @ApiResponse({ status: 200, description: 'Array of recently viewed properties', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus viewedAt - representative fields shown, not exhaustive', properties: {
+  @ApiResponse({ status: 200, description: 'Array of recently viewed properties. Not paginated.', schema: { type: 'array', items: { type: 'object', description: 'Full Property record plus viewedAt - representative fields shown, not exhaustive', properties: {
     id: { type: 'string' }, addressLine1: { type: 'string' }, postcode: { type: 'string' },
     estimatedPrice: { type: 'number', nullable: true }, epcRating: { type: 'string', nullable: true },
     viewedAt: { type: 'string', format: 'date-time' },
   } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getRecentlyViewed(@Request() req: any) {
     return this.propertyService.getRecentlyViewed(req.user.id);
   }
@@ -432,6 +447,7 @@ export class PropertyController {
   @ApiOperation({ summary: 'Record a property page view', description: "Upsert-and-bump: fired from the property page's mount to update the user's recently-viewed list." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Acknowledgement', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async recordView(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.recordRecentlyViewed(req.user.id, id);
   }
@@ -473,6 +489,7 @@ export class PropertyController {
     total: { type: 'number' },
     needsPostcode: { type: 'boolean', nullable: true, description: 'True (with an empty items array) if the user has no postcode set yet' },
   } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getForYou(
     @Request() req: any,
     @Query('propertyType') propertyType?: string,
@@ -539,6 +556,7 @@ export class PropertyController {
   @ApiOperation({ summary: "Get the user's wishlist/save state for a property", description: "Quick lookup of whether the signed-in user has wishlisted or saved this specific property." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Wishlist/save flags', schema: { type: 'object', properties: { wishlisted: { type: 'boolean' }, saved: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getPropertyActions(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getPropertyActions(req.user.id, id);
   }
@@ -549,6 +567,7 @@ export class PropertyController {
   @ApiOperation({ summary: 'Toggle wishlist for a property', description: 'Adds the property to the wishlist if not present, removes it if already there. Private - never visible to the owner.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'New wishlist state', schema: { type: 'object', properties: { wishlisted: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async toggleWishlist(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.toggleWishlist(req.user.id, id);
   }
@@ -559,6 +578,7 @@ export class PropertyController {
   @ApiOperation({ summary: 'Toggle save for a property', description: 'Adds the property to saved properties if not present, removes it if already there. Private - never visible to the owner.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'New saved state', schema: { type: 'object', properties: { saved: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async toggleSave(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.toggleSave(req.user.id, id);
   }
@@ -574,6 +594,7 @@ export class PropertyController {
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiBody({ schema: { type: 'object', properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } } })
   @ApiResponse({ status: 200, description: 'The saved watch preferences', schema: { type: 'object', properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async upsertPropertyWatch(
     @Param('id') id: string,
     @Request() req: any,
@@ -589,6 +610,7 @@ export class PropertyController {
   @ApiOperation({ summary: 'Get notification preferences for a property', description: "Returns the user's current watch preferences for this property, if any." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Watch preferences, or null if not watching', schema: { type: 'object', nullable: true, properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async getPropertyWatch(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.getPropertyWatch(req.user.id, id);
   }
@@ -599,12 +621,13 @@ export class PropertyController {
   @ApiOperation({ summary: 'Stop watching a property', description: 'Removes all notification preferences for this property.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Updated watch state', schema: { type: 'object', properties: { watching: { type: 'boolean' } } } })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async deletePropertyWatch(@Param('id') id: string, @Request() req: any) {
     return this.propertyService.deletePropertyWatch(req.user.id, id);
   }
 
   @Get(':id/sold-history')
-  @ApiOperation({ summary: 'Get sold-price history for a property and its area', description: "Live HM Land Registry price-paid history for this property and nearby sales." })
+  @ApiOperation({ summary: 'Get sold-price history for a property and its area', description: "Live HM Land Registry price-paid history for this property and nearby sales. No authentication required." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'This property\'s own sales plus nearby sales', schema: { type: 'object', properties: {
     thisProperty: { type: 'array', items: { type: 'object', properties: { price: { type: 'number' }, date: { type: 'string' }, address: { type: 'string' }, town: { type: 'string', nullable: true }, propertyType: { type: 'string', nullable: true }, tenure: { type: 'string', nullable: true }, newBuild: { type: 'boolean' }, isThisProperty: { type: 'boolean' } } } },
@@ -615,7 +638,7 @@ export class PropertyController {
   }
 
   @Get(':id/enrichment')
-  @ApiOperation({ summary: 'Get property enrichment data', description: "Returns the property's enrichment fields (sqft, bedrooms, year built, heating type, council tax band, EPC) sourced from EPC/OS/other upstream APIs." })
+  @ApiOperation({ summary: 'Get property enrichment data', description: "Returns the property's enrichment fields (sqft, bedrooms, year built, heating type, council tax band, EPC) sourced from EPC/OS/other upstream APIs. No authentication required." })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Enrichment data', schema: { type: 'object', properties: {
     nearby: { type: 'object', description: 'OS NGD (schools) + Overpass (everything else) results, each field sorted by distanceKm ascending', properties: {
@@ -667,6 +690,7 @@ export class PropertyController {
     radonData: { type: 'object', nullable: true, description: 'BGS/UKHSA indicative radon potential', properties: { classMax: { type: 'number' }, band: { type: 'string', enum: ['Low', 'Moderate', 'Higher'] }, description: { type: 'string', description: "BGS's own plain-English text, surfaced verbatim" } } },
     streetViewUrl: { type: 'string', nullable: true, description: 'Proxied URL - never the raw Google API key' },
   } } })
+  @ApiResponse({ status: 404, description: 'Property not found.' })
   async getEnrichment(@Param('id') id: string): Promise<any> {
     const data = await this.propertyService.getPropertyEnrichment(id);
     if (!data) throw new NotFoundException('Property not found');
@@ -677,7 +701,7 @@ export class PropertyController {
   // upstream APIs returned data, were empty, or errored. Includes which
   // env-var keys are present without leaking values.
   @Get(':id/enrichment/debug')
-  @ApiOperation({ summary: 'Debug per-source enrichment pipeline health', description: 'Reports which upstream APIs returned data, were empty, or errored for this property, and which env-var keys are present (without leaking values). Diagnostic endpoint.' })
+  @ApiOperation({ summary: 'Debug per-source enrichment pipeline health', description: 'Reports which upstream APIs returned data, were empty, or errored for this property, and which env-var keys are present (without leaking values). Diagnostic endpoint. No authentication required.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
   @ApiResponse({ status: 200, description: 'Per-source diagnostic report', schema: { type: 'object', properties: {
     property: { type: 'object', properties: { id: { type: 'string' }, postcode: { type: 'string', nullable: true }, lat: { type: 'number', nullable: true }, lon: { type: 'number', nullable: true }, uprn: { type: 'string', nullable: true } } },

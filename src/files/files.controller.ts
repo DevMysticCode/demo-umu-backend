@@ -51,7 +51,7 @@ export class FilesController {
   @ApiQuery({ name: 'u', description: 'The user id the link was signed for.' })
   @ApiQuery({ name: 'exp', description: 'Unix expiry timestamp.' })
   @ApiQuery({ name: 'sig', description: 'HMAC-SHA256 signature over the path, user id and expiry.' })
-  @ApiResponse({ status: 200, description: 'The file content, streamed directly (not JSON).' })
+  @ApiResponse({ status: 200, description: 'The file content, streamed directly - content-type matches the stored file (e.g. application/pdf, image/jpeg).', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } })
   @ApiResponse({ status: 400, description: 'Malformed bucket/filename (e.g. path traversal attempt).' })
   @ApiResponse({ status: 403, description: 'Signature invalid/expired, or the user no longer has a right to this file - deliberately generic so a failed attempt reveals nothing about which check failed.' })
   @ApiResponse({ status: 404, description: 'File not found on disk/storage.' })
