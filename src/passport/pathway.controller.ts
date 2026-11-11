@@ -7,21 +7,21 @@ import { createUploadStorage, DOCUMENT_MIME_TYPES } from '../common/storage';
 import { PathwayService } from './pathway.service';
 
 class AdvanceJourneyDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the pathway step being answered.' })
   @IsString()
   stepId: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'The label of the chosen answer option for this step.' })
   @IsString()
   answerLabel: string;
 
-  @ApiProperty({ type: [String], required: false })
+  @ApiProperty({ type: [String], required: false, description: 'URLs of any evidence files uploaded via /pathways/evidence that support this answer.' })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   evidenceFileUrls?: string[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Optional free-text note to attach to this answer.' })
   @IsOptional()
   @IsString()
   notes?: string;
@@ -245,7 +245,7 @@ export class PathwayController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Evidence file to attach to a pathway step.' },
       },
       required: ['file'],
     },

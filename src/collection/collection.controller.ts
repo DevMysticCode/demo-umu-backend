@@ -47,7 +47,7 @@ export class CollectionController {
       type: 'object',
       required: ['name'],
       properties: {
-        name: { type: 'string' },
+        name: { type: 'string', description: 'Display name for the new collection.' },
       },
     },
   })
@@ -75,7 +75,7 @@ export class CollectionController {
       type: 'object',
       required: ['passportId'],
       properties: {
-        passportId: { type: 'string' },
+        passportId: { type: 'string', description: 'ID of the passport to file into this collection.' },
       },
     },
   })
@@ -104,7 +104,7 @@ export class CollectionController {
       type: 'object',
       required: ['passportId'],
       properties: {
-        passportId: { type: 'string' },
+        passportId: { type: 'string', description: 'ID of the passport to remove from this collection.' },
       },
     },
   })

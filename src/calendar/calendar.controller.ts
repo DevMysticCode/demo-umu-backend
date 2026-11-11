@@ -71,13 +71,13 @@ export class CalendarController {
     },
   })
   @ApiBody({ schema: { type: 'object', required: ['title', 'date'], properties: {
-    title: { type: 'string' },
+    title: { type: 'string', description: 'Title of the reminder.' },
     date: { type: 'string', description: 'ISO date, e.g. 2026-09-14' },
-    time: { type: 'string', nullable: true, example: '14:00' },
-    repeats: { type: 'string', nullable: true },
-    notes: { type: 'string', nullable: true },
-    type: { type: 'string', nullable: true },
-    sourceRef: { type: 'string', nullable: true },
+    time: { type: 'string', nullable: true, example: '14:00', description: 'Reminder time, 24-hour "HH:mm".' },
+    repeats: { type: 'string', nullable: true, description: 'Recurrence rule for this reminder, if it repeats.' },
+    notes: { type: 'string', nullable: true, description: 'Free-text notes attached to the reminder.' },
+    type: { type: 'string', nullable: true, description: 'Category of reminder (e.g. viewing, deadline), used for icon/grouping.' },
+    sourceRef: { type: 'string', nullable: true, description: 'Reference ID linking this reminder back to the entity that created it.' },
   } } })
   @Post()
   async createReminder(@Request() req, @Body() dto: CreateReminderDto) {
@@ -106,11 +106,11 @@ export class CalendarController {
     },
   })
   @ApiBody({ schema: { type: 'object', properties: {
-    title: { type: 'string', nullable: true },
-    date: { type: 'string', nullable: true },
-    time: { type: 'string', nullable: true },
-    repeats: { type: 'string', nullable: true },
-    notes: { type: 'string', nullable: true },
+    title: { type: 'string', nullable: true, description: 'Title of the reminder.' },
+    date: { type: 'string', nullable: true, description: 'Reminder date, ISO date string.' },
+    time: { type: 'string', nullable: true, description: 'Reminder time, 24-hour "HH:mm".' },
+    repeats: { type: 'string', nullable: true, description: 'Recurrence rule for this reminder, if it repeats.' },
+    notes: { type: 'string', nullable: true, description: 'Free-text notes attached to the reminder.' },
   } } })
   @Put(':id')
   async updateReminder(

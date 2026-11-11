@@ -109,7 +109,7 @@ export class QuestionController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'File to store as this question\'s single-slot answer.' },
       },
       required: ['file'],
     },
@@ -157,7 +157,7 @@ export class QuestionController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'File to store for this one part of the MULTIPART question.' },
       },
       required: ['file'],
     },
@@ -224,9 +224,9 @@ export class QuestionController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
-        name: { type: 'string' },
-        kind: { type: 'string' },
+        file: { type: 'string', format: 'binary', description: 'Certificate/document file to add as another copy.' },
+        name: { type: 'string', description: 'Display name for this copy.' },
+        kind: { type: 'string', description: 'Sub-kind of certificate, for questions that track more than one type.' },
       },
       required: ['file'],
     },
@@ -305,7 +305,7 @@ export class QuestionController {
     schema: {
       type: 'object',
       properties: {
-        kind: { type: 'string', enum: ['tenancy', 'inventory'] },
+        kind: { type: 'string', enum: ['tenancy', 'inventory'], description: 'Which document the sign link is for.' },
       },
     },
   })

@@ -52,7 +52,7 @@ export class LearnController {
   })
   @ApiBody({ schema: { type: 'object', required: ['positionSecs'], properties: {
     positionSecs: { type: 'number', description: 'Current playback position, in seconds' },
-    completed: { type: 'boolean', nullable: true },
+    completed: { type: 'boolean', nullable: true, description: 'Whether the video has been watched to completion.' },
   } } })
   @Put('progress/:videoId')
   @ApiBearerAuth('access-token')

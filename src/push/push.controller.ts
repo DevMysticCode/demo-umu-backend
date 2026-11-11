@@ -22,8 +22,8 @@ export class PushController {
   @ApiOperation({ summary: 'Register a push notification token', description: "Registers (or re-registers) the signed-in user's device push token for the given platform, so push notifications can be delivered to this device." })
   @ApiBody({ schema: { type: 'object', required: ['token', 'platform'], properties: {
     token: { type: 'string', description: 'The device push token (FCM/APNs)' },
-    platform: { type: 'string', example: 'ios' },
-    deviceId: { type: 'string', nullable: true },
+    platform: { type: 'string', example: 'ios', description: 'The device platform this token belongs to.' },
+    deviceId: { type: 'string', nullable: true, description: 'Optional stable device identifier, used to replace a previous token for the same device.' },
   } } })
   @ApiResponse({ status: 201, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   @Post()
@@ -33,7 +33,7 @@ export class PushController {
   }
 
   @ApiOperation({ summary: 'Unregister a push notification token', description: "Removes one of the signed-in user's device push tokens, stopping further push delivery to that device." })
-  @ApiBody({ schema: { type: 'object', required: ['token'], properties: { token: { type: 'string' } } } })
+  @ApiBody({ schema: { type: 'object', required: ['token'], properties: { token: { type: 'string', description: 'The device push token to remove.' } } } })
   @ApiResponse({ status: 200, description: 'Confirmation.', schema: { type: 'object', properties: { ok: { type: 'boolean' } } } })
   @Delete()
   async unregister(@Req() req: any, @Body() dto: UnregisterPushTokenDto) {

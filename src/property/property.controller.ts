@@ -592,7 +592,13 @@ export class PropertyController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Set per-property notification preferences', description: 'Upserts which notification categories (claimed/progress/published/comparables/homescore) the user wants for this property.' })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiBody({ schema: { type: 'object', properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } } })
+  @ApiBody({ schema: { type: 'object', properties: {
+    claimed: { type: 'boolean', description: 'Notify when this property is claimed.' },
+    progress: { type: 'boolean', description: "Notify on the owner's passport progress." },
+    published: { type: 'boolean', description: 'Notify when the passport is published.' },
+    comparables: { type: 'boolean', description: 'Notify when new comparable properties are found.' },
+    homescore: { type: 'boolean', description: 'Notify when a HomeScore result is available.' },
+  } } })
   @ApiResponse({ status: 200, description: 'The saved watch preferences', schema: { type: 'object', properties: { claimed: { type: 'boolean' }, progress: { type: 'boolean' }, published: { type: 'boolean' }, comparables: { type: 'boolean' }, homescore: { type: 'boolean' } } } })
   @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   async upsertPropertyWatch(
@@ -857,7 +863,7 @@ export class PropertyController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Photo, scan, or PDF of an energy bill to OCR-parse.' },
       },
     },
   })

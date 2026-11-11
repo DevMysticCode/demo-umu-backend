@@ -27,35 +27,35 @@ const CONVERSATION_CONTEXTS: ConversationContext[] = [
 ];
 
 class SendMessageDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'The message text to post into this conversation.' })
   @IsString()
   body: string;
 }
 
 class StartConversationDto {
-  @ApiProperty({ enum: CONVERSATION_CONTEXTS })
+  @ApiProperty({ enum: CONVERSATION_CONTEXTS, description: 'What kind of conversation this is - drives which card types can be posted into it.' })
   @IsIn(CONVERSATION_CONTEXTS)
   context: ConversationContext;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'ID of the entity (passport, property, marketplace job) this conversation is about.' })
   @IsString()
   contextId: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'User ID of the other participant in this conversation.' })
   @IsString()
   peerUserId: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: "Caller's role in this conversation (e.g. buyer, seller), if relevant to the context." })
   @IsOptional()
   @IsString()
   selfRole?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: "The peer's role in this conversation (e.g. buyer, seller), if relevant to the context." })
   @IsOptional()
   @IsString()
   peerRole?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Optional first message to post immediately after the conversation is created.' })
   @IsOptional()
   @IsString()
   initialMessage?: string;
@@ -64,55 +64,55 @@ class StartConversationDto {
 // Shared shape for a single proposed/chosen viewing slot — see
 // ViewingRequestsService's Slot interface.
 class ViewingSlotDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Slot start time, ISO 8601.' })
   @IsString()
   startISO: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Slot end time, ISO 8601.' })
   @IsOptional()
   @IsString()
   endISO?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Optional human-readable label for this slot (e.g. "Saturday morning").' })
   @IsOptional()
   @IsString()
   label?: string;
 }
 
 class CreateViewingRequestDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'User ID of the person being invited to the viewing.' })
   @IsString()
   invitedUserId: string;
 
-  @ApiProperty({ type: [ViewingSlotDto] })
+  @ApiProperty({ type: [ViewingSlotDto], description: 'Proposed time slots for the viewing.' })
   @ValidateNested({ each: true })
   @Type(() => ViewingSlotDto)
   slots: ViewingSlotDto[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Optional message to include with the viewing invitation.' })
   @IsOptional()
   @IsString()
   message?: string;
 }
 
 class RespondToViewingDto {
-  @ApiProperty({ enum: ['accept', 'decline', 'reschedule'] })
+  @ApiProperty({ enum: ['accept', 'decline', 'reschedule'], description: 'How the invitee is responding to the viewing request.' })
   @IsIn(['accept', 'decline', 'reschedule'])
   action: 'accept' | 'decline' | 'reschedule';
 
-  @ApiProperty({ type: ViewingSlotDto, required: false })
+  @ApiProperty({ type: ViewingSlotDto, required: false, description: 'The slot being accepted, required when action is "accept".' })
   @IsOptional()
   @ValidateNested()
   @Type(() => ViewingSlotDto)
   chosenSlot?: ViewingSlotDto;
 
-  @ApiProperty({ type: [ViewingSlotDto], required: false })
+  @ApiProperty({ type: [ViewingSlotDto], required: false, description: 'Alternative slots being proposed, required when action is "reschedule".' })
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ViewingSlotDto)
   proposedSlots?: ViewingSlotDto[];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: 'Optional message to include with the response.' })
   @IsOptional()
   @IsString()
   message?: string;

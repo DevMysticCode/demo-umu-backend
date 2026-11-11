@@ -116,7 +116,7 @@ export class BuyerProfileController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Proof-of-funds or mortgage AIP document to upload, matching the :kind path parameter.' },
       },
     },
   })

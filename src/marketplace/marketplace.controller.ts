@@ -189,7 +189,7 @@ export class MarketplaceController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Job photo to upload (max 8MB). Call once per photo.' },
       },
     },
   })

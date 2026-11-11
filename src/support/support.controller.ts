@@ -15,7 +15,10 @@ export class SupportController {
   @ApiOperation({ summary: 'Submit a support request', description: 'Public contact form - no authentication required. Rate-limited to 10 requests per minute per IP. Generates a human-readable ticket number and stores the request.' })
   @ApiResponse({ status: 201, description: 'The created support request.', schema: { type: 'object', properties: { id: { type: 'string' }, ticketNumber: { type: 'string', example: 'SUP-LXK3F9' }, name: { type: 'string' }, email: { type: 'string' }, subject: { type: 'string' }, message: { type: 'string' }, createdAt: { type: 'string', format: 'date-time' } } } })
   @ApiBody({ schema: { type: 'object', required: ['name', 'email', 'subject', 'message'], properties: {
-    name: { type: 'string' }, email: { type: 'string', format: 'email' }, subject: { type: 'string' }, message: { type: 'string' },
+    name: { type: 'string', description: "Submitter's name." },
+    email: { type: 'string', format: 'email', description: "Submitter's email address, for the support team to reply to." },
+    subject: { type: 'string', description: 'Subject line of the request.' },
+    message: { type: 'string', description: 'The support request message.' },
   } } })
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('request')

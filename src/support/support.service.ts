@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 
 // The global ValidationPipe runs with `whitelist: true`, which strips any
@@ -9,17 +10,21 @@ import { PrismaService } from '../prisma/prisma.service';
 // with a generic "Invalid data supplied", silently breaking every
 // support/contact submission.
 export class CreateSupportRequestDto {
+  @ApiProperty({ description: "Submitter's name." })
   @IsString()
   @MinLength(1)
   name: string;
 
+  @ApiProperty({ description: "Submitter's email address, for the support team to reply to." })
   @IsEmail()
   email: string;
 
+  @ApiProperty({ description: 'Subject line of the request.' })
   @IsString()
   @MinLength(1)
   subject: string;
 
+  @ApiProperty({ description: 'The support request message.' })
   @IsString()
   @MinLength(1)
   message: string;

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IsArray, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 
 // The global ValidationPipe runs with `whitelist: true`, which strips any
@@ -8,40 +9,49 @@ import { PrismaService } from '../prisma/prisma.service';
 // onboarding answers were never actually persisted even though the
 // endpoint returned "Preferences saved successfully".
 export class SaveQuestionnaireDto {
+  @ApiPropertyOptional({ description: "Buyer's stated purpose(s) for using the app (e.g. buying, selling, renting).", type: [String] })
   @IsOptional()
   @IsArray()
   purpose?: string[];
 
+  @ApiPropertyOptional({ description: 'How soon the buyer intends to purchase.' })
   @IsOptional()
   @IsString()
   buyingTimeline?: string;
 
+  @ApiPropertyOptional({ description: "Lower bound of the buyer's budget, in pounds." })
   @IsOptional()
   @IsInt()
   @Min(0)
   budgetMin?: number;
 
+  @ApiPropertyOptional({ description: "Upper bound of the buyer's budget, in pounds." })
   @IsOptional()
   @IsInt()
   @Min(0)
   budgetMax?: number;
 
+  @ApiPropertyOptional({ description: 'Property types the buyer is interested in (e.g. detached, flat).', type: [String] })
   @IsOptional()
   @IsArray()
   propertyTypes?: string[];
 
+  @ApiPropertyOptional({ description: 'Property styles the buyer is interested in.', type: [String] })
   @IsOptional()
   @IsArray()
   propertyStyles?: string[];
 
+  @ApiPropertyOptional({ description: 'Features the buyer considers important (e.g. garden, parking).', type: [String] })
   @IsOptional()
   @IsArray()
   importantFeatures?: string[];
 
+  @ApiPropertyOptional({ description: 'How soon the seller intends to sell.' })
   @IsOptional()
   @IsString()
   sellingTimeline?: string;
 
+  @ApiPropertyOptional({ description: "The seller's estimated property value, in pounds." })
   @IsOptional()
   @IsInt()
   @Min(0)

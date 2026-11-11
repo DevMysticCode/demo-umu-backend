@@ -64,7 +64,7 @@ export class AdminController {
   @Delete('users')
   @ApiOperation({ summary: 'Delete accounts by email (admin)', description: 'Permanently deletes one or more user accounts by email address, cascading to all data they own.' })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
-  @ApiBody({ schema: { type: 'object', required: ['emails'], properties: { emails: { type: 'array', items: { type: 'string' } } } } })
+  @ApiBody({ schema: { type: 'object', required: ['emails'], properties: { emails: { type: 'array', items: { type: 'string' }, description: 'Email addresses of the accounts to permanently delete.' } } } })
   @ApiResponse({ status: 200, description: 'Which emails were deleted vs. not found.', schema: { type: 'object', properties: { deleted: { type: 'array', items: { type: 'string' } }, notFound: { type: 'array', items: { type: 'string' } } } } })
   @ApiResponse({ status: 400, description: 'emails is missing or not a non-empty array.' })
   @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
@@ -100,7 +100,7 @@ export class AdminController {
   @Delete('founder-numbers')
   @ApiOperation({ summary: 'Reset the Founder Number sequence (admin, one-off)', description: "Wipes every FounderNumber row and restarts the database-native sequence at restartAt. Meant to be called once, to line up the launch sequence across databases. Requires confirm === 'RESET-FOUNDER-SEQ'." })
   @ApiHeader({ name: 'x-admin-secret', description: 'Shared admin secret' })
-  @ApiBody({ schema: { type: 'object', required: ['restartAt', 'confirm'], properties: { restartAt: { type: 'integer', description: 'Value the sequence should restart at' }, confirm: { type: 'string', example: 'RESET-FOUNDER-SEQ' } } } })
+  @ApiBody({ schema: { type: 'object', required: ['restartAt', 'confirm'], properties: { restartAt: { type: 'integer', description: 'Value the sequence should restart at' }, confirm: { type: 'string', example: 'RESET-FOUNDER-SEQ', description: "Safety confirmation literal - must equal exactly 'RESET-FOUNDER-SEQ' or the reset is rejected." } } } })
   @ApiResponse({ status: 200, description: 'How many rows were wiped and the new sequence start.', schema: { type: 'object', properties: { deletedRows: { type: 'integer' }, sequenceRestartedAt: { type: 'integer' } } } })
   @ApiResponse({ status: 400, description: 'restartAt is not a positive integer.' })
   @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
@@ -138,7 +138,7 @@ export class AdminController {
       type: 'object',
       required: ['isAdmin'],
       properties: {
-        isAdmin: { type: 'boolean' },
+        isAdmin: { type: 'boolean', description: 'true to grant admin role, false to revoke it.' },
       },
     },
   })

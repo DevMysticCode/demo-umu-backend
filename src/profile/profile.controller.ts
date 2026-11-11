@@ -61,7 +61,7 @@ export class ProfileController {
       type: 'object',
       required: ['file'],
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Avatar image to upload (jpg/png/webp/gif, max 5MB).' },
       },
     },
   })

@@ -44,7 +44,7 @@ export class PaymentController {
       type: 'object',
       required: ['passportId'],
       properties: {
-        passportId: { type: 'string' },
+        passportId: { type: 'string', description: 'ID of the published passport the buyer wants to unlock.' },
       },
     },
   })
@@ -79,7 +79,7 @@ export class PaymentController {
       type: 'object',
       required: ['passportId'],
       properties: {
-        passportId: { type: 'string' },
+        passportId: { type: 'string', description: 'ID of the PENDING_PAYMENT passport created for this ownership claim.' },
       },
     },
   })

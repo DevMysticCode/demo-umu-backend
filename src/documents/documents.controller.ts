@@ -64,7 +64,7 @@ export class DocumentsController {
       type: 'object',
       required: ['file', 'name'],
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'The document file to upload.' },
         name: { type: 'string', description: 'Display name for the document' },
         tags: { type: 'string', description: 'Comma-separated list of tags' },
         expiresAt: { type: 'string', format: 'date-time', nullable: true, description: 'Optional reminder date, e.g. for an insurance policy or warranty expiry' },

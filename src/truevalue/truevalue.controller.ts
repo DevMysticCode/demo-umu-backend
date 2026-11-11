@@ -133,7 +133,7 @@ export class TrueValueController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Supporting evidence file for this declared work item.' },
       },
     },
   })
@@ -163,7 +163,7 @@ export class TrueValueController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Save a final TrueValue snapshot', description: "Recomputes the valuation from the caller's declared works and persists it as a ValuationSnapshot (upsert) for this property/user pair — the quiz's final 'finish' step." })
   @ApiParam({ name: 'id', description: 'Property ID' })
-  @ApiBody({ schema: { type: 'object', properties: { epcStatus: { type: 'string', nullable: true } } } })
+  @ApiBody({ schema: { type: 'object', properties: { epcStatus: { type: 'string', nullable: true, description: "Freshness of the property's EPC to save alongside the valuation snapshot.", enum: ['current', 'stale', 'none'] } } } })
   @ApiResponse({ status: 201, description: 'The persisted ValuationSnapshot row.', schema: { type: 'object', properties: {
     id: { type: 'string' }, propertyId: { type: 'string' }, userId: { type: 'string' }, baseline: { type: 'number' },
     estimateLow: { type: 'number' }, estimateHigh: { type: 'number' }, estimatePoint: { type: 'number' },

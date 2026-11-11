@@ -21,6 +21,7 @@ const noopDecorator = () => () => undefined;
 export const ApiBody = noopDecorator;
 export const ApiConsumes = noopDecorator;
 export const ApiProperty = noopDecorator;
+export const ApiPropertyOptional = noopDecorator;
 export const ApiBearerAuth = noopDecorator;
 export const ApiOperation = noopDecorator;
 export const ApiResponse = noopDecorator;

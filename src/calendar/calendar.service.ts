@@ -1,52 +1,65 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class CreateReminderDto {
+  @ApiProperty({ description: 'Title of the reminder.' })
   @IsString()
   title: string;
 
+  @ApiProperty({ description: 'Reminder date, ISO date string.', example: '2025-09-14' })
   @IsString()
   date: string;   // ISO date string e.g. "2025-09-14"
 
+  @ApiPropertyOptional({ description: 'Reminder time, 24-hour "HH:mm".', example: '14:00' })
   @IsOptional()
   @IsString()
   time?: string;  // "14:00"
 
+  @ApiPropertyOptional({ description: 'Recurrence rule for this reminder, if it repeats.' })
   @IsOptional()
   @IsString()
   repeats?: string;
 
+  @ApiPropertyOptional({ description: 'Free-text notes attached to the reminder.' })
   @IsOptional()
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Category of reminder (e.g. viewing, deadline), used for icon/grouping.' })
   @IsOptional()
   @IsString()
   type?: string;
 
+  @ApiPropertyOptional({ description: 'Reference ID linking this reminder back to the entity that created it (e.g. a viewing request).' })
   @IsOptional()
   @IsString()
   sourceRef?: string;
 }
 
 export class UpdateReminderDto {
+  @ApiPropertyOptional({ description: 'Title of the reminder.' })
   @IsOptional()
   @IsString()
   title?: string;
 
+  @ApiPropertyOptional({ description: 'Reminder date, ISO date string.' })
   @IsOptional()
   @IsString()
   date?: string;
 
+  @ApiPropertyOptional({ description: 'Reminder time, 24-hour "HH:mm".' })
   @IsOptional()
   @IsString()
   time?: string;
 
+  @ApiPropertyOptional({ description: 'Recurrence rule for this reminder, if it repeats.' })
   @IsOptional()
   @IsString()
   repeats?: string;
 
+  @ApiPropertyOptional({ description: 'Free-text notes attached to the reminder.' })
   @IsOptional()
   @IsString()
   notes?: string;

@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SEED_VIDEOS = [
@@ -62,10 +63,12 @@ const SEED_VIDEOS = [
 // PUT here silently discarded positionSecs/completed (request body
 // arrived as `{}`), so "continue watching" position never actually saved.
 export class UpdateProgressDto {
+  @ApiProperty({ description: 'Current playback position, in seconds.' })
   @IsInt()
   @Min(0)
   positionSecs: number;
 
+  @ApiPropertyOptional({ description: 'Whether the video has been watched to completion.' })
   @IsOptional()
   @IsBoolean()
   completed?: boolean;

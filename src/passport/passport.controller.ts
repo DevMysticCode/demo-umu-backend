@@ -909,7 +909,7 @@ export class PassportController {
     schema: {
       type: 'object',
       properties: {
-        isPublic: { type: 'boolean' },
+        isPublic: { type: 'boolean', description: 'true to make this passport publicly visible, false to make it private.' },
       },
       required: ['isPublic'],
     },
@@ -1299,7 +1299,7 @@ export class PassportController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary' },
+        file: { type: 'string', format: 'binary', description: 'Image file to upload to this passport\'s property-images bucket.' },
       },
       required: ['file'],
     },
@@ -1369,7 +1369,7 @@ export class PassportController {
     schema: {
       type: 'object',
       properties: {
-        images: { type: 'array', items: { type: 'string' } },
+        images: { type: 'array', items: { type: 'string' }, description: 'The full ordered list of property image URLs to save, replacing the previous list.' },
       },
       required: ['images'],
     },
@@ -1416,8 +1416,8 @@ export class PassportController {
     schema: {
       type: 'object',
       properties: {
-        scope: { type: 'string', enum: ['buyer', 'tenant'] },
-        documentIds: { type: 'array', items: { type: 'string' } },
+        scope: { type: 'string', enum: ['buyer', 'tenant'], description: 'Who the share link is intended for, used to filter which sections/documents are visible through it.' },
+        documentIds: { type: 'array', items: { type: 'string' }, description: 'IDs of specific documents to include in the link\'s snapshotted manifest. Omit to include all documents visible at the chosen scope.' },
       },
     },
   })
@@ -1539,8 +1539,8 @@ export class PassportController {
     schema: {
       type: 'object',
       properties: {
-        text: { type: 'string' },
-        sectionKey: { type: 'string' },
+        text: { type: 'string', description: 'The note content.' },
+        sectionKey: { type: 'string', description: 'Optional section key to scope this note to a specific section.' },
       },
       required: ['text'],
     },

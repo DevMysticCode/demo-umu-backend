@@ -325,7 +325,7 @@ export class VerifierAdminController {
     description: { type: 'string', nullable: true, description: "Shown to buyers so they understand who's asking for access" },
     fcaNumber: { type: 'string', nullable: true, description: 'FCA registration number, if the org is FCA-regulated' },
     contactEmail: { type: 'string', format: 'email', description: "The organisation's own contact address, not stored/used for login" },
-    websiteUrl: { type: 'string', nullable: true },
+    websiteUrl: { type: 'string', nullable: true, description: "The organisation's public website." },
     allowedScopes: { type: 'array', items: { type: 'string' }, description: 'The categories this org is permitted to ever request - a request for anything outside this list is rejected with 403' },
   } } })
   @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })

@@ -16,15 +16,15 @@ export class OnboardingController {
 
   @ApiOperation({ summary: 'Save the first-run onboarding questionnaire', description: "Saves (upserts) the signed-in user's answers from the first-run onboarding questionnaire." })
   @ApiBody({ schema: { type: 'object', properties: {
-    purpose: { type: 'array', items: { type: 'string' }, nullable: true },
-    buyingTimeline: { type: 'string', nullable: true },
-    budgetMin: { type: 'number', nullable: true },
-    budgetMax: { type: 'number', nullable: true },
-    propertyTypes: { type: 'array', items: { type: 'string' }, nullable: true },
-    propertyStyles: { type: 'array', items: { type: 'string' }, nullable: true },
-    importantFeatures: { type: 'array', items: { type: 'string' }, nullable: true },
-    sellingTimeline: { type: 'string', nullable: true },
-    propertyValue: { type: 'number', nullable: true },
+    purpose: { type: 'array', items: { type: 'string' }, nullable: true, description: "Buyer's stated purpose(s) for using the app." },
+    buyingTimeline: { type: 'string', nullable: true, description: 'How soon the buyer intends to purchase.' },
+    budgetMin: { type: 'number', nullable: true, description: "Lower bound of the buyer's budget, in pounds." },
+    budgetMax: { type: 'number', nullable: true, description: "Upper bound of the buyer's budget, in pounds." },
+    propertyTypes: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Property types the buyer is interested in.' },
+    propertyStyles: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Property styles the buyer is interested in.' },
+    importantFeatures: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Features the buyer considers important.' },
+    sellingTimeline: { type: 'string', nullable: true, description: 'How soon the seller intends to sell.' },
+    propertyValue: { type: 'number', nullable: true, description: "The seller's estimated property value, in pounds." },
   } } })
   @ApiResponse({
     status: 201,
