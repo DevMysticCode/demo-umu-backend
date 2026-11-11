@@ -56,7 +56,7 @@ export class BuyerProfileController {
     schema: {
       type: 'object',
       properties: {
-        existingDraft: { type: 'string', nullable: true },
+        existingDraft: { type: 'string', nullable: true, description: 'An existing statement the buyer wants the AI to refine, instead of writing from scratch' },
       },
     },
   })
@@ -68,10 +68,18 @@ export class BuyerProfileController {
   @ApiOperation({ summary: 'Create or update my buyer profile', description: 'Upserts whichever fields are supplied (identity, funds, chain position, etc.) as the buyer progresses through the builder. Recomputes strengthScore against the merged result on every call; mints a publicRef short-code on first creation.' })
   @ApiResponse({ status: 200, description: 'The created/updated buyer profile.', schema: { type: 'object', properties: { id: { type: 'string' }, userId: { type: 'string' }, publicRef: { type: 'string' }, strengthScore: { type: 'integer' } } } })
   @ApiBody({ schema: { type: 'object', description: 'All fields optional - only supplied fields are upserted', properties: {
-    tier: { type: 'string', nullable: true }, idDocumentType: { type: 'string', nullable: true }, idDocumentUrl: { type: 'string', nullable: true },
-    fundsType: { type: 'string', nullable: true }, fundsAmount: { type: 'number', nullable: true }, fundsDocumentUrl: { type: 'string', nullable: true },
-    chainPosition: { type: 'string', nullable: true }, solicitorStatus: { type: 'string', nullable: true }, timeline: { type: 'string', nullable: true },
-    propertyType: { type: 'string', nullable: true }, statement: { type: 'string', nullable: true }, completedSteps: { type: 'integer', nullable: true },
+    tier: { type: 'string', nullable: true, description: "Not settable directly here - flips only via the Stripe tier/checkout+confirm flow. Present for read-symmetry with the response, not a real write path." },
+    idDocumentType: { type: 'string', nullable: true, description: "e.g. 'passport', 'driving_licence' - which document type the buyer is verifying identity with" },
+    idDocumentUrl: { type: 'string', nullable: true, description: 'URL of the uploaded ID document, from the document upload flow' },
+    fundsType: { type: 'string', nullable: true, description: "Source of the deposit/purchase funds, e.g. 'savings', 'sale_of_property', 'gift'" },
+    fundsAmount: { type: 'number', nullable: true, description: 'The amount the buyer has available, in GBP' },
+    fundsDocumentUrl: { type: 'string', nullable: true, description: 'URL of the uploaded proof-of-funds document' },
+    chainPosition: { type: 'string', nullable: true, description: "Where the buyer sits in a property chain, e.g. 'first_time_buyer', 'chain_free', 'chain_dependent'" },
+    solicitorStatus: { type: 'string', nullable: true, description: "Whether a solicitor is already instructed, e.g. 'not_instructed', 'instructed'" },
+    timeline: { type: 'string', nullable: true, description: "How soon the buyer wants to move, e.g. 'asap', '3_months', '6_months'" },
+    propertyType: { type: 'string', nullable: true, description: 'The type of property the buyer is looking for' },
+    statement: { type: 'string', nullable: true, description: "The buyer's personal story/pitch to a seller, shown on their profile" },
+    completedSteps: { type: 'integer', nullable: true, description: 'How many of the builder steps the buyer has completed - drives the progress indicator client-side' },
   } } })
   @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @ApiBearerAuth('access-token')
@@ -171,8 +179,8 @@ export class BuyerProfileController {
     schema: {
       type: 'object',
       properties: {
-        kind: { type: 'string' },
-        decision: { type: 'string', enum: ['approve', 'reject'] },
+        kind: { type: 'string', enum: ['funds', 'mortgage'], description: 'Which uploaded document is being reviewed' },
+        decision: { type: 'string', enum: ['approve', 'reject'], description: 'Approve flips the matching verified flag on; reject clears the upload so the buyer re-submits' },
       },
       required: ['kind', 'decision'],
     },
@@ -197,7 +205,10 @@ export class BuyerProfileController {
   @ApiResponse({ status: 400, description: 'Required steps are missing, or no profile exists yet.' })
   @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @ApiBody({ required: false, schema: { type: 'object', description: 'Optional - any fields supplied here are upserted first, same shape as PATCH /buyer-profile', properties: {
-    idDocumentType: { type: 'string', nullable: true }, fundsType: { type: 'string', nullable: true }, fundsAmount: { type: 'number', nullable: true }, chainPosition: { type: 'string', nullable: true },
+    idDocumentType: { type: 'string', nullable: true, description: "e.g. 'passport', 'driving_licence'" },
+    fundsType: { type: 'string', nullable: true, description: "Source of funds, e.g. 'savings', 'sale_of_property'" },
+    fundsAmount: { type: 'number', nullable: true, description: 'Amount available, in GBP' },
+    chainPosition: { type: 'string', nullable: true, description: "e.g. 'first_time_buyer', 'chain_free'" },
   } } })
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard)
@@ -261,7 +272,7 @@ export class BuyerProfileController {
     schema: {
       type: 'object',
       properties: {
-        tier: { type: 'string', example: 'VERIFIED' },
+        tier: { type: 'string', example: 'VERIFIED', description: 'The tier to purchase - only "VERIFIED" (£19.99) is a real option today' },
       },
       required: ['tier'],
     },
@@ -289,7 +300,7 @@ export class BuyerProfileController {
     schema: {
       type: 'object',
       properties: {
-        paymentIntentId: { type: 'string' },
+        paymentIntentId: { type: 'string', description: 'The Stripe PaymentIntent id returned from tier/checkout, after the client has confirmed it with Stripe' },
       },
       required: ['paymentIntentId'],
     },
@@ -332,8 +343,8 @@ export class BuyerProfileController {
   @ApiResponse({ status: 401, description: 'Missing or invalid access token.' })
   @ApiResponse({ status: 404, description: 'No buyer profile exists yet.' })
   @ApiBody({ schema: { type: 'object', properties: {
-    recipientName: { type: 'string', nullable: true },
-    recipientEmail: { type: 'string', nullable: true, format: 'email' },
+    recipientName: { type: 'string', nullable: true, description: "The recipient's name, shown on the share link's landing page" },
+    recipientEmail: { type: 'string', nullable: true, format: 'email', description: 'If given, the recipient is emailed a notification with the share link' },
     scope: { type: 'array', items: { type: 'string' }, nullable: true, description: 'Which categories to include; defaults to all (identity/deposit/sof/afford/credit/story)' },
     expiresInDays: { type: 'integer', nullable: true, description: 'Default 30, max 365' },
   } } })

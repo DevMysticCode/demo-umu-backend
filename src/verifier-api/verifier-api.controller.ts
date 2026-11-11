@@ -80,7 +80,7 @@ export class BuyerProfileAccessController {
   @ApiParam({ name: 'id', description: 'AccessRequest ID' })
   @ApiBody({ schema: { type: 'object', required: ['scopes'], properties: {
     scopes: { type: 'array', items: { type: 'string' }, description: 'Categories the buyer is choosing to approve - may be a subset of what was requested' },
-    expiresInDays: { type: 'integer', nullable: true },
+    expiresInDays: { type: 'integer', nullable: true, description: 'How long the grant lasts before the org must re-request access. Defaults to a standard period if omitted.' },
   } } })
   @ApiResponse({ status: 201, description: 'The created access grant.', schema: { type: 'object', properties: { id: { type: 'string' }, status: { type: 'string', example: 'APPROVED' }, requestedScopes: { type: 'array', items: { type: 'string' } }, approvedScopes: { type: 'array', items: { type: 'string' } }, reason: { type: 'string', nullable: true }, expiresAt: { type: 'string', format: 'date-time' }, createdAt: { type: 'string', format: 'date-time' }, decidedAt: { type: 'string', format: 'date-time', nullable: true }, org: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, legalName: { type: 'string', nullable: true }, logoEmoji: { type: 'string', nullable: true }, description: { type: 'string', nullable: true }, fcaNumber: { type: 'string', nullable: true }, websiteUrl: { type: 'string', nullable: true } } }, grant: { type: 'object', properties: { id: { type: 'string' }, scopes: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time' }, revokedAt: { type: 'string', format: 'date-time', nullable: true }, lastUsedAt: { type: 'string', format: 'date-time', nullable: true } } } } } })
   @ApiResponse({ status: 404, description: 'Not found, or belongs to a different buyer.' })
@@ -158,7 +158,7 @@ export class VerifierPublicController {
     scopes: { type: 'array', items: { type: 'string' }, description: 'Requested categories' },
     buyerRef: { type: 'string', nullable: true, description: "The buyer's public reference code - preferred lookup" },
     buyerEmail: { type: 'string', nullable: true, format: 'email', description: 'Fallback lookup if buyerRef is not known' },
-    reason: { type: 'string', nullable: true },
+    reason: { type: 'string', nullable: true, description: 'Shown to the buyer alongside the request, explaining why access is being asked for' },
   } } })
   @ApiResponse({ status: 401, description: 'Missing or invalid client credentials.' })
   @ApiResponse({ status: 403, description: 'Org is suspended, or requested a scope outside its allowedScopes.' })
@@ -319,14 +319,14 @@ export class VerifierAdminController {
     },
   })
   @ApiBody({ schema: { type: 'object', required: ['name', 'contactEmail', 'allowedScopes'], properties: {
-    name: { type: 'string' },
-    legalName: { type: 'string', nullable: true },
-    logoEmoji: { type: 'string', nullable: true },
-    description: { type: 'string', nullable: true },
-    fcaNumber: { type: 'string', nullable: true },
-    contactEmail: { type: 'string', format: 'email' },
+    name: { type: 'string', description: "The organisation's display name" },
+    legalName: { type: 'string', nullable: true, description: 'Full registered legal name, if different from the display name' },
+    logoEmoji: { type: 'string', nullable: true, description: 'Placeholder logo shown until a real logo is uploaded' },
+    description: { type: 'string', nullable: true, description: "Shown to buyers so they understand who's asking for access" },
+    fcaNumber: { type: 'string', nullable: true, description: 'FCA registration number, if the org is FCA-regulated' },
+    contactEmail: { type: 'string', format: 'email', description: "The organisation's own contact address, not stored/used for login" },
     websiteUrl: { type: 'string', nullable: true },
-    allowedScopes: { type: 'array', items: { type: 'string' }, description: 'The categories this org is permitted to ever request' },
+    allowedScopes: { type: 'array', items: { type: 'string' }, description: 'The categories this org is permitted to ever request - a request for anything outside this list is rejected with 403' },
   } } })
   @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
   @ApiResponse({ status: 400, description: 'name and contactEmail are required.' })

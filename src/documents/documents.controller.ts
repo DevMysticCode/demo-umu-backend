@@ -65,11 +65,11 @@ export class DocumentsController {
       required: ['file', 'name'],
       properties: {
         file: { type: 'string', format: 'binary' },
-        name: { type: 'string' },
+        name: { type: 'string', description: 'Display name for the document' },
         tags: { type: 'string', description: 'Comma-separated list of tags' },
-        expiresAt: { type: 'string', format: 'date-time', nullable: true },
-        category: { type: 'string', nullable: true },
-        passportId: { type: 'string', nullable: true },
+        expiresAt: { type: 'string', format: 'date-time', nullable: true, description: 'Optional reminder date, e.g. for an insurance policy or warranty expiry' },
+        category: { type: 'string', nullable: true, description: 'Vault category to file this under (e.g. property_information, ownership_legal) - see the vault-overview endpoint for the full category list' },
+        passportId: { type: 'string', nullable: true, description: 'Link this document to a specific passport, making it a "Property document" rather than a general private one. Omit to keep it private and unlinked.' },
       },
     },
   })
@@ -127,9 +127,9 @@ export class DocumentsController {
     schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', nullable: true },
-        category: { type: 'string', nullable: true },
-        passportId: { type: 'string', nullable: true },
+        name: { type: 'string', nullable: true, description: 'New display name' },
+        category: { type: 'string', nullable: true, description: 'New vault category' },
+        passportId: { type: 'string', nullable: true, description: 'Pass a passport id to link this document to it, or null to unlink it back to a general private document' },
       },
     },
   })
@@ -233,7 +233,7 @@ export class DocumentsController {
       type: 'object',
       required: ['accessLevel'],
       properties: {
-        accessLevel: { type: 'string' },
+        accessLevel: { type: 'string', enum: ['PRIVATE', 'SELECTED', 'ELIGIBLE', 'PUBLISHED'], description: "PRIVATE: owner only. SELECTED: owner + any collaborator individually granted access (see POST :kind/:id/grants). ELIGIBLE: visible to a buyer who has paid to unlock this passport. PUBLISHED: visible to anyone once the passport is published." },
       },
     },
   })
@@ -257,7 +257,7 @@ export class DocumentsController {
       type: 'object',
       required: ['collaboratorUserId'],
       properties: {
-        collaboratorUserId: { type: 'string' },
+        collaboratorUserId: { type: 'string', description: "The user id of an already-invited PassportCollaborator on this document's passport - granting access to someone not already invited is rejected with 400." },
       },
     },
   })
