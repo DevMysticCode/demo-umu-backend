@@ -20,7 +20,7 @@
 # Dockerfile is the explicit override. Add `[build] builder = "DOCKERFILE"`
 # to railway.toml to switch.
 
-ARG NODE_VERSION=20-alpine
+ARG NODE_VERSION=22-alpine
 
 # ────────────────────────────────────────────────────────────────
 # deps — install all deps (dev + prod) for the build stage
