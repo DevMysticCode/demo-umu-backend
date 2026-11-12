@@ -159,31 +159,72 @@ SIGTERM cleanly). HEALTHCHECK hits `/health` every 30s.
 
 ## Migrations
 
-Local/dev schema changes follow the usual Prisma flow:
+**Baselined 2026-11-12** (security/launch review finding #2): the dev
+DB had drifted from the committed migration history — every schema
+change between `20260226134300_add_other_placeholder_to_question_template`
+and now had gone through `prisma db push --accept-data-loss` directly,
+which never writes to `_prisma_migrations`. The drift was captured as
+a single migration,
+`prisma/migrations/20261112000000_baseline_since_add_other_placeholder`,
+generated via `prisma migrate diff` against the dev DB and verified to
+reproduce the live schema exactly from an empty database before being
+marked applied there with `prisma migrate resolve --applied`. **No
+data was changed** — this only backfilled the migration history to
+match what `db push` had already done. `db push --accept-data-loss`
+must not be used again from this point on; see the workflow below.
+
+Local/dev schema changes now go through versioned migrations:
 
 ```sh
 # 1. Stop the dev backend (Windows file lock on prisma DLL)
 # 2. Edit prisma/schema.prisma
-# 3. Push to dev DB
-npx prisma db push --accept-data-loss
-# 4. Regenerate client
-npx prisma generate
+# 3. Create + apply a migration against the dev DB
+npx prisma migrate dev --name <short_description>
+# 4. Commit the new prisma/migrations/<timestamp>_<short_description>/ folder
 # 5. Restart
 npm run start:dev
 ```
 
+`migrate dev` regenerates the client itself — no separate `prisma
+generate` step needed.
+
 **Production (RDS) is in a private subnet** — there's no direct network
-path to it from a laptop. To run a migration/`db push` against prod:
-spin up a temporary bastion EC2 in the public subnet (or a Lambda in the
-same VPC), tunnel through it, run the Prisma command, then tear the
-bastion down. Full walkthrough (this is exactly how the Railway → RDS
-data migration was done) in
+path to it from a laptop. To run a migration against prod: spin up a
+temporary bastion EC2 in the public subnet (or a Lambda in the same
+VPC), tunnel through it, then run:
+
+```sh
+npx prisma migrate deploy
+```
+
+(never `db push`) against the tunnelled `DATABASE_URL`, then tear the
+bastion down. Full bastion walkthrough (this is exactly how the
+Railway → RDS data migration was done) in
 [infra/RUNBOOK.md](infra/RUNBOOK.md#migrating-data-from-railway--rds).
 
-There have been no new `prisma/migrations/*` folders since the RDS
-migration, so schema is currently in sync — but this is a manual step,
-not part of `build-and-push.ps1`, so check before assuming a deploy
-picked up a schema change.
+**One-time step before `migrate deploy` will work cleanly on RDS**:
+since RDS was seeded from the same pre-baseline Railway data, its
+`_prisma_migrations` table is almost certainly missing the same
+`20261112000000_baseline_since_add_other_placeholder` entry. Run
+`npx prisma migrate status` against RDS first (via the bastion) — if
+it reports that migration as pending rather than the schema already
+matching, apply the identical fix used on dev:
+```sh
+npx prisma migrate diff --from-url "$RDS_URL" --to-schema-datamodel prisma/schema.prisma --script
+```
+confirm the output is empty (no actual drift — RDS should already
+match `schema.prisma` from the original Railway→RDS data copy), then
+```sh
+npx prisma migrate resolve --applied 20261112000000_baseline_since_add_other_placeholder
+```
+This was not run against RDS from this session — no bastion access
+here — so do this before the next prod schema change.
+
+Going forward, `prisma/migrations/` is the source of truth. A deploy
+that changes `prisma/schema.prisma` must include its matching
+migration folder in the same PR, and `migrate deploy` should become
+part of the release flow (`build-and-push.ps1`) rather than a manual
+step someone has to remember.
 
 ## Backups
 
