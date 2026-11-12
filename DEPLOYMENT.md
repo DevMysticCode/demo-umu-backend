@@ -1,13 +1,32 @@
 # UMU Backend — Deployment
 
-Production runs on **AWS** (App Runner + RDS + S3 + ECR + Secrets
-Manager, provisioned via CDK). Railway was the original TestFlight-era
-host; data was migrated Railway → RDS and AWS is now the real
-production target. Full infra operations (bootstrap, teardown, custom
-domain, rollback, cost breakdown) live in
-[infra/RUNBOOK.md](infra/RUNBOOK.md) — this doc covers the app-level
-contract (env vars, boot sequence, health checks) plus the day-to-day
-"ship a code change" and "change a config value" flows.
+**Confirmed 2026-11-12 (security/launch review finding #5): real user
+traffic is currently on Railway, not AWS.** The live Vercel frontend
+(`demo-umu-frontend.vercel.app`, the site real users have) has
+`NUXT_PUBLIC_API_BASE` set to the Railway backend
+(`demo-umu-backend-production.up.railway.app`), which talks to
+Railway's Postgres — the same DB whose password was rotated today.
+AWS (App Runner + RDS + S3 + ECR + Secrets Manager, provisioned via
+CDK, described below) is a **separate, parallel environment that is
+not currently receiving live traffic**, despite being built out with
+the intention of becoming production and despite some config (e.g.
+`CORS_ORIGINS` below) already allow-listing the live frontend's
+origin in anticipation of a cutover that hasn't happened yet. There
+is no Azure environment — confirmed with the team 2026-11-12; ignore
+any reference to one.
+
+**Until a real cutover happens, treat Railway's DB as the one with
+real user data**, and be deliberate about which environment any
+read/write/migration/debugging work targets. A full Railway → AWS
+cutover (not just a one-time data copy) is still open; see the
+Railway/RDS drift note under "Known gaps" below for what's already
+diverged between the two databases.
+
+Full infra operations (bootstrap, teardown, custom domain, rollback,
+cost breakdown) live in [infra/RUNBOOK.md](infra/RUNBOOK.md) — this
+doc covers the app-level contract (env vars, boot sequence, health
+checks) plus the day-to-day "ship a code change" and "change a config
+value" flows.
 
 ## Architecture at a glance
 
@@ -328,7 +347,11 @@ TestFlight pipeline doesn't break until this is explicitly switched.
 
 Whichever mode, `NUXT_PUBLIC_API_BASE` needs to point at the real AWS
 URL (`https://ijfai9mgwj.eu-west-2.awsapprunner.com` or the custom
-domain) for a store-submitted build — not `localhost`.
+domain) for a store-submitted build — not `localhost`. **Note:** as of
+2026-11-12 the live Vercel frontend's `NUXT_PUBLIC_API_BASE` still
+points at Railway, not AWS (see the top of this doc) — pointing a
+store build at AWS instead means it will NOT share data with the live
+web app until the AWS cutover actually happens.
 
 ## Known gaps (audit follow-ups)
 
