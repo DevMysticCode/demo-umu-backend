@@ -8,11 +8,14 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
+  Ip,
+  Logger,
   Param,
   Post,
   Query,
 } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
 
@@ -23,13 +26,28 @@ import { timingSafeStringEqual } from '../common/timing-safe-equal';
 // named accounts by email is a much narrower, safe-by-construction action
 // (same x-admin-secret guard) that's still needed in prod — RDS sits in a
 // private subnet with no other way to remove a test/scratch account.
+//
+// Security/launch review finding #8: this is still just one shared static
+// secret with no network restriction or per-operator identity — the real
+// fix (VPC/network restriction, or SSO behind MFA) is infra work outside
+// what this module can do alone. Until that lands, every call is logged
+// (who attempted it, from where, success or not) and the whole controller
+// has a much tighter rate limit than the app default, so a leaked or
+// guessed secret can't be hammered silently or at volume.
+@Throttle({ default: { limit: 20, ttl: 60_000 } })
 @Controller('admin')
 export class AdminController {
+  private readonly logger = new Logger(AdminController.name);
+
   constructor(private readonly adminService: AdminService) {}
 
-  private guard(secret: string | undefined) {
+  private guard(secret: string | undefined, ip: string, route: string) {
     const expected = process.env.ADMIN_SECRET;
-    if (!expected || !timingSafeStringEqual(secret, expected)) {
+    const ok = !!expected && timingSafeStringEqual(secret, expected);
+    this.logger.warn(
+      `admin call: route=${route} ip=${ip} result=${ok ? 'ALLOWED' : 'DENIED'}`,
+    );
+    if (!ok) {
       throw new ForbiddenException('Invalid or missing admin secret');
     }
   }
@@ -48,8 +66,9 @@ export class AdminController {
   async searchUsers(
     @Headers('x-admin-secret') secret: string,
     @Query('contains') contains: string,
+    @Ip() ip: string,
   ) {
-    this.guard(secret);
+    this.guard(secret, ip, 'GET /admin/users/search');
     const substrings = (contains ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -72,8 +91,9 @@ export class AdminController {
   async deleteUsers(
     @Headers('x-admin-secret') secret: string,
     @Body('emails') emails: string[],
+    @Ip() ip: string,
   ) {
-    this.guard(secret);
+    this.guard(secret, ip, 'DELETE /admin/users');
     if (!Array.isArray(emails) || emails.length === 0) {
       throw new BadRequestException('emails must be a non-empty array');
     }
@@ -88,8 +108,11 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'All Founder Number rows. Not paginated - returns every row.', schema: { type: 'array', items: { type: 'object', properties: { number: { type: 'integer' }, userEmail: { type: 'string' }, passportId: { type: 'string' }, assignedAt: { type: 'string', format: 'date-time' } } } } })
   @ApiResponse({ status: 403, description: 'x-admin-secret is missing or incorrect.' })
   @HttpCode(HttpStatus.OK)
-  async listFounderNumbers(@Headers('x-admin-secret') secret: string) {
-    this.guard(secret);
+  async listFounderNumbers(
+    @Headers('x-admin-secret') secret: string,
+    @Ip() ip: string,
+  ) {
+    this.guard(secret, ip, 'GET /admin/founder-numbers');
     return this.adminService.listFounderNumbers();
   }
 
@@ -110,8 +133,9 @@ export class AdminController {
     @Headers('x-admin-secret') secret: string,
     @Body('restartAt') restartAt: number,
     @Body('confirm') confirm: string,
+    @Ip() ip: string,
   ) {
-    this.guard(secret);
+    this.guard(secret, ip, 'DELETE /admin/founder-numbers');
     if (!Number.isInteger(restartAt) || restartAt <= 0) {
       throw new BadRequestException('restartAt must be a positive integer');
     }
@@ -146,8 +170,9 @@ export class AdminController {
     @Headers('x-admin-secret') secret: string,
     @Param('email') email: string,
     @Body('isAdmin') isAdmin: boolean,
+    @Ip() ip: string,
   ) {
-    this.guard(secret);
+    this.guard(secret, ip, `POST /admin/users/${email}/admin-role`);
     if (typeof isAdmin !== 'boolean') {
       throw new BadRequestException('isAdmin must be a boolean');
     }

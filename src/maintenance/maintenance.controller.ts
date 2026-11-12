@@ -8,10 +8,13 @@ import {
   HttpStatus,
   ForbiddenException,
   BadRequestException,
+  Ip,
+  Logger,
 } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
 import { timingSafeStringEqual } from '../common/timing-safe-equal';
 import { ApiOperation, ApiResponse, ApiHeader, ApiBody } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 // Total-data-loss endpoints (deleteMany({}) with no filter). The only
 // thing keeping this module out of production is `PROD_BUILD` in
@@ -26,19 +29,38 @@ import { ApiOperation, ApiResponse, ApiHeader, ApiBody } from '@nestjs/swagger';
 // review 2026-09-22, H10).
 const CONFIRM_WIPE = 'DELETE-EVERYTHING';
 
+// Security/launch review finding #8: same static-secret weakness as
+// AdminController, logged and rate-limited the same way here too — this
+// module is excluded from production builds (see app.module.ts), but that
+// exclusion is only as good as NODE_ENV being set correctly on every
+// environment that loads this image (e.g. the Railway deployment currently
+// holding real user data, per DEPLOYMENT.md), so it still needs its own
+// independent hardening rather than relying solely on PROD_BUILD.
+@Throttle({ default: { limit: 20, ttl: 60_000 } })
 @Controller('maintenance')
 export class MaintenanceController {
+  private readonly logger = new Logger(MaintenanceController.name);
+
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
-  private guard(secret: string | undefined) {
+  private guard(secret: string | undefined, ip: string, route: string) {
     const expected = process.env.ADMIN_SECRET;
-    if (!expected || !timingSafeStringEqual(secret, expected)) {
+    const ok = !!expected && timingSafeStringEqual(secret, expected);
+    this.logger.warn(
+      `maintenance call: route=${route} ip=${ip} result=${ok ? 'ALLOWED' : 'DENIED'}`,
+    );
+    if (!ok) {
       throw new ForbiddenException('Invalid or missing admin secret');
     }
   }
 
-  private guardDestructive(secret: string | undefined, confirm: string | undefined) {
-    this.guard(secret);
+  private guardDestructive(
+    secret: string | undefined,
+    confirm: string | undefined,
+    ip: string,
+    route: string,
+  ) {
+    this.guard(secret, ip, route);
     if (confirm !== CONFIRM_WIPE) {
       throw new BadRequestException(`confirm must be '${CONFIRM_WIPE}'`);
     }
@@ -51,8 +73,11 @@ export class MaintenanceController {
   @ApiResponse({ status: 403, description: 'Missing or invalid x-admin-secret.' })
   @Post('fix-images')
   @HttpCode(HttpStatus.OK)
-  async fixImages(@Headers('x-admin-secret') secret: string) {
-    this.guard(secret);
+  async fixImages(
+    @Headers('x-admin-secret') secret: string,
+    @Ip() ip: string,
+  ) {
+    this.guard(secret, ip, 'POST /maintenance/fix-images');
     return this.maintenanceService.clearPexelsImages();
   }
 
@@ -68,8 +93,9 @@ export class MaintenanceController {
   async deletePassports(
     @Headers('x-admin-secret') secret: string,
     @Body('confirm') confirm: string,
+    @Ip() ip: string,
   ) {
-    this.guardDestructive(secret, confirm);
+    this.guardDestructive(secret, confirm, ip, 'DELETE /maintenance/passports');
     return this.maintenanceService.deleteAllPassports();
   }
 
@@ -83,8 +109,9 @@ export class MaintenanceController {
   async deleteProperties(
     @Headers('x-admin-secret') secret: string,
     @Body('confirm') confirm: string,
+    @Ip() ip: string,
   ) {
-    this.guardDestructive(secret, confirm);
+    this.guardDestructive(secret, confirm, ip, 'DELETE /maintenance/properties');
     return this.maintenanceService.deleteAllProperties();
   }
 
@@ -98,8 +125,9 @@ export class MaintenanceController {
   async deleteAll(
     @Headers('x-admin-secret') secret: string,
     @Body('confirm') confirm: string,
+    @Ip() ip: string,
   ) {
-    this.guardDestructive(secret, confirm);
+    this.guardDestructive(secret, confirm, ip, 'DELETE /maintenance/all');
     return this.maintenanceService.nukeAll();
   }
 }
