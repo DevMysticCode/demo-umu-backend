@@ -1,13 +1,41 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+// Security/launch review finding #11: no connection_limit was ever
+// set on DATABASE_URL, so Prisma used its default (num_cpus * 2 + 1,
+// per-process) — fine for one instance, but the first real multiplier
+// problem once there's more than one: N instances each opening that
+// many connections can exceed Postgres's max_connections with no
+// obvious error pointing back at this. Pinning a sane default here
+// means it's explicit and tunable (DATABASE_CONNECTION_LIMIT) rather
+// than implicit and scaling with whatever CPU count a given host
+// happens to have. Only appends the param when the URL doesn't
+// already set one, so an operator who deliberately tuned it isn't
+// silently overridden.
+function withConnectionLimit(url: string): string {
+  if (/[?&]connection_limit=/.test(url)) return url;
+  const limit = process.env.DATABASE_CONNECTION_LIMIT ?? '10';
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}connection_limit=${limit}`;
+}
 
 const getPrismaClient = () => {
   let prisma = globalForPrisma.prisma;
 
   if (!prisma) {
-    prisma = new PrismaClient();
+    const rawUrl = process.env.DATABASE_URL;
+    prisma = rawUrl
+      ? new PrismaClient({ datasourceUrl: withConnectionLimit(rawUrl) })
+      : new PrismaClient();
+    if (rawUrl && !/[?&]connection_limit=/.test(rawUrl)) {
+      new Logger('PrismaService').log(
+        `DATABASE_URL has no connection_limit - defaulting to ${
+          process.env.DATABASE_CONNECTION_LIMIT ?? '10'
+        } per instance (security/launch review finding #11). Set DATABASE_CONNECTION_LIMIT or add ?connection_limit=N to DATABASE_URL to override.`,
+      );
+    }
   }
 
   if (process.env.NODE_ENV !== 'production') {

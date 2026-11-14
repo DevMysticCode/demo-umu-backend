@@ -121,6 +121,8 @@ malformed. Run with `NODE_ENV=production` to enable prod-only checks.
 | `SENTRY_TRACES_SAMPLE_RATE` | `0`–`1`, default `0` (errors only) |
 | `GROQ_API_KEY` | Chat + AI passport summaries. Feature disabled when unset |
 | `GOOGLE_API_KEY` | Google Maps Street View. Feature disabled when unset |
+| `REDIS_URL` | Security/launch review finding #11, 2026-11-14: without it, rate-limit counters (`@nestjs/throttler`) live in an in-memory Map, which works for one instance but isn't shared once there's more than one. Set this (`redis://...`) before running more than one instance — a log warning fires on boot in production if it's unset. No-op/falls back to in-memory storage when unset, so this is safe to leave out for the pilot |
+| `DATABASE_CONNECTION_LIMIT` | Same finding #11: Prisma's connection pool size, appended to `DATABASE_URL` as `?connection_limit=N` if the URL doesn't already set one. Defaults to `10` per instance if unset. Tune down if running many instances against a small Postgres (e.g. the current `t4g.small` RDS box) to avoid exceeding `max_connections` |
 | `OS_API_KEY` | Ordnance Survey Places. Property search degrades when unset |
 | `PERSONA_API_KEY`, `PERSONA_WEBHOOK_SECRET`, `PERSONA_TEMPLATE_ID` | Persona KYC integration |
 | `HMLR_PFX_PATH`/`HMLR_CERT_PATH`+`HMLR_KEY_PATH`, `HMLR_PFX_PASSPHRASE`, `HMLR_OV_ENDPOINT`, `HMLR_USERNAME`, `HMLR_PASSWORD` | HM Land Registry ownership verification |
