@@ -112,3 +112,18 @@ prisma/external_search_api_documentation*.pdf
 prisma/installer-flow*.html
 # Client-supplied product specs used as design reference — kept local.
 prisma/messaging-spec*.pdf
+
+# Stray working drafts and OS/editor junk (security/launch review
+# finding #17, 2026-11-14) — these keep getting committed by accident.
+# Genuine reference material lives under prisma/ with its own specific
+# entries above; this is just clutter with no reason to ever be tracked.
+*.docx
+*.doc
+*~
+*.swp
+*.swo
+Thumbs.db
+# macOS zip-extraction junk (AppleDouble resource-fork files + the
+# __MACOSX wrapper folder it ships in).
+__MACOSX/
+._*

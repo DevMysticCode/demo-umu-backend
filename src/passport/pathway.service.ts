@@ -37,7 +37,7 @@ function normaliseAnswer(v: unknown): string {
 
 /**
  * Resolution-pathways engine (client handoff, 2026-09-29 — see
- * prisma/content/source/ and src/scripts/import-passport-content.ts for
+ * prisma/content/source/ and src/scripts/archive/import-passport-content.ts for
  * where the content itself comes from). This service is the generic
  * evaluator over that content; it never hard-codes a specific pathway.
  *

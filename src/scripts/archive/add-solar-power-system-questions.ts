@@ -26,7 +26,7 @@
 // Run manually: npx ts-node -r tsconfig-paths/register src/scripts/add-solar-power-system-questions.ts
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import { TASK_ORDERS, TASK_DESCRIPTIONS } from '../constants/task-metadata';
+import { TASK_ORDERS, TASK_DESCRIPTIONS } from '../../constants/task-metadata';
 
 const prisma = new PrismaClient();
 

@@ -278,7 +278,7 @@ export class QuestionService {
     // Resolution pathways: open a guided pathway when this answer matches a
     // known trigger (client handoff, 2026-09-29). Silently no-ops for the
     // ~80% of questions not yet mapped to source content — see
-    // src/scripts/import-passport-content.ts.
+    // src/scripts/archive/import-passport-content.ts.
     this.pathways
       .checkTriggersForAnswer(passportId, question.questionTemplateId, answerJson ?? answerText, userId)
       .catch((err) => console.error('[Pathways] trigger check failed:', err?.message ?? err));
