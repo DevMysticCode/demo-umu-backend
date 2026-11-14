@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { FilesService } from '../files/files.service';
+import { uploadsPathFrom } from '../common/storage';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 /**
  * Generic 1:1 conversations layer. Every messaging surface in the app
@@ -36,7 +40,20 @@ export class ConversationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly files: FilesService,
   ) {}
+
+  // Avatars moved from a public bucket to signed delivery (security/
+  // launch review finding #12) — every avatarUrl surfaced to a client
+  // through this service must be re-signed for the viewer making this
+  // specific request.
+  private avatarUrlFor(avatarUrl: string | null | undefined, viewerUserId: string): string | null {
+    if (!avatarUrl) return avatarUrl ?? null;
+    const uploadsPath = uploadsPathFrom(avatarUrl);
+    if (!uploadsPath) return avatarUrl;
+    const relPath = uploadsPath.replace(/^\/uploads\//, '');
+    return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
+  }
 
   /**
    * Returns the existing conversation for this context + participant
@@ -96,7 +113,7 @@ export class ConversationsService {
    * inbox row without a second round-trip.
    */
   async listForUser(userId: string) {
-    return this.prisma.conversation.findMany({
+    const conversations = await this.prisma.conversation.findMany({
       where: { participants: { some: { userId } } },
       orderBy: [{ lastMessageAt: 'desc' }, { createdAt: 'desc' }],
       include: {
@@ -121,6 +138,14 @@ export class ConversationsService {
         },
       },
     });
+
+    return conversations.map((c) => ({
+      ...c,
+      participants: c.participants.map((p) => ({
+        ...p,
+        user: { ...p.user, avatarUrl: this.avatarUrlFor(p.user.avatarUrl, userId) },
+      })),
+    }));
   }
 
   /**
@@ -164,7 +189,13 @@ export class ConversationsService {
       }),
     ]);
 
-    return { messages, participants };
+    return {
+      messages: messages.map((m) => ({
+        ...m,
+        sender: { ...m.sender, avatarUrl: this.avatarUrlFor(m.sender.avatarUrl, userId) },
+      })),
+      participants,
+    };
   }
 
   /**

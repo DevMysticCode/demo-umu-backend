@@ -6,6 +6,10 @@ import {
 } from '@nestjs/common';
 import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
+import { uploadsPathFrom } from '../common/storage';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 // Platform fee — 10% of the job amount, paid by the customer on top
 // of the supplier's quoted price. Lifted to a constant so the wizard
@@ -38,10 +42,25 @@ export interface AuthorizeResult {
 export class EscrowService {
   private readonly stripe: Stripe;
 
-  constructor(private prisma: PrismaService) {
+  constructor(
+    private prisma: PrismaService,
+    private files: FilesService,
+  ) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
     this.stripe = new Stripe(key);
+  }
+
+  // job-evidence moved to signed delivery (security/launch review
+  // finding #12) — only /uploads/job-evidence/... paths need signing;
+  // legacy rows stored under the old, now-public job-photos bucket
+  // (pre-finding-#12 uploads) pass through untouched since that bucket
+  // is still served directly.
+  private signEvidenceUrl(url: string, viewerUserId: string): string {
+    const uploadsPath = uploadsPathFrom(url);
+    if (!uploadsPath || !uploadsPath.startsWith('/uploads/job-evidence/')) return url;
+    const relPath = uploadsPath.replace(/^\/uploads\//, '');
+    return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
   }
 
   // Called from POST /marketplace/offers/:id/authorize — the customer
@@ -129,7 +148,7 @@ export class EscrowService {
     ]);
 
     return {
-      payment: this.toDto(payment),
+      payment: this.toDto(payment, viewerUserId),
       clientSecret: intent.client_secret!,
     };
   }
@@ -140,7 +159,7 @@ export class EscrowService {
   async confirmPayment(viewerUserId: string, paymentId: string): Promise<MarketplacePaymentDto> {
     const payment = await this.findOwnPayment(viewerUserId, paymentId);
 
-    if (payment.status === 'held') return this.toDto(payment); // idempotent
+    if (payment.status === 'held') return this.toDto(payment, viewerUserId); // idempotent
     if (payment.status !== 'pending') {
       throw new BadRequestException(`Payment is already ${payment.status}`);
     }
@@ -170,7 +189,7 @@ export class EscrowService {
       where: { id: paymentId },
       data: { status: 'held', heldAt: new Date() },
     });
-    return this.toDto(updated);
+    return this.toDto(updated, viewerUserId);
   }
 
   // Customer releases funds after verifying the work is done. The
@@ -179,7 +198,7 @@ export class EscrowService {
   // (controller) drops a system message into the thread.
   async releasePayment(viewerUserId: string, paymentId: string): Promise<MarketplacePaymentDto> {
     const payment = await this.findOwnPayment(viewerUserId, paymentId);
-    if (payment.status === 'released') return this.toDto(payment);
+    if (payment.status === 'released') return this.toDto(payment, viewerUserId);
     if (payment.status !== 'held') {
       throw new BadRequestException(`Cannot release a ${payment.status} payment`);
     }
@@ -197,12 +216,12 @@ export class EscrowService {
         data: { status: 'completed' },
       }),
     ]);
-    return this.toDto(released);
+    return this.toDto(released, viewerUserId);
   }
 
   async getPayment(viewerUserId: string, paymentId: string): Promise<MarketplacePaymentDto> {
     const payment = await this.findVisiblePayment(viewerUserId, paymentId);
-    return this.toDto(payment);
+    return this.toDto(payment, viewerUserId);
   }
 
   // For receipts shown on the offers page — fetch by jobId if the
@@ -213,7 +232,7 @@ export class EscrowService {
     if (payment.customerId !== viewerUserId && payment.supplierId !== viewerUserId) {
       return null;
     }
-    return this.toDto(payment);
+    return this.toDto(payment, viewerUserId);
   }
 
   // Append evidence photo URLs to the payment row. Either party can
@@ -237,8 +256,14 @@ export class EscrowService {
     }
 
     // Accept either:
-    //   - relative paths into our own bucket: /uploads/job-photos/<file>
-    //   - direct S3 URLs from publicUrlFor() in S3 mode
+    //   - relative paths into the private job-evidence bucket:
+    //     /uploads/job-evidence/<file>
+    //   - /uploads/job-photos/<file> — the old (public) bucket evidence
+    //     used before security/launch review finding #12; only matters
+    //     for already-stored rows, since new uploads now always go
+    //     through /marketplace/upload-evidence-photo → job-evidence
+    //   - direct S3 URLs from publicUrlFor() in S3 mode, same two bucket
+    //     names
     // Everything else (arbitrary external links, data: URIs, attempts
     // to point at a different bucket) is rejected so the evidence
     // array can't be used as a free hotlink store.
@@ -249,8 +274,12 @@ export class EscrowService {
       .map((p) => (p ?? '').toString().trim())
       .filter((p) => {
         if (p.includes('..')) return false;
-        if (p.startsWith('/uploads/job-photos/')) return true;
-        if (expectedS3Prefix && p.startsWith(expectedS3Prefix) && p.includes('/job-photos/')) {
+        if (p.startsWith('/uploads/job-evidence/') || p.startsWith('/uploads/job-photos/')) return true;
+        if (
+          expectedS3Prefix &&
+          p.startsWith(expectedS3Prefix) &&
+          (p.includes('/job-evidence/') || p.includes('/job-photos/'))
+        ) {
           return true;
         }
         return false;
@@ -265,7 +294,7 @@ export class EscrowService {
       where: { id: paymentId },
       data: { evidencePhotos: next },
     });
-    return this.toDto(updated);
+    return this.toDto(updated, viewerUserId);
   }
 
   // ─── internal ─────────────────────────────────────────────────────
@@ -287,7 +316,8 @@ export class EscrowService {
     return payment;
   }
 
-  private toDto(p: any): MarketplacePaymentDto {
+  private toDto(p: any, viewerUserId: string): MarketplacePaymentDto {
+    const evidencePhotos = Array.isArray(p.evidencePhotos) ? p.evidencePhotos : [];
     return {
       id: p.id,
       jobId: p.jobId,
@@ -302,7 +332,7 @@ export class EscrowService {
       heldAt: p.heldAt?.toISOString() ?? null,
       releasedAt: p.releasedAt?.toISOString() ?? null,
       refundedAt: p.refundedAt?.toISOString() ?? null,
-      evidencePhotos: Array.isArray(p.evidencePhotos) ? p.evidencePhotos : [],
+      evidencePhotos: evidencePhotos.map((url: string) => this.signEvidenceUrl(url, viewerUserId)),
     };
   }
 }

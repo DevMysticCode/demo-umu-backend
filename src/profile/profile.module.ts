@@ -3,10 +3,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
     PrismaModule,
+    FilesModule,
     JwtModule.register({ secret: process.env.JWT_SECRET }),
   ],
   controllers: [ProfileController],

@@ -8,8 +8,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReviewsService } from './reviews.service';
+import { FilesService } from '../files/files.service';
+import { uploadsPathFrom } from '../common/storage';
 import { CreateJobDto } from './dto/create-job.dto';
 import { CreateOfferDto } from './dto/create-offer.dto';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 
 // Shape returned by the public endpoints. We collapse the DB row
 // into something the mobile client can render directly — derived
@@ -164,7 +168,18 @@ export class MarketplaceService {
     // grows a back-reference to MarketplaceService.
     @Inject(forwardRef(() => ReviewsService))
     private reviews: ReviewsService,
+    private files: FilesService,
   ) {}
+
+  // job-evidence moved to signed delivery (security/launch review
+  // finding #12); legacy rows under the old, still-public job-photos
+  // bucket pass through untouched.
+  private signEvidenceUrl(url: string, viewerUserId: string): string {
+    const uploadsPath = uploadsPathFrom(url);
+    if (!uploadsPath || !uploadsPath.startsWith('/uploads/job-evidence/')) return url;
+    const relPath = uploadsPath.replace(/^\/uploads\//, '');
+    return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
+  }
 
   async listCategories(): Promise<MarketplaceCategoryDto[]> {
     const rows = await this.prisma.marketplaceCategory.findMany({
@@ -332,7 +347,9 @@ export class MarketplaceService {
         heldAt: payment.heldAt?.toISOString() ?? null,
         releasedAt: payment.releasedAt?.toISOString() ?? null,
         refundedAt: payment.refundedAt?.toISOString() ?? null,
-        evidencePhotos: Array.isArray(payment.evidencePhotos) ? payment.evidencePhotos : [],
+        evidencePhotos: (Array.isArray(payment.evidencePhotos) ? payment.evidencePhotos : []).map(
+          (url: string) => this.signEvidenceUrl(url, viewerUserId),
+        ),
       },
       offer: {
         id: payment.offer.id,

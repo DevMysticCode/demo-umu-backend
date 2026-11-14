@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { FilesModule } from '../files/files.module';
 import { ConversationsController } from './conversations.controller';
 import { ConversationsService } from './conversations.service';
 import { ViewingRequestsService } from './viewing-requests.service';
@@ -16,7 +17,7 @@ import { ViewingRequestsService } from './viewing-requests.service';
  * conversation without going through HTTP.
  */
 @Module({
-  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), NotificationsModule],
+  imports: [PrismaModule, JwtModule.register({ secret: process.env.JWT_SECRET }), NotificationsModule, FilesModule],
   controllers: [ConversationsController],
   providers: [ConversationsService, ViewingRequestsService],
   exports: [ConversationsService, ViewingRequestsService],

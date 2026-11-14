@@ -27,21 +27,34 @@ import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/m
  *
  * The two-tier delivery model (public buckets via direct URL, private
  * via /files/<bucket>/<file>?sig=...) is preserved in both modes:
- *   - Public buckets (avatars, job-photos, property-images): saved
- *     with ACL 'public-read' in S3 mode → publicUrlFor() returns the
- *     S3 https URL. In disk mode, the URL stays /uploads/<bucket>/...
- *   - Private buckets (documents, passport-docs, kyc, etc.): saved
- *     private. The existing FilesController + HMAC-signed URLs still
- *     handle delivery; in S3 mode it streams via GetObjectCommand
- *     instead of fs.sendFile.
+ *   - Public buckets (property-images, job-photos): saved with ACL
+ *     'public-read' in S3 mode → publicUrlFor() returns the S3 https
+ *     URL. In disk mode, the URL stays /uploads/<bucket>/... Both need
+ *     to be visible to anonymous, logged-out visitors browsing search
+ *     results (property search) or open job listings (marketplace) —
+ *     there is no "owner" to check a signed URL against for a public
+ *     listing photo, so these are a deliberate, permanent exception
+ *     rather than a gap to close (security/launch review finding #12,
+ *     2026-11-13). job-photos is ONLY for photos attached to a job
+ *     listing itself (marketplace "post a job" wizard) — contract
+ *     evidence photos between a specific customer/supplier pair use
+ *     the separate, private `job-evidence` bucket below instead, since
+ *     those have a real two-party owner and no public-browse need.
+ *   - Private buckets (documents, passport-docs, kyc, avatars,
+ *     job-evidence, etc.): saved private. The existing FilesController
+ *     + HMAC-signed URLs handle delivery; in S3 mode it streams via
+ *     GetObjectCommand instead of fs.sendFile. avatars moved from
+ *     public to private here (finding #12) — see
+ *     FilesService.userOwnsFilePath for the relationship checks
+ *     (any authenticated user for avatars, payment party for
+ *     job-evidence).
  */
 
 const UPLOAD_ROOT = join(process.cwd(), 'uploads');
 
 const PUBLIC_BUCKETS = new Set<string>([
-  'avatars',
-  'job-photos',
   'property-images',
+  'job-photos',
 ]);
 
 const s3Bucket = process.env.S3_UPLOADS_BUCKET ?? '';

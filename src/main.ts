@@ -87,7 +87,7 @@ async function bootstrap() {
   // per-bucket allow-list so adding a new public bucket is explicit.
   if (!process.env.S3_UPLOADS_BUCKET) {
     const uploadsRoot = join(process.cwd(), 'uploads');
-    const publicBuckets = ['avatars', 'job-photos', 'property-images'];
+    const publicBuckets = ['property-images', 'job-photos'];
     for (const bucket of publicBuckets) {
       app.useStaticAssets(join(uploadsRoot, bucket), {
         prefix: `/uploads/${bucket}`,

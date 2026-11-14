@@ -70,9 +70,14 @@ export class DocumentsService {
 
   /**
    * Convert a stored fileUrl into the URL the client should hit:
-   *   - public bucket (avatars, job-photos, property-images, …): the
-   *     existing /uploads/<bucket>/<file> path → served by the static
-   *     middleware in main.ts. No auth attached.
+   *   - public bucket (property-images only): the existing
+   *     /uploads/<bucket>/<file> path → served by the static middleware
+   *     in main.ts. No auth attached. avatars and job-photos used to be
+   *     public too but moved to signed delivery (security/launch review
+   *     finding #12) — this service only ever handles `documents`
+   *     rows though, so that move doesn't touch this method; see
+   *     ProfileService (avatars) and MarketplaceService (job-photos)
+   *     for their own signed-URL wrapping.
    *   - private bucket (documents/, future kyc/, evidence/): /files/...
    *     with a freshly-minted HMAC signature scoped to this userId.
    *     The signature is valid for 1 hour by default — long enough for

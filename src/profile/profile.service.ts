@@ -3,12 +3,16 @@ import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
+import { FilesService } from '../files/files.service';
 import {
   publicUrlFor,
   storedFilename,
   deleteStoredFile,
   isS3Mode,
+  uploadsPathFrom,
 } from '../common/storage';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { computePassportCompletion } from '../common/passport-completion';
 import {
   UpdateProfileDto,
@@ -36,7 +40,25 @@ const INTEREST_LABELS: Record<string, string> = {
 
 @Injectable()
 export class ProfileService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private files: FilesService,
+  ) {}
+
+  /**
+   * avatars moved from a public bucket to signed delivery (security/
+   * launch review finding #12) — every avatarUrl handed to a client
+   * must be re-signed for the viewer actually making this request, not
+   * just the stored relative path. Returns '' for no avatar, passes
+   * through unrecognised/legacy absolute URLs untouched.
+   */
+  private avatarUrlFor(avatarUrl: string | null | undefined, viewerUserId: string): string {
+    if (!avatarUrl) return '';
+    const uploadsPath = uploadsPathFrom(avatarUrl);
+    if (!uploadsPath) return avatarUrl;
+    const relPath = uploadsPath.replace(/^\/uploads\//, '');
+    return `${BASE_URL}${this.files.buildSignedUrl(relPath, viewerUserId)}`;
+  }
 
   async uploadAvatar(userId: string, file: any, host: string) {
     if (!file) throw new BadRequestException('No file provided');
@@ -71,7 +93,7 @@ export class ProfileService {
     });
 
     const { password, ...safe } = updated;
-    return { ...safe, avatarUrl };
+    return { ...safe, avatarUrl: this.avatarUrlFor(avatarUrl, userId) };
   }
 
   async getProfile(userId: string) {
@@ -87,7 +109,7 @@ export class ProfileService {
     if (!user) throw new NotFoundException('User not found');
 
     const { password, ...safe } = user;
-    return safe;
+    return { ...safe, avatarUrl: this.avatarUrlFor(user.avatarUrl, userId) };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
@@ -627,7 +649,7 @@ export class ProfileService {
       // (security review 2026-09-22, L2).
       email: this.maskEmail(u.email),
       name: [u.firstName, u.lastName].filter(Boolean).join(' ') || this.maskEmail(u.email),
-      avatarUrl: u.avatarUrl,
+      avatarUrl: this.avatarUrlFor(u.avatarUrl, currentUserId),
     }));
   }
 
@@ -684,7 +706,7 @@ export class ProfileService {
         collaboratorId: r.collaborator.id,
         name: [r.collaborator.firstName, r.collaborator.lastName].filter(Boolean).join(' ') || r.collaborator.email,
         email: r.collaborator.email,
-        avatarUrl: r.collaborator.avatarUrl,
+        avatarUrl: this.avatarUrlFor(r.collaborator.avatarUrl, userId),
         role: r.role,
         permission: r.permission,
         propertyIds: r.propertyIds ?? [],
@@ -755,7 +777,7 @@ export class ProfileService {
       collaboratorId: row.collaborator.id,
       name: [row.collaborator.firstName, row.collaborator.lastName].filter(Boolean).join(' ') || row.collaborator.email,
       email: row.collaborator.email,
-      avatarUrl: row.collaborator.avatarUrl,
+      avatarUrl: this.avatarUrlFor(row.collaborator.avatarUrl, userId),
       joinedAt: row.collaborator.createdAt,
       role: row.role,
       permission: row.permission,
@@ -806,7 +828,7 @@ export class ProfileService {
       collaboratorId: row.collaborator.id,
       name: [row.collaborator.firstName, row.collaborator.lastName].filter(Boolean).join(' ') || row.collaborator.email,
       email: row.collaborator.email,
-      avatarUrl: row.collaborator.avatarUrl,
+      avatarUrl: this.avatarUrlFor(row.collaborator.avatarUrl, userId),
       role: row.role,
       permission: row.permission,
       propertyIds: row.propertyIds ?? [],

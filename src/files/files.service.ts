@@ -121,16 +121,45 @@ export class FilesService {
    * URL for a QuestionAnswer file 403'd because this only ever checked
    * the bare form.
    *
-   * Looks at the two surfaces that currently produce signed URLs:
+   * Looks at the surfaces that currently produce signed URLs:
    *   - UserDocument — the explicit /documents upload
    *   - QuestionAnswer — passport question file answers (the user
    *     who answered the question owns the file)
+   *   - avatars — shown across many in-app surfaces with no single
+   *     relationship type in common (collaborator search, matched-buyer
+   *     cards, collaborator lists) — gated on "is this a real,
+   *     authenticated account" rather than a specific relationship,
+   *     closing the actual gap (fully public, no-login access) without
+   *     breaking any of those surfaces (security/launch review
+   *     finding #12, 2026-11-13)
+   *   - job-evidence — marketplace contract dispute photos, restricted
+   *     to the customer/supplier on the specific MarketplacePayment
+   *     the photo was attached to (finding #12)
    *
-   * Extend here when new private-bucket surfaces come online (e.g.
-   * KYC, marketplace evidence) so they get the same check for free.
+   * Extend here when new private-bucket surfaces come online (e.g. KYC)
+   * so they get the same check for free.
    */
   private async userOwnsFilePath(userId: string, path: string): Promise<boolean> {
     const bareUrl = `/uploads/${path.replace(/^\/+/, '')}`;
+
+    if (path.startsWith('avatars/')) {
+      const viewer = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+      return !!viewer;
+    }
+
+    if (path.startsWith('job-evidence/')) {
+      const payment = await this.prisma.marketplacePayment.findFirst({
+        where: {
+          evidencePhotos: { has: bareUrl },
+          OR: [{ customerId: userId }, { supplierId: userId }],
+        },
+        select: { id: true },
+      });
+      return !!payment;
+    }
     // Match by suffix, not a fixed list of [bare, current-BASE_URL]
     // candidates — a row stored with a stale BASE_URL (e.g. a
     // dev-time localhost URL that shipped before BASE_URL was set

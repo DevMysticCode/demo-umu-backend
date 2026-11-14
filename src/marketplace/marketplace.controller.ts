@@ -207,6 +207,45 @@ export class MarketplaceController {
     return { url: publicUrlFor('job-photos', file.filename) };
   }
 
+  // Contract/dispute evidence photos — separate from the job-listing
+  // wizard's upload-photo above. These are private (the photo can show
+  // the inside of someone's home) and go to the job-evidence bucket,
+  // delivered later via a signed URL scoped to the two payment parties
+  // instead of a public URL (security/launch review finding #12).
+  @Post('upload-evidence-photo')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      createUploadStorage({
+        bucket: 'job-evidence',
+        maxMb: 8,
+        mimeAllowList: IMAGE_MIME_TYPES,
+      }),
+    ),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Contract evidence photo to upload (max 8MB). Call once per photo.' },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload a contract evidence photo', description: 'Uploads a single image (jpg/png/webp/heic, max 8MB) to the private job-evidence bucket. The returned URL is a relative path - pass it to POST /marketplace/payments/:id/evidence; it is only ever served back out as a signed URL to the two parties on that specific payment.' })
+  @ApiResponse({ status: 201, description: 'The uploaded photo\'s relative storage path.', schema: { type: 'object', properties: { url: { type: 'string' } } } })
+  @ApiResponse({ status: 400, description: 'File missing, or an unsupported MIME type.' })
+  uploadEvidencePhoto(@UploadedFile() file: any) {
+    if (!file) {
+      throw new BadRequestException(
+        'Upload missing or unsupported file type (allowed: jpg, png, webp, heic)',
+      );
+    }
+    return { url: publicUrlFor('job-evidence', file.filename) };
+  }
+
   // Param routes last so they don't capture /me or /upload-photo.
   @Get('jobs/:id')
   @ApiOperation({ summary: 'Get job detail', description: 'Public. Returns full job detail including description, photos and status. If a valid bearer token is present, `isMine` reflects whether the caller posted it; anonymous callers always get isMine: false.' })
