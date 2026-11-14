@@ -36,7 +36,22 @@ function makeService(opts?: { paid?: boolean; kycApproved?: boolean }) {
   // The constructor reads GROQ_API_KEY but the SDK is lazy — instantiating
   // it doesn't make any HTTP call, so test bootstrap stays clean.
   const pushStub: any = { send: jest.fn().mockResolvedValue(undefined) };
-  const svc = new PassportService(prismaStub, paymentsStub, pushStub);
+  const conversationsStub: any = {
+    findOrCreate: jest.fn().mockResolvedValue({ id: 'conv-1' }),
+    sendMessage: jest.fn().mockResolvedValue(undefined),
+  };
+  const notificationsStub: any = { sendNotification: jest.fn().mockResolvedValue(undefined) };
+  const filesStub: any = { buildSignedUrl: jest.fn().mockReturnValue('/files/mock') };
+  const eventsStub: any = { logEvent: jest.fn().mockResolvedValue(undefined) };
+  const svc = new PassportService(
+    prismaStub,
+    paymentsStub,
+    pushStub,
+    conversationsStub,
+    notificationsStub,
+    filesStub,
+    eventsStub,
+  );
   return { svc, prismaStub, paymentsStub };
 }
 

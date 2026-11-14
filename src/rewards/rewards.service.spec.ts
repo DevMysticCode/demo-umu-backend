@@ -193,7 +193,18 @@ describe('RewardsService.award', () => {
       }),
     });
     expect(txUserStamp.create).toHaveBeenCalledWith({
-      data: { userId: 'u1', stampDefinitionId: 'stamp1', passportId: undefined, propertyId: 'prop1' },
+      data: expect.objectContaining({
+        userId: 'u1',
+        stampDefinitionId: 'stamp1',
+        passportId: undefined,
+        propertyId: 'prop1',
+        // Snapshotted at mint time (rewards.service.ts) so the
+        // uncelebrated-stamps endpoint needs no extra join back to the
+        // ledger to know how many points to display / whether it's
+        // already verified.
+        pointsAwarded: 750,
+        verificationStatus: 'VERIFIED',
+      }),
     });
     expect(result).toEqual(expect.objectContaining({ id: 'entry1' }));
   });

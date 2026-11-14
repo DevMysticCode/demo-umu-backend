@@ -36,7 +36,25 @@ function makeService() {
     hasSuccessfulPayment: jest.fn().mockResolvedValue(false),
   };
   const pushStub: any = { send: jest.fn().mockResolvedValue(undefined) };
-  return { svc: new PassportService(prismaStub, paymentsStub, pushStub), prismaStub };
+  const conversationsStub: any = {
+    findOrCreate: jest.fn().mockResolvedValue({ id: 'conv-1' }),
+    sendMessage: jest.fn().mockResolvedValue(undefined),
+  };
+  const notificationsStub: any = { sendNotification: jest.fn().mockResolvedValue(undefined) };
+  const filesStub: any = { buildSignedUrl: jest.fn().mockReturnValue('/files/mock') };
+  const eventsStub: any = { logEvent: jest.fn().mockResolvedValue(undefined) };
+  return {
+    svc: new PassportService(
+      prismaStub,
+      paymentsStub,
+      pushStub,
+      conversationsStub,
+      notificationsStub,
+      filesStub,
+      eventsStub,
+    ),
+    prismaStub,
+  };
 }
 
 beforeAll(() => {

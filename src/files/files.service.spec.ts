@@ -12,6 +12,8 @@ function makeSvc() {
   const prismaStub: any = {
     userDocument: { findFirst: jest.fn().mockResolvedValue(null) },
     questionAnswer: { findFirst: jest.fn().mockResolvedValue(null) },
+    user: { findUnique: jest.fn().mockResolvedValue(null) },
+    marketplacePayment: { findFirst: jest.fn().mockResolvedValue(null) },
   };
   return { svc: new FilesService(prismaStub), prismaStub };
 }
@@ -120,5 +122,81 @@ describe('FilesService - verifyAndAuthorise', () => {
         'user-2',
       ),
     ).rejects.toThrow(/signature|does not own/i);
+  });
+});
+
+// Security/launch review finding #12 (2026-11-13): avatars and
+// marketplace evidence photos moved from public buckets to this same
+// signed-delivery mechanism. These lock in their ownership rules.
+describe('FilesService - userOwnsFilePath (avatars, job-evidence)', () => {
+  beforeAll(() => {
+    process.env.JWT_SECRET = 'sentinel-secret-at-least-sixteen-chars';
+  });
+
+  it('avatars: allows any real, authenticated account (no single relationship covers every surface that shows one)', async () => {
+    const { svc, prismaStub } = makeSvc();
+    prismaStub.user.findUnique.mockResolvedValue({ id: 'viewer-1' });
+    const q = svc.buildSignedQuery('avatars/pic.jpg', 'viewer-1');
+    const params = new URLSearchParams(q);
+
+    await expect(
+      svc.verifyAndAuthorise('avatars/pic.jpg', params.get('sig')!, params.get('exp')!, 'viewer-1'),
+    ).resolves.toEqual({ userId: 'viewer-1' });
+    expect(prismaStub.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'viewer-1' },
+      select: { id: true },
+    });
+  });
+
+  it('avatars: rejects when the signed-for account no longer exists', async () => {
+    const { svc, prismaStub } = makeSvc();
+    prismaStub.user.findUnique.mockResolvedValue(null);
+    const q = svc.buildSignedQuery('avatars/pic.jpg', 'deleted-user');
+    const params = new URLSearchParams(q);
+
+    await expect(
+      svc.verifyAndAuthorise('avatars/pic.jpg', params.get('sig')!, params.get('exp')!, 'deleted-user'),
+    ).rejects.toThrow(/does not own/i);
+  });
+
+  it('job-evidence: allows the customer on the payment the photo belongs to', async () => {
+    const { svc, prismaStub } = makeSvc();
+    prismaStub.marketplacePayment.findFirst.mockResolvedValue({ id: 'payment-1' });
+    const q = svc.buildSignedQuery('job-evidence/leak.jpg', 'customer-1');
+    const params = new URLSearchParams(q);
+
+    await expect(
+      svc.verifyAndAuthorise(
+        'job-evidence/leak.jpg',
+        params.get('sig')!,
+        params.get('exp')!,
+        'customer-1',
+      ),
+    ).resolves.toEqual({ userId: 'customer-1' });
+    expect(prismaStub.marketplacePayment.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          evidencePhotos: { has: '/uploads/job-evidence/leak.jpg' },
+          OR: [{ customerId: 'customer-1' }, { supplierId: 'customer-1' }],
+        }),
+      }),
+    );
+  });
+
+  it('job-evidence: rejects a third party who is neither the customer nor supplier on that payment', async () => {
+    const { svc, prismaStub } = makeSvc();
+    // No payment matches this user as customer or supplier for this photo.
+    prismaStub.marketplacePayment.findFirst.mockResolvedValue(null);
+    const q = svc.buildSignedQuery('job-evidence/leak.jpg', 'stranger-1');
+    const params = new URLSearchParams(q);
+
+    await expect(
+      svc.verifyAndAuthorise(
+        'job-evidence/leak.jpg',
+        params.get('sig')!,
+        params.get('exp')!,
+        'stranger-1',
+      ),
+    ).rejects.toThrow(/does not own/i);
   });
 });

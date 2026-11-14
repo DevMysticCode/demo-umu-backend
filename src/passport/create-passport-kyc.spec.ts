@@ -27,7 +27,25 @@ function makeService(opts?: { user?: any }) {
     passportSection: { create: jest.fn() },
     questionTemplate: { findMany: jest.fn().mockResolvedValue([]) },
   };
-  return { svc: new PassportService(prismaStub, {} as any, { send: jest.fn() } as any), prismaStub };
+  const conversationsStub: any = {
+    findOrCreate: jest.fn().mockResolvedValue({ id: 'conv-1' }),
+    sendMessage: jest.fn().mockResolvedValue(undefined),
+  };
+  const notificationsStub: any = { sendNotification: jest.fn().mockResolvedValue(undefined) };
+  const filesStub: any = { buildSignedUrl: jest.fn().mockReturnValue('/files/mock') };
+  const eventsStub: any = { logEvent: jest.fn().mockResolvedValue(undefined) };
+  return {
+    svc: new PassportService(
+      prismaStub,
+      {} as any,
+      { send: jest.fn() } as any,
+      conversationsStub,
+      notificationsStub,
+      filesStub,
+      eventsStub,
+    ),
+    prismaStub,
+  };
 }
 
 beforeAll(() => {
