@@ -13,6 +13,7 @@ import { PushService } from '../push/push.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { FilesService } from '../files/files.service';
+import { SHARE_LINK_DURATION_HOURS, ShareLinkDurationHours } from './dto/share.dto';
 import { PUBLIC_BUCKETS, uploadsPathFrom } from '../common/storage';
 import { assertKycVerified } from '../common/kyc';
 import { resolveFrontendBaseUrl } from '../common/frontend-url';
@@ -2941,18 +2942,17 @@ export class PassportService {
     scope: 'buyer' | 'tenant' = 'buyer',
     documentIds?: string[],
     requestOrigin?: string | null,
+    durationHours?: ShareLinkDurationHours,
   ) {
     const passport = await this.prisma.passport.findUnique({ where: { id: passportId } });
     if (!passport) throw new NotFoundException('Passport not found');
-    const isOwner = passport.ownerId === userId;
-    const isCollaborator = await this.prisma.passportCollaborator.findFirst({
-      where: { passportId, userId },
-    });
-    const isBuyer = await this.prisma.buyerPassportAccess.findFirst({
-      where: { passportId, userId },
-    });
-    if (!isOwner && !isCollaborator && !isBuyer) {
-      throw new ForbiddenException('Access denied');
+    // Owner-only — a collaborator or an unlocked buyer used to be able
+    // to mint a share link for a passport they don't own too, handing
+    // out read access to the whole document set at their own
+    // discretion rather than the owner's (security/launch review
+    // finding #16, 2026-11-14).
+    if (passport.ownerId !== userId) {
+      throw new ForbiddenException('Only the passport owner can create a share link');
     }
 
     // Tenant scope only makes sense for landlord passports.
@@ -2962,8 +2962,16 @@ export class PassportService {
       );
     }
 
+    // Closed menu of lifetimes (finding #16) — the DTO's @IsIn already
+    // rejects anything outside SHARE_LINK_DURATION_HOURS at the HTTP
+    // boundary; this fallback only matters for other, non-HTTP callers
+    // of the service.
+    const hours = SHARE_LINK_DURATION_HOURS.includes(durationHours as any)
+      ? (durationHours as ShareLinkDurationHours)
+      : 3;
+
     const token = require('crypto').randomUUID() as string;
-    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+    const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
 
     const link = await this.prisma.sharedPassportLink.create({
       data: { passportId, token, expiresAt, scope },

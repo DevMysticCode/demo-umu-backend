@@ -26,7 +26,7 @@ import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode, IMAGE_MIME
 import { CreatePassportDto } from './dto/create-passport.dto';
 import { ConvertToSellerDto } from './dto/convert-to-seller.dto';
 import { SetPassportTypeDto } from './dto/set-passport-type.dto';
-import { CreateShareLinkDto, SharePassportWithBuyerDto } from './dto/share.dto';
+import { CreateShareLinkDto, SharePassportWithBuyerDto, SHARE_LINK_DURATION_HOURS } from './dto/share.dto';
 import { SetLastVisitedDto, SetSectionVisibilityDto } from './dto/misc.dto';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
@@ -1418,10 +1418,12 @@ export class PassportController {
       properties: {
         scope: { type: 'string', enum: ['buyer', 'tenant'], description: 'Who the share link is intended for, used to filter which sections/documents are visible through it.' },
         documentIds: { type: 'array', items: { type: 'string' }, description: 'IDs of specific documents to include in the link\'s snapshotted manifest. Omit to include all documents visible at the chosen scope.' },
+        durationHours: { type: 'number', enum: SHARE_LINK_DURATION_HOURS as unknown as number[], default: 3, description: 'How long the link stays valid for - must be one of the listed choices. Defaults to 3 hours if omitted.' },
       },
     },
   })
   @ApiResponse({ status: 201, description: 'The created share link.', schema: { type: 'object', properties: { token: { type: 'string' }, url: { type: 'string' }, expiresAt: { type: 'string', format: 'date-time' } } } })
+  @ApiResponse({ status: 403, description: 'Only the passport owner can create a share link.' })
   async createShareLink(
     @Param('id') passportId: string,
     // `| undefined` dropped: TS's emitDecoratorMetadata erases a union
@@ -1442,6 +1444,7 @@ export class PassportController {
       scope,
       body?.documentIds,
       origin,
+      body?.durationHours,
     );
   }
 
