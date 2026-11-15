@@ -110,6 +110,40 @@ describe('validateEnv', () => {
     expect(printed).toContain('STRIPE_SECRET_KEY');
   });
 
+  it('REJECTS a well-formed test key (sk_test_*) in production - finding #11 regression guard', () => {
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://u:p@h:5432/d',
+        JWT_SECRET: 'sixteen_chars_minimum_for_secret',
+        STRIPE_SECRET_KEY: 'sk_test_realistic_but_not_live',
+        STRIPE_WEBHOOK_SECRET: 'whsec_x',
+        RESEND_API_KEY: 'real_key',
+        ADMIN_SECRET: 'sixteen_chars_minimum_for_secret',
+        CORS_ORIGINS: 'https://x.com',
+        BASE_URL: 'https://api.umovingu.com',
+      } as any),
+    ).toThrow('process.exit(1)');
+    const printed = errSpy.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(printed).toContain('test key');
+  });
+
+  it('allows a live key (sk_live_*) in production', () => {
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        DATABASE_URL: 'postgresql://u:p@h:5432/d',
+        JWT_SECRET: 'sixteen_chars_minimum_for_secret',
+        STRIPE_SECRET_KEY: 'sk_live_realistic_key',
+        STRIPE_WEBHOOK_SECRET: 'whsec_x',
+        RESEND_API_KEY: 'real_key',
+        ADMIN_SECRET: 'sixteen_chars_minimum_for_secret',
+        CORS_ORIGINS: 'https://x.com',
+        BASE_URL: 'https://api.umovingu.com',
+      } as any),
+    ).not.toThrow();
+  });
+
   it('rejects malformed STRIPE_WEBHOOK_SECRET in production', () => {
     expect(() =>
       validateEnv({

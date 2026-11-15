@@ -168,6 +168,18 @@ export function validateEnv(env: NodeJS.ProcessEnv): void {
     }
   }
 
+  // Security/launch review finding #11 (2026-11-14): STRIPE_SECRET_KEY's
+  // `shape` check above only confirms it's SOME Stripe key (test or
+  // live) - it would happily boot a production deploy still running on
+  // a leftover sk_test_ key, silently refusing real payments while
+  // looking configured. A live key is non-negotiable before this
+  // environment can take money, so this is fatal, not a warning.
+  if (isProd && env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+    errors.push(
+      '  - STRIPE_SECRET_KEY is a test key (sk_test_*) in a production environment - a live key (sk_live_*) is required before any payment can be taken',
+    );
+  }
+
   for (const check of checks) {
     if (check.prodOnly && !isProd) continue;
 
