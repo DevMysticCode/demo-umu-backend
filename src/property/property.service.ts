@@ -16,6 +16,7 @@ import { Property, Prisma } from '@prisma/client';
 import { Resend } from 'resend';
 import { buildStreetViewUrl, resolveStreetViewUrl, proxiedStreetViewUrl } from './street-view';
 import { escapeForEmail } from '../common/escape-html';
+import { BoundedCache } from '../common/cache-store';
 
 // ── EPC API helpers ──────────────────────────────────────────────────────────
 //
@@ -1467,13 +1468,22 @@ export class PropertyService {
     private rewards: RewardsService,
   ) {}
 
-  // In-memory enrichment cache. The /enrichment endpoint aggregates ~10 live
+  // Enrichment cache. The /enrichment endpoint aggregates ~10 live
   // external APIs (Overpass, OS, Land Registry, Ofcom…), some of which are
   // slow or intermittently empty. We cache the last successful aggregate per
   // property and MERGE empty sections from a fresh fetch with the cached
   // non-empty values, so schools/transport/sales stop flickering on/off.
-  private enrichmentCache = new Map<string, { data: any; ts: number }>();
+  // Redis-backed + shared across instances when REDIS_URL is set (security/
+  // launch review follow-up, 2026-11-16 — same motivation as the throttler
+  // storage in app.module.ts); bounded in-memory (oldest-first eviction, a
+  // few thousand properties' worth) when it isn't, so an unbounded Map
+  // can't grow for the life of the process.
   private static readonly ENRICHMENT_TTL_MS = 24 * 60 * 60 * 1000; // 24h fresh
+  private readonly enrichmentCache = new BoundedCache<{ data: any; ts: number }>(
+    'enrichment',
+    PropertyService.ENRICHMENT_TTL_MS,
+    2000,
+  );
 
   // Overpass (OpenStreetMap) circuit breaker. When every mirror fails we skip
   // Overpass entirely for a cooldown window instead of burning ~60-70s on dead
@@ -3243,7 +3253,7 @@ export class PropertyService {
   // ~60-70s on live external APIs, and so intermittently-empty sections
   // (schools, transport, sales) stop flickering between loads.
   async getPropertyEnrichment(propertyId: string) {
-    const cached = this.enrichmentCache.get(propertyId);
+    const cached = await this.enrichmentCache.get(propertyId);
     const age = cached ? Date.now() - cached.ts : Infinity;
 
     if (cached && age < PropertyService.ENRICHMENT_TTL_MS) {
@@ -3254,10 +3264,10 @@ export class PropertyService {
       // Stale: serve cached immediately, refresh in the background. Merge so
       // any section the refresh can't fetch keeps its last good value.
       this.computeEnrichment(propertyId)
-        .then((fresh) => {
+        .then(async (fresh) => {
           if (!fresh) return;
           const merged = this.mergeEnrichment(cached.data, fresh);
-          this.enrichmentCache.set(propertyId, { data: merged, ts: Date.now() });
+          await this.enrichmentCache.set(propertyId, { data: merged, ts: Date.now() });
         })
         .catch(() => {});
       return cached.data;
@@ -3265,7 +3275,7 @@ export class PropertyService {
 
     // Cold: compute synchronously, then cache.
     const fresh = await this.computeEnrichment(propertyId);
-    if (fresh) this.enrichmentCache.set(propertyId, { data: fresh, ts: Date.now() });
+    if (fresh) await this.enrichmentCache.set(propertyId, { data: fresh, ts: Date.now() });
     return fresh;
   }
 
@@ -5680,12 +5690,15 @@ export class PropertyService {
   // review, 14 Oct 2026). Bounded size with oldest-first eviction so it
   // can't grow unbounded under a scraping attempt with many distinct
   // coordinates.
-  private readonly streetViewCache = new Map<
-    string,
-    { buffer: Buffer; contentType: string; expiresAt: number }
-  >();
   private static readonly STREET_VIEW_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
   private static readonly STREET_VIEW_CACHE_MAX_ENTRIES = 1000;
+  // Buffer isn't JSON-serialisable, so the Redis path stores it base64-
+  // encoded; see BoundedCache for the REDIS_URL/bounded-in-memory split.
+  private readonly streetViewCache = new BoundedCache<{ bufferBase64: string; contentType: string }>(
+    'street-view',
+    PropertyService.STREET_VIEW_CACHE_TTL_MS,
+    PropertyService.STREET_VIEW_CACHE_MAX_ENTRIES,
+  );
 
   async fetchStreetViewImage(
     lat: number,
@@ -5696,9 +5709,9 @@ export class PropertyService {
     // collapses the many near-identical lat/lon values a scraper could
     // use to try to defeat an exact-match cache into the same entry.
     const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${opts.size ?? ''},${opts.fov ?? ''},${opts.pitch ?? ''},${opts.radius ?? ''}`;
-    const cached = this.streetViewCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return { buffer: cached.buffer, contentType: cached.contentType };
+    const cached = await this.streetViewCache.get(cacheKey);
+    if (cached) {
+      return { buffer: Buffer.from(cached.bufferBase64, 'base64'), contentType: cached.contentType };
     }
 
     const googleUrl = buildStreetViewUrl(lat, lon, opts);
@@ -5708,14 +5721,9 @@ export class PropertyService {
     const contentType = res.headers.get('content-type') ?? 'image/jpeg';
     const buffer = Buffer.from(await res.arrayBuffer());
 
-    if (this.streetViewCache.size >= PropertyService.STREET_VIEW_CACHE_MAX_ENTRIES) {
-      const oldestKey = this.streetViewCache.keys().next().value;
-      if (oldestKey) this.streetViewCache.delete(oldestKey);
-    }
-    this.streetViewCache.set(cacheKey, {
-      buffer,
+    await this.streetViewCache.set(cacheKey, {
+      bufferBase64: buffer.toString('base64'),
       contentType,
-      expiresAt: Date.now() + PropertyService.STREET_VIEW_CACHE_TTL_MS,
     });
 
     return { buffer, contentType };
