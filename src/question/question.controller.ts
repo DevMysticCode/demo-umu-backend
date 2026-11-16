@@ -292,10 +292,11 @@ export class QuestionController {
   @ApiOperation({
     summary: 'Generate a no-account signing link for a tenant',
     description:
-      'Landlord-only (authenticated). Creates a random-token link, valid 30 days, that a tenant can open without any account to review and sign either the tenancy agreement or the inventory - kind distinguishes which document the link is for.',
+      "Landlord-only (authenticated). Creates a random-token link, valid 7 days, that a tenant can open without any account to review either document. Signing itself additionally requires a one-time code sent to tenantEmail (see tenancy-sign/:token/otp and the main tenancy-sign/:token POST) - finding #6, Onward pen-test.",
   })
   @ApiParam({ name: 'questionId', description: 'The PassportQuestion the signature belongs to' })
   @ApiResponse({ status: 201, description: 'Signing link created.', schema: { type: 'object', properties: { token: { type: 'string' }, url: { type: 'string', description: 'Full shareable sign link' } } } })
+  @ApiResponse({ status: 400, description: 'tenantEmail missing or not a valid email address.' })
   @ApiResponse({ status: 403, description: 'No access to this question.' })
   @ApiResponse({ status: 404, description: 'Question not found.' })
   @Post(':questionId/tenancy-sign-link')
@@ -304,14 +305,17 @@ export class QuestionController {
   @ApiBody({
     schema: {
       type: 'object',
+      required: ['tenantEmail'],
       properties: {
         kind: { type: 'string', enum: ['tenancy', 'inventory'], description: 'Which document the sign link is for.' },
+        tenantEmail: { type: 'string', description: 'Email the one-time signing code will be sent to.' },
       },
     },
   })
   async createTenancySignLink(
     @Param('questionId') questionId: string,
     @Body('kind') kind: 'tenancy' | 'inventory',
+    @Body('tenantEmail') tenantEmail: string,
     @Headers('origin') origin: string | undefined,
     @Request() req: any,
   ) {
@@ -320,6 +324,7 @@ export class QuestionController {
       req.user.id,
       kind || 'tenancy',
       origin,
+      tenantEmail,
     );
   }
 
@@ -342,14 +347,29 @@ export class QuestionController {
   }
 
   @ApiOperation({
+    summary: 'Request a one-time signing code',
+    description:
+      "Unauthenticated - the token is the credential. Sends a 6-digit code (10 min expiry) to the link's tenantEmail, required in the same request that submits the signature below. Rate-limited to one send per 60 seconds per link.",
+  })
+  @ApiParam({ name: 'token', description: 'The sign-link token' })
+  @ApiResponse({ status: 201, description: 'Code sent.', schema: { type: 'object', properties: { sent: { type: 'boolean' } } } })
+  @ApiResponse({ status: 400, description: 'A code was already sent recently, or the email could not be sent.' })
+  @ApiResponse({ status: 403, description: 'Link has expired, or has already been used to sign.' })
+  @ApiResponse({ status: 404, description: 'Link is invalid.' })
+  @Post('tenancy-sign/:token/otp')
+  async requestSignOtp(@Param('token') token: string) {
+    return this.questionService.requestSignOtp(token);
+  }
+
+  @ApiOperation({
     summary: 'Submit the tenant\'s signature',
     description:
-      'Unauthenticated - the token is the credential. Records the tenant\'s name, signature image, timestamp and submitting IP against the question\'s answer, and marks the link used (single use for the tenant\'s side).',
+      "Unauthenticated - the token is the credential. Requires the current one-time code from tenancy-sign/:token/otp in the same request. Records the tenant's name, email, signature image, timestamp and submitting IP against the question's answer, and marks the link used (single use for the tenant's side).",
   })
   @ApiParam({ name: 'token', description: 'The sign-link token' })
   @ApiResponse({ status: 201, description: 'Signature recorded.', schema: { type: 'object', properties: { success: { type: 'boolean' } } } })
-  @ApiResponse({ status: 400, description: 'Name/signature missing, or the signature image is invalid.' })
-  @ApiResponse({ status: 403, description: 'Link has expired, or has already been used to sign.' })
+  @ApiResponse({ status: 400, description: 'Name/signature/code missing, or the signature image is invalid.' })
+  @ApiResponse({ status: 403, description: 'Link expired/already used, code expired/missing, or too many incorrect code attempts.' })
   @ApiResponse({ status: 404, description: 'Link is invalid, or the underlying document no longer exists.' })
   @Post('tenancy-sign/:token')
   async submitTenantSignature(

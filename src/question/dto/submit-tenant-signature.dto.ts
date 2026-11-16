@@ -11,4 +11,8 @@ export class SubmitTenantSignatureDto {
   @ApiProperty({ description: 'Signature image as a data URL (e.g. "data:image/png;base64,...").' })
   @IsString()
   signatureDataUrl: string;
+
+  @ApiProperty({ description: 'The one-time code sent to the tenant email on file for this link (request it first via POST tenancy-sign/:token/otp).' })
+  @IsString()
+  otpCode: string;
 }

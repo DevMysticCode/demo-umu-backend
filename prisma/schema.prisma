@@ -1846,6 +1846,22 @@ model TenancySignLink {
   createdAt          DateTime         @default(now())
   passportQuestion   PassportQuestion @relation(fields: [passportQuestionId], references: [id], onDelete: Cascade)
 
+  // Security/pen-test finding #6 (Onward, 2026-11-16): the link's token is
+  // unguessable, but anyone it gets FORWARDED to could open it and sign -
+  // nothing checked that the person signing was actually the tenant. The
+  // tenant has no umovingu account, so we can't gate this with a JWT; a
+  // one-time code sent to an email address captured at link-creation time
+  // is the closest equivalent. tenantEmail is required going forward (one
+  // per link, immutable once set) and otpCode must be re-requested and
+  // supplied on the SAME request that submits the signature - it's not a
+  // persisted "verified" flag, specifically so a forwarded link doesn't
+  // stay signable after the real tenant verifies once and moves on.
+  tenantEmail  String
+  otpCode      String?
+  otpSentAt    DateTime?
+  otpExpiresAt DateTime?
+  otpAttempts  Int       @default(0)
+
   @@index([token])
   @@index([passportQuestionId])
 }

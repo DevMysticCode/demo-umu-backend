@@ -4,7 +4,8 @@
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
+import { Resend } from 'resend';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,6 +22,19 @@ import { resolveFrontendBaseUrl } from '../common/frontend-url';
 
 @Injectable()
 export class QuestionService {
+  // Finding #6 (Onward pen-test, 2026-11-16): was 30 days ("signing can
+  // take a while"). Shortened considerably - the OTP-at-sign-time gate
+  // below is the real fix, this just caps how long a forwarded/stale link
+  // keeps working at all. Revisit once the solicitor-reviewed approach is
+  // confirmed; this is a reasonable interim default, not a final answer.
+  private static readonly SIGN_LINK_EXPIRY_DAYS = 7;
+  private static readonly SIGN_OTP_EXPIRY_MINUTES = 10;
+  private static readonly SIGN_OTP_MAX_ATTEMPTS = 5;
+  private static readonly SIGN_OTP_RESEND_COOLDOWN_SECONDS = 60;
+  private readonly resend = new Resend(process.env.RESEND_API_KEY ?? '');
+  private readonly signOtpFrom =
+    process.env.RESEND_FROM ?? 'UMovingU <onboarding@resend.dev>';
+
   constructor(
     private prisma: PrismaService,
     private passportService: PassportService,
@@ -488,14 +502,93 @@ export class QuestionService {
     userId: string,
     kind: 'tenancy' | 'inventory' = 'tenancy',
     requestOrigin?: string | null,
+    tenantEmail?: string,
   ) {
     await this.assertQuestionAccess(questionId, userId);
+    const email = tenantEmail?.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('A valid tenant email is required to create a signing link.');
+    }
     const token = randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days - signing can take a while
+    const expiresAt = new Date(
+      Date.now() + QuestionService.SIGN_LINK_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+    );
     const link = await this.prisma.tenancySignLink.create({
-      data: { passportQuestionId: questionId, token, kind, expiresAt },
+      data: { passportQuestionId: questionId, token, kind, expiresAt, tenantEmail: email },
     });
     return { token: link.token, url: `${this.frontendBaseUrl(requestOrigin)}/sign/${kind}/${link.token}` };
+  }
+
+  private async sendSignOtpEmail(email: string, otp: string): Promise<void> {
+    const result = await this.resend.emails.send({
+      from: this.signOtpFrom,
+      to: email,
+      subject: `Your UMovingU signing code: ${otp}`,
+      html: `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h2 style="color:#1f2024;font-size:22px;margin:16px 0 4px;">Confirm it's you</h2>
+    <p style="color:#8f9094;font-size:14px;margin:0;">Enter this code to sign your document</p>
+  </div>
+  <div style="background:#f6f6f7;border-radius:16px;padding:28px;text-align:center;margin-bottom:24px;">
+    <p style="color:#8f9094;font-size:12px;letter-spacing:1px;text-transform:uppercase;margin:0 0 12px;">Your signing code</p>
+    <div style="font-size:40px;font-weight:700;letter-spacing:10px;color:#00a19a;">${otp}</div>
+    <p style="color:#8f9094;font-size:12px;margin:12px 0 0;">Expires in ${QuestionService.SIGN_OTP_EXPIRY_MINUTES} minutes</p>
+  </div>
+  <p style="color:#8f9094;font-size:13px;text-align:center;margin:0;">If you weren't expecting to sign a document, you can safely ignore this email.</p>
+  <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
+  <p style="color:#b4b5b8;font-size:11px;text-align:center;margin:0;">&#169; ${new Date().getFullYear()} UMovingU. All rights reserved.</p>
+</div>`,
+    });
+    if (result.error) {
+      throw new Error(`Resend rejected the send: ${JSON.stringify(result.error)}`);
+    }
+  }
+
+  // Unauthenticated (token is the credential) - sends/resends the one-time
+  // code the tenant must supply, in the same request, when they actually
+  // submit their signature (see submitTenantSignature). Deliberately NOT a
+  // persisted "verified" flag - that would let a forwarded link stay
+  // signable forever after the real tenant verifies once (finding #6).
+  async requestSignOtp(token: string) {
+    const link = await this.prisma.tenancySignLink.findUnique({ where: { token } });
+    if (!link) throw new NotFoundException('This signing link is invalid.');
+    if (link.expiresAt < new Date()) throw new ForbiddenException('This signing link has expired.');
+    if (link.usedAt) throw new ForbiddenException('This document has already been signed.');
+
+    if (
+      link.otpSentAt &&
+      link.otpSentAt.getTime() >
+        Date.now() - QuestionService.SIGN_OTP_RESEND_COOLDOWN_SECONDS * 1000
+    ) {
+      throw new BadRequestException(
+        'A code was already sent - check your email, or wait a moment before requesting another.',
+      );
+    }
+
+    const otp = randomInt(100000, 1000000).toString();
+    const now = new Date();
+    await this.prisma.tenancySignLink.update({
+      where: { token },
+      data: {
+        otpCode: otp,
+        otpSentAt: now,
+        otpExpiresAt: new Date(now.getTime() + QuestionService.SIGN_OTP_EXPIRY_MINUTES * 60 * 1000),
+        otpAttempts: 0,
+      },
+    });
+
+    try {
+      await this.sendSignOtpEmail(link.tenantEmail, otp);
+    } catch (mailErr) {
+      console.error('[Sign OTP] Failed to send email:', mailErr?.message ?? mailErr);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Sign OTP DEV] Code for ${link.tenantEmail}: ${otp}`);
+      }
+      throw new BadRequestException('Could not send the signing code - please try again.');
+    }
+
+    return { sent: true };
   }
 
   async getTenancySignData(token: string) {
@@ -599,7 +692,7 @@ export class QuestionService {
 
   async submitTenantSignature(
     token: string,
-    dto: { signerName: string; signatureDataUrl: string },
+    dto: { signerName: string; signatureDataUrl: string; otpCode: string },
     ip?: string,
   ) {
     const link = await this.prisma.tenancySignLink.findUnique({ where: { token } });
@@ -608,6 +701,26 @@ export class QuestionService {
     if (link.usedAt) throw new ForbiddenException('This document has already been signed.');
     if (!dto.signerName?.trim() || !dto.signatureDataUrl) {
       throw new BadRequestException('A name and signature are required.');
+    }
+
+    // Finding #6: the OTP must be supplied in THIS request, not merely
+    // verified at some earlier point - see requestSignOtp's comment for
+    // why a persisted "verified" flag would defeat the point.
+    if (!dto.otpCode?.trim()) {
+      throw new BadRequestException('A signing code is required.');
+    }
+    if (!link.otpCode || !link.otpExpiresAt || link.otpExpiresAt < new Date()) {
+      throw new ForbiddenException('No valid signing code - request a new one.');
+    }
+    if (link.otpAttempts >= QuestionService.SIGN_OTP_MAX_ATTEMPTS) {
+      throw new ForbiddenException('Too many incorrect attempts - request a new code.');
+    }
+    if (link.otpCode !== dto.otpCode.trim()) {
+      await this.prisma.tenancySignLink.update({
+        where: { token },
+        data: { otpAttempts: { increment: 1 } },
+      });
+      throw new ForbiddenException('Incorrect signing code.');
     }
     // Anchored allow-list, not just startsWith('data:image/') - an
     // unescaped version of this string later gets interpolated into an
@@ -628,6 +741,7 @@ export class QuestionService {
       record.audit = record.audit ?? {};
       record.audit.tenant = {
         name: dto.signerName.trim(),
+        email: link.tenantEmail,
         signatureDataUrl: dto.signatureDataUrl,
         signedAt: new Date().toISOString(),
         ip: ip ?? null,
