@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, createReadStream } from 'fs';
+import { existsSync, mkdirSync, createReadStream, unlinkSync } from 'fs';
 import { join } from 'path';
 import { diskStorage } from 'multer';
 import multerS3 from 'multer-s3';
@@ -338,6 +338,37 @@ export async function deleteStoredFile(bucket: string, filename: string): Promis
       Key: `${bucket}/${filename}`,
     }),
   );
+}
+
+/**
+ * Delete whatever file a stored `/uploads/<bucket>/<file>` (or absolute
+ * equivalent) URL points to, in whichever mode is active. Swallows the
+ * "file doesn't exist"/"already deleted" case the same way the existing
+ * avatar-replace and document-delete call sites do — this is cleanup,
+ * not a correctness check, so a missing file is not an error.
+ */
+export async function deleteFileAtUploadsUrl(url: string | null | undefined): Promise<void> {
+  const relative = uploadsPathFrom(url);
+  if (!relative) return;
+  const m = relative.match(/^\/uploads\/([^/]+)\/(.+)$/);
+  if (!m) return;
+  const [, bucket, filename] = m;
+  if (isS3Mode) {
+    try {
+      await deleteStoredFile(bucket, filename);
+    } catch {
+      /* ignore */
+    }
+  } else {
+    const filePath = join(UPLOAD_ROOT, bucket, filename);
+    if (existsSync(filePath)) {
+      try {
+        unlinkSync(filePath);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }
 
 // Re-export PUBLIC_BUCKETS so main.ts can decide which paths to mount

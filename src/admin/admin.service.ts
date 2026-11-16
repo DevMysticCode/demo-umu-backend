@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { purgeUserFiles } from '../common/purge-user-files';
 
 @Injectable()
 export class AdminService {
@@ -44,6 +45,10 @@ export class AdminService {
         notFound.push(email);
         continue;
       }
+      // Finding #10: purge the user's file bytes before the cascade
+      // delete removes the rows that point at them (see deleteAccount in
+      // profile.service.ts - same gap, same fix, here for the admin path).
+      await purgeUserFiles(this.prisma, user.id);
       await this.prisma.user.delete({ where: { id: user.id } });
       deleted.push(email);
     }

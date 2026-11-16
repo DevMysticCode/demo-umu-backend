@@ -11,6 +11,7 @@ import {
   isS3Mode,
   uploadsPathFrom,
 } from '../common/storage';
+import { purgeUserFiles } from '../common/purge-user-files';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
 import { computePassportCompletion } from '../common/passport-completion';
@@ -867,6 +868,10 @@ export class ProfileService {
   async deleteAccount(userId: string) {
     // Deleting the User cascades all related data: passports, sections, tasks,
     // questions, answers, collaborators, documents, preferences, addresses, etc.
+    // Finding #10: that cascade only ever removed DB rows, never the
+    // physical file bytes those rows pointed at - purge the files first,
+    // while the rows (and their fileUrl columns) still exist to read.
+    await purgeUserFiles(this.prisma, userId);
     await this.prisma.user.delete({ where: { id: userId } });
     return { message: 'Account deleted' };
   }
