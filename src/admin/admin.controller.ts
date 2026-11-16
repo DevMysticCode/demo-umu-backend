@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Headers,
   HttpCode,
@@ -17,7 +16,7 @@ import {
 import { ApiBody, ApiOperation, ApiResponse, ApiHeader, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
-import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { assertAdminAccess } from '../common/admin-guard';
 
 // Deliberately separate from MaintenanceModule (excluded from production
 // builds — see app.module.ts's PROD_BUILD comment): that module holds
@@ -27,13 +26,15 @@ import { timingSafeStringEqual } from '../common/timing-safe-equal';
 // (same x-admin-secret guard) that's still needed in prod — RDS sits in a
 // private subnet with no other way to remove a test/scratch account.
 //
-// Security/launch review finding #8: this is still just one shared static
-// secret with no network restriction or per-operator identity — the real
-// fix (VPC/network restriction, or SSO behind MFA) is infra work outside
-// what this module can do alone. Until that lands, every call is logged
-// (who attempted it, from where, success or not) and the whole controller
-// has a much tighter rate limit than the app default, so a leaked or
-// guessed secret can't be hammered silently or at volume.
+// Security/launch review finding #8: this was one shared static secret
+// with no network restriction or per-operator identity. Full SSO behind
+// MFA is a separate product decision (which provider, who counts as an
+// "admin") still outside what this module can do alone — but it's now
+// also gated by an IP allowlist when ADMIN_IP_ALLOWLIST is set (see
+// common/admin-guard.ts), on top of every call being logged (who
+// attempted it, from where, success or not) and the tighter rate limit
+// below, so a leaked or guessed secret can't be hammered silently, at
+// volume, or from anywhere on the internet once that's configured.
 @Throttle({ default: { limit: 20, ttl: 60_000 } })
 @Controller('admin')
 export class AdminController {
@@ -42,14 +43,7 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   private guard(secret: string | undefined, ip: string, route: string) {
-    const expected = process.env.ADMIN_SECRET;
-    const ok = !!expected && timingSafeStringEqual(secret, expected);
-    this.logger.warn(
-      `admin call: route=${route} ip=${ip} result=${ok ? 'ALLOWED' : 'DENIED'}`,
-    );
-    if (!ok) {
-      throw new ForbiddenException('Invalid or missing admin secret');
-    }
+    assertAdminAccess({ secret, ip, route: `admin:${route}`, logger: this.logger });
   }
 
   /** Read-only: find accounts whose email contains any of the given

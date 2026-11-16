@@ -6,13 +6,12 @@ import {
   Headers,
   HttpCode,
   HttpStatus,
-  ForbiddenException,
   BadRequestException,
   Ip,
   Logger,
 } from '@nestjs/common';
 import { MaintenanceService } from './maintenance.service';
-import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { assertAdminAccess } from '../common/admin-guard';
 import { ApiOperation, ApiResponse, ApiHeader, ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -35,7 +34,8 @@ const CONFIRM_WIPE = 'DELETE-EVERYTHING';
 // exclusion is only as good as NODE_ENV being set correctly on every
 // environment that loads this image (e.g. the Railway deployment currently
 // holding real user data, per DEPLOYMENT.md), so it still needs its own
-// independent hardening rather than relying solely on PROD_BUILD.
+// independent hardening rather than relying solely on PROD_BUILD. Also now
+// gated by ADMIN_IP_ALLOWLIST when set — see common/admin-guard.ts.
 @Throttle({ default: { limit: 20, ttl: 60_000 } })
 @Controller('maintenance')
 export class MaintenanceController {
@@ -44,14 +44,7 @@ export class MaintenanceController {
   constructor(private readonly maintenanceService: MaintenanceService) {}
 
   private guard(secret: string | undefined, ip: string, route: string) {
-    const expected = process.env.ADMIN_SECRET;
-    const ok = !!expected && timingSafeStringEqual(secret, expected);
-    this.logger.warn(
-      `maintenance call: route=${route} ip=${ip} result=${ok ? 'ALLOWED' : 'DENIED'}`,
-    );
-    if (!ok) {
-      throw new ForbiddenException('Invalid or missing admin secret');
-    }
+    assertAdminAccess({ secret, ip, route: `maintenance:${route}`, logger: this.logger });
   }
 
   private guardDestructive(

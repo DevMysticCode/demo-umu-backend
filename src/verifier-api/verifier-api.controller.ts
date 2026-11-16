@@ -22,8 +22,8 @@ import {
   Headers,
   UseGuards,
   BadRequestException,
-  ForbiddenException,
   Ip,
+  Logger,
 } from '@nestjs/common';
 import {
   VerifierApiService,
@@ -33,7 +33,7 @@ import {
 } from './verifier-api.service';
 import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { timingSafeStringEqual } from '../common/timing-safe-equal';
+import { assertAdminAccess } from '../common/admin-guard';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiParam, ApiHeader, ApiBody } from '@nestjs/swagger';
 
 // Relied solely on the 300 req/min/IP global default — clientId/clientSecret
@@ -282,6 +282,8 @@ export class VerifierPublicController {
 
 @Controller('admin/verifier')
 export class VerifierAdminController {
+  private readonly logger = new Logger(VerifierAdminController.name);
+
   constructor(private svc: VerifierApiService) {}
 
   @ApiOperation({ summary: 'Register a new verifier organisation', description: 'Admin-secret-gated (temporary stand-in until a real admin portal exists). Onboards a new external organisation allowed to request buyer-profile access, issuing it a client ID/secret pair and an allowed-scopes list.' })
@@ -334,14 +336,9 @@ export class VerifierAdminController {
   async registerOrg(
     @Headers('x-admin-secret') adminSecret: string,
     @Body() dto: CreateVerifierOrgDto,
+    @Ip() ip: string,
   ) {
-    const expected = process.env.ADMIN_SECRET;
-    if (!expected) {
-      throw new ForbiddenException('ADMIN_SECRET not configured');
-    }
-    if (!timingSafeStringEqual(adminSecret, expected)) {
-      throw new ForbiddenException('Invalid admin secret');
-    }
+    assertAdminAccess({ secret: adminSecret, ip, route: 'verifier:POST /admin/verifier/orgs', logger: this.logger });
     if (!dto?.name || !dto?.contactEmail) {
       throw new BadRequestException('name and contactEmail required');
     }
