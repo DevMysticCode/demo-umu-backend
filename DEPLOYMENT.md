@@ -210,51 +210,22 @@ npm run start:dev
 `migrate dev` regenerates the client itself — no separate `prisma
 generate` step needed.
 
-**Production (RDS) is in a private subnet** — there's no direct network
-path to it from a laptop. To run a migration against prod: spin up a
-temporary bastion EC2 in the public subnet (or a Lambda in the same
-VPC), tunnel through it, then run:
+**AWS abandoned 2026-11-17 — the paragraphs below about RDS/bastion
+access are stale.** The AWS App Runner + RDS environment described in
+this doc was never cut over to (see the top of this doc) and is no
+longer being pursued at all; do nothing AWS-related going forward.
+**Railway is the real production target**, and its Postgres is a
+normal public endpoint — no bastion or VPC tunnel is needed to reach
+it.
 
-```sh
-npx prisma migrate deploy
-```
-
-(never `db push`) against the tunnelled `DATABASE_URL`, then tear the
-bastion down. Full bastion walkthrough (this is exactly how the
-Railway → RDS data migration was done) in
-[infra/RUNBOOK.md](infra/RUNBOOK.md#migrating-data-from-railway--rds).
-
-**One-time step required before the next deploy** (security/launch
-review, follow-up): [`docker-entrypoint.sh`](docker-entrypoint.sh) now
-runs `prisma migrate deploy` on every boot instead of
-`db push --accept-data-loss` — the latter was applying un-reviewed
-schema changes straight to RDS on every cold start, which is exactly
-the risk this baselining work was meant to close. `migrate deploy`
-only applies migrations from `prisma/migrations/` that aren't yet
-recorded as applied, so it's safe going forward — but RDS was seeded
-from the same pre-baseline Railway data, so its `_prisma_migrations`
-table is almost certainly missing the
-`20261112000000_baseline_since_add_other_placeholder` entry. **Until
-the step below is done, every boot's `migrate deploy` will try to
-re-apply that migration's SQL against a database that already has
-that schema, and fail** (the entrypoint only warns and continues, so
-the app still comes up — but the schema sync is then silently broken
-until this is run):
-
-Via the bastion, run `npx prisma migrate status` against RDS first —
-if it reports the baseline migration as pending rather than the
-schema already matching, apply the identical fix used on dev:
-```sh
-npx prisma migrate diff --from-url "$RDS_URL" --to-schema-datamodel prisma/schema.prisma --script
-```
-confirm the output is empty (no actual drift — RDS should already
-match `schema.prisma` from the original Railway→RDS data copy), then
-```sh
-npx prisma migrate resolve --applied 20261112000000_baseline_since_add_other_placeholder
-```
-This was not run against RDS from this session — no bastion access
-here — **do this before the next deploy**, or the entrypoint's
-`migrate deploy` will fail on every cold start until it's done.
+[`docker-entrypoint.sh`](docker-entrypoint.sh) now runs `prisma
+migrate deploy` on every boot instead of `db push --accept-data-loss`
+(security/launch review follow-up, 2026-11-17) — the latter was
+applying un-reviewed schema changes straight to the database on every
+cold start, which is exactly the risk the 2026-11-12 baselining above
+was meant to close. Verified directly against Railway's DB:
+`npx prisma migrate status` reports **up to date**, so this is a
+no-op change in terms of current risk — nothing further needed.
 
 Going forward, `prisma/migrations/` is the source of truth. A deploy
 that changes `prisma/schema.prisma` must include its matching
