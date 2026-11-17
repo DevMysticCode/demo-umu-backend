@@ -224,13 +224,26 @@ bastion down. Full bastion walkthrough (this is exactly how the
 Railway → RDS data migration was done) in
 [infra/RUNBOOK.md](infra/RUNBOOK.md#migrating-data-from-railway--rds).
 
-**One-time step before `migrate deploy` will work cleanly on RDS**:
-since RDS was seeded from the same pre-baseline Railway data, its
-`_prisma_migrations` table is almost certainly missing the same
-`20261112000000_baseline_since_add_other_placeholder` entry. Run
-`npx prisma migrate status` against RDS first (via the bastion) — if
-it reports that migration as pending rather than the schema already
-matching, apply the identical fix used on dev:
+**One-time step required before the next deploy** (security/launch
+review, follow-up): [`docker-entrypoint.sh`](docker-entrypoint.sh) now
+runs `prisma migrate deploy` on every boot instead of
+`db push --accept-data-loss` — the latter was applying un-reviewed
+schema changes straight to RDS on every cold start, which is exactly
+the risk this baselining work was meant to close. `migrate deploy`
+only applies migrations from `prisma/migrations/` that aren't yet
+recorded as applied, so it's safe going forward — but RDS was seeded
+from the same pre-baseline Railway data, so its `_prisma_migrations`
+table is almost certainly missing the
+`20261112000000_baseline_since_add_other_placeholder` entry. **Until
+the step below is done, every boot's `migrate deploy` will try to
+re-apply that migration's SQL against a database that already has
+that schema, and fail** (the entrypoint only warns and continues, so
+the app still comes up — but the schema sync is then silently broken
+until this is run):
+
+Via the bastion, run `npx prisma migrate status` against RDS first —
+if it reports the baseline migration as pending rather than the
+schema already matching, apply the identical fix used on dev:
 ```sh
 npx prisma migrate diff --from-url "$RDS_URL" --to-schema-datamodel prisma/schema.prisma --script
 ```
@@ -240,13 +253,12 @@ match `schema.prisma` from the original Railway→RDS data copy), then
 npx prisma migrate resolve --applied 20261112000000_baseline_since_add_other_placeholder
 ```
 This was not run against RDS from this session — no bastion access
-here — so do this before the next prod schema change.
+here — **do this before the next deploy**, or the entrypoint's
+`migrate deploy` will fail on every cold start until it's done.
 
 Going forward, `prisma/migrations/` is the source of truth. A deploy
 that changes `prisma/schema.prisma` must include its matching
-migration folder in the same PR, and `migrate deploy` should become
-part of the release flow (`build-and-push.ps1`) rather than a manual
-step someone has to remember.
+migration folder in the same PR.
 
 ## Backups
 

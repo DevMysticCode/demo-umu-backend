@@ -18,25 +18,30 @@ if [ -z "${DATABASE_URL}" ] && [ -n "${DB_HOST}" ]; then
   echo "[entrypoint] DATABASE_URL assembled from DB_* env vars (host=${DB_HOST})"
 fi
 
-# Sync Prisma schema against the live database on every boot. This is
-# idempotent — `prisma db push` only emits SQL when the schema differs.
-# Cost is ~3-5 seconds per cold start; App Runner cold-starts are rare
-# in production (only on new image deploys + manual restarts).
+# Apply committed, reviewed migrations against the live database on
+# every boot. `prisma migrate deploy` only runs migrations that are
+# in `prisma/migrations/` and not yet recorded as applied — unlike
+# `db push --accept-data-loss` (what this used to run), it never
+# infers or applies an un-reviewed destructive schema change on its
+# own. Cost is ~1-2 seconds per cold start when there's nothing new
+# to apply; App Runner cold-starts are rare in production (only on
+# new image deploys + manual restarts).
 #
-# Why this lives in the entrypoint instead of a one-shot migration
-# job: RDS is in an isolated subnet with no Internet Gateway and no
-# NAT. The only way to reach it is from inside the VPC — App Runner
-# via its VPC connector is the simplest such path. A separate bastion
-# EC2 or in-VPC Lambda would work but adds operational surface.
+# Why this lives in the entrypoint instead of a separate one-shot
+# migration job: RDS is in an isolated subnet with no Internet
+# Gateway and no NAT. The only way to reach it is from inside the
+# VPC — App Runner via its VPC connector is the simplest such path.
+# A separate bastion EC2 or in-VPC Lambda would work but adds
+# operational surface.
 #
 # Set PRISMA_SKIP_DB_PUSH=true to suppress (e.g. for a hotfix deploy
 # where the schema hasn't changed and you want a faster cold start).
 if [ "${PRISMA_SKIP_DB_PUSH:-false}" != "true" ]; then
-  echo "[entrypoint] Syncing Prisma schema (prisma db push)..."
-  if npx --offline prisma db push --accept-data-loss --skip-generate 2>&1; then
-    echo "[entrypoint] Schema in sync."
+  echo "[entrypoint] Applying Prisma migrations (prisma migrate deploy)..."
+  if npx --offline prisma migrate deploy 2>&1; then
+    echo "[entrypoint] Migrations applied."
   else
-    echo "[entrypoint] WARN: prisma db push failed — continuing anyway, the app may 503 on DB calls."
+    echo "[entrypoint] WARN: prisma migrate deploy failed — continuing anyway, the app may 503 on DB calls."
   fi
 fi
 
