@@ -127,3 +127,7 @@ Thumbs.db
 # __MACOSX wrapper folder it ships in).
 __MACOSX/
 ._*
+
+# clj-kondo linter cache (editor-tooling artifact, ~12k files, never
+# meant to be committed — security/launch review finding #17 follow-up).
+.clj-kondo/.cache/
