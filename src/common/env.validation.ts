@@ -174,9 +174,21 @@ export function validateEnv(env: NodeJS.ProcessEnv): void {
   // a leftover sk_test_ key, silently refusing real payments while
   // looking configured. A live key is non-negotiable before this
   // environment can take money, so this is fatal, not a warning.
-  if (isProd && env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+  //
+  // Same dual-environment reality as HMLR's bypass above (this app runs
+  // NODE_ENV=production on more than one Railway environment, not all of
+  // which take real payments - Railway is UAT/demo-flagged-production,
+  // a separate environment is real production). STRIPE_ALLOW_TEST_KEY is
+  // a deliberate, explicit opt-in for those, mirroring HMLR_BYPASS: never
+  // set it anywhere with real customers, since its only job is letting a
+  // demo/UAT deploy run on a sk_test_ key without crashing at boot.
+  if (
+    isProd &&
+    env.STRIPE_SECRET_KEY?.startsWith('sk_test_') &&
+    env.STRIPE_ALLOW_TEST_KEY !== 'true'
+  ) {
     errors.push(
-      '  - STRIPE_SECRET_KEY is a test key (sk_test_*) in a production environment - a live key (sk_live_*) is required before any payment can be taken',
+      '  - STRIPE_SECRET_KEY is a test key (sk_test_*) in a production environment - a live key (sk_live_*) is required before any payment can be taken (set STRIPE_ALLOW_TEST_KEY=true to explicitly allow this in a demo/UAT environment)',
     );
   }
 
