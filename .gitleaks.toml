@@ -32,36 +32,27 @@ paths = [
   '''(?i)package-lock\.json$''',
 ]
 
-# Known-safe placeholders + secrets that may still appear in archived
-# git history snapshots; allowlist by value so the report is
-# actionable, not noise.
+# NestJS's own default README.md boilerplate (CircleCI badge markdown,
+# `?token=abc123def456`) — every fresh `nest new` scaffold ships this
+# literal placeholder token. Confirmed not a real secret; flagged as
+# generic-api-key purely on shape/entropy (security review 2026-09-22,
+# real gitleaks sweep — same false positive the manual regex sweep
+# already found and cleared).
 regexTarget = "match"
 regexes = [
-  # Postgres password — rotated AND purged from history 2026-11-12
-  # (git filter-repo + force-push to origin/main). Kept here only
-  # because some clones/forks/mirrors still hold the pre-purge
-  # history; safe to remove once those are confirmed gone too.
-  '''XzjPlSFlOZFopOmHZKJmFFRaaiyBMbmX''',
-  # Google Maps key — security/launch review 2026-11 (finding #3)
-  # found this was NOT actually revoked despite the prior comment
-  # here claiming it was: live-tested 2026-11-12, the key still
-  # authenticates against Google's API (referer-restricted, so a
-  # bare server-side request is rejected, but that does not confirm
-  # it's scoped only to umovingu's own domains). Needs a real fix in
-  # Google Cloud Console — restrict to umovingu's domains/APIs, or
-  # rotate it outright — before this allowlist entry and the pending
-  # history purge actually close the exposure out.
-  '''AIzaSyA_lEpLKWJl6BS7rv2Fni3cR0NxuT8mGhk''',
-  # User JWT from the leak (rotated via JWT_SECRET — same reason).
-  '''eyJzdWIiOiJiYmY1N2MyNS1mYzM1LTQ3OTMtOTNiYy0yOTdkNTk1MGM5ZmUi''',
-  # NestJS's own default README.md boilerplate (CircleCI badge markdown,
-  # `?token=abc123def456`) — every fresh `nest new` scaffold ships this
-  # literal placeholder token. Confirmed not a real secret; flagged as
-  # generic-api-key purely on shape/entropy (security review 2026-09-22,
-  # real gitleaks sweep — same false positive the manual regex sweep
-  # already found and cleared).
   '''abc123def456''',
 ]
+
+# Security review 2026-11-18 (retest finding #3): three allowlist entries
+# used to live here, allowlisting a leaked Postgres password, a leaked
+# Google Maps key, and a leaked user JWT BY LITERAL VALUE — i.e. this
+# tracked, committed file was itself re-publishing those real secrets on
+# every clone, which defeats the point of a secret-scanner config. Removed.
+# If old false-positive noise from archived pre-purge history needs
+# suppressing again, allowlist by commit SHA (gitleaks `[allowlist] commits
+# = [...]`) instead of by secret value. The Postgres password and JWT were
+# already rotated; the Google Maps key still needs to be rotated/restricted
+# to umovingu's domains in Google Cloud Console — that has not happened yet.
 
 # Stop noisy patterns from triggering on real source. Generic
 # "password" assignments in seed data, fixture JSON, and the like
