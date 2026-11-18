@@ -331,7 +331,7 @@ export class QuestionController {
   @ApiOperation({
     summary: 'Load the document and signing status for a sign link',
     description:
-      'Unauthenticated - the token itself is the credential (expires after 30 days). Returns either the tenancy agreement text or the inventory\'s evidence photos depending on the link\'s kind, plus whether the landlord and/or tenant have already signed.',
+      'Unauthenticated - the token itself is the credential (expires after 7 days). Returns either the tenancy agreement text or the inventory\'s evidence photos depending on the link\'s kind, plus whether the landlord and/or tenant have already signed.',
   })
   @ApiParam({ name: 'token', description: 'The sign-link token' })
   @ApiResponse({
