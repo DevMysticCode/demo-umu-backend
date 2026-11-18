@@ -100,17 +100,29 @@ export class PaymentService {
       orderBy: { createdAt: 'desc' },
     });
     if (pending) {
-      const intent = await this.stripe.paymentIntents.retrieve(
-        pending.stripePaymentIntentId,
-      );
-      if (
-        intent.status !== 'canceled' &&
-        intent.status !== 'succeeded' &&
-        intent.client_secret
-      ) {
-        return { clientSecret: intent.client_secret, paymentId: pending.id };
+      let reusable: { client_secret: string | null; status: string } | null = null;
+      try {
+        reusable = await this.stripe.paymentIntents.retrieve(
+          pending.stripePaymentIntentId,
+        );
+      } catch (err) {
+        // Stripe can't find it — most commonly the row predates a secret-key
+        // rotation (test/live switch, or a new key in the same mode), so
+        // the intent simply doesn't exist from this key's point of view.
+        // Treat exactly like an aged-out intent rather than crashing the
+        // request: supersede it below and mint a fresh one.
+        this.logger.warn(`[payment] pending intent re-fetch failed, superseding: ${(err as any)?.message}`);
       }
-      // Pending row exists but the intent has aged out — supersede it.
+      if (
+        reusable &&
+        reusable.status !== 'canceled' &&
+        reusable.status !== 'succeeded' &&
+        reusable.client_secret
+      ) {
+        return { clientSecret: reusable.client_secret, paymentId: pending.id };
+      }
+      // Pending row exists but the intent has aged out (or is unreachable
+      // under the current key) — supersede it.
       await this.prisma.passportPayment.update({
         where: { id: pending.id },
         data: { status: 'failed' },
@@ -223,16 +235,22 @@ export class PaymentService {
       orderBy: { createdAt: 'desc' },
     });
     if (pending) {
-      const intent = await this.stripe.paymentIntents.retrieve(
-        pending.stripePaymentIntentId,
-      );
+      let reusable: { client_secret: string | null; status: string } | null = null;
+      try {
+        reusable = await this.stripe.paymentIntents.retrieve(
+          pending.stripePaymentIntentId,
+        );
+      } catch (err) {
+        this.logger.warn(`[payment] pending intent re-fetch failed, superseding: ${(err as any)?.message}`);
+      }
       if (
-        intent.status !== 'canceled' &&
-        intent.status !== 'succeeded' &&
-        intent.client_secret
+        reusable &&
+        reusable.status !== 'canceled' &&
+        reusable.status !== 'succeeded' &&
+        reusable.client_secret
       ) {
         return {
-          clientSecret: intent.client_secret,
+          clientSecret: reusable.client_secret,
           paymentId: pending.id,
           amount: pending.amount,
         };
