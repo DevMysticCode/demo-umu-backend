@@ -251,11 +251,20 @@ export class PassportService {
   // PUBLISHED documents plus ones explicitly granted to them
   // (DocumentAccessGrant) — previously collaborators saw every document
   // unfiltered, same as the owner. A buyer-unlock viewer only sees
-  // PUBLISHED documents (buyer-unlock is a self-service paid purchase, not
-  // an owner-confirmed send, so ELIGIBLE candidates don't apply). An
-  // anonymous share-link viewer sees whatever was snapshotted into that
-  // link's ShareManifestDocument at share-creation time, or PUBLISHED-only
-  // for links created before this feature existed (no manifest rows).
+  // PUBLISHED documents, and only if the owner has also left the Passport's
+  // own Manage Visibility switch set to Public (`Passport.publicVisibility`
+  // — client feedback, 2026-11-19: "if it is private, documents must never
+  // be shared with anyone even if the passport is published [and bought]").
+  // That switch is the master gate: it does not matter that buyer-unlock is
+  // a self-service paid purchase, not an owner-confirmed send — a buyer who
+  // already paid still sees nothing once the owner has flipped this to
+  // Private, same as before they paid. (ELIGIBLE candidates don't apply to
+  // buyer-unlock either way — that tier is for the owner-confirmed share/
+  // publish review screen.) An anonymous share-link viewer sees whatever
+  // was snapshotted into that link's ShareManifestDocument at share-creation
+  // time, or PUBLISHED-only for links created before this feature existed
+  // (no manifest rows) — unaffected by publicVisibility, since creating
+  // that link was itself an explicit owner action.
   // Mutates the passport tree in place (matches resolveAnswerFileUrls'
   // existing pattern) — sets fileUrl (and answerJson.fileUrl/url) to null
   // rather than dropping the answer, since the question's text/JSON answer
@@ -265,7 +274,7 @@ export class PassportService {
     ctx:
       | { kind: 'owner' }
       | { kind: 'collaborator'; userId: string }
-      | { kind: 'buyer' }
+      | { kind: 'buyer'; publicVisibility: boolean }
       | { kind: 'sharelink'; manifestIds: Set<string> | null },
   ): Promise<void> {
     if (ctx.kind === 'owner') return;
@@ -289,7 +298,7 @@ export class PassportService {
             ctx.kind === 'collaborator'
               ? answer.accessLevel === 'PUBLISHED' || (grantedIds?.has(answer.id) ?? false)
               : ctx.kind === 'buyer'
-                ? answer.accessLevel === 'PUBLISHED'
+                ? ctx.publicVisibility && answer.accessLevel === 'PUBLISHED'
                 : ctx.manifestIds
                   ? ctx.manifestIds.has(answer.id)
                   : answer.accessLevel === 'PUBLISHED';
@@ -2305,7 +2314,7 @@ export class PassportService {
         ? { kind: 'owner' }
         : isCollaborator
           ? { kind: 'collaborator', userId }
-          : { kind: 'buyer' },
+          : { kind: 'buyer', publicVisibility: passport.publicVisibility },
     );
 
     const owner = (passport as any).owner;
