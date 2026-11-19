@@ -504,11 +504,18 @@ ${draft ? `Rewrite this draft to be warmer and clearer, keeping the facts:\n${dr
         ? Math.min(365, Math.floor(dto.expiresInDays))
         : 30;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-    // Default scope = everything available on the profile.
+    // Client feedback (2026-11-19): financial categories must never be
+    // preselected for sharing — the buyer has to actively choose to
+    // disclose deposit/source-of-funds/affordability/credit info each
+    // time. Previously an omitted/empty scope silently defaulted to
+    // *everything*, including all four financial categories, so a share
+    // created without an explicit scope leaked financial data the buyer
+    // never chose to send. Default now covers only identity + the buyer's
+    // own statement — financial categories are opt-in only.
     const scope =
       Array.isArray(dto.scope) && dto.scope.length > 0
         ? dto.scope
-        : ['identity', 'deposit', 'sof', 'afford', 'credit', 'story'];
+        : ['identity', 'story'];
 
     const share = await this.prisma.buyerProfileShare.create({
       data: {

@@ -8,6 +8,7 @@ import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
+import { PassportService } from '../passport/passport.service';
 import { isWithinCollaboratorScope } from '../common/collaborator-scope';
 import {
   publicUrlFor,
@@ -66,6 +67,7 @@ export class DocumentsService {
   constructor(
     private prisma: PrismaService,
     private files: FilesService,
+    private passportService: PassportService,
   ) {}
 
   /**
@@ -247,6 +249,23 @@ export class DocumentsService {
       // Must be the owner or a collaborator to file a document under this
       // property - same gate as every other passport-scoped write.
       await this.assertPassportAccess(passportId, userId);
+      // Security/launch review (client feedback, 2026-11-19): membership
+      // alone isn't enough - a "view" collaborator was able to upload
+      // documents here even though PassportService.checkWriteAccess (the
+      // same view/view_add/view_add_update_own gate question.service.ts
+      // already enforces for answers) would refuse them. A new upload has
+      // no existing answer, so this matches the "add new information" case
+      // - allowed for view_add and view_add_update_own, refused for view.
+      const writeAccess = await this.passportService.checkWriteAccess(
+        passportId,
+        userId,
+        null,
+      );
+      if (!writeAccess.allowed) {
+        throw new ForbiddenException(
+          'You do not have permission to add documents to this passport',
+        );
+      }
     }
 
     const fileUrl = publicUrlFor('documents', storedFilename(file));
