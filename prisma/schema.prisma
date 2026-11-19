@@ -1551,6 +1551,14 @@ model UserDocument {
   // view does not silently erase history").
   deletedAt            DateTime?
   version              Int                     @default(1)
+  // Provenance status (client feedback, 2026-11-19): "Checked" is an
+  // explicit owner self-check ("I've reviewed this and it's correct and
+  // up to date") — null means never checked. Not third-party/professional
+  // verification; see ProvenanceStatus doc comment in
+  // src/common/provenance-status.ts for the full status computation
+  // (Expired > Checked > Needs checking > Added by homeowner).
+  verifiedAt           DateTime?
+  verifiedByUserId     String?
 
   @@index([userId])
   @@index([passportId])

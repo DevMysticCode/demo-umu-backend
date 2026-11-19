@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FilesService } from '../files/files.service';
 import { PassportService } from '../passport/passport.service';
 import { isWithinCollaboratorScope } from '../common/collaborator-scope';
+import { computeProvenanceStatus, provenanceStatusLabel } from '../common/provenance-status';
 import {
   publicUrlFor,
   storedFilename,
@@ -308,6 +309,8 @@ export class DocumentsService {
       category: doc.category,
       passportId: doc.passportId,
       accessLevel: doc.accessLevel,
+      provenanceStatus: computeProvenanceStatus(doc),
+      provenanceStatusLabel: provenanceStatusLabel(doc),
       createdAt: doc.createdAt,
       uploadedAt: formatDate(doc.createdAt),
       source: 'user' as const,
@@ -412,6 +415,8 @@ export class DocumentsService {
       title: d.name,
       fileUrl: this.resolveUrl(d.fileUrl, userId),
       accessLevel: d.accessLevel,
+      provenanceStatus: computeProvenanceStatus(d),
+      provenanceStatusLabel: provenanceStatusLabel(d),
       sharedWith: d.accessGrants.map((g) => ({
         id: g.collaborator.id,
         name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
@@ -503,6 +508,8 @@ export class DocumentsService {
       category: d.category,
       passportId: d.passportId,
       accessLevel: d.accessLevel,
+      provenanceStatus: computeProvenanceStatus(d),
+      provenanceStatusLabel: provenanceStatusLabel(d),
       createdAt: d.createdAt,
       uploadedAt: formatDate(d.createdAt),
     }));
@@ -572,6 +579,9 @@ export class DocumentsService {
       mimeType: doc.mimeType ?? '',
       category: doc.category,
       accessLevel: doc.accessLevel,
+      provenanceStatus: computeProvenanceStatus(doc),
+      provenanceStatusLabel: provenanceStatusLabel(doc),
+      verifiedAt: doc.verifiedAt,
       passport: doc.passport,
       createdAt: doc.createdAt,
       uploadedAt: formatDate(doc.createdAt),
@@ -654,6 +664,33 @@ export class DocumentsService {
     }
     const doc = await this.prisma.userDocument.findUnique({ where: { id }, select: { userId: true, passportId: true } });
     return doc ? { ownerId: doc.userId, passportId: doc.passportId } : null;
+  }
+
+  // Owner self-check ("I've reviewed this and it's correct and up to
+  // date" — client feedback, 2026-11-19). Deliberately owner-only, same
+  // gate as updateDocumentMeta/deleteDocument: this is the document's
+  // uploader vouching for it, not a collaborator or third party, so it
+  // must not be mistaken for independent verification. Setting checked
+  // false clears it back to whatever computeProvenanceStatus derives from
+  // category/expiry alone (e.g. a compliance cert the owner un-checks
+  // goes back to "Needs checking").
+  async setDocumentChecked(userId: string, documentId: string, checked: boolean) {
+    const doc = await this.prisma.userDocument.findUnique({ where: { id: documentId } });
+    if (!doc || doc.deletedAt) throw new NotFoundException('Document not found');
+    if (doc.userId !== userId) throw new ForbiddenException('You do not own this document');
+
+    const updated = await this.prisma.userDocument.update({
+      where: { id: documentId },
+      data: checked
+        ? { verifiedAt: new Date(), verifiedByUserId: userId }
+        : { verifiedAt: null, verifiedByUserId: null },
+    });
+    return {
+      id: updated.id,
+      verifiedAt: updated.verifiedAt,
+      provenanceStatus: computeProvenanceStatus(updated),
+      provenanceStatusLabel: provenanceStatusLabel(updated),
+    };
   }
 
   async setDocumentAccess(

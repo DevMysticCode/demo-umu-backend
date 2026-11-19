@@ -143,6 +143,21 @@ export class DocumentsController {
     return this.documentsService.updateDocumentMeta(req.user.id, id, { name, category, passportId });
   }
 
+  @ApiOperation({ summary: 'Owner self-check a document', description: "Marks a document as reviewed by the owner (\"I've checked this is correct and up to date\") or clears that check. This is a self-declaration, not independent/professional verification - it drives the provenanceStatus shown elsewhere (Added by homeowner / Needs checking / Checked / Expired)." })
+  @ApiParam({ name: 'id', description: 'The UserDocument id.' })
+  @ApiResponse({ status: 201, description: 'The updated provenance status.', schema: { type: 'object', properties: { id: { type: 'string' }, verifiedAt: { type: 'string', format: 'date-time', nullable: true }, provenanceStatus: { type: 'string' }, provenanceStatusLabel: { type: 'string' } } } })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
+  @ApiResponse({ status: 404, description: 'No such document.' })
+  @Post(':id/checked')
+  @ApiBody({ schema: { type: 'object', required: ['checked'], properties: { checked: { type: 'boolean' } } } })
+  setDocumentChecked(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body('checked') checked: boolean,
+  ) {
+    return this.documentsService.setDocumentChecked(req.user.id, id, !!checked);
+  }
+
   @ApiOperation({ summary: 'List documents shared with me', description: 'Every document (vault document or passport-answer file) another owner has individually granted the caller SELECTED-tier access to.' })
   @ApiResponse({ status: 200, description: 'Shared documents.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, kind: { type: 'string', enum: ['user', 'answer'] }, title: { type: 'string' }, fileUrl: { type: 'string' }, uploadedAt: { type: 'string' } } } } })
   @Get('shared-with-me')
