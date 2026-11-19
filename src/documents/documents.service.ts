@@ -179,6 +179,8 @@ export class DocumentsService {
         createdAt: a.createdAt,
         uploadedAt: formatDate(a.createdAt),
         source: 'passport' as const,
+        provenanceStatus: computeProvenanceStatus({ verifiedAt: a.verifiedAt, sectionKey: section.key }),
+        provenanceStatusLabel: provenanceStatusLabel({ verifiedAt: a.verifiedAt, sectionKey: section.key }),
       };
     });
 
@@ -197,6 +199,8 @@ export class DocumentsService {
       createdAt: d.createdAt,
       uploadedAt: formatDate(d.createdAt),
       source: 'user' as const,
+      provenanceStatus: computeProvenanceStatus(d),
+      provenanceStatusLabel: provenanceStatusLabel(d),
     }));
 
     // Recent uploads: latest 5 across both lists
@@ -392,6 +396,14 @@ export class DocumentsService {
         title: a.passportQuestion.questionTemplate.title,
         fileUrl: this.resolveUrl(a.fileUrl!, userId),
         accessLevel: a.accessLevel,
+        provenanceStatus: computeProvenanceStatus({
+          verifiedAt: a.verifiedAt,
+          sectionKey: a.passportQuestion.passportSectionTask.passportSection.key,
+        }),
+        provenanceStatusLabel: provenanceStatusLabel({
+          verifiedAt: a.verifiedAt,
+          sectionKey: a.passportQuestion.passportSectionTask.passportSection.key,
+        }),
         sharedWith: a.accessGrants.map((g) => ({
           id: g.collaborator.id,
           name: [g.collaborator.firstName, g.collaborator.lastName].filter(Boolean).join(' '),
@@ -672,12 +684,44 @@ export class DocumentsService {
   // uploader vouching for it, not a collaborator or third party, so it
   // must not be mistaken for independent verification. Setting checked
   // false clears it back to whatever computeProvenanceStatus derives from
-  // category/expiry alone (e.g. a compliance cert the owner un-checks
-  // goes back to "Needs checking").
-  async setDocumentChecked(userId: string, documentId: string, checked: boolean) {
-    const doc = await this.prisma.userDocument.findUnique({ where: { id: documentId } });
-    if (!doc || doc.deletedAt) throw new NotFoundException('Document not found');
-    if (doc.userId !== userId) throw new ForbiddenException('You do not own this document');
+  // category/section/expiry alone (e.g. a compliance cert the owner
+  // un-checks goes back to "Needs checking").
+  //
+  // Follow-up (client feedback, 2026-11-19): extended from UserDocument
+  // ("Vault" uploads) to also cover 'answer' (QuestionAnswer "home
+  // records" — a certificate attached as a passport-question answer
+  // rather than filed via "+ Add document") — same kind/id split
+  // setDocumentAccess/addDocumentGrant already use.
+  async setDocumentChecked(
+    kind: 'answer' | 'user',
+    userId: string,
+    documentId: string,
+    checked: boolean,
+  ) {
+    const owner = await this.findDocOwner(kind, documentId);
+    if (!owner) throw new NotFoundException('Document not found');
+    if (owner.ownerId !== userId) throw new ForbiddenException('You do not own this document');
+
+    if (kind === 'answer') {
+      const updated = await this.prisma.questionAnswer.update({
+        where: { id: documentId },
+        data: checked
+          ? { verifiedAt: new Date(), verifiedByUserId: userId }
+          : { verifiedAt: null, verifiedByUserId: null },
+        include: {
+          passportQuestion: {
+            include: { passportSectionTask: { include: { passportSection: { select: { key: true } } } } },
+          },
+        },
+      });
+      const sectionKey = updated.passportQuestion.passportSectionTask.passportSection.key;
+      return {
+        id: updated.id,
+        verifiedAt: updated.verifiedAt,
+        provenanceStatus: computeProvenanceStatus({ verifiedAt: updated.verifiedAt, sectionKey }),
+        provenanceStatusLabel: provenanceStatusLabel({ verifiedAt: updated.verifiedAt, sectionKey }),
+      };
+    }
 
     const updated = await this.prisma.userDocument.update({
       where: { id: documentId },

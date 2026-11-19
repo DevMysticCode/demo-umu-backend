@@ -1423,6 +1423,13 @@ model QuestionAnswer {
   accessLevel          DocumentAccessLevel     @default(PRIVATE)
   accessGrants         DocumentAccessGrant[]
   shareManifestEntries ShareManifestDocument[]
+  // Provenance status follow-up (client feedback, 2026-11-19): the same
+  // owner self-check UserDocument got (see its verifiedAt/verifiedByUserId
+  // comment) extended to "home record" files attached as a passport-answer
+  // too, so provenanceStatus isn't Vault-only. See computeProvenanceStatus
+  // in src/common/provenance-status.ts.
+  verifiedAt           DateTime?
+  verifiedByUserId     String?
 }
 
 model UserWishlist {

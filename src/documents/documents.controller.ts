@@ -31,12 +31,14 @@ export class DocumentsController {
       passportId: { type: 'string' }, passportAddress: { type: 'string' }, sectionTitle: { type: 'string' },
       visibility: { type: 'string', enum: ['PUBLIC', 'PRIVATE'] }, createdAt: { type: 'string', format: 'date-time' }, uploadedAt: { type: 'string' },
       source: { type: 'string', enum: ['passport'] },
+      provenanceStatus: { type: 'string', enum: ['added_by_homeowner', 'source_confirmed', 'checked', 'needs_checking', 'expired'] }, provenanceStatusLabel: { type: 'string' },
     } } },
     userDocuments: { type: 'array', description: 'Files uploaded directly to the vault', items: { type: 'object', properties: {
       id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' },
       tags: { type: 'array', items: { type: 'string' } }, expiresAt: { type: 'string', format: 'date-time', nullable: true },
       visibility: { type: 'string', enum: ['PRIVATE'] }, createdAt: { type: 'string', format: 'date-time' }, uploadedAt: { type: 'string' },
       source: { type: 'string', enum: ['user'] },
+      provenanceStatus: { type: 'string', enum: ['added_by_homeowner', 'source_confirmed', 'checked', 'needs_checking', 'expired'] }, provenanceStatusLabel: { type: 'string' },
     } } },
     recentUploads: { type: 'array', description: 'Latest 5 across both lists above - each item has whichever shape matches its own source field', items: { type: 'object', properties: {
       id: { type: 'string' }, title: { type: 'string' }, fileUrl: { type: 'string' }, size: { type: 'string' }, mimeType: { type: 'string' },
@@ -143,21 +145,6 @@ export class DocumentsController {
     return this.documentsService.updateDocumentMeta(req.user.id, id, { name, category, passportId });
   }
 
-  @ApiOperation({ summary: 'Owner self-check a document', description: "Marks a document as reviewed by the owner (\"I've checked this is correct and up to date\") or clears that check. This is a self-declaration, not independent/professional verification - it drives the provenanceStatus shown elsewhere (Added by homeowner / Needs checking / Checked / Expired)." })
-  @ApiParam({ name: 'id', description: 'The UserDocument id.' })
-  @ApiResponse({ status: 201, description: 'The updated provenance status.', schema: { type: 'object', properties: { id: { type: 'string' }, verifiedAt: { type: 'string', format: 'date-time', nullable: true }, provenanceStatus: { type: 'string' }, provenanceStatusLabel: { type: 'string' } } } })
-  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
-  @ApiResponse({ status: 404, description: 'No such document.' })
-  @Post(':id/checked')
-  @ApiBody({ schema: { type: 'object', required: ['checked'], properties: { checked: { type: 'boolean' } } } })
-  setDocumentChecked(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body('checked') checked: boolean,
-  ) {
-    return this.documentsService.setDocumentChecked(req.user.id, id, !!checked);
-  }
-
   @ApiOperation({ summary: 'List documents shared with me', description: 'Every document (vault document or passport-answer file) another owner has individually granted the caller SELECTED-tier access to.' })
   @ApiResponse({ status: 200, description: 'Shared documents.', schema: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, kind: { type: 'string', enum: ['user', 'answer'] }, title: { type: 'string' }, fileUrl: { type: 'string' }, uploadedAt: { type: 'string' } } } } })
   @Get('shared-with-me')
@@ -259,6 +246,23 @@ export class DocumentsController {
     @Body('accessLevel') accessLevel: string,
   ) {
     return this.documentsService.setDocumentAccess(kind, id, req.user.id, accessLevel);
+  }
+
+  @ApiOperation({ summary: 'Owner self-check a document', description: "Marks a document as reviewed by the owner (\"I've checked this is correct and up to date\") or clears that check, on either a vault document ('user') or a passport-answer file ('answer'). This is a self-declaration, not independent/professional verification - it drives the provenanceStatus shown elsewhere (Added by homeowner / Needs checking / Checked / Expired)." })
+  @ApiParam({ name: 'kind', description: 'Which kind of document this is.', enum: ['answer', 'user'] })
+  @ApiParam({ name: 'id', description: 'The UserDocument id (kind=user) or QuestionAnswer id (kind=answer).' })
+  @ApiResponse({ status: 201, description: 'The updated provenance status.', schema: { type: 'object', properties: { id: { type: 'string' }, verifiedAt: { type: 'string', format: 'date-time', nullable: true }, provenanceStatus: { type: 'string' }, provenanceStatusLabel: { type: 'string' } } } })
+  @ApiResponse({ status: 403, description: 'Caller does not own this document.' })
+  @ApiResponse({ status: 404, description: 'No such document.' })
+  @Post(':kind/:id/checked')
+  @ApiBody({ schema: { type: 'object', required: ['checked'], properties: { checked: { type: 'boolean' } } } })
+  setDocumentChecked(
+    @Req() req: any,
+    @Param('kind') kind: 'answer' | 'user',
+    @Param('id') id: string,
+    @Body('checked') checked: boolean,
+  ) {
+    return this.documentsService.setDocumentChecked(kind, req.user.id, id, !!checked);
   }
 
   @ApiOperation({ summary: 'Grant a collaborator access to one document', description: "Owner-only. For a passport-linked document, the target must already be an invited collaborator on that passport - this only narrows what an already-invited person can see, it doesn't invite someone new." })
