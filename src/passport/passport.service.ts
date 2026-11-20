@@ -317,8 +317,8 @@ export class PassportService {
 
   // Question-answer file fields (fileUrl, and answerJson.fileUrl/url for
   // MULTIPART parts) are stored as an /uploads/<bucket>/<file> path — bare
-  // in S3 mode, but prefixed with BASE_URL in disk mode (see
-  // question.service.ts's uploadQuestionFile: `isS3Mode ? relative :
+  // in S3/Azure mode, but prefixed with BASE_URL in disk mode (see
+  // question.service.ts's uploadQuestionFile: `isRemoteMode ? relative :
   // BASE_URL+relative`), so both forms have to be recognised here. For a
   // PUBLIC bucket that's directly fetchable — main.ts statically mounts
   // those. But passport-docs (where every certificate/document upload

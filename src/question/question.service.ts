@@ -17,7 +17,7 @@ import { PathwayService } from '../passport/pathway.service';
 import { PassportEventType } from '../passport/passport-event-types';
 import { RewardsService } from '../rewards/rewards.service';
 import { DocumentsService } from '../documents/documents.service';
-import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
+import { publicUrlFor, storedFilename, isRemoteMode } from '../common/storage';
 import { resolveFrontendBaseUrl } from '../common/frontend-url';
 
 @Injectable()
@@ -367,7 +367,7 @@ export class QuestionService {
     // behaviour; S3 mode stores the relative form so the existing
     // ownership lookup in FilesService.userOwnsFilePath matches.
     const relative = publicUrlFor('passport-docs', storedFilename(file));
-    const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
+    const fileUrl = isRemoteMode ? relative : `${BASE_URL}${relative}`;
 
     const previousAnswer = await this.prisma.questionAnswer.findUnique({
       where: { passportQuestionId: questionId },
@@ -451,7 +451,7 @@ export class QuestionService {
     if (!hasAccess) throw new ForbiddenException('You do not have access to this question');
 
     const relative = publicUrlFor('passport-docs', storedFilename(file));
-    const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
+    const fileUrl = isRemoteMode ? relative : `${BASE_URL}${relative}`;
 
     return { url: fileUrl, name: file.originalname, mimeType: file.mimetype, size: file.size };
   }

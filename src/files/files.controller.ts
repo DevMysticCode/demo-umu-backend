@@ -14,7 +14,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { FilesService } from './files.service';
-import { isS3Mode, getS3Object, isSafeToRenderInline } from '../common/storage';
+import { isRemoteMode, getRemoteObject, isSafeToRenderInline } from '../common/storage';
 
 /**
  * Signed-URL file delivery for sensitive buckets.
@@ -101,18 +101,23 @@ export class FilesController {
       isSafeToRenderInline(filename) ? 'inline' : 'attachment',
     );
 
-    if (isS3Mode) {
-      // S3 mode: stream the object straight from S3 → response. Skips
-      // the disk-existence check entirely; if the key doesn't exist S3
-      // raises NoSuchKey which we map to 404.
+    if (isRemoteMode) {
+      // S3/Azure mode: stream the object straight from the cloud
+      // provider → response. Skips the disk-existence check entirely;
+      // a missing key/blob raises a not-found error from the SDK which
+      // we map to 404.
       try {
-        const obj = await getS3Object(`${bucket}/${filename}`);
+        const obj = await getRemoteObject(`${bucket}/${filename}`);
         if (obj.contentType) res.set('Content-Type', obj.contentType);
         if (obj.contentLength) res.set('Content-Length', String(obj.contentLength));
         obj.body.pipe(res);
         return;
       } catch (err: any) {
-        if (err?.name === 'NoSuchKey' || err?.$metadata?.httpStatusCode === 404) {
+        if (
+          err?.name === 'NoSuchKey' ||
+          err?.$metadata?.httpStatusCode === 404 ||
+          err?.statusCode === 404
+        ) {
           throw new NotFoundException('File not found');
         }
         throw err;

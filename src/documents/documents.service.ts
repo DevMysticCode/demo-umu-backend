@@ -15,7 +15,7 @@ import {
   publicUrlFor,
   storedFilename,
   deleteStoredFile,
-  isS3Mode,
+  isRemoteMode,
   uploadsPathFrom,
 } from '../common/storage';
 
@@ -843,9 +843,9 @@ export class DocumentsService {
       },
     });
 
-    if (isS3Mode) {
+    if (isRemoteMode) {
       // doc.fileUrl shape: '/uploads/documents/<filename>' — strip the
-      // leading /uploads/ to get the S3 key bucket/filename form.
+      // leading /uploads/ to get the bucket/filename key form.
       const m = doc.fileUrl.match(/^\/uploads\/([^/]+)\/(.+)$/);
       if (m) {
         try { await deleteStoredFile(m[1], m[2]); } catch { /* ignore */ }

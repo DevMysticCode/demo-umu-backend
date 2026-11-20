@@ -10,7 +10,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateEnv, warnIfHmlrLooksLikeTestStub } from './common/env.validation';
 import { initSentry } from './common/sentry';
-import { isSafeToRenderInline } from './common/storage';
+import { isSafeToRenderInline, isRemoteMode } from './common/storage';
 import { ALLOWED_ORIGINS } from './common/cors-origins';
 import { swaggerBasicAuth } from './common/swagger-basic-auth';
 import { buildFilteredDocument } from './common/swagger-filter-document';
@@ -81,11 +81,12 @@ async function bootstrap() {
   // /documents/abc.pdf 404s. Those files must be fetched via the
   // signed-URL endpoint /files/:bucket/:filename (see FilesController).
   //
-  // In S3 mode (production), public buckets serve directly from S3 via
-  // the bucket's public DNS — App Runner never sees those requests, so
-  // we skip the static mount entirely. Disk mode (local dev) keeps the
-  // per-bucket allow-list so adding a new public bucket is explicit.
-  if (!process.env.S3_UPLOADS_BUCKET) {
+  // In S3/Azure mode (production), public buckets serve directly from
+  // the cloud provider's own public URL — this process never sees those
+  // requests, so we skip the static mount entirely. Disk mode (local
+  // dev, and Railway's current disk+volume setup) keeps the per-bucket
+  // allow-list so adding a new public bucket is explicit.
+  if (!isRemoteMode) {
     const uploadsRoot = join(process.cwd(), 'uploads');
     const publicBuckets = ['property-images', 'job-photos'];
     for (const bucket of publicBuckets) {

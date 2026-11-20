@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportEventType } from './passport-event-types';
-import { publicUrlFor, storedFilename, isS3Mode } from '../common/storage';
+import { publicUrlFor, storedFilename, isRemoteMode } from '../common/storage';
 import { isTerminalNext, terminalStatusFor, severityOf } from './pathway-outcome-codes';
 
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3002';
@@ -353,7 +353,7 @@ export class PathwayService {
     if (!file) throw new BadRequestException('No file provided');
     await this.assertAccess(passportId, userId);
     const relative = publicUrlFor('pathway-evidence', storedFilename(file));
-    const fileUrl = isS3Mode ? relative : `${BASE_URL}${relative}`;
+    const fileUrl = isRemoteMode ? relative : `${BASE_URL}${relative}`;
     return { fileUrl, fileName: file.originalname };
   }
 

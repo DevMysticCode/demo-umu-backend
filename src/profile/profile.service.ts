@@ -8,7 +8,7 @@ import {
   publicUrlFor,
   storedFilename,
   deleteStoredFile,
-  isS3Mode,
+  isRemoteMode,
   uploadsPathFrom,
 } from '../common/storage';
 import { purgeUserFiles } from '../common/purge-user-files';
@@ -70,11 +70,11 @@ export class ProfileService {
     }
 
     // Best-effort delete the previous avatar so we don't accumulate
-    // orphaned objects. S3 deletes go through deleteStoredFile (no-op
-    // in disk mode); disk deletes use fs.unlinkSync.
+    // orphaned objects. S3/Azure deletes go through deleteStoredFile
+    // (no-op in disk mode); disk deletes use fs.unlinkSync.
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user?.avatarUrl) {
-      if (isS3Mode && user.avatarUrl.includes('/avatars/')) {
+      if (isRemoteMode && user.avatarUrl.includes('/avatars/')) {
         const oldKey = user.avatarUrl.split('/avatars/').pop();
         if (oldKey) {
           try { await deleteStoredFile('avatars', oldKey); } catch { /* ignore */ }

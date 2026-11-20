@@ -22,7 +22,7 @@ import { PassportService } from './passport.service';
 import { PassportEventsService } from './passport-events.service';
 import { PassportActionsService } from './passport-actions.service';
 import { JwtAuthGuard } from '../auth/jwt.guard';
-import { createUploadStorage, publicUrlFor, storedFilename, isS3Mode, IMAGE_MIME_TYPES } from '../common/storage';
+import { createUploadStorage, publicUrlFor, storedFilename, isRemoteMode, IMAGE_MIME_TYPES } from '../common/storage';
 import { CreatePassportDto } from './dto/create-passport.dto';
 import { ConvertToSellerDto } from './dto/convert-to-seller.dto';
 import { SetPassportTypeDto } from './dto/set-passport-type.dto';
@@ -49,10 +49,10 @@ const COLLABORATOR_EMAIL_CHECK_THROTTLE = { default: { limit: 15, ttl: 60_000 } 
  * and preview deployments where BASE_URL is often either unset (falls
  * back to `http://localhost:3002` and every uploaded URL breaks on
  * real devices) or lags behind the current deploy's actual hostname.
- * S3-mode public URLs are already absolute and returned unchanged.
+ * S3/Azure-mode public URLs are already absolute and returned unchanged.
  */
 function absoluteUploadUrl(req: any, relativeOrAbsolute: string): string {
-  if (isS3Mode) return relativeOrAbsolute;
+  if (isRemoteMode) return relativeOrAbsolute;
   // Trust request headers first — every reverse-proxied deploy (Railway,
   // Vercel, Cloudflare) sets x-forwarded-proto/x-forwarded-host, and Express
   // parses those when trust proxy is on. Fall back to req.protocol / host
